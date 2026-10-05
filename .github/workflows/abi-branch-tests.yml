@@ -1,7 +1,7 @@
 name: ABI Branch Tests
 on:
   push:
-    branches: [feature/abi-simulation]
+    branches: [feature/abi-simulation, feature/equipment-instance-chain]
 jobs:
   abi-tests:
     runs-on: ubuntu-24.04
