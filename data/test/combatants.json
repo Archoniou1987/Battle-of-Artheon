@@ -6,6 +6,6 @@
     {"id": "TEST_DAGGER_FIGHTER", "name": "Dagger Fighter", "equipment": ["TEST_DAGGER", "TEST_DAGGER"]},
     {"id": "TEST_SWORD_FIGHTER", "name": "Sword Fighter", "equipment": ["TEST_SWORD"]},
     {"id": "TEST_AXE_FIGHTER", "name": "Axe Fighter", "equipment": ["TEST_AXE"]},
-    {"id": "TEST_SHIELD_FIGHTER", "name": "Shield Fighter", "equipment": ["TEST_SWORD", "TEST_SHIELD"]}
+    {"id": "TEST_SHIELD_FIGHTER", "name": "Shield Fighter", "equipment": ["TEST_SHIELD_SWORD", "TEST_SHIELD"]}
   ]
 }
