@@ -1,13 +1,16 @@
 class_name CombatEngine
 extends RefCounted
 
-## Central event dispatcher. Individual resolvers will remain small and testable.
+## Central deterministic event dispatcher. Random rolls are supplied in the
+## event payload so tests/replays can reproduce the exact same combat.
 
 var state: CombatState
+var physical_balance: Dictionary
 
 
-func _init(combat_state: CombatState) -> void:
+func _init(combat_state: CombatState, balance: Dictionary = {}) -> void:
 	state = combat_state
+	physical_balance = balance
 
 
 func resolve_pending_events() -> void:
@@ -28,8 +31,79 @@ func resolve_event(event: CombatEvent) -> void:
 
 
 func _resolve_attack(event: CombatEvent) -> void:
-	# Attack delivery/active-defence pipeline will be expanded independently.
-	event.set_result("resolved", true)
+	var attacker := state.get_combatant(event.source_id)
+	var defender := state.get_combatant(event.target_id)
+	if attacker == null or defender == null:
+		event.set_result("outcome", "invalid_combatant")
+		return
+
+	var rolls: Dictionary = event.payload.get("rolls", {})
+	var hit_chance := _hit_chance(attacker.level - defender.level)
+	hit_chance += float(attacker.combat_stats.get("hit_modifier", 0.0))
+	if not CombatMath.roll_success(hit_chance, int(rolls.get("hit", 100))):
+		event.set_result("outcome", "miss")
+		return
+
+	var active_defence_available := _active_defence_available(defender.tempo, int(rolls.get("reaction", 100)))
+	if active_defence_available:
+		var dodge := CombatMath.effective_dodge(
+			float(defender.combat_stats.get("dodge", 0.0)),
+			float(attacker.combat_stats.get("anti_dodge", 0.0))
+		)
+		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
+			event.set_result("outcome", "dodge")
+			return
+
+		if _manual_block_success(event, defender):
+			if not _block_crushed(attacker, rolls):
+				event.set_result("outcome", "manual_block")
+				return
+
+		var auto_block := float(defender.combat_stats.get("auto_block", 0.0))
+		if CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
+			if not _block_crushed(attacker, rolls):
+				event.set_result("outcome", "auto_block")
+				return
+
+	var crit := CombatMath.effective_crit(
+		float(attacker.combat_stats.get("crit", 0.0)),
+		float(defender.combat_stats.get("anti_crit", 0.0))
+	)
+	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
+	var raw_damage := float(event.payload.get("raw_damage", 0.0))
+	if is_crit:
+		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5))
+
+	var zone := String(event.payload.get("zone", "chest"))
+	var damage_type := String(event.payload.get("damage_type", "slashing"))
+	var armour_value := _armour_for(defender, zone, damage_type)
+	var effective_armour := CombatMath.effective_armour(
+		armour_value,
+		float(attacker.combat_stats.get("flat_armour_pen", 0.0)),
+		float(attacker.combat_stats.get("percent_armour_reduction", 0.0))
+	)
+	var reduction := BalanceCurve.sample(physical_balance.get("armour_reduction_curve", []), effective_armour)
+	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
+
+	var damage_event := state.create_event(
+		CombatEvent.Kind.DAMAGE,
+		event.source_id,
+		event.target_id,
+		{
+			"amount": after_armour,
+			"damage_type": damage_type,
+			"zone": zone,
+			"source": "attack"
+		},
+		event.event_id
+	)
+	state.queue_event(damage_event)
+	event.set_result("outcome", "connected")
+	event.set_result("critical", is_crit)
+	event.set_result("raw_damage", raw_damage)
+	event.set_result("effective_armour", effective_armour)
+	event.set_result("armour_reduction", reduction)
+	event.set_result("damage_event_id", damage_event.event_id)
 
 
 func _resolve_damage(event: CombatEvent) -> void:
@@ -37,15 +111,47 @@ func _resolve_damage(event: CombatEvent) -> void:
 	if target == null:
 		event.set_result("error", "target_not_found")
 		return
-
 	var raw_amount := float(event.payload.get("amount", 0.0))
 	var final_damage := CombatMath.final_damage_floor(raw_amount)
 	var applied := target.apply_damage(final_damage)
 	event.set_result("final_damage", final_damage)
 	event.set_result("hp_removed", applied)
+	# Reaching HP resolution counts as connected even when final damage is zero.
 	event.set_result("connected", true)
 
 
 func _resolve_effect(event: CombatEvent) -> void:
-	# EFF lifecycle/stacking is deliberately isolated from Attack and Damage.
 	event.set_result("resolved", true)
+
+
+func _hit_chance(level_difference: int) -> float:
+	var table: Dictionary = physical_balance.get("hit_by_level_difference", {})
+	if table.is_empty():
+		return 95.0
+	var bounded := clampi(level_difference, -10, 5)
+	return float(table.get(str(bounded), 95.0))
+
+
+func _active_defence_available(tempo: float, roll: int) -> bool:
+	if tempo <= -100.0:
+		return false
+	if tempo >= 0.0:
+		return true
+	return CombatMath.roll_success(100.0 + tempo, roll)
+
+
+func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
+	var chosen_zone := String(defender.combat_stats.get("manual_block_zone", ""))
+	if chosen_zone.is_empty():
+		return false
+	return chosen_zone == String(event.payload.get("zone", ""))
+
+
+func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
+	var chance := float(attacker.combat_stats.get("block_crush", 0.0))
+	return CombatMath.roll_success(chance, int(rolls.get("block_crush", 100)))
+
+
+func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
+	var zone_armour: Dictionary = defender.armour.get(zone, {})
+	return float(zone_armour.get(damage_type, 0.0))
