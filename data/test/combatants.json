@@ -3,7 +3,7 @@
   "purpose": "Development-only combat fixtures.",
   "defaults": {"level": 10, "hp": 100, "mana": 0, "tempo": 0.0, "action_points": 0, "max_action_points": 5},
   "combatants": [
-    {"id": "TEST_DAGGER_FIGHTER", "name": "Dagger Fighter", "equipment": ["TEST_DAGGER"]},
+    {"id": "TEST_DAGGER_FIGHTER", "name": "Dagger Fighter", "equipment": ["TEST_DAGGER", "TEST_DAGGER"]},
     {"id": "TEST_SWORD_FIGHTER", "name": "Sword Fighter", "equipment": ["TEST_SWORD"]},
     {"id": "TEST_AXE_FIGHTER", "name": "Axe Fighter", "equipment": ["TEST_AXE"]},
     {"id": "TEST_SHIELD_FIGHTER", "name": "Shield Fighter", "equipment": ["TEST_SWORD", "TEST_SHIELD"]}
