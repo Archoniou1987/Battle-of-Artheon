@@ -6,6 +6,7 @@ const FIGHTERS := [
 	"TEST_AXE_FIGHTER",
 	"TEST_SHIELD_FIGHTER"
 ]
+const HIT_ZONES := ["head", "chest", "arms", "waist", "legs"]
 const FIGHTS_PER_PAIR := 100
 
 
@@ -18,7 +19,7 @@ func _init() -> void:
 		return
 
 	print("BATTLE_OF_ARTHEON_TESTS=PASS")
-	print("FIRST_COMBAT_TOURNAMENT fights_per_pair=", FIGHTS_PER_PAIR)
+	print("SECOND_COMBAT_TOURNAMENT fights_per_pair=", FIGHTS_PER_PAIR)
 	for i in range(FIGHTERS.size()):
 		for j in range(i + 1, FIGHTERS.size()):
 			print(JSON.stringify(_run_pair(FIGHTERS[i], FIGHTERS[j], balance)))
@@ -34,9 +35,8 @@ func _run_pair(first_id: String, second_id: String, balance: Dictionary) -> Dict
 		var state := CombatState.new()
 		var first := TestFixtureLoader.build_combatant(first_id)
 		var second := TestFixtureLoader.build_combatant(second_id)
-		# Fixed test choices: weapon covers chest; shield additionally covers head.
-		EquipmentBuilder.set_manual_block_zones(first, ["chest", "head"])
-		EquipmentBuilder.set_manual_block_zones(second, ["chest", "head"])
+		_randomize_block_zones(first, 50000 + n * 2)
+		_randomize_block_zones(second, 50001 + n * 2)
 		state.add_combatant(first)
 		state.add_combatant(second)
 		var result := CombatSimulator.new(state, balance, 1000 + n).run_duel(first_id, second_id)
@@ -55,6 +55,19 @@ func _run_pair(first_id: String, second_id: String, balance: Dictionary) -> Dict
 		"avg_rounds": float(total_rounds) / float(FIGHTS_PER_PAIR),
 		"events": totals
 	}
+
+
+func _randomize_block_zones(combatant: CombatantState, seed_value: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var available := HIT_ZONES.duplicate()
+	var selected: Array = []
+	var capacity := int(combatant.combat_stats.get("manual_block_zone_capacity", 0))
+	while selected.size() < capacity and not available.is_empty():
+		var index := rng.randi_range(0, available.size() - 1)
+		selected.append(available[index])
+		available.remove_at(index)
+	EquipmentBuilder.set_manual_block_zones(combatant, selected)
 
 
 func _count_events(state: CombatState, totals: Dictionary) -> void:
