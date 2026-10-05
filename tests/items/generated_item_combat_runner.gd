@@ -1,5 +1,15 @@
 extends SceneTree
 
+func _numeric_dictionary_equal(actual: Dictionary, expected: Dictionary) -> bool:
+	if actual.size() != expected.size():
+		return false
+	for key in expected.keys():
+		if not actual.has(key):
+			return false
+		if not is_equal_approx(float(actual[key]), float(expected[key])):
+			return false
+	return true
+
 func _init() -> void:
 	var file := FileAccess.open("res://data/test/item_generator_template.json", FileAccess.READ)
 	var template: Dictionary = JSON.parse_string(file.get_as_text())
@@ -22,8 +32,9 @@ func _init() -> void:
 	var result: Dictionary = simulator.run_duel(hero.combatant_id, enemy.combatant_id)
 
 	var equipped_ok: bool = int(hero.combat_stats.get("main_hand_damage_min", 0)) == int(item.get("damage_min", 0)) and int(hero.combat_stats.get("main_hand_damage_max", 0)) == int(item.get("damage_max", 0))
-	var stats_ok: bool = hero.stats == item.get("final_stats", {})
+	var stats_ok: bool = _numeric_dictionary_equal(hero.stats, item.get("final_stats", {}))
 	var damage_events: int = 0
+	var rounds_ok: bool = true
 
 	print("=== GENERATED ITEM ===")
 	print(JSON.stringify(item))
@@ -35,9 +46,13 @@ func _init() -> void:
 		if event.kind == CombatEvent.Kind.DAMAGE:
 			if event.source_id == hero.combatant_id:
 				damage_events += 1
-			print("Round ", event.payload.get("round", "?"), " | ", event.source_id, " -> ", event.target_id, " | raw=", event.payload.get("raw_damage", event.payload.get("amount", "?")), " | result=", JSON.stringify(event.result))
+			var event_round: int = int(event.payload.get("round", 0))
+			if event_round <= 0:
+				rounds_ok = false
+			print("Round ", event_round, " | ", event.source_id, " -> ", event.target_id, " | raw=", event.payload.get("raw_damage", event.payload.get("amount", "?")), " | result=", JSON.stringify(event.result))
 
-	var ok: bool = equipped_ok and stats_ok and damage_events > 0 and int(result.get("second_hp", 100)) < 100
+	var ok: bool = equipped_ok and stats_ok and rounds_ok and damage_events > 0 and int(result.get("second_hp", 100)) < 100
+	print("CHECKS equipped=", equipped_ok, " stats=", stats_ok, " rounds=", rounds_ok, " hero_damage_events=", damage_events)
 	print("=== RESULT ===")
 	print(JSON.stringify(result))
 	print("GENERATED_ITEM_COMBAT_TEST=", "PASS" if ok else "FAIL")
