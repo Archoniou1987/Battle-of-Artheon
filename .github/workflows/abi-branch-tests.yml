@@ -26,3 +26,5 @@ jobs:
         run: godot --headless --path . --script res://tests/items/character_ownership_chain_runner.gd
       - name: Validate item ABI slot chain
         run: godot --headless --path . --script res://tests/items/item_abi_chain_runner.gd
+      - name: Cast item-provided ABI in combat
+        run: godot --headless --path . --script res://tests/items/item_abi_combat_runner.gd

@@ -2,10 +2,9 @@ class_name EquipmentAbilityLoadout
 extends RefCounted
 
 const WEAPON_SLOTS := ["main_hand", "off_hand"]
-const ARMOUR_ABI_SLOTS := ["chest", "head"]
 const MAX_WEAPON_ABILITIES := 3
 
-## Builds the five ABI slots from actual equipped item instances:
+## Builds five ABI slots from actual equipped item instances:
 ## weapon[0..2], chest[0], head[0]. Empty positions remain null.
 static func build(character: CharacterState, repository: ItemRepository) -> Dictionary:
 	var weapon: Array = [null, null, null]
@@ -34,6 +33,13 @@ static func active_abilities(character: CharacterState, repository: ItemReposito
 		for value in slots[group]:
 			if value != null: result.append(String(value))
 	return result
+
+## CombatSimulator already consumes fighter_data["abilities"]. This adapter makes
+## equipped items the authoritative source without coupling the simulator to inventory.
+static func apply_to_combat_data(fighter_data: Dictionary, character: CharacterState, repository: ItemRepository) -> Dictionary:
+	var combat_data := fighter_data.duplicate(true)
+	combat_data["abilities"] = active_abilities(character, repository)
+	return combat_data
 
 static func _first_unique_ability(slot: String, character: CharacterState, repository: ItemRepository, seen: Dictionary) -> Variant:
 	var item := ItemResolver.resolve_equipped(slot, character.equipment, repository)
