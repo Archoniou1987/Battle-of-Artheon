@@ -7,6 +7,7 @@
       "name": "Test Dagger",
       "slot": "main_hand",
       "damage": {"min": 2, "max": 3, "type": "piercing"},
+      "manual_block_zones_added": 1,
       "combat_stats": {"dodge": 10.0}
     },
     {
@@ -14,6 +15,7 @@
       "name": "Test Sword",
       "slot": "main_hand",
       "damage": {"min": 3, "max": 4, "type": "slashing"},
+      "manual_block_zones_added": 1,
       "combat_stats": {"auto_block": 15.0}
     },
     {
@@ -21,12 +23,14 @@
       "name": "Test Axe",
       "slot": "main_hand",
       "damage": {"min": 4, "max": 5, "type": "chopping"},
+      "manual_block_zones_added": 1,
       "combat_stats": {"crit": 15.0}
     },
     {
       "id": "TEST_SHIELD",
       "name": "Test Shield",
       "slot": "off_hand",
+      "manual_block_zones_added": 1,
       "armour_all_zones_all_physical": 50.0
     }
   ]
