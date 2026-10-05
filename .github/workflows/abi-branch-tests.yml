@@ -1,0 +1,18 @@
+name: ABI Branch Tests
+on:
+  push:
+    branches: [feature/abi-simulation]
+jobs:
+  abi-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import project
+        run: godot --headless --editor --path . --quit
+      - name: Run combat tournament with ABI
+        run: godot --headless --path . --script res://tests/combat/tournament_runner.gd
