@@ -143,8 +143,13 @@ func _active_defence_available(tempo: float, roll: int) -> bool:
 
 
 func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
-	var chosen_zone := String(defender.combat_stats.get("manual_block_zone", ""))
-	return not chosen_zone.is_empty() and chosen_zone == String(event.payload.get("zone", ""))
+	var attack_zone := String(event.payload.get("zone", ""))
+	var chosen_zones: Array = defender.combat_stats.get("manual_block_zones", [])
+	if chosen_zones.has(attack_zone):
+		return true
+	# Temporary compatibility with early fixtures/tests.
+	var legacy_zone := String(defender.combat_stats.get("manual_block_zone", ""))
+	return not legacy_zone.is_empty() and legacy_zone == attack_zone
 
 
 func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
