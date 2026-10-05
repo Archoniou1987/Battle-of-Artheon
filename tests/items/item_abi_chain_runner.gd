@@ -9,15 +9,15 @@ func _init() -> void:
 	for item in [sword, dagger, chest]:
 		repository.add_item(item)
 		hero.receive_item(String(item.instance_id), repository)
-	var equipped := hero.equip("main_hand","ABI-SWORD-1",repository) and hero.equip("off_hand","ABI-DAGGER-1",repository) and hero.equip("chest","ABI-CHEST-1",repository)
-	var slots := EquipmentAbilityLoadout.build(hero, repository)
-	var active := EquipmentAbilityLoadout.active_abilities(hero, repository)
-	var weapon_ok := slots.weapon == ["ABI001","ABI002","ABI003"]
-	var chest_ok := slots.chest == ["ABI004"]
-	var head_empty := slots.head == [null]
-	var duplicate_deduped := active.count("ABI001") == 1
-	var ok := equipped and weapon_ok and chest_ok and head_empty and duplicate_deduped and active.size() == 4
-	print("ITEM_ABI_CHAIN weapon=", slots.weapon, " chest=", slots.chest, " head=", slots.head)
+	var equipped: bool = hero.equip("main_hand","ABI-SWORD-1",repository) and hero.equip("off_hand","ABI-DAGGER-1",repository) and hero.equip("chest","ABI-CHEST-1",repository)
+	var slots: Dictionary = EquipmentAbilityLoadout.build(hero, repository)
+	var active: Array[String] = EquipmentAbilityLoadout.active_abilities(hero, repository)
+	var weapon_ok: bool = slots.get("weapon", []) == ["ABI001","ABI002","ABI003"]
+	var chest_ok: bool = slots.get("chest", []) == ["ABI004"]
+	var head_empty: bool = slots.get("head", []) == [null]
+	var duplicate_deduped: bool = active.count("ABI001") == 1
+	var ok: bool = equipped and weapon_ok and chest_ok and head_empty and duplicate_deduped and active.size() == 4
+	print("ITEM_ABI_CHAIN weapon=", slots.get("weapon", []), " chest=", slots.get("chest", []), " head=", slots.get("head", []))
 	print("ITEM_ABI_CHAIN duplicate_deduped=", duplicate_deduped, " active=", active)
 	print("ITEM_ABI_CHAIN_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
