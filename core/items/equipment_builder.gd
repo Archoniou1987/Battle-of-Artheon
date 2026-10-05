@@ -12,15 +12,20 @@ static func equip(combatant: CombatantState, item: Dictionary) -> void:
 	for stat_name in item_stats:
 		combatant.combat_stats[stat_name] = float(combatant.combat_stats.get(stat_name, 0.0)) + float(item_stats[stat_name])
 
-	var block_zones_added := int(item.get("manual_block_zones_added", 0))
-	if block_zones_added > 0:
-		combatant.combat_stats["manual_block_zone_capacity"] = int(combatant.combat_stats.get("manual_block_zone_capacity", 0)) + block_zones_added
-
 	var damage: Dictionary = item.get("damage", {})
-	if not damage.is_empty():
+	var is_weapon := not damage.is_empty()
+	if is_weapon:
+		combatant.combat_stats["weapon_attack_count"] = int(combatant.combat_stats.get("weapon_attack_count", 0)) + 1
+		# Manual block is a weapon capability, not one block zone per weapon.
+		combatant.combat_stats["manual_block_zone_capacity"] = maxi(int(combatant.combat_stats.get("manual_block_zone_capacity", 0)), int(item.get("manual_block_zones_added", 0)))
+	else:
+		var block_zones_added := int(item.get("manual_block_zones_added", 0))
+		if block_zones_added > 0:
+			combatant.combat_stats["manual_block_zone_capacity"] = int(combatant.combat_stats.get("manual_block_zone_capacity", 0)) + block_zones_added
+
+	if is_weapon:
 		combatant.combat_stats["main_hand_damage_min"] = float(damage.get("min", 0.0))
 		combatant.combat_stats["main_hand_damage_max"] = float(damage.get("max", 0.0))
-		# Until variable weapon damage is rolled by the simulator, use midpoint.
 		combatant.combat_stats["main_hand_damage"] = (float(damage.get("min", 0.0)) + float(damage.get("max", 0.0))) / 2.0
 		combatant.combat_stats["main_hand_damage_type"] = String(damage.get("type", "slashing"))
 
