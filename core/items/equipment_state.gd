@@ -12,19 +12,37 @@ func _init() -> void:
 	for slot in SLOTS:
 		slots[slot] = null
 
-func equip(slot: String, instance_id: String) -> bool:
-	if not slots.has(slot) or instance_id.is_empty():
+func equip_item(slot: String, item: Dictionary) -> bool:
+	if not slots.has(slot):
 		return false
-	if is_equipped(instance_id):
+	var instance_id := String(item.get("instance_id", ""))
+	if instance_id.is_empty() or is_equipped(instance_id):
 		return false
-	slots[slot] = instance_id
+	var allowed_slots: Array = item.get("equip_slots", [])
+	if not allowed_slots.has(slot):
+		return false
+	var occupied_slots: Array = item.get("slot_usage", [slot])
+	if occupied_slots.is_empty():
+		occupied_slots = [slot]
+	if not occupied_slots.has(slot):
+		occupied_slots = occupied_slots.duplicate()
+		occupied_slots.append(slot)
+	for occupied_slot in occupied_slots:
+		if not slots.has(occupied_slot) or slots[occupied_slot] != null:
+			return false
+	for occupied_slot in occupied_slots:
+		slots[occupied_slot] = instance_id
 	return true
 
 func unequip(slot: String) -> Variant:
 	if not slots.has(slot):
 		return null
 	var previous: Variant = slots[slot]
-	slots[slot] = null
+	if previous == null:
+		return null
+	for equipment_slot in SLOTS:
+		if slots[equipment_slot] == previous:
+			slots[equipment_slot] = null
 	return previous
 
 func get_instance_id(slot: String) -> Variant:
