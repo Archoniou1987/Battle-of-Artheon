@@ -1,6 +1,8 @@
 class_name CombatSimulator
 extends RefCounted
 
+const HIT_ZONES := ["head", "chest", "arms", "waist", "legs"]
+
 ## Minimal duel runner for deterministic and later Monte Carlo simulations.
 
 var state: CombatState
@@ -66,14 +68,24 @@ func _make_basic_attack(attacker: CombatantState, defender: CombatantState, extr
 		attacker.combatant_id,
 		defender.combatant_id,
 		{
-			"raw_damage": float(attacker.combat_stats.get("main_hand_damage", 1.0)),
-			"zone": "chest",
+			"raw_damage": _weapon_damage(attacker),
+			"zone": HIT_ZONES[rng.randi_range(0, HIT_ZONES.size() - 1)],
 			"damage_type": String(attacker.combat_stats.get("main_hand_damage_type", "slashing")),
 			"rolls": _attack_rolls(),
 			"is_extra_attack": extra,
 			"generates_ap": not extra
 		}
 	)
+
+
+func _weapon_damage(attacker: CombatantState) -> float:
+	var minimum := float(attacker.combat_stats.get("main_hand_damage_min", attacker.combat_stats.get("main_hand_damage", 1.0)))
+	var maximum := float(attacker.combat_stats.get("main_hand_damage_max", attacker.combat_stats.get("main_hand_damage", minimum)))
+	if maximum < minimum:
+		var swap := minimum
+		minimum = maximum
+		maximum = swap
+	return rng.randf_range(minimum, maximum)
 
 
 func _tempo_allows_attack(tempo: float) -> bool:
