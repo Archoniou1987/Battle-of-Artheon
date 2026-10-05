@@ -16,3 +16,5 @@ jobs:
         run: godot --headless --editor --path . --quit
       - name: Run combat tournament with ABI
         run: godot --headless --path . --script res://tests/combat/tournament_runner.gd
+      - name: Generate and validate 100 items
+        run: godot --headless --path . --script res://tests/items/item_generator_runner.gd
