@@ -19,7 +19,13 @@ func _init() -> void:
 	enemy.combat_stats = {"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
 	state.add_combatant(fighter)
 	state.add_combatant(enemy)
-	var balance: Dictionary = AbilityCatalog.load_json("res://data/test/effects.json")
+
+	var balance: Dictionary = TestFixtureLoader.load_json("res://data/balance/physical_combat.json")
+	var effect_data: Dictionary = TestFixtureLoader.load_json("res://data/test/effects.json")
+	var effect_map := {}
+	for effect in effect_data.get("effects", []):
+		effect_map[String(effect.get("id", ""))] = effect
+	balance["effects"] = effect_map
 	var simulator := CombatSimulator.new(state, balance, 1001)
 	simulator.max_rounds = 6
 	var result: Dictionary = simulator.run_duel("EFF_HERO", "EFF_ENEMY")
