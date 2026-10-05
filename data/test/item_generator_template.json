@@ -1,0 +1,8 @@
+{
+  "id":"GEN_SWORD_L50",
+  "name":"Level 50 Sword",
+  "item_level":50,
+  "damage_min":25,
+  "damage_max":33,
+  "base_stats":{"END":5}
+}
