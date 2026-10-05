@@ -24,3 +24,5 @@ jobs:
         run: godot --headless --path . --script res://tests/items/inventory_exploit_runner.gd
       - name: Validate character ownership chain
         run: godot --headless --path . --script res://tests/items/character_ownership_chain_runner.gd
+      - name: Validate item ABI slot chain
+        run: godot --headless --path . --script res://tests/items/item_abi_chain_runner.gd
