@@ -1,0 +1,18 @@
+# Godot 4+
+.godot/
+/export.cfg
+/export_presets.cfg
+
+# Builds / exports
+build/
+exports/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
