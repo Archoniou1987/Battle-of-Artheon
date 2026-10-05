@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "purpose": "Minimal combat-engine test fixtures. Values are intentionally exaggerated and are not game balance.",
+  "items": [
+    {
+      "id": "TEST_DAGGER",
+      "name": "Test Dagger",
+      "slot": "main_hand",
+      "damage": {"min": 2, "max": 3, "type": "piercing"},
+      "combat_stats": {"dodge": 10.0}
+    },
+    {
+      "id": "TEST_SWORD",
+      "name": "Test Sword",
+      "slot": "main_hand",
+      "damage": {"min": 3, "max": 4, "type": "slashing"},
+      "combat_stats": {"auto_block": 15.0}
+    },
+    {
+      "id": "TEST_AXE",
+      "name": "Test Axe",
+      "slot": "main_hand",
+      "damage": {"min": 4, "max": 5, "type": "chopping"},
+      "combat_stats": {"crit": 15.0}
+    },
+    {
+      "id": "TEST_SHIELD",
+      "name": "Test Shield",
+      "slot": "off_hand",
+      "armour_all_zones_all_physical": 50.0
+    }
+  ]
+}
