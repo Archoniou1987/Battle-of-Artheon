@@ -7,22 +7,31 @@ func _init() -> void:
 	repository.add_item(sword)
 	hero.receive_item("COMBAT-SWORD-1", repository)
 	var equipped: bool = hero.equip("main_hand", "COMBAT-SWORD-1", repository)
+	var active: Array[String] = EquipmentAbilityLoadout.active_abilities(hero, repository)
 
-	var base_fighter := {"id":"ITEM_ABI_HERO","name":"Item ABI Hero","level":50,"hp":100,"mana":25,"mana_regen":2,"combat_stats":{},"stats":{},"main_hand":{"damage_min":2,"damage_max":2,"damage_type":"slashing"},"abilities":[]}
-	var enemy := {"id":"ITEM_ABI_ENEMY","name":"Enemy","level":50,"hp":100,"mana":0,"mana_regen":0,"combat_stats":{},"stats":{},"main_hand":{"damage_min":2,"damage_max":2,"damage_type":"slashing"},"abilities":[]}
-	var combat_fighter: Dictionary = EquipmentAbilityLoadout.apply_to_combat_data(base_fighter, hero, repository)
-	var abilities: Dictionary = AbilityCatalog.load_json("res://data/test/abilities.json")
-	var simulator := CombatSimulator.new(4242)
-	var result: Dictionary = simulator.run_duel(combat_fighter, enemy, {}, abilities)
+	var state := CombatState.new()
+	var first := CombatantState.new("ITEM_ABI_HERO", "Item ABI Hero", 50, 100, 25)
+	var second := CombatantState.new("ITEM_ABI_ENEMY", "Enemy", 50, 100, 0)
+	first.combat_stats = {"mana_regen":2,"main_hand_damage_min":2.0,"main_hand_damage_max":2.0,"main_hand_damage_type":"slashing"}
+	second.combat_stats = {"mana_regen":0,"main_hand_damage_min":2.0,"main_hand_damage_max":2.0,"main_hand_damage_type":"slashing"}
+	state.add_combatant(first)
+	state.add_combatant(second)
+
+	var definitions := AbilityCatalog.load_json("res://data/test/abilities.json")
+	var item_loadouts := {"ITEM_ABI_HERO": active, "ITEM_ABI_ENEMY": []}
+	var simulator := CombatSimulator.new(state, {}, 4242)
+	simulator.ability_scheduler = AbilityScheduler.new(definitions, item_loadouts)
+	var result: Dictionary = simulator.run_duel("ITEM_ABI_HERO", "ITEM_ABI_ENEMY")
+
 	var abi_casts := 0
 	var abi_damage := 0
-	for event in result.get("event_log", []):
-		if String(event.get("kind", "")) == "Ability" and String(event.get("source_id", "")) == "ITEM_ABI_HERO":
+	for event in state.event_log:
+		if event.kind == CombatEvent.Kind.DAMAGE and event.source_id == "ITEM_ABI_HERO" and String(event.payload.get("ability_id", "")) == "ABI001":
 			abi_casts += 1
-			abi_damage += int(event.get("result", {}).get("final_damage", 0))
-	var item_source_ok: bool = combat_fighter.get("abilities", []) == ["ABI001"]
-	var mana_spent: bool = int(result.get("first_mana", 25)) < 25 or abi_casts > 0
+			abi_damage += int(event.result.get("hp_removed", 0))
+	var item_source_ok: bool = active == ["ABI001"]
+	var mana_spent: bool = int(result.get("first_mana", 25)) < 25
 	var ok: bool = equipped and item_source_ok and abi_casts > 0 and abi_damage > 0 and mana_spent
-	print("ITEM_ABI_COMBAT source=", combat_fighter.get("abilities", []), " casts=", abi_casts, " damage=", abi_damage, " final_mana=", result.get("first_mana", -1))
+	print("ITEM_ABI_COMBAT source=", active, " casts=", abi_casts, " damage=", abi_damage, " final_mana=", result.get("first_mana", -1))
 	print("ITEM_ABI_COMBAT_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
