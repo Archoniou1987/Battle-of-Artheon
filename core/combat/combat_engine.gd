@@ -77,7 +77,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if kind == "heal":
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
 	else:
-		_apply_timed_effect(target, effect_id, definition)
+		_apply_timed_effect(target, effect_id, definition, event.source_id)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
 
 func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defender: CombatantState, rolls: Dictionary) -> void:
@@ -95,12 +95,12 @@ func _trigger_manual_block_effects(parent: CombatEvent, defender: CombatantState
 		if CombatMath.roll_success(float(trigger.get("chance", 0.0)), int(rolls.get("manual_block_effect", 100))):
 			state.queue_event(state.create_event(CombatEvent.Kind.EFFECT, defender.combatant_id, defender.combatant_id, {"effect_id": String(trigger.get("effect_id", ""))}, parent.event_id))
 
-func _apply_timed_effect(target: CombatantState, effect_id: String, definition: Dictionary) -> void:
+func _apply_timed_effect(target: CombatantState, effect_id: String, definition: Dictionary, source_id: String) -> void:
 	var max_stacks := int(definition.get("max_stacks", 1)); var count := 0
 	for active in target.active_effects:
 		if String(active.get("effect_id", "")) == effect_id: count += 1
 	if count >= max_stacks: return
-	target.active_effects.append({"effect_id":effect_id,"definition":definition.duplicate(true),"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds", 1))})
+	target.active_effects.append({"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":source_id,"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds", 1))})
 
 func _active_effect_value(target: CombatantState, field: String) -> float:
 	var total := 0.0
