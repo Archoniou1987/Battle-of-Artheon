@@ -1,0 +1,6 @@
+{
+  "ABI001": {"name":"Fireball","damage":5,"damage_type":"fire","cooldown_rounds":2},
+  "ABI002": {"name":"Frostball","damage":5,"damage_type":"frost","cooldown_rounds":2},
+  "ABI003": {"name":"Lightning","damage":5,"damage_type":"lightning","cooldown_rounds":2},
+  "ABI004": {"name":"Shield Bash","damage":5,"damage_type":"physical","cooldown_rounds":2}
+}
