@@ -21,7 +21,7 @@ func _init() -> void:
 	var stored_ok: bool = repository.add_item(item)
 	var wrong_slot_rejected: bool = not equipment.equip_item("feet", item)
 	var slot_ok: bool = equipment.equip_item("main_hand", item)
-	var instance_ok: bool = String(equipment.get_instance_id("main_hand")) == String(item.get("instance_id"))
+	var instance_ok: bool = String(equipment.get_equipped_instance_id("main_hand")) == String(item.get("instance_id"))
 	var resolved: Dictionary = ItemResolver.resolve_equipped("main_hand", equipment, repository)
 	var resolved_ok: bool = not resolved.is_empty() and String(resolved.get("instance_id")) == String(item.get("instance_id"))
 
@@ -44,7 +44,7 @@ func _init() -> void:
 	var rounds_ok: bool = true
 
 	print("=== INSTANCE CHAIN ===")
-	print("Stored: ", stored_ok, " | wrong_slot_rejected: ", wrong_slot_rejected, " | main_hand: ", equipment.get_instance_id("main_hand"), " | resolved: ", resolved_ok)
+	print("Stored: ", stored_ok, " | wrong_slot_rejected: ", wrong_slot_rejected, " | main_hand: ", equipment.get_equipped_instance_id("main_hand"), " | resolved: ", resolved_ok)
 	print("=== GENERATED ITEM ===")
 	print(JSON.stringify(item))
 	print("=== EQUIPPED CHARACTER ===")

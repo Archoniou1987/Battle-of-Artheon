@@ -45,7 +45,7 @@ func unequip(slot: String) -> Variant:
 			slots[equipment_slot] = null
 	return previous
 
-func get_instance_id(slot: String) -> Variant:
+func get_equipped_instance_id(slot: String) -> Variant:
 	return slots.get(slot, null)
 
 func is_equipped(instance_id: String) -> bool:
