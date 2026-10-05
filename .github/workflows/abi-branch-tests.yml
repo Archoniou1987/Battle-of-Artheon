@@ -20,3 +20,5 @@ jobs:
         run: godot --headless --path . --script res://tests/items/item_generator_runner.gd
       - name: Equip generated item and run combat
         run: godot --headless --path . --script res://tests/items/generated_item_combat_runner.gd
+      - name: Reject inventory and equipment exploits
+        run: godot --headless --path . --script res://tests/items/inventory_exploit_runner.gd
