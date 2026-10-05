@@ -4,11 +4,15 @@ extends RefCounted
 const HIT_ZONES := ["head", "chest", "arms", "waist", "legs"]
 var state: CombatState
 var engine: CombatEngine
+var ability_scheduler: AbilityScheduler
 var rng := RandomNumberGenerator.new()
 var max_rounds: int = 100
 
 func _init(combat_state: CombatState, balance: Dictionary = {}, seed_value: int = 1) -> void:
-	state = combat_state; engine = CombatEngine.new(state, balance); rng.seed = seed_value
+	state = combat_state
+	engine = CombatEngine.new(state, balance)
+	rng.seed = seed_value
+	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/test/abilities.json"), AbilityCatalog.load_json("res://data/test/ability_loadouts.json"))
 
 func run_duel(first_id: String, second_id: String) -> Dictionary:
 	while _both_alive(first_id, second_id) and state.round_number < max_rounds:
@@ -25,9 +29,17 @@ func _run_round(first_id: String, second_id: String) -> void:
 	engine.resolve_pending_events()
 	var round := CombatRound.new(state.round_number)
 	var first := state.get_combatant(first_id); var second := state.get_combatant(second_id)
+	if first.is_alive() and second.is_alive():
+		_queue_ready_abilities(first, second)
+		_queue_ready_abilities(second, first)
+		engine.resolve_pending_events()
 	_lock_basic_attack(round, first, second); _lock_basic_attack(round, second, first)
 	round.resolve(engine)
 	_finish_effect_rounds()
+
+func _queue_ready_abilities(source: CombatantState, target: CombatantState) -> void:
+	for event in ability_scheduler.ready_events(state, source.combatant_id, target.combatant_id):
+		state.queue_event(event)
 
 func _process_round_start_effects() -> void:
 	for combatant in state.combatants.values():
@@ -40,8 +52,7 @@ func _process_round_start_effects() -> void:
 func _finish_effect_rounds() -> void:
 	for combatant in state.combatants.values():
 		for active in combatant.active_effects:
-			if state.round_number >= int(active.get("start_round", 999999)):
-				active["remaining_rounds"] = int(active.get("remaining_rounds", 0)) - 1
+			if state.round_number >= int(active.get("start_round", 999999)): active["remaining_rounds"] = int(active.get("remaining_rounds", 0)) - 1
 		var kept: Array[Dictionary] = []
 		for active in combatant.active_effects:
 			if int(active.get("remaining_rounds", 0)) > 0: kept.append(active)
