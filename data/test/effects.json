@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "effects": [
+    {"id":"EFF001","name":"Bleeding","kind":"dot","damage":2,"duration_rounds":3,"max_stacks":3},
+    {"id":"EFF002","name":"Heal","kind":"heal","amount":50},
+    {"id":"EFF003","name":"Madness","kind":"crit_buff","crit_bonus":25.0,"duration_rounds":1},
+    {"id":"EFF004","name":"Shield Wall","kind":"damage_reduction","reduction":0.75,"duration_rounds":1}
+  ]
+}
