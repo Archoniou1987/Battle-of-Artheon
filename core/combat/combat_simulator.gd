@@ -31,13 +31,7 @@ func run_duel(first_id: String, second_id: String) -> Dictionary:
 	elif second.is_alive() and not first.is_alive():
 		outcome = second_id
 
-	return {
-		"outcome": outcome,
-		"rounds": state.round_number,
-		"first_hp": first.hp,
-		"second_hp": second.hp,
-		"events": state.event_log.size()
-	}
+	return {"outcome": outcome, "rounds": state.round_number, "first_hp": first.hp, "second_hp": second.hp, "events": state.event_log.size()}
 
 
 func _run_round(first_id: String, second_id: String) -> void:
@@ -45,37 +39,28 @@ func _run_round(first_id: String, second_id: String) -> void:
 	var round := CombatRound.new(state.round_number)
 	var first := state.get_combatant(first_id)
 	var second := state.get_combatant(second_id)
-
 	_lock_basic_attack(round, first, second)
 	_lock_basic_attack(round, second, first)
 	round.resolve(engine)
 
 
 func _lock_basic_attack(round: CombatRound, attacker: CombatantState, defender: CombatantState) -> void:
-	if not attacker.is_alive():
+	if not attacker.is_alive() or not _tempo_allows_attack(attacker.tempo):
 		return
-	if not _tempo_allows_attack(attacker.tempo):
-		return
-
-	round.lock_action(_make_basic_attack(attacker, defender, false))
+	var weapon_attacks := maxi(1, int(attacker.combat_stats.get("weapon_attack_count", 1)))
+	for weapon_index in range(weapon_attacks):
+		round.lock_action(_make_basic_attack(attacker, defender, weapon_index > 0))
 	if attacker.tempo > 0.0 and CombatMath.roll_success(minf(attacker.tempo, 100.0), _roll()):
 		round.lock_action(_make_basic_attack(attacker, defender, true))
 
 
 func _make_basic_attack(attacker: CombatantState, defender: CombatantState, extra: bool) -> CombatEvent:
-	return state.create_event(
-		CombatEvent.Kind.ATTACK,
-		attacker.combatant_id,
-		defender.combatant_id,
-		{
-			"raw_damage": _weapon_damage(attacker),
-			"zone": HIT_ZONES[rng.randi_range(0, HIT_ZONES.size() - 1)],
-			"damage_type": String(attacker.combat_stats.get("main_hand_damage_type", "slashing")),
-			"rolls": _attack_rolls(),
-			"is_extra_attack": extra,
-			"generates_ap": not extra
-		}
-	)
+	return state.create_event(CombatEvent.Kind.ATTACK, attacker.combatant_id, defender.combatant_id, {
+		"raw_damage": _weapon_damage(attacker),
+		"zone": HIT_ZONES[rng.randi_range(0, HIT_ZONES.size() - 1)],
+		"damage_type": String(attacker.combat_stats.get("main_hand_damage_type", "slashing")),
+		"rolls": _attack_rolls(), "is_extra_attack": extra, "generates_ap": not extra
+	})
 
 
 func _weapon_damage(attacker: CombatantState) -> float:
@@ -89,27 +74,13 @@ func _weapon_damage(attacker: CombatantState) -> float:
 
 
 func _tempo_allows_attack(tempo: float) -> bool:
-	if tempo <= -100.0:
-		return false
-	if tempo >= 0.0:
-		return true
+	if tempo <= -100.0: return false
+	if tempo >= 0.0: return true
 	return CombatMath.roll_success(100.0 + tempo, _roll())
 
 
 func _attack_rolls() -> Dictionary:
-	return {
-		"hit": _roll(),
-		"reaction": _roll(),
-		"dodge": _roll(),
-		"auto_block": _roll(),
-		"block_crush": _roll(),
-		"crit": _roll(),
-		"counterattack": _roll(),
-		"counterattack_rolls": {
-			"hit": _roll(), "reaction": _roll(), "dodge": _roll(),
-			"auto_block": _roll(), "block_crush": _roll(), "crit": _roll()
-		}
-	}
+	return {"hit": _roll(), "reaction": _roll(), "dodge": _roll(), "auto_block": _roll(), "block_crush": _roll(), "crit": _roll(), "counterattack": _roll(), "counterattack_rolls": {"hit": _roll(), "reaction": _roll(), "dodge": _roll(), "auto_block": _roll(), "block_crush": _roll(), "crit": _roll()}}
 
 
 func _roll() -> int:
