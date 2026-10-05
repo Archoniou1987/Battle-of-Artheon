@@ -22,3 +22,5 @@ jobs:
         run: godot --headless --path . --script res://tests/items/generated_item_combat_runner.gd
       - name: Reject inventory and equipment exploits
         run: godot --headless --path . --script res://tests/items/inventory_exploit_runner.gd
+      - name: Validate character ownership chain
+        run: godot --headless --path . --script res://tests/items/character_ownership_chain_runner.gd
