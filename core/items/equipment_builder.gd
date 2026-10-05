@@ -14,6 +14,9 @@ static func equip(combatant: CombatantState, item: Dictionary) -> void:
 	if is_weapon:
 		combatant.combat_stats["weapon_attack_count"] = int(combatant.combat_stats.get("weapon_attack_count", 0)) + 1
 		combatant.combat_stats["manual_block_zone_capacity"] = maxi(int(combatant.combat_stats.get("manual_block_zone_capacity", 0)), int(item.get("manual_block_zones_added", 0)))
+		var weapon_effects: Array = combatant.combat_stats.get("weapon_on_hit_effects", [])
+		weapon_effects.append(item.get("on_hit_effect", {}).duplicate(true))
+		combatant.combat_stats["weapon_on_hit_effects"] = weapon_effects
 	else:
 		var block_zones_added := int(item.get("manual_block_zones_added", 0))
 		if block_zones_added > 0:
@@ -25,10 +28,6 @@ static func equip(combatant: CombatantState, item: Dictionary) -> void:
 		combatant.combat_stats["main_hand_damage"] = (float(damage.get("min", 0.0)) + float(damage.get("max", 0.0))) / 2.0
 		combatant.combat_stats["main_hand_damage_type"] = String(damage.get("type", "slashing"))
 
-	if item.has("on_hit_effect"):
-		var triggers: Array = combatant.combat_stats.get("on_hit_effects", [])
-		triggers.append(item["on_hit_effect"].duplicate(true))
-		combatant.combat_stats["on_hit_effects"] = triggers
 	if item.has("on_manual_block_effect"):
 		var block_triggers: Array = combatant.combat_stats.get("on_manual_block_effects", [])
 		block_triggers.append(item["on_manual_block_effect"].duplicate(true))
