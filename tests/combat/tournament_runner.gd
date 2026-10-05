@@ -13,13 +13,13 @@ func _init() -> void:
 	var all_ok := EquipmentFixtureCases.run() and PhysicalAttackCases.run(balance) and DuelSmokeCases.run(balance)
 	if not all_ok: printerr("BATTLE_OF_ARTHEON_TESTS=FAIL"); quit(1); return
 	print("BATTLE_OF_ARTHEON_TESTS=PASS")
-	print("FOURTH_COMBAT_TOURNAMENT_WITH_EFF fights_per_pair=",FIGHTS_PER_PAIR)
+	print("FIFTH_COMBAT_TOURNAMENT_WITH_ABI fights_per_pair=",FIGHTS_PER_PAIR)
 	for i in range(FIGHTERS.size()):
 		for j in range(i+1,FIGHTERS.size()): print(JSON.stringify(_run_pair(FIGHTERS[i],FIGHTERS[j],balance)))
 	quit(0)
 
 func _new_stats() -> Dictionary:
-	return {"attacks":0,"miss":0,"dodges":0,"manual_blocks":0,"auto_blocks":0,"connected":0,"crits":0,"damage_dealt":0,"damage_taken":0,"eff001":0,"eff002":0,"eff003":0,"eff004":0,"healing":0}
+	return {"attacks":0,"miss":0,"dodges":0,"manual_blocks":0,"auto_blocks":0,"connected":0,"crits":0,"damage_dealt":0,"damage_taken":0,"eff001":0,"eff002":0,"eff003":0,"eff004":0,"healing":0,"abi_casts":0,"abi_damage":0,"abi001":0,"abi002":0,"abi003":0,"abi004":0}
 func _run_pair(first_id:String,second_id:String,balance:Dictionary)->Dictionary:
 	var wins := {first_id:0,second_id:0,"draw":0,"timeout":0}; var stats := {first_id:_new_stats(),second_id:_new_stats()}; var total_rounds:=0
 	for n in range(FIGHTS_PER_PAIR):
@@ -47,7 +47,12 @@ func _count_events(state:CombatState,stats:Dictionary)->void:
 				"connected": source["connected"]+=1
 			if bool(event.result.get("critical",false)): source["crits"]+=1
 		elif event.kind==CombatEvent.Kind.DAMAGE:
-			if stats.has(event.source_id) and stats.has(event.target_id): var dealt:=int(event.result.get("hp_removed",0)); stats[event.source_id]["damage_dealt"]+=dealt; stats[event.target_id]["damage_taken"]+=dealt
+			if stats.has(event.source_id) and stats.has(event.target_id):
+				var dealt:=int(event.result.get("hp_removed",0)); stats[event.source_id]["damage_dealt"]+=dealt; stats[event.target_id]["damage_taken"]+=dealt
+				var ability_id:=String(event.payload.get("ability_id",""))
+				if not ability_id.is_empty():
+					stats[event.source_id]["abi_casts"]+=1; stats[event.source_id]["abi_damage"]+=dealt
+					var abi_key:=ability_id.to_lower(); if stats[event.source_id].has(abi_key): stats[event.source_id][abi_key]+=1
 		elif event.kind==CombatEvent.Kind.EFFECT and stats.has(event.source_id):
 			var key:=String(event.result.get("effect_id","")).to_lower()
 			if stats[event.source_id].has(key): stats[event.source_id][key]+=1
