@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "note": "Development defaults only. Balance values are data, not hard-coded combat rules.",
+  "roll": {
+    "min": 1,
+    "max": 100
+  },
+  "crit": {
+    "base_damage_multiplier": 1.5
+  },
+  "counterattack": {
+    "main_hand_damage_coefficient": 0.8
+  },
+  "action_points": {
+    "combat_start": 0,
+    "maximum": 5,
+    "basic_physical_attack_gain": 1
+  },
+  "stun_protection": {
+    "negative_tempo_multiplier": 0.5,
+    "duration_rounds": 2,
+    "max_stacks": 1
+  }
+}
