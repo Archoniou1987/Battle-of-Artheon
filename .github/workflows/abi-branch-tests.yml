@@ -28,3 +28,5 @@ jobs:
         run: godot --headless --path . --script res://tests/items/item_abi_chain_runner.gd
       - name: Cast item-provided ABI in combat
         run: godot --headless --path . --script res://tests/items/item_abi_combat_runner.gd
+      - name: Generate item with EFF001
+        run: godot --headless --path . --script res://tests/items/generated_eff001_item_runner.gd
