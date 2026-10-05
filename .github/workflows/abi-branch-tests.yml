@@ -32,3 +32,5 @@ jobs:
         run: godot --headless --path . --script res://tests/items/generated_eff001_item_runner.gd
       - name: Apply generated EFF001 in combat
         run: godot --headless --path . --script res://tests/items/generated_eff001_combat_runner.gd
+      - name: Validate EFF stacking and source ownership
+        run: godot --headless --path . --script res://tests/combat/effect_stacking_runner.gd
