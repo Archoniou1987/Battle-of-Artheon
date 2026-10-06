@@ -4,6 +4,7 @@ func _init() -> void:
 	var repository := ItemRepository.new()
 	var hero := CharacterState.new("ITEM_ABI_HERO", "Item ABI Hero", 50)
 	var sword := {"instance_id":"COMBAT-SWORD-1","equip_slots":["main_hand","off_hand"],"slot_usage":["main_hand"],"abilities":["ABI001"]}
+	ItemDurabilityService.initialize_item(sword, 50)
 	repository.add_item(sword)
 	hero.receive_item("COMBAT-SWORD-1", repository)
 	var equipped: bool = hero.equip("main_hand", "COMBAT-SWORD-1", repository)
