@@ -18,6 +18,14 @@ func _initialize()->void:
 				valid=valid and map.in_bounds(pos) and map.cell(pos).is_passable()
 				valid=valid and pos!=entrance and pos!=exit and not occupied.has(pos)
 				occupied[pos]=true
+		for i in range(generated.resource_cells.size()):
+			valid=valid and map.areas_at(generated.resource_cells[i]).has("GEN_RESOURCE_%02d"%i)
+		for i in range(generated.object_cells.size()):
+			valid=valid and map.cell(generated.object_cells[i]).object_ids.has("GEN_OBJECT_%02d"%i)
+		for i in range(generated.npc_cells.size()):
+			valid=valid and map.entity_positions.get("GEN_NPC_%02d"%i,Vector2i(-1,-1))==generated.npc_cells[i]
+		var service:HexEncounterService=generated.encounter_service
+		valid=valid and service.encounters.size()==generated.encounter_cells.size()
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
 			break
