@@ -23,3 +23,6 @@ func remove_instance(instance_id: String, equipment: EquipmentState) -> bool:
 
 func size() -> int:
 	return _instance_ids.size()
+
+func instance_ids() -> Array:
+	return _instance_ids.keys().duplicate()
