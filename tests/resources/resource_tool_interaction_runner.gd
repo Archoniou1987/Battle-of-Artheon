@@ -1,10 +1,8 @@
 extends SceneTree
 
-func _initialize()->void:
-	print("RT_STAGE_START") # diagnostic trigger
+func _initialize()->void: # diagnostic trigger
 	var repository:=ItemRepository.new()
 	var character:=CharacterState.new("PLAYER_TOOL_TEST", "Tool Tester", 20)
-	print("RT_STAGE_CHARACTER")
 	var pickaxe:Dictionary = {
 		"instance_id":"TOOL_PICKAXE_001",
 		"equip_slots":["tool"],
@@ -31,26 +29,22 @@ func _initialize()->void:
 	var iron:=ResourceDefinition.new("RES002", "Iron Ore", "ore", 20, "common")
 	var hide:=ResourceDefinition.new("RES_HIDE_010", "Wolf Hide", "hide", 10, "common")
 	var high_ore:=ResourceDefinition.new("RES_HIGH_ORE", "Black Iron Ore", "ore", 40, "green")
-	print("RT_STAGE_BEFORE_EVALUATE")
 	var no_tool_required:=ResourceToolService.evaluate(character, repository, hide, ResourceToolService.MODE_REQUIRED)
-	print("RT_STAGE_AFTER_EVALUATE")
 	valid = valid and not bool(no_tool_required.get("allowed", true))
-	print("RT_STAGE_BEFORE_EQUIP")
 	valid = valid and character.equip("tool", "TOOL_PICKAXE_001", repository)
-	print("RT_STAGE_AFTER_EQUIP")
 	var gather:=ResourceToolService.evaluate(character, repository, iron, ResourceToolService.MODE_GATHERING)
 	var bonus:=ResourceToolService.evaluate(character, repository, iron, ResourceToolService.MODE_BONUS)
 	var too_high:=ResourceToolService.evaluate(character, repository, high_ore, ResourceToolService.MODE_GATHERING)
 	valid = valid and bool(gather.get("allowed", false)) and bool(gather.get("tool_matched", false))
 	valid = valid and ResourceToolService.apply_bonus(2, bonus) == 4
 	valid = valid and not bool(too_high.get("allowed", true))
-	valid = valid and String(character.unequip("tool")) == "TOOL_PICKAXE_001"
+	valid = valid and str(character.unequip("tool")) == "TOOL_PICKAXE_001"
 	valid = valid and character.equip("tool", "TOOL_KNIFE_001", repository)
 	var hide_required:=ResourceToolService.evaluate(character, repository, hide, ResourceToolService.MODE_REQUIRED)
 	var ore_with_knife:=ResourceToolService.evaluate(character, repository, iron, ResourceToolService.MODE_BONUS)
 	valid = valid and bool(hide_required.get("allowed", false))
 	valid = valid and bool(ore_with_knife.get("allowed", false)) and not bool(ore_with_knife.get("tool_matched", true))
 	valid = valid and ResourceToolService.apply_bonus(2, ore_with_knife) == 2
-	print("RESOURCE_TOOL required=%s bonus=%d high_level=%s" % [String(hide_required.get("allowed", false)), ResourceToolService.apply_bonus(2, bonus), String(too_high.get("allowed", true))])
+	print("RESOURCE_TOOL required=%s bonus=%d high_level=%s" % [str(hide_required.get("allowed", false)), ResourceToolService.apply_bonus(2, bonus), str(too_high.get("allowed", true))])
 	print("RESOURCE_TOOL_INTERACTION_TEST=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
