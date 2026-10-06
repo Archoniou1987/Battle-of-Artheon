@@ -47,5 +47,7 @@ jobs:
         run: godot --headless --path . --script res://tests/loot/chest_loot_runner.gd
       - name: Validate item durability lifetime
         run: godot --headless --path . --script res://tests/items/item_durability_runner.gd
+      - name: Apply equipment wear from actual combat defeat
+        run: godot --headless --path . --script res://tests/items/combat_defeat_consequence_runner.gd
       - name: Damage all equipped items after defeat
         run: godot --headless --path . --script res://tests/items/defeat_equipment_wear_runner.gd

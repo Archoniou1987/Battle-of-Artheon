@@ -26,7 +26,7 @@ func _initialize() -> void:
 	var generator := ItemGenerator.new(20261006)
 	var loot_service := LootService.new(4242)
 	var drops := CombatRewardService.award_duel_loot(result, bandit.combatant_id, player, loot_table, templates, generator, repository, loot_service)
-	var valid := String(result.get("outcome", "")) == player.character_id and int(result.get("second_hp", 1)) == 0
+	var valid := String(result.get("winner_id", "")) == player.character_id and String(result.get("loser_id", "")) == bandit.combatant_id
 	valid = valid and drops.size() == 2 and repository.size() == 2 and player.inventory.size() == 2
 	for item in drops:
 		var instance_id := String(item.get("instance_id", ""))

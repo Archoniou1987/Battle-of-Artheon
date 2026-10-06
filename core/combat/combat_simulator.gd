@@ -20,7 +20,15 @@ func run_duel(first_id: String, second_id: String) -> Dictionary:
 	if not first.is_alive() and not second.is_alive(): outcome = "draw"
 	elif first.is_alive() and not second.is_alive(): outcome = first_id
 	elif second.is_alive() and not first.is_alive(): outcome = second_id
-	return {"outcome":outcome,"rounds":state.round_number,"first_hp":first.hp,"second_hp":second.hp,"first_mana":first.mana,"second_mana":second.mana,"events":state.event_log.size()}
+	var winner_id := ""
+	var loser_id := ""
+	if outcome == first_id:
+		winner_id = first_id
+		loser_id = second_id
+	elif outcome == second_id:
+		winner_id = second_id
+		loser_id = first_id
+	return {"outcome":outcome,"winner_id":winner_id,"loser_id":loser_id,"rounds":state.round_number,"first_hp":first.hp,"second_hp":second.hp,"first_mana":first.mana,"second_mana":second.mana,"events":state.event_log.size()}
 
 func _run_round(first_id:String,second_id:String)->void:
 	state.begin_round(); _regenerate_mana(); _process_round_start_effects(); engine.resolve_pending_events()
