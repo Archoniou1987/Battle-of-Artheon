@@ -16,9 +16,9 @@ func _initialize()->void:
 	var enemy:CombatantState=session.get("enemy") as CombatantState
 	valid=valid and enemy!=null and enemy.combatant_id=="WORLD_BANDIT_001"
 	valid=valid and enemy.display_name==npc.display_name and enemy.level==npc.level
-	valid=valid and session.get("npc")===npc
+	valid=valid and session.get("npc")==npc
 	var state:CombatState=session.get("state") as CombatState
-	valid=valid and state.get_combatant("WORLD_BANDIT_001")===enemy and state.get_combatant("PLAYER")===player
+	valid=valid and state.get_combatant("WORLD_BANDIT_001")==enemy and state.get_combatant("PLAYER")==player
 	var simulator:=CombatSimulator.new(state,TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),6711)
 	simulator.max_rounds=20
 	var result:=simulator.run_duel("PLAYER","WORLD_BANDIT_001")
