@@ -75,3 +75,6 @@ jobs:
 
       - name: Validate tactical map movement and resource area
         run: godot --headless --path . --script res://tests/map/tactical_map_runner.gd
+
+      - name: Validate hex geometry and weighted pathfinding
+        run: godot --headless --path . --script res://tests/map/hex_pathfinding_runner.gd
