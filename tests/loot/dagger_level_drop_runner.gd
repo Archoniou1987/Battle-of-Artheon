@@ -21,7 +21,7 @@ func _initialize()->void:
 	var drops:Array[Dictionary]=[]
 	if String(result.get("winner_id",""))==fighter.combatant_id and not candidates.is_empty():
 		var chosen:Dictionary=candidates[0].get("template",{})
-		var item:=ItemGenerator.new(7712).generate(chosen,"common",{"origin":"loot"})
+		var item:=ItemGenerator.new(7712).generate(chosen,"common",{"origin":"loot","max_wear_min":0.10,"max_wear_max":0.35,"damage_min":0.15,"damage_max":0.65,"hidden_progress_min":0.0,"hidden_progress_max":1.0})
 		item["loot_source_id"]=bandit.combatant_id
 		if repository.add_item(item) and player.inventory.add_instance(String(item.get("instance_id","")),repository):
 			drops.append(item)
@@ -29,6 +29,8 @@ func _initialize()->void:
 	var valid:bool=templates.size()==11 and String(result.get("winner_id",""))==fighter.combatant_id and drops.size()==1
 	if not drops.is_empty():
 		valid=valid and int(drops[0].get("item_level",0))>=int(level_range.get("min",0)) and int(drops[0].get("item_level",0))<=int(level_range.get("max",0))
+		valid=valid and String(drops[0].get("origin",""))=="loot"
+		valid=valid and int(drops[0].get("durability_max",20))<20 and int(drops[0].get("durability_current",20))<int(drops[0].get("durability_max",20))
 	print("DAGGER_LEVELS="+JSON.stringify([1,10,20,30,40,50,60,70,80,90,100]))
 	print("DAGGER_BANDIT combat_winner=%s bandit_hp=%d loot_range=%d-%d drops=%d"%[String(result.get("winner_id","")),int(result.get("second_hp",-1)),int(level_range.get("min",0)),int(level_range.get("max",0)),drops.size()])
 	if not drops.is_empty(): print("DAGGER_DROP="+JSON.stringify(drops[0]))
