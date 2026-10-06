@@ -67,4 +67,10 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		map.add_area(area,[resource_cells[i]])
 	for i in range(object_cells.size()):
 		map.add_object("GEN_OBJECT_%02d"%i,object_cells[i])
-	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells}
+	for i in range(npc_cells.size()):
+		map.place_entity("GEN_NPC_%02d"%i,npc_cells[i])
+	var encounter_service:=HexEncounterService.new()
+	for i in range(encounter_cells.size()):
+		var encounter:=HexEncounter.new("GEN_ENCOUNTER_%02d"%i,HexEncounter.TRIGGER_ENTER,"damage",{"amount":1},true)
+		encounter_service.add_encounter(encounter,encounter_cells[i],map)
+	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service}
