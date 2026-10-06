@@ -102,3 +102,6 @@ jobs:
 
       - name: Validate resource source stock yield depletion and recovery
         run: godot --headless --path . --script res://tests/resources/resource_source_runner.gd
+
+      - name: Validate tool slot and resource interaction modes
+        run: godot --headless --path . --script res://tests/resources/resource_tool_interaction_runner.gd

@@ -3,7 +3,7 @@ extends RefCounted
 
 const SLOTS := [
 	"head", "shoulders", "neck", "back", "chest", "wrists",
-	"ring1", "ring2", "waist", "legs", "feet", "main_hand", "off_hand"
+	"ring1", "ring2", "waist", "legs", "feet", "main_hand", "off_hand", "tool"
 ]
 
 var slots: Dictionary = {}
