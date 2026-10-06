@@ -87,3 +87,6 @@ jobs:
 
       - name: Validate overlapping map areas and transitions
         run: godot --headless --path . --script res://tests/map/map_areas_runner.gd
+
+      - name: Connect map objects and persistent NPC instances
+        run: godot --headless --path . --script res://tests/map/world_object_interaction_runner.gd

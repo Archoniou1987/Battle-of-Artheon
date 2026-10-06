@@ -106,3 +106,22 @@ func area_transition(from:Vector2i,to:Vector2i)->Dictionary:
 	for area_id in before:
 		if not after.has(area_id): exited.append(area_id)
 	return {"entered":entered,"exited":exited,"stayed":stayed}
+
+func add_object(object_id:String,pos:Vector2i)->bool:
+	if object_id.is_empty() or not in_bounds(pos): return false
+	var target:=cell(pos)
+	if target.object_ids.has(object_id): return false
+	target.object_ids.append(object_id)
+	return true
+
+func remove_object(object_id:String,pos:Vector2i)->bool:
+	var target:=cell(pos)
+	if target==null or not target.object_ids.has(object_id): return false
+	target.object_ids.erase(object_id)
+	return true
+
+func entities_at(pos:Vector2i)->Array[String]:
+	var result:Array[String]=[]
+	for entity_id in entity_positions.keys():
+		if entity_positions[entity_id]==pos: result.append(entity_id)
+	return result
