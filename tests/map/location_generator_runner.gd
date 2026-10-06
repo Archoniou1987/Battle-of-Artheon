@@ -26,6 +26,12 @@ func _initialize()->void:
 			valid=valid and map.entity_positions.get("GEN_NPC_%02d"%i,Vector2i(-1,-1))==generated.npc_cells[i]
 		var service:HexEncounterService=generated.encounter_service
 		valid=valid and service.encounters.size()==generated.encounter_cells.size()
+		for guarded in generated.guarded_objects:
+			var object_pos:Vector2i=guarded.object_pos
+			var guard_pos:Vector2i=guarded.guard_pos
+			valid=valid and HexGrid.distance(object_pos,guard_pos)==1
+			valid=valid and map.cell(object_pos).object_ids.size()>0
+			valid=valid and map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
 			break
