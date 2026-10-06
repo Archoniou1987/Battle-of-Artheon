@@ -21,12 +21,16 @@ func _initialize() -> void:
 	var after_repair := [_bot_report(bot_a,repository),_bot_report(bot_b,repository)]
 	var broken_filter_ok := _verify_broken_item_inactive(bot_a,repository,base)
 	var second := _run_series(bot_a,bot_b,repository,base,100,20000)
-	var report := {"initial_100":initial,"repair":repaired,"after_repair":after_repair,"broken_item_filter_ok":broken_filter_ok,"second_100_draws_as_defeats":second,"final":[_bot_report(bot_a,repository),_bot_report(bot_b,repository)]}
+	var before_final_repair := [_bot_report(bot_a,repository),_bot_report(bot_b,repository)]
+	var final_repair := {"BOT_A":_repair_all(bot_a,repository),"BOT_B":_repair_all(bot_b,repository)}
+	var final := [_bot_report(bot_a,repository),_bot_report(bot_b,repository)]
+	var final_repair_ok := _all_usable(bot_a,repository) and _all_usable(bot_b,repository)
+	var report := {"initial_100":initial,"repair":repaired,"after_repair":after_repair,"broken_item_filter_ok":broken_filter_ok,"second_100_draws_as_defeats":second,"before_final_repair":before_final_repair,"final_repair":final_repair,"final":final}
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://test-results"))
 	var file := FileAccess.open("res://test-results/hundred_bot_durability_report.json",FileAccess.WRITE)
 	file.store_string(JSON.stringify(report,"\t")); file.close()
 	print("BOT_DURABILITY_100_REPORT="+JSON.stringify(report))
-	var valid := broken_filter_ok and _all_usable(bot_a,repository) == false and _all_usable(bot_b,repository) == false
+	var valid := broken_filter_ok and final_repair_ok
 	print("BOT_DURABILITY_REPAIR_BREAK_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
 
