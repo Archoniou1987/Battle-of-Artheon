@@ -62,4 +62,9 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		object_cells.append(content_cells.pop_back())
 	for i in range(mini(3,content_cells.size())):
 		encounter_cells.append(content_cells.pop_back())
+	for i in range(resource_cells.size()):
+		var area:=MapArea.new("GEN_RESOURCE_%02d"%i,"resource",1,"common",1.0,60.0)
+		map.add_area(area,[resource_cells[i]])
+	for i in range(object_cells.size()):
+		map.add_object("GEN_OBJECT_%02d"%i,object_cells[i])
 	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells}
