@@ -6,10 +6,11 @@ func _initialize()->void:
 		var map:TacticalMapState=generated.map
 		var entrance:Vector2i=generated.entrance
 		var exit:Vector2i=generated.exit
-		var path:=HexPathfinder.find_path(map,entrance,exit)
+		var result:=HexPathfinder.new().find_path(map,entrance,exit)
+		var path:Array=result.get("path",[])
 		valid=valid and map.in_bounds(entrance) and map.in_bounds(exit)
 		valid=valid and map.cell(entrance).is_passable() and map.cell(exit).is_passable()
-		valid=valid and not path.is_empty()
+		valid=valid and bool(result.get("ok",false)) and not path.is_empty()
 		valid=valid and path[0]==entrance and path[path.size()-1]==exit
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
