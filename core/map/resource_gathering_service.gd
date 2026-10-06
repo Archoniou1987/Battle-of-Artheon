@@ -30,6 +30,29 @@ func begin(map:TacticalMapState, entity_id:String, area_id:String, sources:Resou
 		return {"ok":false, "reason":"depleted"}
 	return {"ok":true, "area_id":area.area_id, "duration_sec":duration, "sources":available}
 
+func gather_with_tool(source_id:String, sources:ResourceSourceRepository, resources:ResourceRepository, character:CharacterState, items:ItemRepository, requested_yield:int)->Dictionary:
+	var source:=sources.get_source(source_id)
+	if source == null:
+		return {"ok":false, "reason":"unknown_source"}
+	var resource:=resources.get_resource(source.resource_id)
+	if resource == null:
+		return {"ok":false, "reason":"unknown_resource"}
+	var evaluation:=ResourceToolService.evaluate(character, items, resource, ResourceToolService.MODE_GATHERING)
+	if not bool(evaluation.get("allowed", false)):
+		return {"ok":false, "reason":"tool_required", "resource_id":source.resource_id, "tool_level":int(evaluation.get("tool_level", 0))}
+	var base_result:=gather(source_id, sources, requested_yield)
+	if not bool(base_result.get("ok", false)):
+		return base_result
+	var base_quantity:=int(base_result.get("quantity", 0))
+	var desired_quantity:=ResourceToolService.apply_bonus(base_quantity, evaluation)
+	var extra_gathered:=source.take(maxi(0, desired_quantity - base_quantity))
+	base_result["quantity"] = base_quantity + extra_gathered
+	base_result["base_quantity"] = base_quantity
+	base_result["tool_bonus_quantity"] = extra_gathered
+	base_result["remaining"] = source.quantity
+	base_result["depleted"] = source.is_depleted()
+	return base_result
+
 func gather(source_id:String, sources:ResourceSourceRepository, requested_yield:int)->Dictionary:
 	var source:=sources.get_source(source_id)
 	if source == null:
