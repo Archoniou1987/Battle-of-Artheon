@@ -117,3 +117,6 @@ jobs:
 
       - name: Chain Hex Encounters through persistent world flags
         run: godot --headless --path . --script res://tests/map/hex_encounter_chain_runner.gd
+
+      - name: Generate 200 traversable tactical Locations
+        run: godot --headless --path . --script res://tests/map/location_generator_runner.gd
