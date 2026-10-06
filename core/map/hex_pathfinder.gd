@@ -9,12 +9,18 @@ func find_path(map:TacticalMapState, start:Vector2i, goal:Vector2i)->Dictionary:
 	var frontier:Array[Vector2i] = [start]
 	var came_from:Dictionary = {start:start}
 	var cost_so_far:Dictionary = {start:0.0}
+	var closed:Dictionary = {}
 	while not frontier.is_empty():
 		var current:=_lowest_score(frontier, cost_so_far, goal)
 		frontier.erase(current)
+		if closed.has(current):
+			continue
+		closed[current] = true
 		if current == goal:
 			break
 		for next in map.neighbors(current, true):
+			if closed.has(next):
+				continue
 			var new_cost:float = float(cost_so_far[current]) + map.cell(next).movement_cost
 			if not cost_so_far.has(next) or new_cost < float(cost_so_far[next]):
 				cost_so_far[next] = new_cost
