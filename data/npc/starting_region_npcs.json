@@ -31,7 +31,10 @@
       "traits": [
         "TRA_WOLF"
       ],
-      "loot_table_id": "LOOT_WOLF"
+      "loot_table_id": "LOOT_WOLF",
+      "loot_groups": [
+        "REGION_01"
+      ]
     },
     {
       "id": "NPC002",
@@ -62,7 +65,10 @@
       "traits": [
         "TRA_BOAR"
       ],
-      "loot_table_id": "LOOT_BOAR"
+      "loot_table_id": "LOOT_BOAR",
+      "loot_groups": [
+        "REGION_01"
+      ]
     },
     {
       "id": "NPC003",
@@ -91,7 +97,12 @@
       },
       "abilities": [],
       "traits": [],
-      "loot_table_id": "LOOT_TEST_BANDIT"
+      "loot_table_id": "LOOT_TEST_BANDIT",
+      "loot_groups": [
+        "HUMANOID_COMMON",
+        "BANDIT_COMMON",
+        "REGION_01"
+      ]
     },
     {
       "id": "NPC004",
@@ -121,7 +132,12 @@
       },
       "abilities": [],
       "traits": [],
-      "loot_table_id": "LOOT_BANDIT_ARCHER"
+      "loot_table_id": "LOOT_BANDIT_ARCHER",
+      "loot_groups": [
+        "HUMANOID_COMMON",
+        "BANDIT_COMMON",
+        "REGION_01"
+      ]
     },
     {
       "id": "NPC005",
@@ -155,7 +171,12 @@
       "traits": [
         "TRA_ELITE"
       ],
-      "loot_table_id": "LOOT_BANDIT_CHIEF"
+      "loot_table_id": "LOOT_BANDIT_CHIEF",
+      "loot_groups": [
+        "HUMANOID_COMMON",
+        "BANDIT_COMMON",
+        "REGION_01"
+      ]
     }
   ]
 }

@@ -11,6 +11,7 @@ var base:Dictionary
 var abilities:Array
 var traits:Array
 var loot_table_id:String
+var loot_groups:Array
 func _init(data:Dictionary)->void:
 	npc_id=String(data.get("id",""))
 	template_id=String(data.get("template_id",npc_id))
@@ -23,3 +24,4 @@ func _init(data:Dictionary)->void:
 	abilities=(data.get("abilities",[]) as Array).duplicate(true)
 	traits=(data.get("traits",[]) as Array).duplicate(true)
 	loot_table_id=String(data.get("loot_table_id",""))
+	loot_groups=(data.get("loot_groups",[]) as Array).duplicate(true)

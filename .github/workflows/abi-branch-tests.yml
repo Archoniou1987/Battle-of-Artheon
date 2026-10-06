@@ -44,6 +44,8 @@ jobs:
         run: godot --headless --path . --script res://tests/loot/combat_loot_runner.gd
       - name: Validate persistent NPC entities
         run: godot --headless --path . --script res://tests/npc/npc_entity_runner.gd
+      - name: Validate scalable loot groups and quest conditions
+        run: godot --headless --path . --script res://tests/loot/loot_group_level_runner.gd
       - name: Simulate NPC possessions entering loot roll
         run: godot --headless --path . --script res://tests/loot/npc_possession_loot_runner.gd
       - name: Validate NPC to worn loot condition chain
