@@ -18,7 +18,10 @@ func roll_loot(source_id: String, loot_table: Dictionary, templates_by_id: Dicti
 		var quality := _roll_quality(entry.get("quality_weights", {}))
 		if quality.is_empty():
 			continue
-		var item := generator.generate(templates_by_id[template_id] as Dictionary, quality)
+		var condition_rule := (entry.get("condition_rule", loot_table.get("condition_rule", {"origin":"loot"})) as Dictionary).duplicate(true)
+		if not condition_rule.has("origin"):
+			condition_rule["origin"] = "loot"
+		var item := generator.generate(templates_by_id[template_id] as Dictionary, quality, condition_rule)
 		if item.is_empty():
 			continue
 		item["loot_source_id"] = source_id
