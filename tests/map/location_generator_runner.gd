@@ -26,6 +26,15 @@ func _initialize()->void:
 			valid=valid and map.entity_positions.get("GEN_NPC_%02d"%i,Vector2i(-1,-1))==generated.npc_cells[i]
 		var service:HexEncounterService=generated.encounter_service
 		valid=valid and service.encounters.size()==generated.encounter_cells.size()
+		for patrol in generated.patrols:
+			var patrol_path:Array=patrol.path
+			valid=valid and patrol_path.size()>=2
+			valid=valid and patrol_path[0]==patrol.start and patrol_path[patrol_path.size()-1]==patrol.goal
+			valid=valid and map.entity_positions.get(patrol.patrol_id,Vector2i(-1,-1))==patrol.start
+			for step in patrol_path:
+				valid=valid and map.in_bounds(step) and map.cell(step).is_passable()
+			for i in range(1,patrol_path.size()):
+				valid=valid and HexGrid.distance(patrol_path[i-1],patrol_path[i])==1
 		for route_guard in generated.route_guards:
 			var route_guard_pos:Vector2i=route_guard.guard_pos
 			valid=valid and generated.guaranteed_path.has(route_guard_pos)
