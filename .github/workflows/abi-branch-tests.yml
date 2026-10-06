@@ -50,8 +50,7 @@ jobs:
       - name: Run 100 battles between equipped bots
         run: |
           mkdir -p test-results
-          godot --headless --path . --user-data-dir "$PWD/test-results/user" --script res://tests/items/hundred_bot_durability_runner.gd
-          cp test-results/user/hundred_bot_durability_report.json test-results/hundred_bot_durability_report.json
+          godot --headless --path . --script res://tests/items/hundred_bot_durability_runner.gd
       - name: Upload 100-battle durability report
         uses: actions/upload-artifact@v4
         with:

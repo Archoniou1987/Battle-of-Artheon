@@ -37,7 +37,7 @@ func _initialize() -> void:
 				return
 
 	var report := {"battles":100,"wins":{bot_a.character_id:wins[bot_a.character_id],bot_b.character_id:wins[bot_b.character_id]},"draws":draws,"bots":[_bot_report(bot_a, repository),_bot_report(bot_b, repository)]}
-	var report_file := FileAccess.open("user://hundred_bot_durability_report.json", FileAccess.WRITE)
+	var report_file := FileAccess.open("res://test-results/hundred_bot_durability_report.json", FileAccess.WRITE)
 	report_file.store_string(JSON.stringify(report, "\t"))
 	report_file.close()
 	print("BOT_DURABILITY_100_REPORT=" + JSON.stringify(report))
