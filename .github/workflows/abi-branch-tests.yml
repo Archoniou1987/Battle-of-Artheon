@@ -42,6 +42,8 @@ jobs:
         run: godot --headless --path . --script res://tests/loot/loot_pipeline_runner.gd
       - name: Award NPC loot after combat victory
         run: godot --headless --path . --script res://tests/loot/combat_loot_runner.gd
+      - name: Validate persistent NPC entities
+        run: godot --headless --path . --script res://tests/npc/npc_entity_runner.gd
       - name: Validate NPC to worn loot condition chain
         run: godot --headless --path . --script res://tests/loot/npc_worn_loot_chain_runner.gd
 

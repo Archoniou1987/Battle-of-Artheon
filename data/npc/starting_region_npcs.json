@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "npcs": [
+    {
+      "id": "NPC001",
+      "template_id": "WOLF_01",
+      "name": "Wolf",
+      "type": "beast",
+      "level": 3,
+      "rank": "normal",
+      "aggression": 0.55,
+      "base": {
+        "health": 55,
+        "mana": 0,
+        "stats": {
+          "STR": 5,
+          "DEX": 7,
+          "INTU": 5,
+          "WIS": 0,
+          "INT": 1,
+          "END": 4
+        },
+        "combat_stats": {
+          "main_hand_damage_min": 4,
+          "main_hand_damage_max": 7,
+          "main_hand_damage_type": "slashing",
+          "dodge": 3
+        }
+      },
+      "abilities": [],
+      "traits": [
+        "TRA_WOLF"
+      ],
+      "loot_table_id": "LOOT_WOLF"
+    },
+    {
+      "id": "NPC002",
+      "template_id": "BOAR_01",
+      "name": "Boar",
+      "type": "beast",
+      "level": 4,
+      "rank": "normal",
+      "aggression": 0.45,
+      "base": {
+        "health": 85,
+        "mana": 0,
+        "stats": {
+          "STR": 7,
+          "DEX": 3,
+          "INTU": 4,
+          "WIS": 0,
+          "INT": 1,
+          "END": 7
+        },
+        "combat_stats": {
+          "main_hand_damage_min": 5,
+          "main_hand_damage_max": 8,
+          "main_hand_damage_type": "piercing"
+        }
+      },
+      "abilities": [],
+      "traits": [
+        "TRA_BOAR"
+      ],
+      "loot_table_id": "LOOT_BOAR"
+    },
+    {
+      "id": "NPC003",
+      "template_id": "BANDIT_01",
+      "name": "Bandit",
+      "type": "humanoid",
+      "level": 5,
+      "rank": "normal",
+      "aggression": 0.65,
+      "base": {
+        "health": 75,
+        "mana": 0,
+        "stats": {
+          "STR": 6,
+          "DEX": 6,
+          "INTU": 5,
+          "WIS": 2,
+          "INT": 3,
+          "END": 5
+        },
+        "combat_stats": {
+          "main_hand_damage_min": 6,
+          "main_hand_damage_max": 9,
+          "main_hand_damage_type": "slashing"
+        }
+      },
+      "abilities": [],
+      "traits": [],
+      "loot_table_id": "LOOT_TEST_BANDIT"
+    },
+    {
+      "id": "NPC004",
+      "template_id": "BANDIT_ARCHER_01",
+      "name": "Bandit Archer",
+      "type": "humanoid",
+      "level": 6,
+      "rank": "normal",
+      "aggression": 0.6,
+      "base": {
+        "health": 65,
+        "mana": 0,
+        "stats": {
+          "STR": 4,
+          "DEX": 9,
+          "INTU": 7,
+          "WIS": 2,
+          "INT": 3,
+          "END": 4
+        },
+        "combat_stats": {
+          "main_hand_damage_min": 7,
+          "main_hand_damage_max": 10,
+          "main_hand_damage_type": "piercing",
+          "anti_dodge": 2
+        }
+      },
+      "abilities": [],
+      "traits": [],
+      "loot_table_id": "LOOT_BANDIT_ARCHER"
+    },
+    {
+      "id": "NPC005",
+      "template_id": "BANDIT_CHIEF_01",
+      "name": "Bandit Chief",
+      "type": "humanoid",
+      "level": 8,
+      "rank": "elite",
+      "aggression": 0.8,
+      "base": {
+        "health": 140,
+        "mana": 20,
+        "stats": {
+          "STR": 10,
+          "DEX": 7,
+          "INTU": 8,
+          "WIS": 4,
+          "INT": 5,
+          "END": 9
+        },
+        "combat_stats": {
+          "main_hand_damage_min": 10,
+          "main_hand_damage_max": 15,
+          "main_hand_damage_type": "slashing",
+          "crit": 3
+        }
+      },
+      "abilities": [
+        "ABI001"
+      ],
+      "traits": [
+        "TRA_ELITE"
+      ],
+      "loot_table_id": "LOOT_BANDIT_CHIEF"
+    }
+  ]
+}
