@@ -78,3 +78,6 @@ jobs:
 
       - name: Validate hex geometry and weighted pathfinding
         run: godot --headless --path . --script res://tests/map/hex_pathfinding_runner.gd
+
+      - name: Stress test hex movement and pathfinding
+        run: godot --headless --path . --script res://tests/map/hex_pathfinding_stress_runner.gd
