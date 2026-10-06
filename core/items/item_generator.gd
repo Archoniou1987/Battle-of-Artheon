@@ -10,7 +10,7 @@ const QUALITY_RULES := {
 	"purple":{"min_mult":1.15,"max_mult":1.25,"mods":3,"mod_min":3,"mod_max":4}}
 var rng:=RandomNumberGenerator.new(); var serial:int=0
 func _init(seed_value:int=1)->void:rng.seed=seed_value
-func generate(template:Dictionary,quality:String)->Dictionary:
+func generate(template:Dictionary,quality:String,condition_rule:Dictionary={})->Dictionary:
 	var rule:Dictionary=QUALITY_RULES.get(quality,{})
 	if rule.is_empty():return {}
 	serial+=1; var multiplier:=rng.randf_range(float(rule.min_mult),float(rule.max_mult))
@@ -25,9 +25,32 @@ func generate(template:Dictionary,quality:String)->Dictionary:
 	if template.has("on_hit_effect"):item["on_hit_effect"]=(template.get("on_hit_effect",{}) as Dictionary).duplicate(true)
 	if template.has("on_manual_block_effect"):item["on_manual_block_effect"]=(template.get("on_manual_block_effect",{}) as Dictionary).duplicate(true)
 	if template.has("abilities"):item["abilities"]=(template.get("abilities",[]) as Array).duplicate(true)
-	ItemDurabilityService.initialize_item(item, int(template.get("durability_max", 50)))
+	_initialize_condition(item,int(template.get("durability_max",50)),condition_rule)
 	return item
 func generate_batch(template:Dictionary,count:int)->Array[Dictionary]:
 	var result:Array[Dictionary]=[]; var qualities:=QUALITY_RULES.keys()
 	for i in range(count):result.append(generate(template,String(qualities[rng.randi_range(0,qualities.size()-1)])))
 	return result
+
+
+func _initialize_condition(item:Dictionary,base_max:int,rule:Dictionary)->void:
+	var origin:=String(rule.get("origin","crafted"))
+	item["origin"]=origin
+	if origin=="crafted":
+		ItemDurabilityService.initialize_item(item,base_max)
+		return
+	var max_wear_min:=clampf(float(rule.get("max_wear_min",0.0)),0.0,1.0)
+	var max_wear_max:=clampf(float(rule.get("max_wear_max",max_wear_min)),max_wear_min,1.0)
+	var damage_min:=clampf(float(rule.get("damage_min",0.0)),0.0,1.0)
+	var damage_max:=clampf(float(rule.get("damage_max",damage_min)),damage_min,1.0)
+	var max_wear:=rng.randf_range(max_wear_min,max_wear_max)
+	var maximum:=clampi(int(round(float(base_max)*(1.0-max_wear))),1,base_max)
+	var damage:=rng.randf_range(damage_min,damage_max)
+	var current:=clampi(int(round(float(maximum)*(1.0-damage))),0,maximum)
+	var hidden_limit:=maxi(0,maximum-2)
+	var hidden_progress:=0
+	if hidden_limit>0:
+		var hidden_min:=clampf(float(rule.get("hidden_progress_min",0.0)),0.0,1.0)
+		var hidden_max:=clampf(float(rule.get("hidden_progress_max",hidden_min)),hidden_min,1.0)
+		hidden_progress=clampi(int(round(float(hidden_limit)*rng.randf_range(hidden_min,hidden_max))),0,hidden_limit)
+	ItemDurabilityService.initialize_item(item,maximum,current,hidden_progress)

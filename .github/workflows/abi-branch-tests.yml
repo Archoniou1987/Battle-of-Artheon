@@ -47,6 +47,8 @@ jobs:
         run: godot --headless --path . --script res://tests/loot/chest_loot_runner.gd
       - name: Validate item durability lifetime
         run: godot --headless --path . --script res://tests/items/item_durability_runner.gd
+      - name: Generate crafted and worn loot conditions
+        run: godot --headless --path . --script res://tests/items/item_initial_condition_runner.gd
       - name: Repair items, treat draws as defeats, and simulate breakage
         run: |
           mkdir -p test-results
