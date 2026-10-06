@@ -1,9 +1,6 @@
 extends SceneTree
 
-func _init()->void:
-	call_deferred("_run")
-
-func _run()->void:
+func _initialize()->void:
 	var repository:=ItemRepository.new()
 	var character:=CharacterState.new("PLAYER_TOOL_TEST", "Tool Tester", 20)
 	var pickaxe:Dictionary = {
