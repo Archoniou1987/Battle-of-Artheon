@@ -73,6 +73,16 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	for i in range(encounter_cells.size()):
 		var encounter:=HexEncounter.new("GEN_ENCOUNTER_%02d"%i,HexEncounter.TRIGGER_ENTER,"damage",{"amount":1},true)
 		encounter_service.add_encounter(encounter,encounter_cells[i],map)
+	var route_guards:Array[Dictionary]=[]
+	var route_candidates:Array[Vector2i]=[]
+	for route_pos in guaranteed_path:
+		if route_pos!=entrance and route_pos!=exit and not npc_cells.has(route_pos):
+			route_candidates.append(route_pos)
+	if not route_candidates.is_empty():
+		var guard_pos:=route_candidates[rng.randi_range(0,route_candidates.size()-1)]
+		var guard_id:="GEN_ROUTE_GUARD_00"
+		if map.place_entity(guard_id,guard_pos):
+			route_guards.append({"guard_id":guard_id,"guard_pos":guard_pos})
 	var guarded_objects:Array[Dictionary]=[]
 	var reserved_guard_cells:Dictionary={}
 	for object_pos in object_cells:
@@ -87,4 +97,4 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		if map.place_entity(guard_id,guard_pos):
 			reserved_guard_cells[guard_pos]=true
 			guarded_objects.append({"object_pos":object_pos,"guard_pos":guard_pos,"guard_id":guard_id})
-	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,"guarded_objects":guarded_objects}
+	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,"guarded_objects":guarded_objects,"route_guards":route_guards}
