@@ -90,3 +90,6 @@ jobs:
 
       - name: Connect map objects and persistent NPC instances
         run: godot --headless --path . --script res://tests/map/world_object_interaction_runner.gd
+
+      - name: Start combat from map NPC encounter
+        run: godot --headless --path . --script res://tests/map/map_encounter_combat_runner.gd
