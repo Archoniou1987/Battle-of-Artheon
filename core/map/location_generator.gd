@@ -39,4 +39,15 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			elif roll<0.42:
 				map.set_terrain(pos,"rough",1.5)
 	map.mark_visited(entrance)
+	var content_cells:Array[Vector2i]=[]
+	for r in range(safe_height):
+		for q in range(safe_width):
+			var content_pos:=Vector2i(q,r)
+			if content_pos!=entrance and content_pos!=exit and map.cell(content_pos).is_passable():
+				content_cells.append(content_pos)
+	for i in range(content_cells.size()-1,0,-1):
+		var j:=rng.randi_range(0,i)
+		var swap:=content_cells[i]
+		content_cells[i]=content_cells[j]
+		content_cells[j]=swap
 	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path}
