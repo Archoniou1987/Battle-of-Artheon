@@ -7,6 +7,7 @@ func _init() -> void:
 	var dagger := {"instance_id":"ABI-DAGGER-1","equip_slots":["main_hand","off_hand"],"slot_usage":["off_hand"],"abilities":["ABI001","ABI003"]}
 	var chest := {"instance_id":"ABI-CHEST-1","equip_slots":["chest"],"slot_usage":["chest"],"abilities":["ABI004"]}
 	for item in [sword, dagger, chest]:
+		ItemDurabilityService.initialize_item(item, 50)
 		repository.add_item(item)
 		hero.receive_item(String(item.instance_id), repository)
 	var equipped: bool = hero.equip("main_hand","ABI-SWORD-1",repository) and hero.equip("off_hand","ABI-DAGGER-1",repository) and hero.equip("chest","ABI-CHEST-1",repository)
