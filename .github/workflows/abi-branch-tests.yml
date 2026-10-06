@@ -47,7 +47,7 @@ jobs:
         run: godot --headless --path . --script res://tests/loot/chest_loot_runner.gd
       - name: Validate item durability lifetime
         run: godot --headless --path . --script res://tests/items/item_durability_runner.gd
-      - name: Run 100 battles between equipped bots
+      - name: Repair items, treat draws as defeats, and simulate breakage
         run: |
           mkdir -p test-results
           godot --headless --path . --script res://tests/items/hundred_bot_durability_runner.gd

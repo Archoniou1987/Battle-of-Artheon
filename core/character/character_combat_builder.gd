@@ -34,7 +34,7 @@ static func equipped_items(character:CharacterState, repository:ItemRepository) 
 		var instance_id := String(value)
 		if instance_id.is_empty() or seen.has(instance_id): continue
 		var item := repository.get_item(instance_id)
-		if item.is_empty(): continue
+		if item.is_empty() or not ItemDurabilityService.is_usable(item): continue
 		seen[instance_id] = true
 		result.append(item)
 	return result
