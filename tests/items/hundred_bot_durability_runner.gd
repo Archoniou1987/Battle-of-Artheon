@@ -36,7 +36,11 @@ func _initialize() -> void:
 				quit(1)
 				return
 
-	print("BOT_DURABILITY_100 battles=100 A_wins=%d B_wins=%d draws=%d" % [wins[bot_a.character_id], wins[bot_b.character_id], draws])
+	var report := {"battles":100,"wins":{bot_a.character_id:wins[bot_a.character_id],bot_b.character_id:wins[bot_b.character_id]},"draws":draws,"bots":[_bot_report(bot_a, repository),_bot_report(bot_b, repository)]}
+	var report_file := FileAccess.open("user://hundred_bot_durability_report.json", FileAccess.WRITE)
+	report_file.store_string(JSON.stringify(report, "\t"))
+	report_file.close()
+	print("BOT_DURABILITY_100_REPORT=" + JSON.stringify(report))
 	_print_equipment(bot_a, repository)
 	_print_equipment(bot_b, repository)
 	var expected_a := 50 - int(wins[bot_b.character_id])
@@ -53,3 +57,11 @@ func _print_equipment(bot: CharacterState, repository: ItemRepository) -> void:
 	for slot in ["head","chest","legs","feet","main_hand","off_hand"]:
 		var item := ItemResolver.resolve_equipped(slot, bot.equipment, repository)
 		print("BOT_ITEM bot=%s slot=%s item=%s durability=%d/%d" % [bot.character_id, slot, String(item.get("name","")), int(item.get("durability_current",0)), int(item.get("durability_max",0))])
+
+
+func _bot_report(bot: CharacterState, repository: ItemRepository) -> Dictionary:
+	var items: Array[Dictionary] = []
+	for slot in ["head","chest","legs","feet","main_hand","off_hand"]:
+		var item := ItemResolver.resolve_equipped(slot, bot.equipment, repository)
+		items.append({"slot":slot,"instance_id":String(item.get("instance_id","")),"name":String(item.get("name","")),"durability_current":int(item.get("durability_current",0)),"durability_max":int(item.get("durability_max",0))})
+	return {"bot_id":bot.character_id,"items":items}
