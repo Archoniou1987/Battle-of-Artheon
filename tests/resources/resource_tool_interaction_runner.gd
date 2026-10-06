@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _initialize()->void:
-	print("RT_STAGE_START")
+	print("RT_STAGE_START") # diagnostic trigger
 	var repository:=ItemRepository.new()
 	var character:=CharacterState.new("PLAYER_TOOL_TEST", "Tool Tester", 20)
 	print("RT_STAGE_CHARACTER")
