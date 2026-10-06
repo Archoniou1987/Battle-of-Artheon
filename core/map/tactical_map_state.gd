@@ -46,3 +46,45 @@ func move_entity(entity_id:String,to:Vector2i)->Dictionary:
 	if HexGrid.distance(from,to)!=1: return {"ok":false,"reason":"not_adjacent"}
 	entity_positions[entity_id]=to; target.discovered=true; target.visited=true
 	return {"ok":true,"from":from,"to":to,"movement_cost":target.movement_cost,"areas":target.area_ids.duplicate(),"objects":target.object_ids.duplicate(),"effects":target.effects.duplicate(),"triggers":target.triggers.duplicate()}
+
+func reveal_from(origin:Vector2i,radius:int)->Array[Vector2i]:
+	var revealed:Array[Vector2i]=[]
+	if not in_bounds(origin): return revealed
+	var safe_radius:=maxi(0,radius)
+	for pos in cells.keys():
+		if HexGrid.distance(origin,pos)<=safe_radius:
+			var target:MapCell=cell(pos)
+			if not target.discovered:
+				target.discovered=true
+				revealed.append(pos)
+	return revealed
+
+func mark_visited(pos:Vector2i)->bool:
+	var target:=cell(pos)
+	if target==null: return false
+	target.discovered=true
+	target.visited=true
+	return true
+
+func exploration_state(pos:Vector2i)->String:
+	var target:=cell(pos)
+	if target==null: return "invalid"
+	if target.visited: return "visited"
+	if target.discovered: return "revealed"
+	return "unknown"
+
+func exploration_snapshot()->Dictionary:
+	var result:Dictionary={}
+	for pos in cells.keys():
+		var target:MapCell=cell(pos)
+		if target.discovered or target.visited:
+			result[pos]={"discovered":target.discovered,"visited":target.visited}
+	return result
+
+func restore_exploration(snapshot:Dictionary)->void:
+	for pos in snapshot.keys():
+		if not in_bounds(pos): continue
+		var data:Dictionary=snapshot[pos]
+		var target:MapCell=cell(pos)
+		target.discovered=bool(data.get("discovered",false))
+		target.visited=bool(data.get("visited",false))

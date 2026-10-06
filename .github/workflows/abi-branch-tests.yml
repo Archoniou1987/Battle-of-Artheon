@@ -81,3 +81,6 @@ jobs:
 
       - name: Stress test hex movement and pathfinding
         run: godot --headless --path . --script res://tests/map/hex_pathfinding_stress_runner.gd
+
+      - name: Validate hex exploration persistence
+        run: godot --headless --path . --script res://tests/map/hex_exploration_runner.gd
