@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "loot_tables": [
+    {
+      "id": "LOOT_TEST_BANDIT",
+      "entries": [
+        {"template_id":"SWORD_19","chance":100.0,"quality_weights":{"poor":10,"common":30,"green":30,"blue":20,"purple":10}},
+        {"template_id":"HEAD_17","chance":100.0,"quality_weights":{"poor":10,"common":30,"green":30,"blue":20,"purple":10}}
+      ]
+    }
+  ]
+}

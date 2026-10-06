@@ -38,3 +38,5 @@ jobs:
         run: godot --headless --path . --script res://tests/character/character_combat_builder_runner.gd
       - name: Build ten equipped potential players and stats
         run: godot --headless --path . --script res://tests/character/ten_player_stats_runner.gd
+      - name: Roll NPC loot into player inventory
+        run: godot --headless --path . --script res://tests/loot/loot_pipeline_runner.gd
