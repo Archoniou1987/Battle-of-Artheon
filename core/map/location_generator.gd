@@ -50,4 +50,16 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		var swap:=content_cells[i]
 		content_cells[i]=content_cells[j]
 		content_cells[j]=swap
-	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path}
+	var resource_cells:Array[Vector2i]=[]
+	var npc_cells:Array[Vector2i]=[]
+	var object_cells:Array[Vector2i]=[]
+	var encounter_cells:Array[Vector2i]=[]
+	for i in range(mini(3,content_cells.size())):
+		resource_cells.append(content_cells.pop_back())
+	for i in range(mini(4,content_cells.size())):
+		npc_cells.append(content_cells.pop_back())
+	for i in range(mini(3,content_cells.size())):
+		object_cells.append(content_cells.pop_back())
+	for i in range(mini(3,content_cells.size())):
+		encounter_cells.append(content_cells.pop_back())
+	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells}
