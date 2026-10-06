@@ -40,3 +40,5 @@ jobs:
         run: godot --headless --path . --script res://tests/character/ten_player_stats_runner.gd
       - name: Roll NPC loot into player inventory
         run: godot --headless --path . --script res://tests/loot/loot_pipeline_runner.gd
+      - name: Award NPC loot after combat victory
+        run: godot --headless --path . --script res://tests/loot/combat_loot_runner.gd
