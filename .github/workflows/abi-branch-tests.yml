@@ -99,3 +99,6 @@ jobs:
 
       - name: Validate fixed resource definitions and level ranges
         run: godot --headless --path . --script res://tests/resources/resource_definition_runner.gd
+
+      - name: Validate resource source stock yield depletion and recovery
+        run: godot --headless --path . --script res://tests/resources/resource_source_runner.gd
