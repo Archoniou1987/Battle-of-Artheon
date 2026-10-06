@@ -114,3 +114,6 @@ jobs:
 
       - name: Resolve Hex Encounters into world consequences
         run: godot --headless --path . --script res://tests/map/hex_encounter_world_runner.gd
+
+      - name: Chain Hex Encounters through persistent world flags
+        run: godot --headless --path . --script res://tests/map/hex_encounter_chain_runner.gd
