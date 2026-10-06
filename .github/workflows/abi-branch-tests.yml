@@ -96,3 +96,6 @@ jobs:
 
       - name: Resolve map combat victory into death and loot
         run: godot --headless --path . --script res://tests/map/map_combat_outcome_runner.gd
+
+      - name: Validate fixed resource definitions and level ranges
+        run: godot --headless --path . --script res://tests/resources/resource_definition_runner.gd

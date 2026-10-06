@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "purpose": "Resource definitions. Levels are fixed progression values and do not scale with player level.",
+  "resources": [
+    {"id": "RES001", "name": "Copper Ore", "category": "ore", "level": 5, "rarity": "common"},
+    {"id": "RES002", "name": "Iron Ore", "category": "ore", "level": 20, "rarity": "common"},
+    {"id": "RES003", "name": "Black Iron Ore", "category": "ore", "level": 40, "rarity": "green"},
+    {"id": "RES004", "name": "Mithril Ore", "category": "ore", "level": 60, "rarity": "blue"},
+    {"id": "RES005", "name": "Adamantite Ore", "category": "ore", "level": 80, "rarity": "purple"},
+    {"id": "RES006", "name": "Obsidian", "category": "ore", "level": 95, "rarity": "purple"}
+  ]
+}
