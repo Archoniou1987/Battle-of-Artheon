@@ -84,3 +84,6 @@ jobs:
 
       - name: Validate hex exploration persistence
         run: godot --headless --path . --script res://tests/map/hex_exploration_runner.gd
+
+      - name: Validate overlapping map areas and transitions
+        run: godot --headless --path . --script res://tests/map/map_areas_runner.gd
