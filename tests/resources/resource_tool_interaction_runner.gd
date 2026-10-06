@@ -1,6 +1,9 @@
 extends SceneTree
 
-func _initialize()->void:
+func _init()->void:
+	call_deferred("_run")
+
+func _run()->void:
 	var repository:=ItemRepository.new()
 	var character:=CharacterState.new("PLAYER_TOOL_TEST", "Tool Tester", 20)
 	var pickaxe:Dictionary = {
@@ -29,11 +32,9 @@ func _initialize()->void:
 	var iron:=ResourceDefinition.new("RES002", "Iron Ore", "ore", 20, "common")
 	var hide:=ResourceDefinition.new("RES_HIDE_010", "Wolf Hide", "hide", 10, "common")
 	var high_ore:=ResourceDefinition.new("RES_HIGH_ORE", "Black Iron Ore", "ore", 40, "green")
-
 	var no_tool_required:=ResourceToolService.evaluate(character, repository, hide, ResourceToolService.MODE_REQUIRED)
 	valid = valid and not bool(no_tool_required.get("allowed", true))
 	valid = valid and character.equip("tool", "TOOL_PICKAXE_001", repository)
-
 	var gather:=ResourceToolService.evaluate(character, repository, iron, ResourceToolService.MODE_GATHERING)
 	var bonus:=ResourceToolService.evaluate(character, repository, iron, ResourceToolService.MODE_BONUS)
 	var too_high:=ResourceToolService.evaluate(character, repository, high_ore, ResourceToolService.MODE_GATHERING)
