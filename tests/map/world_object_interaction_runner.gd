@@ -9,9 +9,9 @@ func _initialize()->void:
 	var valid:=bridge.register_npc(map,bandit,Vector2i(5,5))
 	valid=valid and map.entity_positions["WORLD_BANDIT_001"]==Vector2i(5,5)
 	var found:=bridge.npc_at(map,Vector2i(5,5))
-	valid=valid and found.size()==1 and found[0]===bandit
+	valid=valid and found.size()==1 and found[0]==bandit
 	var encounter:=bridge.encounter_at(map,Vector2i(5,5))
-	valid=valid and bool(encounter.get("ok",false)) and encounter.get("npc")===bandit
+	valid=valid and bool(encounter.get("ok",false)) and encounter.get("npc")==bandit
 	valid=valid and String(encounter.get("npc_template_id",""))=="NPC003"
 	valid=valid and map.add_object("CHEST_WORLD_001",Vector2i(6,5))
 	valid=valid and map.add_object("ORE_WORLD_001",Vector2i(6,5))
