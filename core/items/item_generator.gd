@@ -25,6 +25,7 @@ func generate(template:Dictionary,quality:String)->Dictionary:
 	if template.has("on_hit_effect"):item["on_hit_effect"]=(template.get("on_hit_effect",{}) as Dictionary).duplicate(true)
 	if template.has("on_manual_block_effect"):item["on_manual_block_effect"]=(template.get("on_manual_block_effect",{}) as Dictionary).duplicate(true)
 	if template.has("abilities"):item["abilities"]=(template.get("abilities",[]) as Array).duplicate(true)
+	ItemDurabilityService.initialize_item(item, int(template.get("durability_max", 50)))
 	return item
 func generate_batch(template:Dictionary,count:int)->Array[Dictionary]:
 	var result:Array[Dictionary]=[]; var qualities:=QUALITY_RULES.keys()

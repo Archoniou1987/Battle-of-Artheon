@@ -10,6 +10,6 @@ static func equip_instance(slot: String, instance_id: String, inventory: Invento
 	if equipment.is_equipped(instance_id):
 		return false
 	var item := repository.get_item(instance_id)
-	if item.is_empty():
+	if item.is_empty() or not ItemDurabilityService.is_usable(item):
 		return false
 	return equipment.equip_item(slot, item)

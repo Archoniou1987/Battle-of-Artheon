@@ -19,6 +19,13 @@ func get_item(instance_id: String) -> Dictionary:
 		return {}
 	return (_items[instance_id] as Dictionary).duplicate(true)
 
+func update_item(item: Dictionary) -> bool:
+	var instance_id := String(item.get("instance_id", ""))
+	if instance_id.is_empty() or not _items.has(instance_id):
+		return false
+	_items[instance_id] = item.duplicate(true)
+	return true
+
 func remove_item(instance_id: String) -> bool:
 	return _items.erase(instance_id)
 
