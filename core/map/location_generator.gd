@@ -83,6 +83,20 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		var guard_id:="GEN_ROUTE_GUARD_00"
 		if map.place_entity(guard_id,guard_pos):
 			route_guards.append({"guard_id":guard_id,"guard_pos":guard_pos})
+	var patrols:Array[Dictionary]=[]
+	var patrol_candidates:Array[Vector2i]=[]
+	for patrol_pos in content_cells:
+		if not npc_cells.has(patrol_pos):
+			patrol_candidates.append(patrol_pos)
+	if patrol_candidates.size()>=2:
+		var patrol_start:=patrol_candidates.pop_back()
+		var patrol_goal:=patrol_candidates[rng.randi_range(0,patrol_candidates.size()-1)]
+		var patrol_result:=HexPathfinder.new().find_path(map,patrol_start,patrol_goal)
+		var patrol_path:Array=patrol_result.get("path",[])
+		if bool(patrol_result.get("ok",false)) and patrol_path.size()>=2:
+			var patrol_id:="GEN_PATROL_00"
+			if map.place_entity(patrol_id,patrol_start):
+				patrols.append({"patrol_id":patrol_id,"start":patrol_start,"goal":patrol_goal,"path":patrol_path})
 	var guarded_objects:Array[Dictionary]=[]
 	var reserved_guard_cells:Dictionary={}
 	for object_pos in object_cells:
@@ -97,4 +111,4 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		if map.place_entity(guard_id,guard_pos):
 			reserved_guard_cells[guard_pos]=true
 			guarded_objects.append({"object_pos":object_pos,"guard_pos":guard_pos,"guard_id":guard_id})
-	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,"guarded_objects":guarded_objects,"route_guards":route_guards}
+	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols}
