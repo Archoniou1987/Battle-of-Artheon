@@ -93,3 +93,6 @@ jobs:
 
       - name: Start combat from map NPC encounter
         run: godot --headless --path . --script res://tests/map/map_encounter_combat_runner.gd
+
+      - name: Resolve map combat victory into death and loot
+        run: godot --headless --path . --script res://tests/map/map_combat_outcome_runner.gd

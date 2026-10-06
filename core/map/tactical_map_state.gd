@@ -125,3 +125,8 @@ func entities_at(pos:Vector2i)->Array[String]:
 	for entity_id in entity_positions.keys():
 		if entity_positions[entity_id]==pos: result.append(entity_id)
 	return result
+
+func remove_entity(entity_id:String)->bool:
+	if not entity_positions.has(entity_id): return false
+	entity_positions.erase(entity_id)
+	return true
