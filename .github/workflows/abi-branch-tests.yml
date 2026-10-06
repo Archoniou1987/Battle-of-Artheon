@@ -46,6 +46,8 @@ jobs:
         run: godot --headless --path . --script res://tests/npc/npc_entity_runner.gd
       - name: Validate scalable loot groups and quest conditions
         run: godot --headless --path . --script res://tests/loot/loot_group_level_runner.gd
+      - name: Fight unarmed bandit and validate scaled dagger drop
+        run: godot --headless --path . --script res://tests/loot/dagger_level_drop_runner.gd
       - name: Simulate NPC possessions entering loot roll
         run: godot --headless --path . --script res://tests/loot/npc_possession_loot_runner.gd
       - name: Validate NPC to worn loot condition chain
