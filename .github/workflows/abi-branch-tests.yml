@@ -111,3 +111,6 @@ jobs:
 
       - name: Validate Hex Encounter triggers conditions and persistence
         run: godot --headless --path . --script res://tests/map/hex_encounter_runner.gd
+
+      - name: Resolve Hex Encounters into world consequences
+        run: godot --headless --path . --script res://tests/map/hex_encounter_world_runner.gd
