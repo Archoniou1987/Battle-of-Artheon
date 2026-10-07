@@ -2,9 +2,11 @@ class_name GroupCombatController
 extends RefCounted
 
 var group:GroupCombatState
+var engagement:EngagementResolver
 
 func _init(group_state:GroupCombatState) -> void:
 	group=group_state
+	engagement=EngagementResolver.new(group_state)
 
 func initialize_active_opponents() -> void:
 	for combatant_id in group.combatant_team.keys():
@@ -32,10 +34,13 @@ func after_end_round(round_summary:Dictionary) -> Dictionary:
 		var after:=ensure_active_opponent(owner_id)
 		if before!=after and not after.is_empty():
 			replacements[owner_id]={"from":before,"to":after}
+			engagement.clear_lock(owner_id)
+	var engagement_result:=engagement.resolve_end_round(group.combat_state.round_number)
 	return {
 		"dead_ids":round_summary.get("dead_ids",[]).duplicate(),
 		"removed_ids":removed,
-		"active_replacements":replacements
+		"active_replacements":replacements,
+		"engagement":engagement_result
 	}
 
 func combat_finished() -> bool:
