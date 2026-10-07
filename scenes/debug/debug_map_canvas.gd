@@ -45,6 +45,10 @@ func _draw()->void:
 			points.append(_hex_center(pos))
 		if points.size()>=2:
 			draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
+		for pause in patrol.get("pause_points",[]):
+			var pause_index:int=int(pause.get("path_index",-1))
+			if pause_index>=0 and pause_index<patrol.path.size():
+				draw_circle(_hex_center(patrol.path[pause_index]),5.0,Color(1.0,0.90,0.35),false,2.0,true)
 	_draw_markers(map)
 
 func _draw_markers(map:TacticalMapState)->void:
