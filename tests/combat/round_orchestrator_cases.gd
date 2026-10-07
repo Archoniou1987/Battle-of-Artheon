@@ -209,7 +209,7 @@ static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":10.0}): return false
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":5.0}): return false
 	var results:=orchestrator.resolve_movement_phase()
-	return results.size()==1 and bool(results[0].get("moved",false)) and zones.zone_of("a")==CombatZoneState.ZONE_2 and float(results[0].get("contest_power",0.0))==10.0
+	return results.size()==1 and bool(results[0].get("moved",false)) and zones.zone_of("a")==CombatZoneState.ZONE_2 and float(results[0].get("contest_power",0.0))==15.0
 
 
 static func _opposing_forced_tie_stays_put(balance:Dictionary)->bool:
