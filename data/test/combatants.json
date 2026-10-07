@@ -48,6 +48,21 @@
         "TEST_DAGGER",
         "TEST_AXE"
       ]
+    },
+    {
+      "id": "TEST_BOW_NO_QUIVER",
+      "name": "Bow No Quiver",
+      "equipment": [
+        "TEST_BOW"
+      ]
+    },
+    {
+      "id": "TEST_BOW_WITH_QUIVER",
+      "name": "Bow With Quiver",
+      "equipment": [
+        "TEST_BOW",
+        "TEST_QUIVER"
+      ]
     }
   ]
 }
