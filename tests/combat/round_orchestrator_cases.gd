@@ -2,7 +2,7 @@ class_name RoundOrchestratorCases
 extends RefCounted
 
 static func run(balance:Dictionary) -> bool:
-	return _locked_actions_finish(balance) and _dead_source_cancels_deferred(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance)
+	return _locked_actions_finish(balance) and _dead_source_cancels_deferred(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance) and _deferred_damage_finalizes_death(balance)
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
@@ -104,3 +104,14 @@ static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	if state.get_combatant("t0").hp!=80 or state.get_combatant("t1").hp!=80: return false
 	orchestrator.begin_round(); orchestrator.end_round()
 	return state.get_combatant("t0").hp==70 and state.get_combatant("t1").hp==70
+
+
+static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
+	var state:=_duel_state()
+	var engine:=CombatEngine.new(state,balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	orchestrator.begin_round()
+	var deferred:=state.create_event(CombatEvent.Kind.DAMAGE,"a","b",{"amount":20.0,"damage_type":"physical","source":"deferred"})
+	orchestrator.defer_event(deferred,true,true)
+	var summary:=orchestrator.end_round()
+	return state.get_combatant("b").is_death_finalized() and summary.get("dead_ids",[]).has("b")
