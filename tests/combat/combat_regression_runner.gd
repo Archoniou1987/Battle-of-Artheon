@@ -16,8 +16,9 @@ func _init() -> void:
 	var physical_ok := PhysicalAttackCases.run(balance)
 	var duel_ok := DuelSmokeCases.run(balance)
 	var action_ok := ActionResolverCases.run()
-	var ok := equipment_ok and physical_ok and duel_ok and action_ok
+	var defence_ok := DeliveryDefenceCases.run(balance)
+	var ok := equipment_ok and physical_ok and duel_ok and action_ok and defence_ok
 
-	print("COMBAT_V1_BASELINE equipment=", equipment_ok, " physical=", physical_ok, " duel=", duel_ok, " action=", action_ok)
+	print("COMBAT_V1_BASELINE equipment=", equipment_ok, " physical=", physical_ok, " duel=", duel_ok, " action=", action_ok, " defence=", defence_ok)
 	print("COMBAT_V1_REGRESSION_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
