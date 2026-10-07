@@ -39,7 +39,7 @@ func remove_member(combatant_id:String) -> void:
 func team_of(combatant_id:String) -> String:
 	return String(combatant_team.get(combatant_id,""))
 
-func living_members(team_id:String) -> Array[String]:
+func round_present_members(team_id:String) -> Array[String]:
 	var result:Array[String]=[]
 	for raw_id in teams.get(team_id,[]):
 		var combatant_id:=String(raw_id)
@@ -54,7 +54,7 @@ func living_enemies(combatant_id:String) -> Array[String]:
 	for team_id in teams.keys():
 		if String(team_id)==own_team:
 			continue
-		result.append_array(living_members(String(team_id)))
+		result.append_array(round_present_members(String(team_id)))
 	return result
 
 func set_active_opponent(combatant_id:String, opponent_id:String) -> bool:
@@ -82,3 +82,16 @@ func prune_finalized_deaths() -> Array[String]:
 			removed.append(String(combatant_id))
 			remove_member(String(combatant_id))
 	return removed
+
+
+func actionable_members(team_id:String) -> Array[String]:
+	var result:Array[String]=[]
+	for combatant_id in round_present_members(team_id):
+		var combatant:=combat_state.get_combatant(combatant_id)
+		if combatant!=null and combatant.is_alive():
+			result.append(combatant_id)
+	return result
+
+func living_members(team_id:String) -> Array[String]:
+	# Compatibility alias: group presence lasts until end-round death finalization.
+	return round_present_members(team_id)
