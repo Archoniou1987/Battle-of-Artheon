@@ -3,37 +3,111 @@
   "purpose": "Minimal combat-engine test fixtures. Values are development balance values.",
   "items": [
     {
-      "id": "TEST_DAGGER", "name": "Test Dagger", "slot": "main_hand",
-      "damage": {"min": 2, "max": 3, "type": "piercing"},
+      "id": "TEST_DAGGER",
+      "name": "Test Dagger",
+      "slot": "main_hand",
+      "damage": {
+        "min": 2,
+        "max": 3,
+        "type": "piercing"
+      },
       "manual_block_zones_added": 1,
-      "combat_stats": {"dodge": 7.5},
-      "on_hit_effect": {"effect_id": "EFF001", "chance": 15.0}
+      "combat_stats": {
+        "dodge": 7.5
+      },
+      "on_hit_effect": {
+        "effect_id": "EFF001",
+        "chance": 15
+      },
+      "weapon_class": "dagger",
+      "level": 15
     },
     {
-      "id": "TEST_SWORD", "name": "Test Sword", "slot": "main_hand",
-      "damage": {"min": 3, "max": 4, "type": "slashing"},
+      "id": "TEST_SWORD",
+      "name": "Test Sword",
+      "slot": "main_hand",
+      "damage": {
+        "min": 3,
+        "max": 4,
+        "type": "slashing"
+      },
       "manual_block_zones_added": 1,
-      "combat_stats": {"auto_block": 15.0, "anti_dodge": 5.0},
-      "on_hit_effect": {"effect_id": "EFF002", "chance": 10.0}
+      "combat_stats": {
+        "auto_block": 15,
+        "anti_dodge": 5
+      },
+      "on_hit_effect": {
+        "effect_id": "EFF002",
+        "chance": 10
+      },
+      "weapon_class": "sword",
+      "level": 10
     },
     {
-      "id": "TEST_SHIELD_SWORD", "name": "Test Shield Sword", "slot": "main_hand",
-      "damage": {"min": 3, "max": 4, "type": "slashing"},
+      "id": "TEST_SHIELD_SWORD",
+      "name": "Test Shield Sword",
+      "slot": "main_hand",
+      "damage": {
+        "min": 3,
+        "max": 4,
+        "type": "slashing"
+      },
       "manual_block_zones_added": 1,
+      "combat_stats": {},
+      "weapon_class": "sword",
+      "level": 10
+    },
+    {
+      "id": "TEST_AXE",
+      "name": "Test Axe",
+      "slot": "main_hand",
+      "damage": {
+        "min": 4,
+        "max": 5,
+        "type": "chopping"
+      },
+      "manual_block_zones_added": 1,
+      "combat_stats": {
+        "crit": 10
+      },
+      "on_hit_effect": {
+        "effect_id": "EFF003",
+        "chance": 10
+      },
+      "weapon_class": "axe",
+      "level": 20
+    },
+    {
+      "id": "TEST_SHIELD",
+      "name": "Test Shield",
+      "slot": "off_hand",
+      "manual_block_zones_added": 1,
+      "armour_all_zones_all_physical": 15,
+      "on_manual_block_effect": {
+        "effect_id": "EFF004",
+        "chance": 5
+      }
+    },
+    {
+      "id": "TEST_BOW",
+      "name": "Test Bow",
+      "slot": "main_hand",
+      "weapon_class": "bow",
+      "level": 10,
+      "requires_off_hand_type": "quiver",
+      "damage": {
+        "min": 3,
+        "max": 5,
+        "type": "piercing"
+      },
       "combat_stats": {}
     },
     {
-      "id": "TEST_AXE", "name": "Test Axe", "slot": "main_hand",
-      "damage": {"min": 4, "max": 5, "type": "chopping"},
-      "manual_block_zones_added": 1,
-      "combat_stats": {"crit": 10.0},
-      "on_hit_effect": {"effect_id": "EFF003", "chance": 10.0}
-    },
-    {
-      "id": "TEST_SHIELD", "name": "Test Shield", "slot": "off_hand",
-      "manual_block_zones_added": 1,
-      "armour_all_zones_all_physical": 15.0,
-      "on_manual_block_effect": {"effect_id": "EFF004", "chance": 5.0}
+      "id": "TEST_QUIVER",
+      "name": "Test Quiver",
+      "slot": "off_hand",
+      "item_type": "quiver",
+      "combat_stats": {}
     }
   ]
 }
