@@ -154,7 +154,7 @@ static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool
 	# Move sequentially for this test: it verifies that EFF queries occupants
 	# after Movement, while swap/Contest behavior has its own regression case.
 	zones.set_zone("leaver",CombatZoneState.ZONE_3)
-	if not orchestrator.queue_movement_request("enterer",CombatZoneState.ZONE_2,1,true,"forced"): return false
+	if not orchestrator.queue_movement_request("enterer",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":1.0}): return false
 	orchestrator.end_round()
 	var ok:=state.get_combatant("leaver").hp==100 and state.get_combatant("enterer").hp==90 and zones.zone_of("leaver")==CombatZoneState.ZONE_3 and zones.zone_of("enterer")==CombatZoneState.ZONE_2
 	if not ok: print("ZONE_AOE_STATE leaver_hp=",state.get_combatant("leaver").hp," enterer_hp=",state.get_combatant("enterer").hp," leaver_zone=",zones.zone_of("leaver")," enterer_zone=",zones.zone_of("enterer"))
@@ -206,9 +206,9 @@ static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
 	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
 	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
 	orchestrator.begin_round()
-	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"flat_power":10.0}): return false
-	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"flat_power":5.0}): return false
-	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_1,1,true,"forced",{"flat_power":5.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":10.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":5.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_1,1,true,"forced",{"stats":[],"flat_power":5.0}): return false
 	var results:=orchestrator.resolve_movement_phase()
 	return results.size()==1 and bool(results[0].get("moved",false)) and zones.zone_of("a")==CombatZoneState.ZONE_2 and float(results[0].get("contest_power",0.0))==10.0
 
