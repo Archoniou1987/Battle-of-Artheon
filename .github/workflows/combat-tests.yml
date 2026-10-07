@@ -17,5 +17,7 @@ jobs:
           include-templates: false
       - name: Import project and register script classes
         run: timeout 120s godot --headless --editor --path . --quit
-      - name: Run combat tests and first tournament
+      - name: Run combat regression gate
+        run: timeout 120s godot --headless --path . --script res://tests/combat/combat_regression_runner.gd
+      - name: Run first tournament
         run: timeout 120s godot --headless --path . --script res://tests/combat/tournament_runner.gd
