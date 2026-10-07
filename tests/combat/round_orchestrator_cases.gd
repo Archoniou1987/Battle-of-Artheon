@@ -2,7 +2,7 @@ class_name RoundOrchestratorCases
 extends RefCounted
 
 static func run(balance:Dictionary) -> bool:
-	return _locked_actions_finish(balance) and _dead_source_cancels_deferred(balance) and _living_source_resolves_deferred(balance) and _persistent_aoe_ticks(balance)
+	return _locked_actions_finish(balance) and _dead_source_cancels_deferred(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance)
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
@@ -46,6 +46,44 @@ static func _living_source_resolves_deferred(balance:Dictionary)->bool:
 	orchestrator.defer_event(deferred,true,true)
 	var summary:=orchestrator.end_round()
 	return summary.get("resolved_deferred_event_ids",[]).has(deferred.event_id) and state.get_combatant("b").hp==7
+
+static func _pending_death_can_be_healed(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	var hero:=CombatantState.new("hero","Hero",1,100)
+	hero.hp=20
+	state.add_combatant(hero)
+	state.add_combatant(CombatantState.new("ally","Ally",1,100))
+	var engine:=CombatEngine.new(state,balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	orchestrator.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"ally","hero",{"amount":50.0,"damage_type":"physical"}))
+	if hero.hp!=-30 or hero.visible_hp()!=0 or hero.is_death_finalized(): return false
+	hero.restore_hp(40)
+	var summary:=orchestrator.end_round()
+	return hero.hp==10 and hero.visible_hp()==10 and not hero.is_death_finalized() and not summary.get("dead_ids",[]).has("hero")
+
+static func _insufficient_heal_still_dies(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	var hero:=CombatantState.new("hero","Hero",1,100)
+	hero.hp=20
+	state.add_combatant(hero)
+	var engine:=CombatEngine.new(state,balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	orchestrator.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"hero","hero",{"amount":50.0,"damage_type":"physical"}))
+	hero.restore_hp(20)
+	var summary:=orchestrator.end_round()
+	return hero.hp==-10 and hero.visible_hp()==0 and hero.is_death_finalized() and summary.get("dead_ids",[]).has("hero")
+
+static func _finalized_death_cannot_be_healed(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	var hero:=CombatantState.new("hero","Hero",1,100)
+	hero.hp=-5
+	state.add_combatant(hero)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance))
+	orchestrator.begin_round(); orchestrator.end_round()
+	var healed:=hero.restore_hp(100)
+	return healed==0 and hero.hp==-5 and hero.is_death_finalized()
 
 static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	var state:=CombatState.new()
