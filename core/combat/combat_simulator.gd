@@ -37,13 +37,15 @@ func _run_round(first_id:String,second_id:String)->void:
 	_regenerate_mana()
 	var first:=state.get_combatant(first_id)
 	var second:=state.get_combatant(second_id)
+	_lock_basic_attack(round,first,second)
+	_lock_basic_attack(round,second,first)
+	orchestrator.resolve_locked_actions(round)
+	# ABI is the second immediate phase. Start-of-round participants may finish
+	# their established actions even when Base Attack has driven HP below zero.
 	if first!=null and second!=null and not first.is_death_finalized() and not second.is_death_finalized():
 		_queue_ready_abilities(first,second)
 		_queue_ready_abilities(second,first)
 		engine.resolve_pending_events()
-	_lock_basic_attack(round,first,second)
-	_lock_basic_attack(round,second,first)
-	orchestrator.resolve_locked_actions(round)
 	orchestrator.end_round()
 
 func _regenerate_mana()->void:
