@@ -2,7 +2,7 @@ class_name RoundOrchestratorCases
 extends RefCounted
 
 static func run(balance:Dictionary) -> bool:
-	return _locked_actions_finish(balance) and _dead_source_keeps_deferred_until_death_phase(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance) and _zone_aoe_follows_occupants_after_movement(balance) and _deferred_damage_finalizes_death(balance)
+	return _locked_actions_finish(balance) and _dead_source_keeps_deferred_until_death_phase(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance) and _zone_aoe_follows_occupants_after_movement(balance) and _deferred_damage_finalizes_death(balance) and _kill_attribution_uses_fatal_round_total(balance)
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
@@ -144,3 +144,26 @@ static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
 	orchestrator.defer_event(deferred,true,true)
 	var summary:=orchestrator.end_round()
 	return state.get_combatant("b").is_death_finalized() and summary.get("dead_ids",[]).has("b")
+
+
+static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	for id in ["a","b","victim"]:
+		state.add_combatant(CombatantState.new(id,id,1,100))
+	var engine:=CombatEngine.new(state,balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	orchestrator.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"a","victim",{"amount":60.0,"damage_type":"physical"}))
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"b","victim",{"amount":50.0,"damage_type":"physical"}))
+	var summary:=orchestrator.end_round()
+	if summary.get("kill_attribution",{}).get("victim",[])!=["a"]: return false
+	var state2:=CombatState.new()
+	for id in ["a","b","victim"]:
+		state2.add_combatant(CombatantState.new(id,id,1,100))
+	var engine2:=CombatEngine.new(state2,balance)
+	var orchestrator2:=RoundOrchestrator.new(state2,engine2)
+	orchestrator2.begin_round()
+	engine2.resolve_event(state2.create_event(CombatEvent.Kind.DAMAGE,"a","victim",{"amount":60.0,"damage_type":"physical"}))
+	engine2.resolve_event(state2.create_event(CombatEvent.Kind.DAMAGE,"b","victim",{"amount":60.0,"damage_type":"physical"}))
+	var tied:=orchestrator2.end_round().get("kill_attribution",{}).get("victim",[])
+	return tied==["a","b"]
