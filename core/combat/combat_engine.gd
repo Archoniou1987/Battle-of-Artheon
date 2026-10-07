@@ -51,6 +51,7 @@ func _resolve_action(event: CombatEvent) -> void:
 					"ability_id": String(event.payload.get("ability_id", "")),
 					"delivery_type": delivery_type,
 					"uses_physical_block": damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
+					"bypass_physical_mitigation": not damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
 					"generates_ap": false
 				}, event.event_id)
 			else:
@@ -104,6 +105,20 @@ func _resolve_attack(event: CombatEvent) -> void:
 		if _event_uses_physical_block(event) and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
 			if not _block_crushed(attacker, rolls):
 				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
+
+	if bool(event.payload.get("bypass_physical_mitigation", false)):
+		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
+			"amount": float(event.payload.get("raw_damage", 0.0)),
+			"raw_damage": float(event.payload.get("raw_damage", 0.0)),
+			"damage_type": String(event.payload.get("damage_type", "physical")),
+			"source": "ability",
+			"ability_id": String(event.payload.get("ability_id", "")),
+			"delivery_type": String(event.payload.get("delivery_type", "PROJECTILE"))
+		}, event.event_id)
+		state.queue_event(ability_damage)
+		event.set_result("outcome", "connected")
+		event.set_result("damage_event_id", ability_damage.event_id)
+		return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
 	var crit := CombatMath.effective_crit(float(attacker.combat_stats.get("crit", 0.0)) + active_crit_bonus, float(defender.combat_stats.get("anti_crit", 0.0)))
