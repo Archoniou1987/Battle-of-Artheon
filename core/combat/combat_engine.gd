@@ -24,8 +24,11 @@ func resolve_event(event: CombatEvent) -> void:
 
 func _resolve_action(event: CombatEvent) -> void:
 	var source := state.get_combatant(event.source_id)
-	var target := state.get_combatant(event.target_id)
-	if source == null or target == null:
+	if source == null:
+		event.set_result("outcome", "invalid_combatant")
+		return
+	var target_ids := _valid_action_targets(event)
+	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
 		return
 	var child_event_ids:Array[int] = []
@@ -36,52 +39,83 @@ func _resolve_action(event: CombatEvent) -> void:
 			continue
 		var component:Dictionary = raw_component
 		var kind := String(component.get("kind", ""))
-		var child:CombatEvent = null
-		if kind == "damage":
-			var delivery_type := String(event.payload.get("delivery_type", "DIRECT"))
-			var damage_type := String(component.get("damage_type", "physical"))
-			if delivery_type in ["MELEE", "PROJECTILE"]:
-				child = state.create_event(CombatEvent.Kind.ATTACK, event.source_id, event.target_id, {
-					"raw_damage": float(component.get("amount", 0.0)),
-					"damage_type": damage_type,
-					"zone": String(component.get("zone", event.payload.get("zone", "chest"))),
-					"rolls": event.payload.get("rolls", {}),
-					"source": "ability",
-					"source_kind": "ability",
-					"ability_id": String(event.payload.get("ability_id", "")),
-					"delivery_type": delivery_type,
-					"uses_physical_block": damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
-					"bypass_physical_mitigation": not damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
-					"generates_ap": false
-				}, event.event_id)
-			else:
-				child = state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
-					"amount": float(component.get("amount", 0.0)),
-					"raw_damage": float(component.get("amount", 0.0)),
-					"damage_type": damage_type,
-					"source": "ability",
-					"ability_id": String(event.payload.get("ability_id", "")),
-					"delivery_type": delivery_type
-				}, event.event_id)
-		elif kind == "effect":
-			child = state.create_event(CombatEvent.Kind.EFFECT, event.source_id, event.target_id, {
-				"effect_id": String(component.get("effect_id", "")),
-				"base_chance": float(component.get("base_chance", 100.0)),
-				"resist_type": String(component.get("resist_type", component.get("element", ""))),
-				"effect_roll": int(component.get("effect_roll", event.payload.get("effect_roll", 1))),
-				"source_type": "ability",
-				"ability_id": String(event.payload.get("ability_id", "")),
-				"delivery_type": String(event.payload.get("delivery_type", "DIRECT"))
-			}, event.event_id)
-		if child != null:
-			state.queue_event(child)
-			child_event_ids.append(child.event_id)
-		else:
+		if not ["damage","effect"].has(kind):
 			unsupported_components.append(kind if not kind.is_empty() else "unknown")
+			continue
+		var scale := _aoe_component_scale(component, target_ids.size())
+		for target_id in target_ids:
+			var child := _make_action_component_event(event, component, String(target_id), scale)
+			if child != null:
+				state.queue_event(child)
+				child_event_ids.append(child.event_id)
 	event.set_result("outcome", "dispatched" if not child_event_ids.is_empty() else "no_supported_components")
 	event.set_result("child_event_ids", child_event_ids)
 	event.set_result("dispatched_component_count", child_event_ids.size())
 	event.set_result("unsupported_components", unsupported_components)
+	event.set_result("resolved_target_ids", target_ids)
+
+func _valid_action_targets(event:CombatEvent) -> Array[String]:
+	var result:Array[String] = []
+	var raw_targets:Array = event.payload.get("target_ids", [event.target_id])
+	for raw_id in raw_targets:
+		var target_id := String(raw_id)
+		if target_id.is_empty() or result.has(target_id):
+			continue
+		if state.get_combatant(target_id) != null:
+			result.append(target_id)
+	return result
+
+func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
+	if target_count <= 0:
+		return 0.0
+	var full_targets := int(component.get("full_targets", 0))
+	if full_targets <= 0:
+		return 1.0
+	return minf(1.0, float(full_targets) / float(target_count))
+
+func _make_action_component_event(parent:CombatEvent, component:Dictionary, target_id:String, scale:float) -> CombatEvent:
+	var kind := String(component.get("kind", ""))
+	var delivery_type := String(parent.payload.get("delivery_type", "DIRECT"))
+	if kind == "damage":
+		var damage_type := String(component.get("damage_type", "physical"))
+		var amount := float(component.get("amount", 0.0)) * scale
+		if delivery_type in ["MELEE", "PROJECTILE"]:
+			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, {
+				"raw_damage": amount,
+				"damage_type": damage_type,
+				"zone": String(component.get("zone", parent.payload.get("zone", "chest"))),
+				"rolls": parent.payload.get("rolls", {}),
+				"source": "ability",
+				"source_kind": "ability",
+				"ability_id": String(parent.payload.get("ability_id", "")),
+				"delivery_type": delivery_type,
+				"uses_physical_block": damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
+				"bypass_physical_mitigation": not damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
+				"generates_ap": false,
+				"aoe_scale": scale
+			}, parent.event_id)
+		return state.create_event(CombatEvent.Kind.DAMAGE, parent.source_id, target_id, {
+			"amount": amount,
+			"raw_damage": amount,
+			"damage_type": damage_type,
+			"source": "ability",
+			"ability_id": String(parent.payload.get("ability_id", "")),
+			"delivery_type": delivery_type,
+			"aoe_scale": scale
+		}, parent.event_id)
+	if kind == "effect":
+		return state.create_event(CombatEvent.Kind.EFFECT, parent.source_id, target_id, {
+			"effect_id": String(component.get("effect_id", "")),
+			"base_chance": float(component.get("base_chance", 100.0)) * scale,
+			"unscaled_base_chance": float(component.get("base_chance", 100.0)),
+			"resist_type": String(component.get("resist_type", component.get("element", ""))),
+			"effect_roll": int(component.get("effect_roll", parent.payload.get("effect_roll", 1))),
+			"source_type": "ability",
+			"ability_id": String(parent.payload.get("ability_id", "")),
+			"delivery_type": delivery_type,
+			"aoe_scale": scale
+		}, parent.event_id)
+	return null
 
 func _resolve_attack(event: CombatEvent) -> void:
 	var attacker := state.get_combatant(event.source_id)
