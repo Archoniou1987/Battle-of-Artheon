@@ -21,5 +21,8 @@ jobs:
           use-dotnet: false
           include-templates: false
 
+      - name: Import project and build script class cache
+        run: godot --headless --editor --path . --quit
+
       - name: Run Location Generator stress test
         run: godot --headless --path . --script res://tests/map/location_generator_runner.gd
