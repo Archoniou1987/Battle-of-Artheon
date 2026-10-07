@@ -68,6 +68,8 @@ func _valid_request(request:Dictionary,round_number:int)->bool:
 	var requester_kind:=String(request.get("requester_kind",""))
 	if not group.living_enemies(owner_id).has(target_id):
 		return false
+	# Engagement lock protects only against forced NPC changes.
+	# Player voluntary targeting always overrides it.
 	if requester_kind!="PLAYER" and is_locked(owner_id,round_number):
 		return false
 	return true
