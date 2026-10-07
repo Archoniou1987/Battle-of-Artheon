@@ -2,7 +2,7 @@ class_name ZoneCombatCases
 extends RefCounted
 
 static func run()->bool:
-	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _movement_contest_has_no_initiative() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules() and _physical_projectile_distance_penalizes_hit()
+	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _movement_contest_has_no_initiative() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules() and _physical_projectile_distance_penalizes_hit() and _zone_target_magic_hit_uses_zone_distance()
 
 static func _fixture()->Dictionary:
 	var state:=CombatState.new()
@@ -151,3 +151,26 @@ static func _physical_projectile_distance_penalizes_hit()->bool:
 			attack_event=logged
 			break
 	return attack_event!=null and String(attack_event.result.get("outcome",""))=="miss" and float(attack_event.result.get("distance_hit_modifier",0.0))==-50.0 and state.get_combatant("b").hp==100
+
+
+static func _zone_target_magic_hit_uses_zone_distance()->bool:
+	var f:=_fixture()
+	var state:CombatState=f["state"]
+	var group:GroupCombatState=f["group"]
+	var zones:CombatZoneState=f["zones"]
+	zones.set_zone("a",CombatZoneState.ZONE_1)
+	zones.set_zone("b",CombatZoneState.ZONE_2)
+	state.get_combatant("a").combat_stats["magic_hit"]=75.0
+	var engine:=CombatEngine.new(state,{})
+	engine.configure_spatial_context(group,zones)
+	var spell:=AbilityRuntime.build_action_event(state,"a","b","ZONE_SPELL",{
+		"delivery_type":"AREA",
+		"max_zone_distance":2,
+		"uses_magic_hit":true,
+		"two_zone_hit_modifier":-50.0,
+		"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]
+	})
+	spell.payload["target_zone_id"]=CombatZoneState.ZONE_3
+	spell.payload["magic_hit_roll"]=50
+	state.queue_event(spell); engine.resolve_pending_events()
+	return String(spell.result.get("outcome",""))=="magic_miss" and spell.result.get("child_event_ids",[]).is_empty() and state.get_combatant("b").hp==100
