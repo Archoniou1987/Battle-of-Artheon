@@ -12,7 +12,8 @@ static func run(balance:Dictionary) -> bool:
 		"persistent_aoe":_persistent_aoe_ticks(balance),
 		"zone_aoe":_zone_aoe_follows_occupants_after_movement(balance),
 		"deferred_death":_deferred_damage_finalizes_death(balance),
-		"kill_attribution":_kill_attribution_uses_fatal_round_total(balance)
+		"kill_attribution":_kill_attribution_uses_fatal_round_total(balance),
+		"combined_forced_movement":_combined_forced_movement_uses_one_step(balance)
 	}
 	for case_name in cases:
 		if not bool(cases[case_name]): print("ROUND_CASE_FAIL=",case_name)
@@ -187,3 +188,21 @@ static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 	engine2.resolve_event(state2.create_event(CombatEvent.Kind.DAMAGE,"b","victim",{"amount":60.0,"damage_type":"physical"}))
 	var tied:Array=orchestrator2.end_round().get("kill_attribution",{}).get("victim",[])
 	return tied==["a","b"]
+
+
+static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	state.add_combatant(CombatantState.new("a","A",1,100))
+	state.add_combatant(CombatantState.new("b","B",1,100))
+	var groups:=GroupCombatState.new(state)
+	groups.add_member("A","a"); groups.add_member("B","b")
+	var zones:=CombatZoneState.new(groups)
+	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
+	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	orchestrator.begin_round()
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"flat_power":10.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"flat_power":5.0}): return false
+	if orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"flat_power":99.0}): return false
+	var results:=orchestrator.resolve_movement_phase()
+	return results.size()==1 and bool(results[0].get("moved",false)) and zones.zone_of("a")==CombatZoneState.ZONE_2 and float(results[0].get("contest_power",0.0))==15.0
