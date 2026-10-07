@@ -10,13 +10,27 @@ static func run()->bool:
 	group.add_member("party","companion")
 	group.add_member("enemies","enemy_a")
 	group.add_member("enemies","enemy_b")
-	var policy:=GroupActionPolicy.new(group)
+	var zones:=CombatZoneState.new(group)
+	zones.set_team_flag("party",CombatZoneState.ZONE_1)
+	zones.set_team_flag("enemies",CombatZoneState.ZONE_3)
+	zones.set_zone("player",CombatZoneState.ZONE_1)
+	zones.set_zone("companion",CombatZoneState.ZONE_1)
+	zones.set_zone("enemy_a",CombatZoneState.ZONE_1)
+	zones.set_zone("enemy_b",CombatZoneState.ZONE_3)
+	var policy:=GroupActionPolicy.new(group,zones)
 
 	# Focus fire is legal in the universal PvE model.
-	var changed:=policy.focus_target(["player","companion"],"enemy_a")
+	var melee:={"min_zone_distance":0,"max_zone_distance":0}
+	var changed:=policy.focus_target(["player","companion"],"enemy_a",melee)
 	if changed.size()!=2: return false
 	if group.active_opponent("player")!="enemy_a": return false
 	if group.active_opponent("companion")!="enemy_a": return false
+
+	# A selected target outside the current action reach is not a valid action target.
+	group.set_active_opponent("player","enemy_b")
+	var context:=policy.primary_action_context("player",melee)
+	if String(context.get("target_id",""))!="" or context.get("valid_enemy_targets",[]).has("enemy_b"): return false
+	group.set_active_opponent("player","enemy_a")
 
 	# The enemy may independently choose either party member.
 	group.set_active_opponent("enemy_a","player")
@@ -24,7 +38,7 @@ static func run()->bool:
 	if group.active_opponent("enemy_a")!="player" or group.active_opponent("enemy_b")!="player": return false
 
 	# Every living party member has a full primary action context.
-	var contexts:=policy.team_action_contexts("party")
+	var contexts:=policy.team_action_contexts("party",melee)
 	if contexts.size()!=2: return false
 	for context in contexts:
 		if String(context.get("target_id",""))!="enemy_a": return false
