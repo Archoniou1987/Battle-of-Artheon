@@ -1,0 +1,73 @@
+class_name ZoneCombatCases
+extends RefCounted
+
+static func run()->bool:
+	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement()
+
+static func _fixture()->Dictionary:
+	var state:=CombatState.new()
+	for id in ["a","b","a2"]:
+		state.add_combatant(CombatantState.new(id,id.to_upper(),1,100))
+	var group:=GroupCombatState.new(state)
+	group.add_member("team_a","a")
+	group.add_member("team_a","a2")
+	group.add_member("team_b","b")
+	var zones:=CombatZoneState.new(group)
+	zones.set_team_flag("team_a",CombatZoneState.ZONE_1)
+	zones.set_team_flag("team_b",CombatZoneState.ZONE_3)
+	zones.set_zone("a",CombatZoneState.ZONE_2)
+	zones.set_zone("a2",CombatZoneState.ZONE_1)
+	zones.set_zone("b",CombatZoneState.ZONE_2)
+	return {"state":state,"group":group,"zones":zones}
+
+static func _direction_relative_to_flag()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	return zones.direction("a",CombatZoneState.ZONE_3)==1 and zones.direction("a",CombatZoneState.ZONE_1)==-1 and zones.direction("b",CombatZoneState.ZONE_1)==1 and zones.direction("b",CombatZoneState.ZONE_3)==-1
+
+static func _front_blocks_forward_only()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	# A and B share center. Each may retreat toward its own flag, but neither
+	# may ordinary-Navigate forward through the opposing line.
+	return not zones.ordinary_navigation_allowed("a",CombatZoneState.ZONE_3) and zones.ordinary_navigation_allowed("a",CombatZoneState.ZONE_1) and not zones.ordinary_navigation_allowed("b",CombatZoneState.ZONE_1) and zones.ordinary_navigation_allowed("b",CombatZoneState.ZONE_3)
+
+static func _reach_is_zone_based()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	# Same-zone ranged attacks remain valid. Melee reaches only distance zero.
+	var ranged:={"min_zone_distance":0,"max_zone_distance":2,"two_zone_hit_modifier":-50.0}
+	var melee:={"min_zone_distance":0,"max_zone_distance":0}
+	if not CombatReachPolicy.valid_enemy_targets("a",zones,ranged).has("b"): return false
+	if not CombatReachPolicy.valid_enemy_targets("a",zones,melee).has("b"): return false
+	zones.set_zone("b",CombatZoneState.ZONE_3)
+	return not CombatReachPolicy.valid_enemy_targets("a",zones,melee).has("b") and CombatReachPolicy.valid_enemy_targets("a",zones,ranged).has("b") and CombatReachPolicy.distance_hit_modifier(2,ranged)==-50.0
+
+static func _tempo_only_accepts_or_rejects_declared_move()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	zones.set_zone("b",CombatZoneState.ZONE_3)
+	var resolver:=CombatMovementResolver.new(zones)
+	var failed:=resolver.navigation_result("a",CombatZoneState.ZONE_1,-50.0,75)
+	if bool(failed["moved"]) or String(failed["reason"])!="tempo_failed" or zones.zone_of("a")!=CombatZoneState.ZONE_2: return false
+	var passed:=resolver.navigation_result("a",CombatZoneState.ZONE_1,-50.0,25)
+	if not bool(passed["moved"]) or int(passed["to_zone"])!=CombatZoneState.ZONE_1: return false
+	if not resolver.apply_result(passed): return false
+	return zones.zone_of("a")==CombatZoneState.ZONE_1
+
+static func _special_move_can_break_front()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	var resolver:=CombatMovementResolver.new(zones)
+	var ordinary:=resolver.navigation_result("a",CombatZoneState.ZONE_3,0.0,100)
+	if bool(ordinary["moved"]) or String(ordinary["reason"])!="front_blocked": return false
+	var charge:=resolver.navigation_result("a",CombatZoneState.ZONE_3,0.0,100,true)
+	return bool(charge["moved"]) and int(charge["to_zone"])==CombatZoneState.ZONE_3
+
+static func _root_blocks_all_movement()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	var resolver:=CombatMovementResolver.new(zones)
+	var rooted_navigation:=resolver.navigation_result("a",CombatZoneState.ZONE_1,0.0,1,false,true)
+	var rooted_charge:=resolver.navigation_result("a",CombatZoneState.ZONE_3,0.0,1,true,true)
+	return not bool(rooted_navigation["moved"]) and not bool(rooted_charge["moved"]) and String(rooted_charge["reason"])=="movement_locked"
