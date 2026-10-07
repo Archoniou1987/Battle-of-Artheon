@@ -2,7 +2,7 @@ class_name ZoneCombatCases
 extends RefCounted
 
 static func run()->bool:
-	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _movement_contest_has_no_initiative() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules()
+	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _movement_contest_has_no_initiative() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules() and _physical_projectile_distance_penalizes_hit()
 
 static func _fixture()->Dictionary:
 	var state:=CombatState.new()
@@ -126,3 +126,28 @@ static func _movement_contest_has_no_initiative()->bool:
 		{"combatant_id":"b","to_zone":CombatZoneState.ZONE_1,"tempo":0.0,"tempo_roll":1,"bypass_front":true,"contest_power":20.0}
 	])
 	return bool(won[0].get("moved",false)) and not bool(won[1].get("moved",false)) and zones.zone_of("a")==CombatZoneState.ZONE_2 and zones.zone_of("b")==CombatZoneState.ZONE_2
+
+
+static func _physical_projectile_distance_penalizes_hit()->bool:
+	var f:=_fixture()
+	var state:CombatState=f["state"]
+	var group:GroupCombatState=f["group"]
+	var zones:CombatZoneState=f["zones"]
+	zones.set_zone("a",CombatZoneState.ZONE_1)
+	zones.set_zone("b",CombatZoneState.ZONE_3)
+	var engine:=CombatEngine.new(state,{})
+	engine.configure_spatial_context(group,zones)
+	var attack:=AbilityRuntime.build_action_event(state,"a","b","BOW_SHOT",{
+		"delivery_type":"PROJECTILE",
+		"max_zone_distance":2,
+		"two_zone_hit_modifier":-50.0,
+		"rolls":{"hit":50},
+		"components":[{"kind":"damage","amount":10.0,"damage_type":"physical"}]
+	})
+	state.queue_event(attack); engine.resolve_pending_events()
+	var attack_event:CombatEvent=null
+	for logged in state.event_log:
+		if logged.parent_event_id==attack.event_id and logged.kind==CombatEvent.Kind.ATTACK:
+			attack_event=logged
+			break
+	return attack_event!=null and String(attack_event.result.get("outcome",""))=="miss" and float(attack_event.result.get("distance_hit_modifier",0.0))==-50.0 and state.get_combatant("b").hp==100
