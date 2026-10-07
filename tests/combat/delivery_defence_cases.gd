@@ -7,6 +7,7 @@ static func run(balance: Dictionary) -> bool:
 		and _case_projectile_magic_ignores_physical_block(balance)
 		and _case_melee_physical_can_block(balance)
 		and _case_manual_block_covers_adjacent_zone(balance)
+		and _case_bow_loadout_has_no_block(balance)
 		and _case_direct_bypasses_active_defence(balance)
 	)
 
@@ -83,3 +84,16 @@ static func _case_manual_block_covers_adjacent_zone(balance:Dictionary)->bool:
 	event.payload["components"][0]["zone"]="head"
 	_resolve(state,balance,event)
 	return state.get_combatant("target").hp==100 and _child_outcome(state,event.event_id)=="manual_block"
+
+
+static func _case_bow_loadout_has_no_block(balance:Dictionary)->bool:
+	var state:=_state()
+	var target:=state.get_combatant("target")
+	target.combat_stats["manual_block_zone"]="chest"
+	target.combat_stats["auto_block"]=100.0
+	target.combat_stats["can_manual_block"]=false
+	target.combat_stats["can_auto_block"]=false
+	target.lock_combat_loadout({"weapon_class":"bow","can_manual_block":false,"can_auto_block":false})
+	var event:=_action(state,"MELEE","physical",{"hit":1,"dodge":100,"auto_block":1,"block_crush":100,"crit":100})
+	_resolve(state,balance,event)
+	return target.hp==90 and _child_outcome(state,event.event_id)=="connected"
