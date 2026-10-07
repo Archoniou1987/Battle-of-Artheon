@@ -25,8 +25,10 @@ static func run() -> bool:
 	ok = ok and target.hp == 93
 	var child:CombatEvent = state.event_log[state.event_log.size() - 1]
 	ok = ok and child.parent_event_id == projectile.event_id
-	ok = ok and String(child.payload.get("ability_id", "")) == "ABI_TEST"
-	ok = ok and String(child.payload.get("delivery_type", "")) == "PROJECTILE"
+	ok = ok and child.parent_event_id == projectile.event_id
+	var projectile_attack:CombatEvent=state.event_log[state.event_log.size()-2]
+	ok = ok and String(projectile_attack.payload.get("ability_id",""))=="ABI_TEST"
+	ok = ok and String(projectile_attack.payload.get("delivery_type",""))=="PROJECTILE"
 
 	var legacy := AbilityRuntime.build_damage_event(state, "source", "target", "ABI_LEGACY", {
 		"damage": 3,
