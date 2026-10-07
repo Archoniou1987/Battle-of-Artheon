@@ -165,5 +165,5 @@ static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 	orchestrator2.begin_round()
 	engine2.resolve_event(state2.create_event(CombatEvent.Kind.DAMAGE,"a","victim",{"amount":60.0,"damage_type":"physical"}))
 	engine2.resolve_event(state2.create_event(CombatEvent.Kind.DAMAGE,"b","victim",{"amount":60.0,"damage_type":"physical"}))
-	var tied:=orchestrator2.end_round().get("kill_attribution",{}).get("victim",[])
+	var tied:Array=orchestrator2.end_round().get("kill_attribution",{}).get("victim",[])
 	return tied==["a","b"]
