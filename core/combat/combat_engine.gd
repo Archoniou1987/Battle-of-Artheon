@@ -206,7 +206,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 				_trigger_manual_block_effects(event, defender, rolls)
 				_gain_basic_attack_ap(attacker, event); return
 		var auto_block := float(defender.combat_stats.get("auto_block", 0.0))
-		if _event_uses_physical_block(event) and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
+		if _event_uses_physical_block(event) and defender.can_auto_block() and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
 			if not _block_crushed(attacker, rolls):
 				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
 
