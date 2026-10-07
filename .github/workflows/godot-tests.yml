@@ -7,6 +7,7 @@ jobs:
   location-generator:
     name: Location Generator 200-seed stress test
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -20,13 +21,13 @@ jobs:
           include-templates: false
 
       - name: Import project and build script class cache
-        run: godot --headless --editor --path . --quit
+        run: timeout 120s godot --headless --editor --path . --quit
 
       - name: Run Location Generator stress test
-        run: godot --headless --path . --script res://tests/map/location_generator_runner.gd
+        run: timeout 120s godot --headless --path . --script res://tests/map/location_generator_runner.gd
 
       - name: Run Debug Map Viewer smoke test
-        run: godot --headless --path . --script res://tests/map/debug_map_viewer_runner.gd
+        run: timeout 120s godot --headless --path . --script res://tests/map/debug_map_viewer_runner.gd
 
       - name: Run Combat v1 regression baseline
-        run: godot --headless --path . --script res://tests/combat/combat_regression_runner.gd
+        run: timeout 120s godot --headless --path . --script res://tests/combat/combat_regression_runner.gd
