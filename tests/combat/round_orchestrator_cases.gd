@@ -53,9 +53,15 @@ static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	state.add_combatant(CombatantState.new("t1","T1",1,100))
 	var engine:=CombatEngine.new(state,balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
-	var payload:={"ability_id":"ABI_DOT_AREA","delivery_type":"AREA","target_scope":"ALL_ENEMIES","components":[{"kind":"damage","amount":10.0,"damage_type":"fire","full_targets":2}]}
-	orchestrator.register_persistent_action("caster",["t0","t1"],payload,3)
-	orchestrator.begin_round(); orchestrator.end_round()
+	var initial:=AbilityRuntime.build_action_event(state,"caster","t0","ABI_DOT_AREA",{
+		"delivery_type":"AREA","target_scope":"ALL_ENEMIES","duration_rounds":3,
+		"components":[{"kind":"damage","amount":10.0,"damage_type":"fire","full_targets":2}]
+	})
+	initial.payload["target_ids"]=["t0","t1"]
+	state.queue_event(initial); engine.resolve_pending_events()
+	orchestrator.register_from_action(initial)
 	if state.get_combatant("t0").hp!=90 or state.get_combatant("t1").hp!=90: return false
 	orchestrator.begin_round(); orchestrator.end_round()
-	return state.get_combatant("t0").hp==80 and state.get_combatant("t1").hp==80
+	if state.get_combatant("t0").hp!=80 or state.get_combatant("t1").hp!=80: return false
+	orchestrator.begin_round(); orchestrator.end_round()
+	return state.get_combatant("t0").hp==70 and state.get_combatant("t1").hp==70
