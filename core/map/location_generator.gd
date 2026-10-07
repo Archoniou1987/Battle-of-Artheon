@@ -98,7 +98,10 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			if map.place_entity(patrol_id,patrol_start):
 				patrols.append({"patrol_id":patrol_id,"start":patrol_start,"goal":patrol_goal,"path":patrol_path})
 	var boss_groups:Array[Dictionary]=[]
-	var boss_candidates:Array[Vector2i]=content_cells.duplicate()
+	var boss_candidates:Array[Vector2i]=[]
+	for boss_candidate in content_cells:
+		if map.entities_at(boss_candidate).is_empty():
+			boss_candidates.append(boss_candidate)
 	while not boss_candidates.is_empty() and boss_groups.is_empty():
 		var boss_index:int=rng.randi_range(0,boss_candidates.size()-1)
 		var boss_pos:Vector2i=boss_candidates[boss_index]
@@ -117,7 +120,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		for guard_pos in boss_neighbors:
 			if guard_ids.size()>=2:
 				break
-			if guard_pos==entrance or guard_pos==exit:
+			if guard_pos==entrance or guard_pos==exit or not map.entities_at(guard_pos).is_empty():
 				continue
 			var guard_id:="GEN_BOSS_GUARD_%02d"%guard_ids.size()
 			if map.place_entity(guard_id,guard_pos):
