@@ -54,7 +54,7 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 	simulator.run_duel("mixed", "target")
 	var attacks:Array[CombatEvent]=[]
 	for event in state.event_log:
-		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == "mixed" and not bool(event.payload.get("is_extra_attack", false)):
+		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == "mixed":
 			attacks.append(event)
 	if attacks.size()!=2: return false
 	return (
