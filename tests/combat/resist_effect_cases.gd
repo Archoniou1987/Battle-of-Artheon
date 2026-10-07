@@ -48,7 +48,7 @@ static func _case_effect_chance_80_to_48(balance:Dictionary) -> bool:
 
 static func _case_effect_immunity(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").effect_immunities.append("EFF_FREEZE")
+	state.get_combatant("target").effect_immunities.append("freeze")
 	var event := _effect_event(state,100.0,1)
 	CombatEngine.new(state,balance).resolve_event(event)
 	return not bool(event.result.get("resolved",true)) and String(event.result.get("outcome","")) == "immune" and state.get_combatant("target").active_effects.is_empty()
