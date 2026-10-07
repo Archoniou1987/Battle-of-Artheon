@@ -35,4 +35,34 @@ static func run() -> bool:
 	ok = ok and legacy.kind == CombatEvent.Kind.ACTION
 	ok = ok and legacy.payload.get("components", []).size() == 1
 
+
+	var mixed := AbilityRuntime.build_action_event(state, "source", "target", "ABI_MIXED", {
+		"delivery_type": "AREA",
+		"target_scope": "ALL_ENEMIES",
+		"components": [
+			{"kind":"damage","amount":2,"damage_type":"frost"},
+			{"kind":"effect","effect_id":"EFF_UNKNOWN","base_chance":80}
+		]
+	})
+	engine.resolve_event(mixed)
+	ok = ok and int(mixed.result.get("dispatched_component_count", 0)) == 2
+	ok = ok and mixed.result.get("child_event_ids", []).size() == 2
+	ok = ok and mixed.result.get("unsupported_components", []).is_empty()
+
+	var unsupported := AbilityRuntime.build_action_event(state, "source", "target", "ABI_FUTURE", {
+		"components": [{"kind":"future_component"}]
+	})
+	engine.resolve_event(unsupported)
+	ok = ok and String(unsupported.result.get("outcome", "")) == "no_supported_components"
+	ok = ok and unsupported.result.get("unsupported_components", []).has("future_component")
+
+	var definitions := {"ABI_SCHEDULED":{"delivery_type":"DIRECT","target_scope":"SINGLE","components":[{"kind":"damage","amount":1,"damage_type":"lightning"}],"mana_cost":1,"cooldown_rounds":1}}
+	var loadouts := {"source":["ABI_SCHEDULED"]}
+	var scheduler := AbilityScheduler.new(definitions, loadouts)
+	source.mana = 10
+	var scheduled:Array[CombatEvent] = scheduler.ready_events(state, "source", "target")
+	ok = ok and scheduled.size() == 1
+	ok = ok and scheduled[0].kind == CombatEvent.Kind.ACTION
+	ok = ok and String(scheduled[0].payload.get("ability_id", "")) == "ABI_SCHEDULED"
+
 	return ok
