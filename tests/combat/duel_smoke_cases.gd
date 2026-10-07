@@ -4,7 +4,7 @@ extends RefCounted
 ## Very small integration cases. These test engine behaviour, not balance.
 
 static func run(balance: Dictionary) -> bool:
-	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance) and _weapon_skill_penalties(balance) and _bow_requires_quiver(balance)
+	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance) and _weapon_skill_penalties(balance) and _bow_requires_quiver(balance) and _abi_v2_schema()
 
 
 static func _equal_duel_finishes(balance: Dictionary) -> bool:
@@ -103,6 +103,23 @@ static func _bow_requires_quiver(balance: Dictionary) -> bool:
 	for event in state_b.event_log:
 		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="bow_with": return true
 	return false
+
+static func _abi_v2_schema() -> bool:
+	var definitions:=AbilityCatalog.load_json("res://data/test/abilities.json")
+	var fireball:=AbilityRuntime.normalized_definition("ABI001",AbilityCatalog.definition(definitions,"ABI001"))
+	var legacy:=AbilityRuntime.normalized_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004"))
+	var charge:=AbilityRuntime.normalized_definition("ABI005",AbilityCatalog.definition(definitions,"ABI005"))
+	var blizzard:=AbilityRuntime.normalized_definition("ABI006",AbilityCatalog.definition(definitions,"ABI006"))
+	if String(fireball.get("delivery_type",""))!="PROJECTILE" or String(fireball.get("target_scope",""))!="SINGLE": return false
+	var fire_components:Array=fireball.get("components",[])
+	if fire_components.size()!=1 or float(fire_components[0].get("amount",0))!=5.0: return false
+	var legacy_components:Array=legacy.get("components",[])
+	if legacy_components.size()!=1 or float(legacy_components[0].get("amount",0))!=5.0: return false
+	if String(legacy.get("delivery_type",""))!="DIRECT": return false
+	var engagement:Dictionary=charge.get("engagement",{})
+	if String(charge.get("delivery_type",""))!="MELEE" or not bool(engagement.get("request_target_change",false)): return false
+	var blizzard_components:Array=blizzard.get("components",[])
+	return String(blizzard.get("target_scope",""))=="ALL_ENEMIES" and int(blizzard.get("duration_rounds",0))==3 and blizzard_components.size()==2 and int(blizzard_components[0].get("full_targets",0))==5 and int(blizzard_components[1].get("full_targets",0))==3
 
 static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) -> CombatState:
 	var state := CombatState.new()
