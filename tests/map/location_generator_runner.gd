@@ -66,6 +66,12 @@ func _initialize()->void:
 			valid=valid and HexGrid.distance(object_pos,guard_pos)==1
 			valid=valid and map.cell(object_pos).object_ids.size()>0
 			valid=valid and map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
+			valid=valid and map.entities_at(guard_pos).size()==1
+		var entity_cells:Dictionary={}
+		for entity_id in map.entity_positions.keys():
+			var entity_pos:Vector2i=map.entity_positions[entity_id]
+			valid=valid and not entity_cells.has(entity_pos)
+			entity_cells[entity_pos]=entity_id
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
 			break
