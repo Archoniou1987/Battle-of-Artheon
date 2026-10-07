@@ -52,12 +52,6 @@ func _resolve_action(event: CombatEvent) -> void:
 				"ability_id": String(event.payload.get("ability_id", "")),
 				"delivery_type": String(event.payload.get("delivery_type", "DIRECT"))
 			}, event.event_id)
-		elif kind == "heal":
-			child = state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
-				"amount": -float(component.get("amount", 0.0)),
-				"source": "ability_heal",
-				"ability_id": String(event.payload.get("ability_id", ""))
-			}, event.event_id)
 		if child != null:
 			state.queue_event(child)
 			child_event_ids.append(child.event_id)
