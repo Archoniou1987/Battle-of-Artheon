@@ -56,6 +56,7 @@ func end_round() -> Dictionary:
 	finalized_dead_ids=[]
 	for combatant in state.combatants.values():
 		if not combatant.is_alive():
+			combatant.death_finalized=true
 			finalized_dead_ids.append(combatant.combatant_id)
 	var resolved_deferred:Array[int]=[]
 	var canceled_deferred:Array[int]=[]
