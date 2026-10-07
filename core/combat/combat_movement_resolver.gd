@@ -39,3 +39,46 @@ func _tempo_allows(tempo:float,roll:int)->bool:
 	if tempo>=0.0:
 		return true
 	return CombatMath.roll_success(100.0+tempo,roll)
+
+
+func resolve_simultaneous(requests:Array[Dictionary])->Array[Dictionary]:
+	var results:Array[Dictionary]=[]
+	var provisional:Array[Dictionary]=[]
+	for request in requests:
+		var result:=navigation_result(
+			String(request.get("combatant_id","")),
+			int(request.get("to_zone",-1)),
+			float(request.get("tempo",0.0)),
+			int(request.get("tempo_roll",1)),
+			bool(request.get("bypass_front",false)),
+			bool(request.get("movement_locked",false))
+		)
+		result["contest_power"]=float(request.get("contest_power",0.0))
+		provisional.append(result)
+	var canceled:Dictionary={}
+	for i in range(provisional.size()):
+		if canceled.has(i) or not bool(provisional[i].get("moved",false)):
+			continue
+		for j in range(i+1,provisional.size()):
+			if canceled.has(j) or not bool(provisional[j].get("moved",false)):
+				continue
+			var a:Dictionary=provisional[i]
+			var b:Dictionary=provisional[j]
+			if int(a.from_zone)==int(b.to_zone) and int(a.to_zone)==int(b.from_zone):
+				var a_power:=float(a.get("contest_power",0.0))
+				var b_power:=float(b.get("contest_power",0.0))
+				if a_power==b_power:
+					canceled[i]="contest_tie"; canceled[j]="contest_tie"
+				elif a_power>b_power:
+					canceled[j]="contest_lost"
+				else:
+					canceled[i]="contest_lost"
+	for i in range(provisional.size()):
+		var result:Dictionary=provisional[i]
+		if canceled.has(i):
+			result["moved"]=false
+			result["reason"]=String(canceled[i])
+		elif bool(result.get("moved",false)):
+			apply_result(result)
+		results.append(result)
+	return results
