@@ -7,6 +7,11 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 	for stat_name in item_stats:combatant.combat_stats[stat_name]=float(combatant.combat_stats.get(stat_name,0.0))+float(item_stats[stat_name])
 	var final_stats:Dictionary=item.get("final_stats",{})
 	for stat_name in final_stats:combatant.stats[stat_name]=float(combatant.stats.get(stat_name,0.0))+float(final_stats[stat_name])
+	var equipped_types:Array=combatant.combat_stats.get("equipped_item_types",[])
+	var item_type:=String(item.get("item_type",""))
+	if not item_type.is_empty() and not equipped_types.has(item_type):
+		equipped_types.append(item_type)
+		combatant.combat_stats["equipped_item_types"]=equipped_types
 	var damage:Dictionary=item.get("damage",{}); var is_weapon:=not damage.is_empty()
 	if is_weapon:
 		var weapon_profiles:Array=combatant.combat_stats.get("weapon_profiles",[])
