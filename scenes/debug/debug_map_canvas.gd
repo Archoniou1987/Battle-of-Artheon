@@ -1,0 +1,104 @@
+class_name DebugMapCanvas
+extends Control
+
+const HEX_SIZE:=20.0
+const SQRT3:=1.7320508075688772
+
+var generated:Dictionary={}
+var _entity_roles:Dictionary={}
+
+func set_generated(value:Dictionary)->void:
+	generated=value
+	_build_entity_roles()
+	custom_minimum_size=_map_pixel_size()
+	queue_redraw()
+
+func _build_entity_roles()->void:
+	_entity_roles.clear()
+	for i in range(generated.get("npc_cells",[]).size()):
+		_entity_roles["GEN_NPC_%02d"%i]="NPC"
+	for route_guard in generated.get("route_guards",[]):
+		_entity_roles[route_guard.guard_id]="RG"
+	for patrol in generated.get("patrols",[]):
+		_entity_roles[patrol.patrol_id]="P"
+	for guarded in generated.get("guarded_objects",[]):
+		_entity_roles[guarded.guard_id]="OG"
+	for boss_group in generated.get("boss_groups",[]):
+		_entity_roles[boss_group.boss_id]="B"
+		for guard_id in boss_group.guard_ids:
+			_entity_roles[guard_id]="BG"
+
+func _draw()->void:
+	if generated.is_empty():
+		return
+	var map:TacticalMapState=generated.map
+	for r in range(map.height):
+		for q in range(map.width):
+			var pos:=Vector2i(q,r)
+			var center:=_hex_center(pos)
+			var cell:MapCell=map.cell(pos)
+			draw_colored_polygon(_hex_points(center),_cell_color(cell))
+			draw_polyline(_closed_hex_points(center),Color(0.16,0.20,0.27),1.0,true)
+	for patrol in generated.get("patrols",[]):
+		var points:=PackedVector2Array()
+		for pos in patrol.path:
+			points.append(_hex_center(pos))
+		if points.size()>=2:
+			draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
+	_draw_markers(map)
+
+func _draw_markers(map:TacticalMapState)->void:
+	_draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
+	_draw_badge(_hex_center(generated.exit),"OUT",Color(0.25,0.60,1.0))
+	for pos in generated.get("resource_cells",[]):
+		_draw_badge(_hex_center(pos),"R",Color(0.25,0.75,0.55))
+	for pos in generated.get("object_cells",[]):
+		_draw_badge(_hex_center(pos),"O",Color(0.70,0.48,0.22))
+	for pos in generated.get("encounter_cells",[]):
+		_draw_badge(_hex_center(pos),"E",Color(0.75,0.35,0.75))
+	for entity_id in map.entity_positions.keys():
+		var role:String=_entity_roles.get(entity_id,"?")
+		var color:=Color(0.88,0.88,0.90)
+		if role=="B": color=Color(0.90,0.18,0.20)
+		elif role=="BG": color=Color(0.82,0.32,0.25)
+		elif role=="P": color=Color(0.95,0.72,0.20)
+		elif role=="RG": color=Color(0.45,0.60,0.95)
+		elif role=="OG": color=Color(0.72,0.52,0.30)
+		_draw_badge(_hex_center(map.entity_positions[entity_id]),role,color)
+
+func _cell_color(cell:MapCell)->Color:
+	if cell.blocked:
+		return Color(0.16,0.17,0.20)
+	if cell.terrain_id=="swamp":
+		return Color(0.18,0.32,0.26)
+	if cell.terrain_id=="rough":
+		return Color(0.35,0.30,0.22)
+	return Color(0.20,0.38,0.24)
+
+func _draw_badge(center:Vector2,label:String,color:Color)->void:
+	draw_circle(center,8.5,color)
+	var font:=ThemeDB.fallback_font
+	var size:=9 if label.length()<=2 else 7
+	var width:=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,size).x
+	draw_string(font,center+Vector2(-width*0.5,3.0),label,HORIZONTAL_ALIGNMENT_LEFT,-1,size,Color(0.04,0.05,0.07))
+
+func _hex_center(pos:Vector2i)->Vector2:
+	return Vector2(HEX_SIZE*SQRT3*(float(pos.x)+float(pos.y)*0.5)+HEX_SIZE*1.1,HEX_SIZE*1.5*float(pos.y)+HEX_SIZE*1.1)
+
+func _hex_points(center:Vector2)->PackedVector2Array:
+	var points:=PackedVector2Array()
+	for i in range(6):
+		var angle:=deg_to_rad(60.0*float(i)-30.0)
+		points.append(center+Vector2(cos(angle),sin(angle))*HEX_SIZE)
+	return points
+
+func _closed_hex_points(center:Vector2)->PackedVector2Array:
+	var points:=_hex_points(center)
+	points.append(points[0])
+	return points
+
+func _map_pixel_size()->Vector2:
+	if generated.is_empty():
+		return Vector2(900,680)
+	var map:TacticalMapState=generated.map
+	return Vector2(HEX_SIZE*SQRT3*(float(map.width)+float(map.height)*0.5)+HEX_SIZE*2.5,HEX_SIZE*1.5*float(map.height)+HEX_SIZE*2.5)
