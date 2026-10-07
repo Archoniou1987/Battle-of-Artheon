@@ -51,3 +51,18 @@ func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,t
 		event.payload["target_ids"]=target_ids.duplicate()
 	event.payload["external_action"]=true
 	return event
+
+
+func choose_ability(ready_abilities:Array[Dictionary])->Dictionary:
+	# Phase 10 baseline policy: caller supplies only currently valid/ready abilities.
+	# Higher ai_priority wins; stable input order breaks ties.
+	var chosen:Dictionary={}
+	var best_priority:=-2147483648
+	for ability in ready_abilities:
+		if ability.is_empty():
+			continue
+		var priority:=int(ability.get("ai_priority",0))
+		if chosen.is_empty() or priority>best_priority:
+			chosen=ability
+			best_priority=priority
+	return chosen.duplicate(true)
