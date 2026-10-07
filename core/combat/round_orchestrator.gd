@@ -39,8 +39,14 @@ func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, 
 	if movement_resolver==null or not start_snapshot.has(combatant_id):
 		return false
 	for existing in movement_requests:
-		if String(existing.get("combatant_id",""))==combatant_id:
-			return false
+		if String(existing.get("combatant_id",""))!=combatant_id:
+			continue
+		if movement_kind=="forced" and String(existing.get("movement_kind",""))=="forced" and int(existing.get("to_zone",-1))==to_zone:
+			var combined:Array=existing.get("combined_contests",[])
+			combined.append(contest.duplicate(true))
+			existing["combined_contests"]=combined
+			return true
+		return false
 	var snap:Dictionary=start_snapshot[combatant_id]
 	if bool(snap.get("movement_locked",false)):
 		return false
@@ -52,7 +58,8 @@ func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, 
 		"tempo_roll":tempo_roll,
 		"bypass_front":bypass_front,
 		"movement_kind":movement_kind,
-		"contest":contest.duplicate(true)
+		"contest":contest.duplicate(true),
+		"combined_contests":[contest.duplicate(true)] if movement_kind=="forced" else []
 	})
 	return true
 
@@ -84,7 +91,12 @@ func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
 		var stat:=String(raw_stat)
 		var fallback:=combatant.stats.get("END",0.0) if stat=="STA" else 0.0
 		power+=float(combatant.stats.get(stat,fallback))
-	return power*float(contest.get("multiplier",1.0))
+	power*=float(contest.get("multiplier",1.0))
+	var combined:Array=request.get("combined_contests",[])
+	for i in range(1,combined.size()):
+		var extra:Dictionary=combined[i]
+		power+=float(extra.get("flat_power",0.0))
+	return power
 
 func defer_event(event:CombatEvent, require_source_alive:bool=true, require_target_alive:bool=true) -> void:
 	deferred_events.append({"event":event,"require_source_alive":require_source_alive,"require_target_alive":require_target_alive})
