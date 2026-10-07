@@ -39,6 +39,13 @@ func _resolve_action(event: CombatEvent) -> void:
 		return
 	var child_event_ids:Array[int] = []
 	var unsupported_components:Array[String] = []
+	# Magic AREA/CHAIN is one cast roll, not one independent roll per victim.
+	var shared_magic_roll:=bool(event.payload.get("uses_magic_hit",false)) and String(event.payload.get("delivery_type","DIRECT")) in ["AREA","CHAIN"]
+	if shared_magic_roll and not _magic_hit_success(event,String(target_ids[0])):
+		event.set_result("outcome","magic_miss")
+		event.set_result("child_event_ids",[])
+		event.set_result("resolved_target_ids",[])
+		return
 	for raw_component in event.payload.get("components", []):
 		if not raw_component is Dictionary:
 			unsupported_components.append("invalid")
@@ -50,7 +57,7 @@ func _resolve_action(event: CombatEvent) -> void:
 			continue
 		var scale := _aoe_component_scale(component, target_ids.size())
 		for target_id in target_ids:
-			if not _magic_hit_success(event,String(target_id)):
+			if not shared_magic_roll and not _magic_hit_success(event,String(target_id)):
 				continue
 			var child := _make_action_component_event(event, component, String(target_id), scale)
 			if child != null:
