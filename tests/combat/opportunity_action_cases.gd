@@ -21,7 +21,8 @@ static func _context()->Dictionary:
 static func _independent_rolls()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
-	var decisions:=resolver.decide_against("player",["e1","e2"],{
+	var actors:Array[String]=["e1","e2"]
+	var decisions:Array[Dictionary]=resolver.decide_against("player",actors,{
 		"e1":{"base_attack":10,"ability":10},
 		"e2":{"base_attack":10,"ability":90}
 	})
@@ -40,7 +41,8 @@ static func _independent_rolls()->bool:
 static func _active_opponent_not_restricted()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
-	var decisions:=resolver.decide_against("player",["e0"],{"e0":{"base_attack":1,"ability":1}})
+	var actors:Array[String]=["e0"]
+	var decisions:Array[Dictionary]=resolver.decide_against("player",actors,{"e0":{"base_attack":1,"ability":1}})
 	var has_base:=false
 	var has_abi:=false
 	for decision in decisions:
@@ -52,7 +54,8 @@ static func _active_opponent_not_restricted()->bool:
 static func _dead_actor_cannot_start_opportunity()->bool:
 	var x:=_context()
 	x["state"].get_combatant("e1").hp=-10
-	var decisions:Array=x["resolver"].decide_against("player",["e1","e2"],{
+	var actors:Array[String]=["e1","e2"]
+	var decisions:Array[Dictionary]=x["resolver"].decide_against("player",actors,{
 		"e1":{"base_attack":1,"ability":1},
 		"e2":{"base_attack":100,"ability":100}
 	})
