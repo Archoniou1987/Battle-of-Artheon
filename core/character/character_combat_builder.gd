@@ -28,11 +28,13 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	var weapon_class:=String(main_hand.get("weapon_class",main_hand.get("subtype",""))).to_lower()
 	var is_bow:=weapon_class.contains("bow")
 	combatant.combat_stats["can_manual_block"]=not is_bow
+	combatant.combat_stats["can_auto_block"]=not is_bow
 	combatant.lock_combat_loadout({
 		"equipment_slots":character.equipment.slots.duplicate(true),
 		"main_hand_instance_id":String(main_hand_id) if main_hand_id!=null else "",
 		"weapon_class":weapon_class,
 		"can_manual_block":not is_bow,
+		"can_auto_block":not is_bow,
 		"abilities":combatant.combat_stats["abilities"].duplicate(true)
 	})
 	return combatant
