@@ -135,7 +135,7 @@ static func _abi_v2_scheduler_payload() -> bool:
 	if events.size()!=1: return false
 	var payload:Dictionary=events[0].payload
 	var components:Array=payload.get("components",[])
-	return String(payload.get("delivery_type",""))=="PROJECTILE" and String(payload.get("target_scope",""))=="SINGLE" and String(payload.get("ability_id",""))=="ABI001" and components.size()==1 and float(payload.get("raw_damage",0.0))==5.0 and source.mana==90
+	return String(payload.get("delivery_type",""))=="PROJECTILE" and String(payload.get("target_scope",""))=="SINGLE" and String(payload.get("ability_id",""))=="ABI001" and components.size()==1 and float(components[0].get("amount",0.0))==5.0 and payload.get("target_ids",[]).size()==1 and source.mana==90
 
 static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) -> CombatState:
 	var state := CombatState.new()
