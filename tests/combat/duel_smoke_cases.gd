@@ -4,7 +4,7 @@ extends RefCounted
 ## Very small integration cases. These test engine behaviour, not balance.
 
 static func run(balance: Dictionary) -> bool:
-	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance) and _weapon_skill_penalties(balance) and _bow_requires_quiver(balance) and _abi_v2_schema()
+	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance) and _weapon_skill_penalties(balance) and _bow_requires_quiver(balance) and _abi_v2_schema() and _abi_v2_scheduler_payload()
 
 
 static func _equal_duel_finishes(balance: Dictionary) -> bool:
@@ -120,6 +120,22 @@ static func _abi_v2_schema() -> bool:
 	if String(charge.get("delivery_type",""))!="MELEE" or not bool(engagement.get("request_target_change",false)): return false
 	var blizzard_components:Array=blizzard.get("components",[])
 	return String(blizzard.get("target_scope",""))=="ALL_ENEMIES" and int(blizzard.get("duration_rounds",0))==3 and blizzard_components.size()==2 and int(blizzard_components[0].get("full_targets",0))==5 and int(blizzard_components[1].get("full_targets",0))==3
+
+static func _abi_v2_scheduler_payload() -> bool:
+	var definitions:=AbilityCatalog.load_json("res://data/test/abilities.json")
+	if not AbilityRuntime.validate_definition("ABI001",AbilityCatalog.definition(definitions,"ABI001")).is_empty(): return false
+	if not AbilityRuntime.validate_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004")).is_empty(): return false
+	if AbilityRuntime.validate_definition("BAD",{"delivery_type":"TELEPORT","target_scope":"SINGLE","components":[]}).is_empty(): return false
+	var source:=CombatantState.new("abi_source","ABI Source",10,100)
+	source.mana=100
+	var target:=CombatantState.new("abi_target","ABI Target",10,100)
+	var state:=CombatState.new(); state.add_combatant(source); state.add_combatant(target)
+	var scheduler:=AbilityScheduler.new(definitions,{"abi_source":["ABI001"]})
+	var events:=scheduler.ready_events(state,"abi_source","abi_target")
+	if events.size()!=1: return false
+	var payload:Dictionary=events[0].payload
+	var components:Array=payload.get("components",[])
+	return String(payload.get("delivery_type",""))=="PROJECTILE" and String(payload.get("target_scope",""))=="SINGLE" and String(payload.get("ability_id",""))=="ABI001" and components.size()==1 and float(payload.get("raw_damage",0.0))==5.0 and source.mana==90
 
 static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) -> CombatState:
 	var state := CombatState.new()
