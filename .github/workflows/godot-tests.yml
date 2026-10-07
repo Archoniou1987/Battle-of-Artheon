@@ -1,0 +1,27 @@
+name: Godot Tests
+
+on:
+  push:
+    branches:
+      - feature/equipment-instance-chain
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  location-generator:
+    name: Location Generator 200-seed stress test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+
+      - name: Run Location Generator stress test
+        run: godot --headless --path . --script res://tests/map/location_generator_runner.gd
