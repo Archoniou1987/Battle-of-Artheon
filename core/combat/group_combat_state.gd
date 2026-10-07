@@ -76,10 +76,6 @@ func alternative_targets(combatant_id:String) -> Array[String]:
 	result.erase(active_opponent(combatant_id))
 	return result
 
-func external_enemies(combatant_id:String) -> Array[String]:
-	# Legacy alias. "External" is not an engagement restriction.
-	return alternative_targets(combatant_id)
-
 func prune_finalized_deaths() -> Array[String]:
 	var removed:Array[String]=[]
 	for combatant_id in combatant_team.keys().duplicate():
