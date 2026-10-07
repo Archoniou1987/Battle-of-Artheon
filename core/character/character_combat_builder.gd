@@ -23,7 +23,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	combatant.max_mana += int(equipped_wis) * 15
 	combatant.mana = combatant.max_mana
 	combatant.combat_stats["abilities"] = EquipmentAbilityLoadout.active_abilities(character, repository)
-	var main_hand_id:=character.equipment.get_equipped_instance_id("main_hand")
+	var main_hand_id:Variant=character.equipment.get_equipped_instance_id("main_hand")
 	var main_hand:=repository.get_item(String(main_hand_id)) if main_hand_id!=null else {}
 	var weapon_class:=String(main_hand.get("weapon_class",main_hand.get("subtype",""))).to_lower()
 	var is_bow:=weapon_class.contains("bow")
