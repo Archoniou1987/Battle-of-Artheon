@@ -31,6 +31,17 @@ func defer_event(event:CombatEvent, require_source_alive:bool=true, require_targ
 		"require_target_alive":require_target_alive
 	})
 
+func register_from_action(event:CombatEvent) -> void:
+	var duration_rounds:=int(event.payload.get("duration_rounds",0))
+	if duration_rounds<=1:
+		return
+	var targets:Array[String]=[]
+	for raw_id in event.payload.get("target_ids",[event.target_id]):
+		var target_id:=String(raw_id)
+		if not target_id.is_empty() and not targets.has(target_id):
+			targets.append(target_id)
+	register_persistent_action(event.source_id,targets,event.payload,duration_rounds)
+
 func register_persistent_action(source_id:String, target_ids:Array[String], payload:Dictionary, duration_rounds:int) -> void:
 	if duration_rounds <= 1:
 		return
