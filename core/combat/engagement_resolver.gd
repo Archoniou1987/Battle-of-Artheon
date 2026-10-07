@@ -66,6 +66,11 @@ func _valid_request(request:Dictionary,round_number:int)->bool:
 	var owner_id:=String(request.get("owner_id",""))
 	var target_id:=String(request.get("target_id",""))
 	var requester_kind:=String(request.get("requester_kind",""))
+	var requester_id:=String(request.get("requester_id",""))
+	var requester:=group.combat_state.get_combatant(requester_id)
+	# Phase 2 engagement consequences require the actor to still be alive at End Round.
+	if requester==null or not requester.is_alive() or requester.is_death_finalized():
+		return false
 	if not group.living_enemies(owner_id).has(target_id):
 		return false
 	# Engagement lock protects only against forced NPC changes.
