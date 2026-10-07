@@ -70,6 +70,8 @@ func resolve_movement_phase() -> Array[Dictionary]:
 	var requests:Array[Dictionary]=[]
 	for request in movement_requests:
 		var enriched:Dictionary=request.duplicate(true)
+		if String(enriched.get("movement_kind",""))=="forced":
+			_resolve_forced_direction(enriched)
 		var combatant_id:=String(request.get("combatant_id",""))
 		var snap:Dictionary=start_snapshot.get(combatant_id,{})
 		enriched["movement_locked"]=bool(snap.get("movement_locked",false))
@@ -77,6 +79,25 @@ func resolve_movement_phase() -> Array[Dictionary]:
 		requests.append(enriched)
 	movement_requests.clear()
 	return movement_resolver.resolve_simultaneous(requests)
+
+
+func _resolve_forced_direction(request:Dictionary)->void:
+	var from_zone:=int(request.get("from_zone",-1))
+	var totals:Dictionary={}
+	for raw_effect in request.get("forced_effects",[]):
+		var effect:Dictionary=raw_effect
+		var to_zone:=int(effect.get("to_zone",-1))
+		var direction:=signi(to_zone-from_zone)
+		if direction==0: continue
+		var contest:Dictionary=effect.get("contest",{})
+		totals[direction]=float(totals.get(direction,0.0))+float(contest.get("flat_power",0.0))
+	var forward:=float(totals.get(1,0.0))
+	var backward:=float(totals.get(-1,0.0))
+	if forward==backward:
+		request["movement_locked"]=true
+		return
+	request["to_zone"]=from_zone+(1 if forward>backward else -1)
+	request["contest_power"]=absf(forward-backward)
 
 func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
 	if request.has("contest_power"):
