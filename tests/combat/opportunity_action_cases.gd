@@ -2,7 +2,7 @@ class_name OpportunityActionCases
 extends RefCounted
 
 static func run()->bool:
-	return _independent_rolls() and _active_opponent_excluded() and _dead_external_cannot_start_action() and _base_attack_uses_attack_pipeline() and _ability_uses_action_pipeline()
+	return _independent_rolls() and _active_opponent_not_restricted() and _dead_actor_cannot_start_opportunity() and _base_attack_uses_attack_pipeline() and _ability_uses_action_pipeline()
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
@@ -37,19 +37,19 @@ static func _independent_rolls()->bool:
 		if key=="e2:ABILITY": e2_abi=true
 	return e1_base and e1_abi and e2_base and not e2_abi
 
-static func _active_opponent_excluded()->bool:
+static func _active_opponent_not_restricted()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
-	var decisions:=resolver.decide_against("player",["e0","e1","e2"],{
-		"e0":{"base_attack":1,"ability":1},
-		"e1":{"base_attack":100,"ability":100},
-		"e2":{"base_attack":100,"ability":100}
-	})
+	var decisions:=resolver.decide_against("player",["e0"],{"e0":{"base_attack":1,"ability":1}})
+	var has_base:=false
+	var has_abi:=false
 	for decision in decisions:
-		if String(decision.get("source_id",""))=="e0": return false
-	return decisions.is_empty()
+		if String(decision.get("source_id",""))!="e0": continue
+		if String(decision.get("kind",""))=="BASE_ATTACK": has_base=true
+		if String(decision.get("kind",""))=="ABILITY": has_abi=true
+	return has_base and has_abi
 
-static func _dead_external_cannot_start_action()->bool:
+static func _dead_actor_cannot_start_opportunity()->bool:
 	var x:=_context()
 	x["state"].get_combatant("e1").hp=-10
 	var decisions:Array=x["resolver"].decide_against("player",["e1","e2"],{
