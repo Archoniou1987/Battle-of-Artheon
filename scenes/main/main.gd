@@ -5,6 +5,7 @@ extends Control
 
 func _ready() -> void:
 	_run_core_self_check()
+	$Center/VBox/DebugMapViewer.pressed.connect(_open_debug_map_viewer)
 
 
 func _run_core_self_check() -> void:
@@ -51,3 +52,7 @@ func _run_event_model_check() -> bool:
 		and damage_event.result.get("final_damage") == 12
 		and damage_event.result.get("connected") == true
 	)
+
+
+func _open_debug_map_viewer() -> void:
+	get_tree().change_scene_to_file("res://scenes/debug/debug_map_viewer.tscn")

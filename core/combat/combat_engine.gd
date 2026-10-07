@@ -3,6 +3,7 @@ extends RefCounted
 
 var state: CombatState
 var physical_balance: Dictionary
+var _next_effect_stack_id: int = 1
 
 func _init(combat_state: CombatState, balance: Dictionary = {}) -> void:
 	state = combat_state
@@ -77,7 +78,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if kind == "heal":
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
 	else:
-		_apply_timed_effect(target, effect_id, definition)
+		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
 
 func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defender: CombatantState, rolls: Dictionary) -> void:
@@ -87,20 +88,34 @@ func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defen
 	var trigger: Dictionary = effects[index]
 	if trigger.is_empty(): return
 	if CombatMath.roll_success(float(trigger.get("chance", 0.0)), int(rolls.get("on_hit_effect", 100))):
-		state.queue_event(state.create_event(CombatEvent.Kind.EFFECT, attacker.combatant_id, defender.combatant_id if String(trigger.get("effect_id")) == "EFF001" else attacker.combatant_id, {"effect_id": String(trigger.get("effect_id", ""))}, parent.event_id))
+		var payload := {"effect_id":String(trigger.get("effect_id", "")),"source_type":String(trigger.get("source_type", "item")),"source_instance_id":String(trigger.get("source_instance_id", ""))}
+		state.queue_event(state.create_event(CombatEvent.Kind.EFFECT, attacker.combatant_id, defender.combatant_id if String(trigger.get("effect_id")) == "EFF001" else attacker.combatant_id, payload, parent.event_id))
 
 func _trigger_manual_block_effects(parent: CombatEvent, defender: CombatantState, rolls: Dictionary) -> void:
 	var triggers: Array = defender.combat_stats.get("on_manual_block_effects", [])
 	for trigger in triggers:
 		if CombatMath.roll_success(float(trigger.get("chance", 0.0)), int(rolls.get("manual_block_effect", 100))):
-			state.queue_event(state.create_event(CombatEvent.Kind.EFFECT, defender.combatant_id, defender.combatant_id, {"effect_id": String(trigger.get("effect_id", ""))}, parent.event_id))
+			var payload := {"effect_id":String(trigger.get("effect_id", "")),"source_type":String(trigger.get("source_type", "item")),"source_instance_id":String(trigger.get("source_instance_id", ""))}
+			state.queue_event(state.create_event(CombatEvent.Kind.EFFECT, defender.combatant_id, defender.combatant_id, payload, parent.event_id))
 
-func _apply_timed_effect(target: CombatantState, effect_id: String, definition: Dictionary) -> void:
-	var max_stacks := int(definition.get("max_stacks", 1)); var count := 0
+func _apply_timed_effect(target: CombatantState, effect_id: String, definition: Dictionary, event: CombatEvent) -> void:
+	var stacking := String(definition.get("stacking", "unique"))
+	var max_stacks := maxi(1, int(definition.get("max_stacks", 1)))
+	var matching:Array = []
 	for active in target.active_effects:
-		if String(active.get("effect_id", "")) == effect_id: count += 1
-	if count >= max_stacks: return
-	target.active_effects.append({"effect_id":effect_id,"definition":definition.duplicate(true),"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds", 1))})
+		if String(active.get("effect_id", "")) == effect_id: matching.append(active)
+	var record := _make_effect_record(effect_id, definition, event)
+	if stacking == "stack":
+		if matching.size() < max_stacks: target.active_effects.append(record)
+		return
+	# UNIQUE means one logical buff/debuff per target. Reapplication replaces it.
+	for active in matching: target.active_effects.erase(active)
+	target.active_effects.append(record)
+
+func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEvent)->Dictionary:
+	var stack_id := "%s:%d" % [effect_id, _next_effect_stack_id]
+	_next_effect_stack_id += 1
+	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
 
 func _active_effect_value(target: CombatantState, field: String) -> float:
 	var total := 0.0

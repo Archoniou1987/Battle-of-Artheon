@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "purpose": "Development-only combat fixtures.",
-  "defaults": {"level": 10, "hp": 100, "mana": 0, "tempo": 0.0, "action_points": 0, "max_action_points": 5},
+  "defaults": {"level": 10, "hp": 100, "mana": 25, "mana_regen": 2, "tempo": 0.0, "action_points": 0, "max_action_points": 5},
   "combatants": [
     {"id": "TEST_DAGGER_FIGHTER", "name": "Dagger Fighter", "equipment": ["TEST_DAGGER", "TEST_DAGGER"]},
     {"id": "TEST_SWORD_FIGHTER", "name": "Sword Fighter", "equipment": ["TEST_SWORD"]},

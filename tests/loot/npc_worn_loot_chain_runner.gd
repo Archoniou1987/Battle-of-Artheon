@@ -1,0 +1,35 @@
+extends SceneTree
+func _initialize() -> void:
+	var td:=TestFixtureLoader.load_json("res://data/test/bot_equipment_templates.json")
+	var ld:=TestFixtureLoader.load_json("res://data/test/loot_tables.json")
+	var templates:Dictionary={}
+	for raw in td.get("templates",[]):
+		var t:=raw as Dictionary
+		templates[String(t.get("id",""))]=t
+	var table:Dictionary=(ld.get("loot_tables",[]) as Array)[0] as Dictionary
+	var repository:=ItemRepository.new()
+	var player:=CharacterState.new("PLAYER_CHAIN","Chain Hero",20)
+	var base:={"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"main_hand_damage_min":35.0,"main_hand_damage_max":35.0,"main_hand_damage_type":"slashing"}}
+	var npc:=CombatantState.new("NPC_WORN_BANDIT_001","Worn Bandit",10,25,0)
+	npc.combat_stats={"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	var state:=CombatState.new()
+	state.add_combatant(CharacterCombatBuilder.build(player,repository,base))
+	state.add_combatant(npc)
+	var sim:=CombatSimulator.new(state,TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),7070)
+	sim.max_rounds=10
+	var result:=sim.run_duel(player.character_id,npc.combatant_id)
+	var drops:=CombatRewardService.award_duel_loot(result,npc.combatant_id,player,table,templates,ItemGenerator.new(20261006),repository,LootService.new(4242))
+	var valid:=String(result.get("winner_id",""))==player.character_id and drops.size()==2
+	for item in drops:
+		var maximum:=int(item.get("durability_max",0))
+		var current:=int(item.get("durability_current",0))
+		valid=valid and String(item.get("origin",""))=="loot"
+		valid=valid and maximum>=33 and maximum<=45 and current>=0 and current<maximum
+		valid=valid and String(item.get("loot_source_id",""))==npc.combatant_id
+		valid=valid and player.inventory.owns(String(item.get("instance_id","")))
+		valid=valid and repository.has_item(String(item.get("instance_id","")))
+	print("NPC_LOOT_CONDITION_CHAIN outcome=%s drops=%d" % [String(result.get("outcome","")),drops.size()])
+	for item in drops:
+		print("NPC_LOOT_CONDITION_ITEM "+JSON.stringify(ItemDurabilityService.public_summary(item)))
+	print("NPC_LOOT_CONDITION_CHAIN_TEST="+("PASS" if valid else "FAIL"))
+	quit(0 if valid else 1)

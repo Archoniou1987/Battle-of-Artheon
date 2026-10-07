@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "id": "HUMANOID_COMMON",
+      "entries": [
+        {
+          "mode": "scaled",
+          "category": "equipment"
+        }
+      ]
+    },
+    {
+      "id": "BANDIT_COMMON",
+      "entries": [
+        {
+          "mode": "scaled",
+          "category": "equipment",
+          "item_type": "weapon"
+        }
+      ]
+    },
+    {
+      "id": "REGION_01",
+      "entries": [
+        {
+          "mode": "scaled",
+          "category": "equipment"
+        }
+      ]
+    },
+    {
+      "id": "QUEST_BANDIT",
+      "entries": [
+        {
+          "mode": "fixed",
+          "template_id": "QUEST_BANDIT_TOKEN",
+          "conditions": {
+            "quest_active": "QUEST001"
+          }
+        }
+      ]
+    }
+  ]
+}

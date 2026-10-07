@@ -29,7 +29,9 @@ func create_event(
 	payload: Dictionary = {},
 	parent_event_id: int = -1
 ) -> CombatEvent:
-	var event := CombatEvent.new(next_event_id, kind, source_id, target_id, payload, parent_event_id)
+	var event_payload := payload.duplicate(true)
+	event_payload["round"] = round_number
+	var event := CombatEvent.new(next_event_id, kind, source_id, target_id, event_payload, parent_event_id)
 	next_event_id += 1
 	return event
 

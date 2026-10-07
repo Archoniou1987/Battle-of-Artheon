@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "loot_tables": [
+    {
+      "id": "LOOT_TEST_BANDIT",
+      "entries": [
+        {
+          "template_id": "SWORD_19",
+          "chance": 100,
+          "quality_weights": {
+            "poor": 10,
+            "common": 30,
+            "green": 30,
+            "blue": 20,
+            "purple": 10
+          }
+        },
+        {
+          "template_id": "HEAD_17",
+          "chance": 100,
+          "quality_weights": {
+            "poor": 10,
+            "common": 30,
+            "green": 30,
+            "blue": 20,
+            "purple": 10
+          }
+        }
+      ],
+      "condition_rule": {
+        "origin": "loot",
+        "max_wear_min": 0.1,
+        "max_wear_max": 0.35,
+        "damage_min": 0.15,
+        "damage_max": 0.65,
+        "hidden_progress_min": 0,
+        "hidden_progress_max": 1
+      }
+    }
+  ]
+}
