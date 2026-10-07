@@ -137,7 +137,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	for object_pos in object_cells:
 		var candidates:Array[Vector2i]=[]
 		for neighbor in map.neighbors(object_pos,true):
-			if neighbor!=entrance and neighbor!=exit and not reserved_guard_cells.has(neighbor):
+			if neighbor!=entrance and neighbor!=exit and not reserved_guard_cells.has(neighbor) and map.entities_at(neighbor).is_empty():
 				candidates.append(neighbor)
 		if candidates.is_empty():
 			continue
