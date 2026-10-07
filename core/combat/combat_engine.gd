@@ -4,6 +4,12 @@ extends RefCounted
 var state: CombatState
 var physical_balance: Dictionary
 var _next_effect_stack_id: int = 1
+var group_state:GroupCombatState
+var zone_state:CombatZoneState
+
+func configure_spatial_context(groups:GroupCombatState,zones:CombatZoneState)->void:
+	group_state=groups
+	zone_state=zones
 
 func _init(combat_state: CombatState, balance: Dictionary = {}) -> void:
 	state = combat_state
@@ -39,11 +45,13 @@ func _resolve_action(event: CombatEvent) -> void:
 			continue
 		var component:Dictionary = raw_component
 		var kind := String(component.get("kind", ""))
-		if not ["damage","effect"].has(kind):
+		if not ["damage","effect","heal"].has(kind):
 			unsupported_components.append(kind if not kind.is_empty() else "unknown")
 			continue
 		var scale := _aoe_component_scale(component, target_ids.size())
 		for target_id in target_ids:
+			if not _magic_hit_success(event,String(target_id)):
+				continue
 			var child := _make_action_component_event(event, component, String(target_id), scale)
 			if child != null:
 				state.queue_event(child)
@@ -55,15 +63,60 @@ func _resolve_action(event: CombatEvent) -> void:
 	event.set_result("resolved_target_ids", target_ids)
 
 func _valid_action_targets(event:CombatEvent) -> Array[String]:
-	var result:Array[String] = []
-	var raw_targets:Array = event.payload.get("target_ids", [event.target_id])
+	var result:Array[String]=[]
+	var raw_targets:Array=event.payload.get("target_ids",[event.target_id])
+	var source_team:=group_state.team_of(event.source_id) if group_state!=null else ""
+	var support_action:=_action_is_support(event)
+	var reach_definition:Dictionary={
+		"min_zone_distance":int(event.payload.get("min_zone_distance",0)),
+		"max_zone_distance":int(event.payload.get("max_zone_distance",2 if String(event.payload.get("delivery_type","DIRECT"))!="MELEE" else 0)),
+		"two_zone_hit_modifier":float(event.payload.get("two_zone_hit_modifier",-50.0))
+	}
 	for raw_id in raw_targets:
-		var target_id := String(raw_id)
+		var target_id:=String(raw_id)
 		if target_id.is_empty() or result.has(target_id):
 			continue
-		if state.get_combatant(target_id) != null:
-			result.append(target_id)
+		var target:=state.get_combatant(target_id)
+		if target==null or target.is_death_finalized():
+			continue
+		if group_state!=null:
+			var same_team:=group_state.team_of(target_id)==source_team
+			if support_action!=same_team:
+				continue
+		if zone_state!=null:
+			var d:=zone_state.distance(event.source_id,target_id)
+			if d<0 or not CombatReachPolicy.can_reach(d,int(reach_definition.min_zone_distance),int(reach_definition.max_zone_distance)):
+				continue
+		result.append(target_id)
 	return result
+
+func _action_is_support(event:CombatEvent)->bool:
+	var has_offense:=false
+	var has_support:=false
+	for raw_component in event.payload.get("components",[]):
+		if not raw_component is Dictionary:
+			continue
+		var kind:=String(raw_component.get("kind",""))
+		if kind=="heal":
+			has_support=true
+		elif kind in ["damage","effect"]:
+			has_offense=true
+	return has_support and not has_offense
+
+func _distance_modifier(event:CombatEvent,target_id:String)->float:
+	if zone_state==null:
+		return 0.0
+	var d:=zone_state.distance(event.source_id,target_id)
+	return CombatReachPolicy.distance_hit_modifier(d,event.payload)
+
+func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
+	if not bool(event.payload.get("uses_magic_hit",false)):
+		return true
+	var source:=state.get_combatant(event.source_id)
+	if source==null:
+		return false
+	var chance:=float(source.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
+	return CombatMath.roll_success(clampf(chance,0.0,100.0),int(event.payload.get("magic_hit_roll",1)))
 
 func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
 	if target_count <= 0:
@@ -76,6 +129,14 @@ func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
 func _make_action_component_event(parent:CombatEvent, component:Dictionary, target_id:String, scale:float) -> CombatEvent:
 	var kind := String(component.get("kind", ""))
 	var delivery_type := String(parent.payload.get("delivery_type", "DIRECT"))
+	if kind=="heal":
+		return state.create_event(CombatEvent.Kind.EFFECT,parent.source_id,target_id,{
+			"inline_heal":int(round(float(component.get("amount",0.0))*scale)),
+			"source_type":"ability",
+			"ability_id":String(parent.payload.get("ability_id","")),
+			"delivery_type":delivery_type,
+			"aoe_scale":scale
+		},parent.event_id)
 	if kind == "damage":
 		var damage_type := String(component.get("damage_type", "physical"))
 		var amount := float(component.get("amount", 0.0)) * scale
@@ -193,9 +254,17 @@ func _resolve_damage(event: CombatEvent) -> void:
 
 func _resolve_effect(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
+	if target==null:
+		event.set_result("resolved",false)
+		return
+	if event.payload.has("inline_heal"):
+		var healed:=target.restore_hp(int(event.payload.get("inline_heal",0)))
+		event.set_result("healed",healed)
+		event.set_result("resolved",healed!=0)
+		return
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
-	if target == null or definition.is_empty(): event.set_result("resolved", false); return
+	if definition.is_empty(): event.set_result("resolved", false); return
 	var effect_kind := String(definition.get("kind", ""))
 	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
 		event.set_result("effect_id", effect_id)
