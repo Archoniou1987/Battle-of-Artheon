@@ -157,7 +157,7 @@ static func _physical_projectile_distance_penalizes_hit()->bool:
 		"max_zone_distance":2,
 		"two_zone_hit_modifier":-50.0,
 		"rolls":{"hit":50},
-		"components":[{"kind":"damage","amount":10.0,"damage_type":"physical"}]
+		"components":[{"kind":"damage","amount":10.0,"damage_type":"slashing"}]
 	})
 	state.queue_event(attack); engine.resolve_pending_events()
 	var attack_event:CombatEvent=null
