@@ -2,7 +2,22 @@ class_name ZoneCombatCases
 extends RefCounted
 
 static func run()->bool:
-	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _movement_contest_has_no_initiative() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules() and _physical_projectile_distance_penalizes_hit() and _zone_target_magic_hit_uses_zone_distance()
+	var cases:Dictionary={
+		"direction":_direction_relative_to_flag(),
+		"front":_front_blocks_forward_only(),
+		"reach":_reach_is_zone_based(),
+		"tempo":_tempo_only_accepts_or_rejects_declared_move(),
+		"special_move":_special_move_can_break_front(),
+		"root":_root_blocks_all_movement(),
+		"movement_contest":_movement_contest_has_no_initiative(),
+		"friendly_fire_reach":_engine_rejects_friendly_fire_and_out_of_reach(),
+		"magic_heal":_magic_hit_and_heal_follow_spatial_rules(),
+		"physical_projectile_distance":_physical_projectile_distance_penalizes_hit(),
+		"zone_magic_distance":_zone_target_magic_hit_uses_zone_distance()
+	}
+	for case_name in cases:
+		if not bool(cases[case_name]): print("ZONE_CASE_FAIL=",case_name)
+	return not cases.values().has(false)
 
 static func _fixture()->Dictionary:
 	var state:=CombatState.new()
