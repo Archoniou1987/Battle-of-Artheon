@@ -113,7 +113,14 @@ func _action_is_support(event:CombatEvent)->bool:
 func _distance_modifier(event:CombatEvent,target_id:String)->float:
 	if zone_state==null:
 		return 0.0
-	var d:=zone_state.distance(event.source_id,target_id)
+	var d:=-1
+	if event.payload.has("target_zone_id"):
+		var source_zone:=zone_state.zone_of(event.source_id)
+		var target_zone:=int(event.payload.get("target_zone_id",-1))
+		if source_zone>=CombatZoneState.MIN_ZONE and target_zone>=CombatZoneState.MIN_ZONE and target_zone<=CombatZoneState.MAX_ZONE:
+			d=absi(target_zone-source_zone)
+	if d<0:
+		d=zone_state.distance(event.source_id,target_id)
 	return CombatReachPolicy.distance_hit_modifier(d,event.payload)
 
 func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
