@@ -38,14 +38,30 @@ func _resolve_action(event: CombatEvent) -> void:
 		var kind := String(component.get("kind", ""))
 		var child:CombatEvent = null
 		if kind == "damage":
-			child = state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
-				"amount": float(component.get("amount", 0.0)),
-				"raw_damage": float(component.get("amount", 0.0)),
-				"damage_type": String(component.get("damage_type", "physical")),
-				"source": "ability",
-				"ability_id": String(event.payload.get("ability_id", "")),
-				"delivery_type": String(event.payload.get("delivery_type", "DIRECT"))
-			}, event.event_id)
+			var delivery_type := String(event.payload.get("delivery_type", "DIRECT"))
+			var damage_type := String(component.get("damage_type", "physical"))
+			if delivery_type in ["MELEE", "PROJECTILE"]:
+				child = state.create_event(CombatEvent.Kind.ATTACK, event.source_id, event.target_id, {
+					"raw_damage": float(component.get("amount", 0.0)),
+					"damage_type": damage_type,
+					"zone": String(component.get("zone", event.payload.get("zone", "chest"))),
+					"rolls": event.payload.get("rolls", {}),
+					"source": "ability",
+					"source_kind": "ability",
+					"ability_id": String(event.payload.get("ability_id", "")),
+					"delivery_type": delivery_type,
+					"uses_physical_block": damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
+					"generates_ap": false
+				}, event.event_id)
+			else:
+				child = state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
+					"amount": float(component.get("amount", 0.0)),
+					"raw_damage": float(component.get("amount", 0.0)),
+					"damage_type": damage_type,
+					"source": "ability",
+					"ability_id": String(event.payload.get("ability_id", "")),
+					"delivery_type": delivery_type
+				}, event.event_id)
 		elif kind == "effect":
 			child = state.create_event(CombatEvent.Kind.EFFECT, event.source_id, event.target_id, {
 				"effect_id": String(component.get("effect_id", "")),
@@ -79,13 +95,13 @@ func _resolve_attack(event: CombatEvent) -> void:
 		var dodge := CombatMath.effective_dodge(float(defender.combat_stats.get("dodge", 0.0)), float(attacker.combat_stats.get("anti_dodge", 0.0)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
 			event.set_result("outcome", "dodge"); _queue_counterattack(event, defender, attacker, rolls); _gain_basic_attack_ap(attacker, event); return
-		if _manual_block_success(event, defender):
+		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
 			if not _block_crushed(attacker, rolls):
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
 				_gain_basic_attack_ap(attacker, event); return
 		var auto_block := float(defender.combat_stats.get("auto_block", 0.0))
-		if CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
+		if _event_uses_physical_block(event) and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
 			if not _block_crushed(attacker, rolls):
 				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
 
@@ -200,6 +216,11 @@ func _active_defence_available(tempo: float, roll: int) -> bool:
 	if tempo <= -100.0: return false
 	if tempo >= 0.0: return true
 	return CombatMath.roll_success(100.0 + tempo, roll)
+func _event_uses_physical_block(event: CombatEvent) -> bool:
+	if not event.payload.has("uses_physical_block"):
+		return true
+	return bool(event.payload.get("uses_physical_block", false))
+
 func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
 	var attack_zone := String(event.payload.get("zone", "")); var chosen_zones: Array = defender.combat_stats.get("manual_block_zones", [])
 	if chosen_zones.has(attack_zone): return true
