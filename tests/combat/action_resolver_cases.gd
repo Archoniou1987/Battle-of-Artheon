@@ -65,4 +65,5 @@ static func run() -> bool:
 	ok = ok and scheduled[0].kind == CombatEvent.Kind.ACTION
 	ok = ok and String(scheduled[0].payload.get("ability_id", "")) == "ABI_SCHEDULED"
 
+	if not ok: print("ACTION_RESOLVER_CASES=FAIL")
 	return ok
