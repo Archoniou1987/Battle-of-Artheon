@@ -33,7 +33,14 @@ func run_duel(first_id: String, second_id: String) -> Dictionary:
 	return {"outcome":outcome,"winner_id":winner_id,"loser_id":loser_id,"rounds":state.round_number,"first_hp":first.hp,"second_hp":second.hp,"first_mana":first.mana,"second_mana":second.mana,"events":state.event_log.size()}
 
 func _run_round(first_id:String,second_id:String)->void:
-	var round:=orchestrator.begin_round()
+	# Keep the legacy duel smoke simulator independent from spatial movement.
+	# Combat v2's orchestrator is used only when it has a complete spatial context.
+	var round:CombatRound
+	if orchestrator!=null:
+		round=orchestrator.begin_round()
+	else:
+		state.begin_round()
+		round=CombatRound.new(state.round_number)
 	_regenerate_mana()
 	var first:=state.get_combatant(first_id)
 	var second:=state.get_combatant(second_id)
