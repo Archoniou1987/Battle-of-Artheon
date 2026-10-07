@@ -169,9 +169,9 @@ static func _zone_target_magic_hit_uses_zone_distance()->bool:
 		"uses_magic_hit":true,
 		"two_zone_hit_modifier":-50.0,
 		"target_zone_id":CombatZoneState.ZONE_3,
+		"magic_hit_roll":50,
 		"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]
 	})
 	if int(spell.payload.get("target_zone_id",-1))!=CombatZoneState.ZONE_3: return false
-	spell.payload["magic_hit_roll"]=50
 	state.queue_event(spell); engine.resolve_pending_events()
 	return String(spell.result.get("outcome",""))=="magic_miss" and spell.result.get("child_event_ids",[]).is_empty() and state.get_combatant("b").hp==100
