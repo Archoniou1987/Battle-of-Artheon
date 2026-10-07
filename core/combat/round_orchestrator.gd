@@ -54,10 +54,8 @@ func register_persistent_action(source_id:String, target_ids:Array[String], payl
 
 func end_round() -> Dictionary:
 	finalized_dead_ids=[]
-	for combatant in state.combatants.values():
-		if not combatant.is_alive():
-			combatant.death_finalized=true
-			finalized_dead_ids.append(combatant.combatant_id)
+	# Deferred consequences are validated against the state produced by this
+	# round's locked actions, then resolved before final death is committed.
 	var resolved_deferred:Array[int]=[]
 	var canceled_deferred:Array[int]=[]
 	for record in deferred_events:
@@ -69,6 +67,11 @@ func end_round() -> Dictionary:
 			canceled_deferred.append(event.event_id)
 	deferred_events.clear()
 	engine.resolve_pending_events()
+	# One final death snapshot includes damage caused by valid deferred events.
+	for combatant in state.combatants.values():
+		if not combatant.is_alive():
+			combatant.death_finalized=true
+			finalized_dead_ids.append(combatant.combatant_id)
 	_tick_effect_durations()
 	return {
 		"dead_ids":finalized_dead_ids.duplicate(),
