@@ -2,6 +2,7 @@ class_name RoundOrchestratorCases
 extends RefCounted
 
 static func run(balance:Dictionary) -> bool:
+	print("CASE_SUITE_START=round_orchestrator_cases")
 	var cases:Dictionary={
 		"locked":_locked_actions_finish(balance),
 		"dead_source_deferred":_dead_source_keeps_deferred_until_death_phase(balance),
