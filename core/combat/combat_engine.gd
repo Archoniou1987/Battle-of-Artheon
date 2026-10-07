@@ -16,10 +16,53 @@ func resolve_pending_events() -> void:
 
 func resolve_event(event: CombatEvent) -> void:
 	match event.kind:
+		CombatEvent.Kind.ACTION: _resolve_action(event)
 		CombatEvent.Kind.ATTACK: _resolve_attack(event)
 		CombatEvent.Kind.DAMAGE: _resolve_damage(event)
 		CombatEvent.Kind.EFFECT: _resolve_effect(event)
 	state.record_event(event)
+
+func _resolve_action(event: CombatEvent) -> void:
+	var source := state.get_combatant(event.source_id)
+	var target := state.get_combatant(event.target_id)
+	if source == null or target == null:
+		event.set_result("outcome", "invalid_combatant")
+		return
+	var child_event_ids:Array[int] = []
+	for raw_component in event.payload.get("components", []):
+		if not raw_component is Dictionary:
+			continue
+		var component:Dictionary = raw_component
+		var kind := String(component.get("kind", ""))
+		var child:CombatEvent = null
+		if kind == "damage":
+			child = state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
+				"amount": float(component.get("amount", 0.0)),
+				"raw_damage": float(component.get("amount", 0.0)),
+				"damage_type": String(component.get("damage_type", "physical")),
+				"source": "ability",
+				"ability_id": String(event.payload.get("ability_id", "")),
+				"delivery_type": String(event.payload.get("delivery_type", "DIRECT"))
+			}, event.event_id)
+		elif kind == "effect":
+			child = state.create_event(CombatEvent.Kind.EFFECT, event.source_id, event.target_id, {
+				"effect_id": String(component.get("effect_id", "")),
+				"base_chance": float(component.get("base_chance", 100.0)),
+				"source_type": "ability",
+				"ability_id": String(event.payload.get("ability_id", "")),
+				"delivery_type": String(event.payload.get("delivery_type", "DIRECT"))
+			}, event.event_id)
+		elif kind == "heal":
+			child = state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
+				"amount": -float(component.get("amount", 0.0)),
+				"source": "ability_heal",
+				"ability_id": String(event.payload.get("ability_id", ""))
+			}, event.event_id)
+		if child != null:
+			state.queue_event(child)
+			child_event_ids.append(child.event_id)
+	event.set_result("outcome", "dispatched")
+	event.set_result("child_event_ids", child_event_ids)
 
 func _resolve_attack(event: CombatEvent) -> void:
 	var attacker := state.get_combatant(event.source_id)
