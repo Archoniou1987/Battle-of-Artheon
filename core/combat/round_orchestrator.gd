@@ -150,6 +150,7 @@ func resolve_effect_phase() -> Array[int]:
 
 func end_round() -> Dictionary:
 	finalized_dead_ids=[]
+	var kill_attribution:Dictionary={}
 	var resolved_deferred:Array[int]=[]
 	var canceled_deferred:Array[int]=[]
 	for record in deferred_events:
@@ -167,9 +168,13 @@ func end_round() -> Dictionary:
 		if not combatant.is_alive():
 			combatant.death_finalized=true
 			finalized_dead_ids.append(combatant.combatant_id)
+			var killers:=state.fatal_round_killers(combatant.combatant_id)
+			if not killers.is_empty():
+				kill_attribution[combatant.combatant_id]=killers
 	_tick_effect_durations()
 	return {
 		"dead_ids":finalized_dead_ids.duplicate(),
+		"kill_attribution":kill_attribution,
 		"resolved_deferred_event_ids":resolved_deferred,
 		"canceled_deferred_event_ids":canceled_deferred,
 		"movement_results":movement_results,
