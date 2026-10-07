@@ -2,7 +2,21 @@ class_name RoundOrchestratorCases
 extends RefCounted
 
 static func run(balance:Dictionary) -> bool:
-	return _locked_actions_finish(balance) and _dead_source_keeps_deferred_until_death_phase(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance) and _zone_aoe_follows_occupants_after_movement(balance) and _deferred_damage_finalizes_death(balance) and _kill_attribution_uses_fatal_round_total(balance)
+	var cases:Dictionary={
+		"locked":_locked_actions_finish(balance),
+		"dead_source_deferred":_dead_source_keeps_deferred_until_death_phase(balance),
+		"living_source_deferred":_living_source_resolves_deferred(balance),
+		"heal_rescue":_pending_death_can_be_healed(balance),
+		"heal_insufficient":_insufficient_heal_still_dies(balance),
+		"finalized_no_heal":_finalized_death_cannot_be_healed(balance),
+		"persistent_aoe":_persistent_aoe_ticks(balance),
+		"zone_aoe":_zone_aoe_follows_occupants_after_movement(balance),
+		"deferred_death":_deferred_damage_finalizes_death(balance),
+		"kill_attribution":_kill_attribution_uses_fatal_round_total(balance)
+	}
+	for case_name in cases:
+		if not bool(cases[case_name]): print("ROUND_CASE_FAIL=",case_name)
+	return not cases.values().has(false)
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
