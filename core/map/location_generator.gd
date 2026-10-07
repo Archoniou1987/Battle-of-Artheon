@@ -89,9 +89,9 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		if not npc_cells.has(patrol_pos):
 			patrol_candidates.append(patrol_pos)
 	if patrol_candidates.size()>=2:
-		var patrol_start:=patrol_candidates.pop_back()
-		var patrol_goal:=patrol_candidates[rng.randi_range(0,patrol_candidates.size()-1)]
-		var patrol_result:=HexPathfinder.new().find_path(map,patrol_start,patrol_goal)
+		var patrol_start:Vector2i=patrol_candidates.pop_back()
+		var patrol_goal:Vector2i=patrol_candidates[rng.randi_range(0,patrol_candidates.size()-1)]
+		var patrol_result:Dictionary=HexPathfinder.new().find_path(map,patrol_start,patrol_goal)
 		var patrol_path:Array=patrol_result.get("path",[])
 		if bool(patrol_result.get("ok",false)) and patrol_path.size()>=2:
 			var patrol_id:="GEN_PATROL_00"
