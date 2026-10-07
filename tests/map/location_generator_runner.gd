@@ -79,7 +79,6 @@ func _initialize()->void:
 			valid=valid and map.cell(object_pos).object_ids.size()>0
 			valid=valid and map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
 			valid=valid and map.entities_at(guard_pos).size()==1
-		var entity_cells:Dictionary={}
 		for npc_pos in generated.npc_cells:
 			valid=valid and HexGrid.distance(entrance,npc_pos)>3
 		for encounter_pos in generated.encounter_cells:
