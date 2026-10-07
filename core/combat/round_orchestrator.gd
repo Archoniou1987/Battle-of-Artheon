@@ -114,10 +114,6 @@ func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
 		var fallback:=combatant.stats.get("END",0.0) if stat=="STA" else 0.0
 		power+=float(combatant.stats.get(stat,fallback))
 	power*=float(contest.get("multiplier",1.0))
-	var combined:Array=request.get("combined_contests",[])
-	for i in range(1,combined.size()):
-		var extra:Dictionary=combined[i]
-		power+=float(extra.get("flat_power",0.0))
 	return power
 
 func defer_event(event:CombatEvent, require_source_alive:bool=true, require_target_alive:bool=true) -> void:
