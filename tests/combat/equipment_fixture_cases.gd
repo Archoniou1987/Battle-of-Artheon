@@ -16,7 +16,7 @@ static func run() -> bool:
 		and String(second_dagger.get("item_id",""))=="TEST_DAGGER"
 		and is_equal_approx(float(first_dagger.get("damage_min",0.0)),2.0)
 		and is_equal_approx(float(second_dagger.get("damage_max",0.0)),3.0)
-		dagger.hp == 100
+		and dagger.hp == 100
 		and is_equal_approx(float(dagger.combat_stats.get("dodge",0.0)),15.0)
 		and int(dagger.combat_stats.get("weapon_attack_count",0)) == 2
 		and int(dagger.combat_stats.get("manual_block_zone_capacity",0)) == 1
