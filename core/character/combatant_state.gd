@@ -53,15 +53,21 @@ func is_death_finalized() -> bool:
 
 
 func apply_damage(amount: int) -> int:
-	var applied := mini(hp, maxi(0, amount))
+	var applied := maxi(0, amount)
 	hp -= applied
 	return applied
 
 
 func restore_hp(amount: int) -> int:
+	if death_finalized:
+		return 0
 	var before := hp
 	hp = mini(max_hp, hp + maxi(0, amount))
 	return hp - before
+
+
+func visible_hp() -> int:
+	return clampi(hp, 0, max_hp)
 
 
 func spend_mana(amount: int) -> bool:
