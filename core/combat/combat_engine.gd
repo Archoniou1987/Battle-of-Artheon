@@ -371,6 +371,8 @@ func _event_uses_physical_block(event: CombatEvent) -> bool:
 	return bool(event.payload.get("uses_physical_block", false))
 
 func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
+	if not defender.can_manual_block():
+		return false
 	var attack_zone := String(event.payload.get("zone", "")); var chosen_zones: Array = defender.combat_stats.get("manual_block_zones", [])
 	if chosen_zones.has(attack_zone): return true
 	var legacy_zone := String(defender.combat_stats.get("manual_block_zone", "")); return not legacy_zone.is_empty() and legacy_zone == attack_zone
