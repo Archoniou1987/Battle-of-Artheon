@@ -27,7 +27,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	if attacker == null or defender == null:
 		event.set_result("outcome", "invalid_combatant"); return
 	var rolls: Dictionary = event.payload.get("rolls", {})
-	var hit_chance := _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0))
+	var hit_chance := _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0)))
+	event.set_result("weapon_skill_hit_penalty", _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0))))
 	if not CombatMath.roll_success(hit_chance, int(rolls.get("hit", 100))):
 		event.set_result("outcome", "miss"); _gain_basic_attack_ap(attacker, event); return
 	var active_defence_available := _active_defence_available(defender.tempo, int(rolls.get("reaction", 100)))
@@ -137,6 +138,16 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void:
 	if bool(event.payload.get("generates_ap", true)) and not bool(event.payload.get("is_counterattack", false)) and not bool(event.payload.get("is_extra_attack", false)):
 		event.set_result("ap_gained", attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain", 1))))
+
+func _weapon_skill_hit_penalty(attacker: CombatantState, weapon_index: int) -> float:
+	var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
+	if profiles.is_empty(): return 0.0
+	var profile:Dictionary=profiles[clampi(weapon_index,0,profiles.size()-1)]
+	var weapon_class:=String(profile.get("weapon_class",""))
+	if weapon_class.is_empty(): return 0.0
+	var item_level:=maxi(1,int(profile.get("item_level",1)))
+	var deficit:=maxi(0,item_level-attacker.weapon_skill(weapon_class))
+	return float(mini(deficit,80))
 
 func _hit_chance(level_difference: int) -> float:
 	var table: Dictionary = physical_balance.get("hit_by_level_difference", {})
