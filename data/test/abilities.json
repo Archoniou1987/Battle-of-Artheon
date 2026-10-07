@@ -1,6 +1,91 @@
 {
-  "ABI001": {"name":"Fireball","damage":5,"damage_type":"fire","cooldown_rounds":2,"mana_cost":10},
-  "ABI002": {"name":"Frostball","damage":5,"damage_type":"frost","cooldown_rounds":2,"mana_cost":7},
-  "ABI003": {"name":"Lightning","damage":5,"damage_type":"lightning","cooldown_rounds":2,"mana_cost":5},
-  "ABI004": {"name":"Shield Bash","damage":5,"damage_type":"physical","cooldown_rounds":2,"mana_cost":2}
+  "ABI001": {
+    "name": "Fireball",
+    "delivery_type": "PROJECTILE",
+    "target_scope": "SINGLE",
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 5,
+        "damage_type": "fire"
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 10
+  },
+  "ABI002": {
+    "name": "Frostball",
+    "delivery_type": "PROJECTILE",
+    "target_scope": "SINGLE",
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 5,
+        "damage_type": "frost"
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 7
+  },
+  "ABI003": {
+    "name": "Lightning",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 5,
+        "damage_type": "lightning"
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 5
+  },
+  "ABI004": {
+    "name": "Shield Bash",
+    "damage": 5,
+    "damage_type": "physical",
+    "cooldown_rounds": 2,
+    "mana_cost": 2
+  },
+  "ABI005": {
+    "name": "Charge",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 4,
+        "damage_type": "physical"
+      }
+    ],
+    "engagement": {
+      "phase": "END_ROUND",
+      "request_target_change": true
+    },
+    "cooldown_rounds": 3,
+    "mana_cost": 0
+  },
+  "ABI006": {
+    "name": "Blizzard",
+    "delivery_type": "AREA",
+    "target_scope": "ALL_ENEMIES",
+    "duration_rounds": 3,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 25,
+        "damage_type": "frost",
+        "full_targets": 5
+      },
+      {
+        "kind": "effect",
+        "effect_id": "EFF_FREEZE",
+        "base_chance": 80,
+        "full_targets": 3
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 15
+  }
 }
