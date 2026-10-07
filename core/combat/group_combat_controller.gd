@@ -23,14 +23,15 @@ func ensure_active_opponent(combatant_id:String) -> String:
 	return replacement
 
 func after_end_round(round_summary:Dictionary) -> Dictionary:
+	var previous:Dictionary=group.active_opponent_by_combatant.duplicate()
 	var removed:=group.prune_finalized_deaths()
 	var replacements:Dictionary={}
 	for combatant_id in group.combatant_team.keys():
 		var owner_id:=String(combatant_id)
-		var before:=group.active_opponent(owner_id)
+		var before:=String(previous.get(owner_id,""))
 		var after:=ensure_active_opponent(owner_id)
 		if before!=after and not after.is_empty():
-			replacements[owner_id]=after
+			replacements[owner_id]={"from":before,"to":after}
 	return {
 		"dead_ids":round_summary.get("dead_ids",[]).duplicate(),
 		"removed_ids":removed,
