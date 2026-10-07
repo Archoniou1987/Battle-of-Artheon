@@ -22,7 +22,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		var mana_cost := int(definition.get("mana_cost", 0))
 		if source.mana < mana_cost: continue
 		if not source.spend_mana(mana_cost): continue
-		events.append(AbilityRuntime.build_damage_event(state, source_id, target_id, ability_id, definition))
+		events.append(AbilityRuntime.build_action_event(state, source_id, target_id, ability_id, definition))
 		AbilityRuntime.start_cooldown(ability_id, cooldowns, state.round_number, int(definition.get("cooldown_rounds", 0)))
 	cooldowns_by_combatant[source_id] = cooldowns
 	return events
