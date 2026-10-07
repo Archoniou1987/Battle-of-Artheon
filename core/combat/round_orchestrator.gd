@@ -35,7 +35,7 @@ func begin_round() -> CombatRound:
 func resolve_locked_actions(round:CombatRound) -> void:
 	round.resolve(engine)
 
-func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, bypass_front:bool=false, movement_kind:String="navigation") -> bool:
+func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, bypass_front:bool=false, movement_kind:String="navigation", contest:Dictionary={}) -> bool:
 	if movement_resolver==null or not start_snapshot.has(combatant_id):
 		return false
 	for existing in movement_requests:
@@ -51,7 +51,8 @@ func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, 
 		"tempo":float(snap.get("tempo",0.0)),
 		"tempo_roll":tempo_roll,
 		"bypass_front":bypass_front,
-		"movement_kind":movement_kind
+		"movement_kind":movement_kind,
+		"contest":contest.duplicate(true)
 	})
 	return true
 
