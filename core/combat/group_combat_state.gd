@@ -1,8 +1,10 @@
 class_name GroupCombatState
 extends RefCounted
 
-## Structural state for group combat. Engagement policy is intentionally kept
-## outside this class and is added in Phase 9.
+## Universal N x M combat structure.
+## Teams contain combatants; a combatant's active opponent is only its current
+## primary target. Targets are not reserved: many combatants may select the same
+## opponent. PvP pairing/focus restrictions belong to a separate targeting policy.
 
 var combat_state:CombatState
 var teams:Dictionary={}
@@ -69,10 +71,14 @@ func active_opponent(combatant_id:String) -> String:
 		return opponent_id
 	return ""
 
-func external_enemies(combatant_id:String) -> Array[String]:
+func alternative_targets(combatant_id:String) -> Array[String]:
 	var result:=living_enemies(combatant_id)
 	result.erase(active_opponent(combatant_id))
 	return result
+
+func external_enemies(combatant_id:String) -> Array[String]:
+	# Legacy alias. "External" is not an engagement restriction.
+	return alternative_targets(combatant_id)
 
 func prune_finalized_deaths() -> Array[String]:
 	var removed:Array[String]=[]
