@@ -29,8 +29,10 @@ func _resolve_action(event: CombatEvent) -> void:
 		event.set_result("outcome", "invalid_combatant")
 		return
 	var child_event_ids:Array[int] = []
+	var unsupported_components:Array[String] = []
 	for raw_component in event.payload.get("components", []):
 		if not raw_component is Dictionary:
+			unsupported_components.append("invalid")
 			continue
 		var component:Dictionary = raw_component
 		var kind := String(component.get("kind", ""))
@@ -55,8 +57,12 @@ func _resolve_action(event: CombatEvent) -> void:
 		if child != null:
 			state.queue_event(child)
 			child_event_ids.append(child.event_id)
-	event.set_result("outcome", "dispatched")
+		else:
+			unsupported_components.append(kind if not kind.is_empty() else "unknown")
+	event.set_result("outcome", "dispatched" if not child_event_ids.is_empty() else "no_supported_components")
 	event.set_result("child_event_ids", child_event_ids)
+	event.set_result("dispatched_component_count", child_event_ids.size())
+	event.set_result("unsupported_components", unsupported_components)
 
 func _resolve_attack(event: CombatEvent) -> void:
 	var attacker := state.get_combatant(event.source_id)
