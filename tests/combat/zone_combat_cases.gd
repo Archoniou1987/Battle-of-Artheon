@@ -2,7 +2,7 @@ class_name ZoneCombatCases
 extends RefCounted
 
 static func run()->bool:
-	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement()
+	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules()
 
 static func _fixture()->Dictionary:
 	var state:=CombatState.new()
@@ -71,3 +71,39 @@ static func _root_blocks_all_movement()->bool:
 	var rooted_navigation:=resolver.navigation_result("a",CombatZoneState.ZONE_1,0.0,1,false,true)
 	var rooted_charge:=resolver.navigation_result("a",CombatZoneState.ZONE_3,0.0,1,true,true)
 	return not bool(rooted_navigation["moved"]) and not bool(rooted_charge["moved"]) and String(rooted_charge["reason"])=="movement_locked"
+
+
+static func _engine_rejects_friendly_fire_and_out_of_reach()->bool:
+	var f:=_fixture()
+	var state:CombatState=f["state"]
+	var group:GroupCombatState=f["group"]
+	var zones:CombatZoneState=f["zones"]
+	zones.set_zone("a",CombatZoneState.ZONE_1)
+	zones.set_zone("a2",CombatZoneState.ZONE_1)
+	zones.set_zone("b",CombatZoneState.ZONE_3)
+	var engine:=CombatEngine.new(state,{})
+	engine.configure_spatial_context(group,zones)
+	var attack:=AbilityRuntime.build_action_event(state,"a","b","RANGED",{"delivery_type":"PROJECTILE","max_zone_distance":1,"components":[{"kind":"damage","amount":10.0,"damage_type":"physical"}]})
+	attack.payload["target_ids"]=["a2","b"]
+	state.queue_event(attack); engine.resolve_pending_events()
+	return attack.result.get("resolved_target_ids",[]).is_empty() and state.get_combatant("a2").hp==100 and state.get_combatant("b").hp==100
+
+static func _magic_hit_and_heal_follow_spatial_rules()->bool:
+	var f:=_fixture()
+	var state:CombatState=f["state"]
+	var group:GroupCombatState=f["group"]
+	var zones:CombatZoneState=f["zones"]
+	zones.set_zone("a",CombatZoneState.ZONE_1)
+	zones.set_zone("a2",CombatZoneState.ZONE_2)
+	zones.set_zone("b",CombatZoneState.ZONE_3)
+	state.get_combatant("a").combat_stats["magic_hit"]=50.0
+	state.get_combatant("a2").hp=50
+	var engine:=CombatEngine.new(state,{})
+	engine.configure_spatial_context(group,zones)
+	var spell:=AbilityRuntime.build_action_event(state,"a","b","SPELL",{"delivery_type":"DIRECT","max_zone_distance":2,"uses_magic_hit":true,"two_zone_hit_modifier":-50.0,"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]})
+	spell.payload["magic_hit_roll"]=1
+	state.queue_event(spell); engine.resolve_pending_events()
+	if state.get_combatant("b").hp!=100: return false
+	var heal:=AbilityRuntime.build_action_event(state,"a","a2","HEAL",{"delivery_type":"DIRECT","max_zone_distance":1,"components":[{"kind":"heal","amount":20.0}]})
+	state.queue_event(heal); engine.resolve_pending_events()
+	return state.get_combatant("a2").hp==70 and heal.result.get("resolved_target_ids",[]).has("a2")
