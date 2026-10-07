@@ -4,6 +4,7 @@ extends RefCounted
 ## Base immutable-intent / mutable-result event passed through Combat Engine.
 
 enum Kind {
+	ACTION,
 	ATTACK,
 	DAMAGE,
 	EFFECT,
