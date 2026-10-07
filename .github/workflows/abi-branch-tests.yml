@@ -1,7 +1,6 @@
 name: ABI Branch Tests
 on:
-  push:
-    branches: [feature/abi-simulation, feature/equipment-instance-chain]
+  workflow_dispatch:
 jobs:
   abi-tests:
     runs-on: ubuntu-24.04
