@@ -42,7 +42,7 @@ func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, 
 		if String(existing.get("combatant_id",""))!=combatant_id:
 			continue
 		if movement_kind=="forced" and String(existing.get("movement_kind",""))=="forced":
-			var effects:Array=existing.get("forced_effects",[])
+			var effects:Array=Array(existing.get("forced_effects",[]))
 			effects.append({"to_zone":to_zone,"contest":contest.duplicate(true)})
 			existing["forced_effects"]=effects
 			return true
@@ -106,7 +106,7 @@ func _contest_definition_power(combatant_id:String,contest:Dictionary)->float:
 	var combatant:=state.get_combatant(combatant_id)
 	if combatant==null:
 		return 0.0
-	var stats:Array=contest.get("stats",["STR","STA"])
+	var stats:Array=Array(contest.get("stats",["STR","STA"]))
 	var power:=float(contest.get("flat_power",0.0))
 	for raw_stat in stats:
 		var stat:=String(raw_stat)
