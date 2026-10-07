@@ -24,3 +24,6 @@ jobs:
 
       - name: Run Location Generator stress test
         run: godot --headless --path . --script res://tests/map/location_generator_runner.gd
+
+      - name: Run Debug Map Viewer smoke test
+        run: godot --headless --path . --script res://tests/map/debug_map_viewer_runner.gd
