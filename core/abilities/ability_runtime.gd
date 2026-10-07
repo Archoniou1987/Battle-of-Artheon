@@ -24,6 +24,24 @@ static func normalized_definition(ability_id: String, definition: Dictionary) ->
 	normalized["components"] = components
 	return normalized
 
+static func validate_definition(ability_id: String, definition: Dictionary) -> Array[String]:
+	var errors:Array[String]=[]
+	var normalized:=normalized_definition(ability_id,definition)
+	if ability_id.is_empty(): errors.append("ability_id_required")
+	if not ["MELEE","PROJECTILE","DIRECT","AREA","CHAIN"].has(String(normalized.get("delivery_type",""))): errors.append("invalid_delivery_type")
+	if not ["SINGLE","ALL_MELEE","ALL_RANGED","ALL_ENEMIES","RANDOM_N","TARGET_ADJACENT"].has(String(normalized.get("target_scope",""))): errors.append("invalid_target_scope")
+	var components:Array=normalized.get("components",[])
+	if components.is_empty(): errors.append("components_required")
+	for raw_component in components:
+		if not raw_component is Dictionary:
+			errors.append("invalid_component")
+			continue
+		var kind:=String(raw_component.get("kind",""))
+		if not ["damage","effect","heal"].has(kind): errors.append("invalid_component_kind")
+		if kind=="damage" and float(raw_component.get("amount",-1.0))<0.0: errors.append("invalid_damage_amount")
+		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
+	return errors
+
 static func build_damage_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
 	var normalized := normalized_definition(ability_id, definition)
 	var damage_component:Dictionary = {}
