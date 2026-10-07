@@ -57,6 +57,9 @@ static func _player_overrides_npc_lock()->bool:
 	if x["group"].active_opponent("player")!="e1": return false
 	if not controller.engagement.is_locked("player",11): return false
 	controller.engagement.request_change("player","e2","player","PLAYER",100)
+	# Player may request an override immediately, but still faces the charging NPC
+	# for the whole round. Every engagement change is applied only at End Round.
+	if x["group"].active_opponent("player")!="e1": return false
 	controller.engagement.resolve_end_round(11)
 	return x["group"].active_opponent("player")=="e2" and controller.engagement.is_locked("player",12)
 
