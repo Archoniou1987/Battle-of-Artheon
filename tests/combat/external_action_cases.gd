@@ -2,7 +2,7 @@ class_name ExternalActionCases
 extends RefCounted
 
 static func run()->bool:
-	return _independent_rolls() and _active_opponent_excluded() and _dead_external_cannot_start_action() and _base_attack_uses_attack_pipeline()
+	return _independent_rolls() and _active_opponent_excluded() and _dead_external_cannot_start_action() and _base_attack_uses_attack_pipeline() and _ability_uses_action_pipeline()
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
@@ -71,3 +71,15 @@ static func _base_attack_uses_attack_pipeline()->bool:
 		"rolls":{"hit":1,"reaction":100,"crit":100}
 	})
 	return event.kind==CombatEvent.Kind.ATTACK and bool(event.payload.get("external_action",false))
+
+
+static func _ability_uses_action_pipeline()->bool:
+	var x:=_context()
+	var resolver:ExternalActionResolver=x["resolver"]
+	var decision:Dictionary={"kind":"ABILITY","source_id":"e1","target_id":"player"}
+	var event:=resolver.ability_event(decision,"ABI_EXT",{
+		"delivery_type":"PROJECTILE",
+		"target_scope":"SINGLE",
+		"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]
+	})
+	return event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI_EXT" and bool(event.payload.get("external_action",false))
