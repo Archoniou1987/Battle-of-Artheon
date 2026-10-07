@@ -2,7 +2,7 @@ class_name RoundOrchestratorCases
 extends RefCounted
 
 static func run(balance:Dictionary) -> bool:
-	return _locked_actions_finish(balance) and _dead_source_cancels_deferred(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance) and _deferred_damage_finalizes_death(balance)
+	return _locked_actions_finish(balance) and _dead_source_keeps_deferred_until_death_phase(balance) and _living_source_resolves_deferred(balance) and _pending_death_can_be_healed(balance) and _insufficient_heal_still_dies(balance) and _finalized_death_cannot_be_healed(balance) and _persistent_aoe_ticks(balance) and _zone_aoe_follows_occupants_after_movement(balance) and _deferred_damage_finalizes_death(balance)
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
@@ -25,7 +25,7 @@ static func _locked_actions_finish(balance:Dictionary)->bool:
 	var summary:=orchestrator.end_round()
 	return summary.get("dead_ids",[]).size()==2 and state.get_combatant("a").is_death_finalized() and state.get_combatant("b").is_death_finalized()
 
-static func _dead_source_cancels_deferred(balance:Dictionary)->bool:
+static func _dead_source_keeps_deferred_until_death_phase(balance:Dictionary)->bool:
 	var state:=_duel_state()
 	var engine:=CombatEngine.new(state,balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
@@ -35,7 +35,7 @@ static func _dead_source_cancels_deferred(balance:Dictionary)->bool:
 	round.lock_action(_lethal(state,"a","b"))
 	orchestrator.resolve_locked_actions(round)
 	var summary:=orchestrator.end_round()
-	return summary.get("canceled_deferred_event_ids",[]).has(deferred.event_id) and state.get_combatant("a").hp==10
+	return summary.get("resolved_deferred_event_ids",[]).has(deferred.event_id) and state.get_combatant("a").hp==7
 
 static func _living_source_resolves_deferred(balance:Dictionary)->bool:
 	var state:=_duel_state()
@@ -104,6 +104,35 @@ static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	if state.get_combatant("t0").hp!=80 or state.get_combatant("t1").hp!=80: return false
 	orchestrator.begin_round(); orchestrator.end_round()
 	return state.get_combatant("t0").hp==70 and state.get_combatant("t1").hp==70
+
+static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	for id in ["caster","leaver","enterer"]:
+		state.add_combatant(CombatantState.new(id,id,1,100))
+	var groups:=GroupCombatState.new(state)
+	groups.add_member("A","caster")
+	groups.add_member("B","leaver")
+	groups.add_member("B","enterer")
+	var zones:=CombatZoneState.new(groups)
+	zones.set_team_flag_zone("A",CombatZoneState.ZONE_1)
+	zones.set_team_flag_zone("B",CombatZoneState.ZONE_3)
+	zones.set_zone("caster",CombatZoneState.ZONE_1)
+	zones.set_zone("leaver",CombatZoneState.ZONE_2)
+	zones.set_zone("enterer",CombatZoneState.ZONE_3)
+	var engine:=CombatEngine.new(state,balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine,groups,zones)
+	orchestrator.begin_round()
+	orchestrator.register_zone_effect("caster",CombatZoneState.ZONE_2,{
+		"delivery_type":"AREA","duration_rounds":3,
+		"components":[{"kind":"damage","amount":10.0,"damage_type":"fire","full_targets":5}]
+	},3)
+	orchestrator.end_round()
+	if state.get_combatant("leaver").hp!=100: return false
+	orchestrator.begin_round()
+	if not orchestrator.queue_movement_request("leaver",CombatZoneState.ZONE_3,1,false): return false
+	if not orchestrator.queue_movement_request("enterer",CombatZoneState.ZONE_2,1,false): return false
+	orchestrator.end_round()
+	return state.get_combatant("leaver").hp==100 and state.get_combatant("enterer").hp==90 and zones.zone_of("leaver")==CombatZoneState.ZONE_3 and zones.zone_of("enterer")==CombatZoneState.ZONE_2
 
 
 static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
