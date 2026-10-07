@@ -14,7 +14,7 @@ static func normalized_definition(ability_id: String, definition: Dictionary) ->
 	normalized["target_scope"] = String(definition.get("target_scope", "SINGLE")).to_upper()
 	normalized["duration_rounds"] = maxi(0, int(definition.get("duration_rounds", 0)))
 	normalized["min_zone_distance"] = maxi(0, int(definition.get("min_zone_distance", 0)))
-	normalized["max_zone_distance"] = maxi(normalized["min_zone_distance"], int(definition.get("max_zone_distance", 0 if normalized["delivery_type"]=="MELEE" else 2)))
+	normalized["max_zone_distance"] = maxi(int(normalized["min_zone_distance"]), int(definition.get("max_zone_distance", 0 if normalized["delivery_type"]=="MELEE" else 2)))
 	normalized["two_zone_hit_modifier"] = float(definition.get("two_zone_hit_modifier", -50.0))
 	normalized["uses_magic_hit"] = bool(definition.get("uses_magic_hit", false))
 	normalized["magic_hit_modifier"] = float(definition.get("magic_hit_modifier", 0.0))
