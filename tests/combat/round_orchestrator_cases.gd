@@ -21,8 +21,9 @@ static func _locked_actions_finish(balance:Dictionary)->bool:
 	round.lock_action(_lethal(state,"a","b"))
 	round.lock_action(_lethal(state,"b","a"))
 	orchestrator.resolve_locked_actions(round)
+	if state.get_combatant("a").is_death_finalized() or state.get_combatant("b").is_death_finalized(): return false
 	var summary:=orchestrator.end_round()
-	return summary.get("dead_ids",[]).size()==2 and not state.get_combatant("a").is_alive() and not state.get_combatant("b").is_alive()
+	return summary.get("dead_ids",[]).size()==2 and state.get_combatant("a").is_death_finalized() and state.get_combatant("b").is_death_finalized()
 
 static func _dead_source_cancels_deferred(balance:Dictionary)->bool:
 	var state:=_duel_state()
