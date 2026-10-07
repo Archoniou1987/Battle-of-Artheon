@@ -23,7 +23,8 @@ func _init(combat_state:CombatState, combat_engine:CombatEngine, combat_groups:G
 	group_state=combat_groups
 	zone_state=combat_zones
 	if group_state!=null and zone_state!=null:
-		movement_resolver=CombatMovementResolver.new(group_state,zone_state)
+		movement_resolver=CombatMovementResolver.new(zone_state)
+		engine.configure_spatial_context(group_state,zone_state)
 
 func begin_round() -> CombatRound:
 	state.begin_round()
