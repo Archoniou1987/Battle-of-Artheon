@@ -22,7 +22,7 @@ static func _one_vs_many_structure()->bool:
 	var state:=_state(3)
 	var group:=_group(state,3)
 	if not group.set_active_opponent("player","e0"): return false
-	var external:=group.external_enemies("player")
+	var external:Array[String]=group.alternative_targets("player")
 	return group.team_of("player")=="players" and group.living_enemies("player").size()==3 and group.active_opponent("player")=="e0" and external.size()==2 and external.has("e1") and external.has("e2")
 
 static func _pending_death_stays_until_end_round(balance:Dictionary)->bool:
@@ -50,7 +50,7 @@ static func _active_replacement_after_death(balance:Dictionary)->bool:
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"player","e0",{"amount":150.0,"damage_type":"physical"}))
 	if group.active_opponent("player")!="e0": return false
 	var sync:=controller.after_end_round(orchestrator.end_round())
-	return group.active_opponent("player")=="e1" and String(sync.get("active_replacements",{}).get("player",{}).get("to",""))=="e1" and group.external_enemies("player").size()==1
+	return group.active_opponent("player")=="e1" and String(sync.get("active_replacements",{}).get("player",{}).get("to",""))=="e1" and group.alternative_targets("player").size()==1
 
 static func _combat_finish()->bool:
 	var state:=_state(1)
