@@ -17,6 +17,19 @@ var stats: Dictionary = {}
 var combat_stats: Dictionary = {}
 var armour: Dictionary = {}
 var active_effects: Array[Dictionary] = []
+var weapon_skills: Dictionary = {}
+var weapon_xp: Dictionary = {}
+
+func weapon_skill(weapon_class: String) -> int:
+	return clampi(int(weapon_skills.get(weapon_class, 1)), 1, 100)
+
+func weapon_experience(weapon_class: String) -> float:
+	return maxf(0.0, float(weapon_xp.get(weapon_class, 0.0)))
+
+func set_weapon_progress(weapon_class: String, skill: int, experience: float = 0.0) -> void:
+	if weapon_class.is_empty(): return
+	weapon_skills[weapon_class] = clampi(skill, 1, 100)
+	weapon_xp[weapon_class] = maxf(0.0, experience)
 
 
 func _init(id: String, name: String, character_level: int, health: int, mana_pool: int = 0) -> void:
