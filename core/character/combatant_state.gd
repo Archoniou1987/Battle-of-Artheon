@@ -22,6 +22,15 @@ var effect_immunities: Array[String] = []
 var active_effects: Array[Dictionary] = []
 var weapon_skills: Dictionary = {}
 var weapon_xp: Dictionary = {}
+var combat_loadout: Dictionary = {}
+var combat_loadout_locked: bool = false
+
+func lock_combat_loadout(snapshot:Dictionary)->void:
+	combat_loadout=snapshot.duplicate(true)
+	combat_loadout_locked=true
+
+func can_manual_block()->bool:
+	return bool(combat_loadout.get("can_manual_block",combat_stats.get("can_manual_block",true)))
 
 func weapon_skill(weapon_class: String) -> int:
 	return clampi(int(weapon_skills.get(weapon_class, 1)), 1, 100)
