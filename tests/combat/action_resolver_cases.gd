@@ -2,6 +2,7 @@ class_name ActionResolverCases
 extends RefCounted
 
 static func run() -> bool:
+	print("CASE_SUITE_START=action_resolver_cases")
 	var ok := true
 	var state := CombatState.new()
 	var source := CombatantState.new("source", "Source", 1, 100)
