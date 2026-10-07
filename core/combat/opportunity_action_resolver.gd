@@ -11,9 +11,11 @@ const DEFAULT_ABILITY_CHANCE:=20.0
 var group:GroupCombatState
 var base_attack_chance:float
 var ability_chance:float
+var zones:CombatZoneState
 
-func _init(group_state:GroupCombatState,base_chance:float=DEFAULT_BASE_ATTACK_CHANCE,abi_chance:float=DEFAULT_ABILITY_CHANCE)->void:
+func _init(group_state:GroupCombatState,base_chance:float=DEFAULT_BASE_ATTACK_CHANCE,abi_chance:float=DEFAULT_ABILITY_CHANCE,zone_state:CombatZoneState=null)->void:
 	group=group_state
+	zones=zone_state
 	base_attack_chance=clampf(base_chance,0.0,100.0)
 	ability_chance=clampf(abi_chance,0.0,100.0)
 
@@ -35,13 +37,17 @@ func decide_against(target_id:String,actors:Array[String],rolls_by_actor:Diction
 	return decisions
 
 func base_attack_event(decision:Dictionary,payload:Dictionary)->CombatEvent:
+	var source_id:=String(decision.get("source_id",""))
+	var target_id:=String(decision.get("target_id",""))
+	if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,{"min_zone_distance":0,"max_zone_distance":0}).has(target_id):
+		return null
 	var data:=payload.duplicate(true)
 	data["source"]="opportunity_base_attack"
 	data["opportunity_action"]=true
 	return group.combat_state.create_event(
 		CombatEvent.Kind.ATTACK,
-		String(decision.get("source_id","")),
-		String(decision.get("target_id","")),
+		source_id,
+		target_id,
 		data
 	)
 
@@ -49,6 +55,8 @@ func base_attack_event(decision:Dictionary,payload:Dictionary)->CombatEvent:
 func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,target_ids:Array[String]=[])->CombatEvent:
 	var source_id:=String(decision.get("source_id",""))
 	var target_id:=String(decision.get("target_id",""))
+	if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,definition).has(target_id):
+		return null
 	var event:=AbilityRuntime.build_action_event(group.combat_state,source_id,target_id,ability_id,definition)
 	if not target_ids.is_empty():
 		event.payload["target_ids"]=target_ids.duplicate()
