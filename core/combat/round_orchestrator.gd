@@ -56,23 +56,27 @@ func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, 
 	return true
 
 func resolve_movement_phase() -> Array[Dictionary]:
-	var results:Array[Dictionary]=[]
 	if movement_resolver==null:
 		movement_requests.clear()
-		return results
+		return []
+	var requests:Array[Dictionary]=[]
 	for request in movement_requests:
+		var enriched:Dictionary=request.duplicate(true)
 		var combatant_id:=String(request.get("combatant_id",""))
-		var result:=movement_resolver.resolve_request(
-			combatant_id,
-			int(request.get("to_zone",-1)),
-			float(request.get("tempo",0.0)),
-			int(request.get("tempo_roll",1)),
-			bool(request.get("bypass_front",false))
-		)
-		result["movement_kind"]=String(request.get("movement_kind","navigation"))
-		results.append(result)
+		var snap:Dictionary=start_snapshot.get(combatant_id,{})
+		enriched["movement_locked"]=bool(snap.get("movement_locked",false))
+		enriched["contest_power"]=_movement_contest_power(combatant_id,request)
+		requests.append(enriched)
 	movement_requests.clear()
-	return results
+	return movement_resolver.resolve_simultaneous(requests)
+
+func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
+	if request.has("contest_power"):
+		return float(request.get("contest_power",0.0))
+	var combatant:=state.get_combatant(combatant_id)
+	if combatant==null:
+		return 0.0
+	return float(combatant.stats.get("STR",0.0))+float(combatant.stats.get("STA",combatant.stats.get("END",0.0)))
 
 func defer_event(event:CombatEvent, require_source_alive:bool=true, require_target_alive:bool=true) -> void:
 	deferred_events.append({"event":event,"require_source_alive":require_source_alive,"require_target_alive":require_target_alive})
