@@ -4,7 +4,7 @@ extends RefCounted
 ## Very small integration cases. These test engine behaviour, not balance.
 
 static func run(balance: Dictionary) -> bool:
-	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance)
+	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance) and _weapon_skill_penalties(balance) and _bow_requires_quiver(balance)
 
 
 static func _equal_duel_finishes(balance: Dictionary) -> bool:
@@ -68,6 +68,41 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 		and float(attacks[1].payload.get("raw_damage",0.0))<=5.0
 	)
 
+
+static func _weapon_skill_penalties(balance: Dictionary) -> bool:
+	var attacker := TestFixtureLoader.build_combatant("TEST_DAGGER_FIGHTER")
+	if attacker == null: return false
+	attacker.combatant_id = "skill"
+	var defender := CombatantState.new("skill_target", "Skill Target", 10, 100)
+	var state := CombatState.new()
+	state.add_combatant(attacker); state.add_combatant(defender)
+	var engine := CombatEngine.new(state,balance)
+	var checks := [[15,15,0.0],[15,5,10.0],[15,1,14.0],[100,1,80.0]]
+	for check in checks:
+		var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
+		profiles[0]["item_level"]=int(check[0])
+		attacker.set_weapon_progress("dagger",int(check[1]))
+		var event:=state.create_event(CombatEvent.Kind.ATTACK,"skill","skill_target",{"raw_damage":2.0,"zone":"chest","damage_type":"piercing","weapon_index":0,"rolls":{"hit":100}})
+		engine.resolve_event(event)
+		if not is_equal_approx(float(event.result.get("weapon_skill_hit_penalty",-1.0)),float(check[2])): return false
+	return true
+
+static func _bow_requires_quiver(balance: Dictionary) -> bool:
+	var without := TestFixtureLoader.build_combatant("TEST_BOW_NO_QUIVER")
+	var with_quiver := TestFixtureLoader.build_combatant("TEST_BOW_WITH_QUIVER")
+	if without == null or with_quiver == null: return false
+	without.combatant_id="bow_without"; with_quiver.combatant_id="bow_with"
+	var target_a:=CombatantState.new("target_a","Target A",10,1000)
+	var state_a:=CombatState.new(); state_a.add_combatant(without); state_a.add_combatant(target_a)
+	var sim_a:=CombatSimulator.new(state_a,balance,31); sim_a.max_rounds=1; sim_a.run_duel("bow_without","target_a")
+	for event in state_a.event_log:
+		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="bow_without": return false
+	var target_b:=CombatantState.new("target_b","Target B",10,1000)
+	var state_b:=CombatState.new(); state_b.add_combatant(with_quiver); state_b.add_combatant(target_b)
+	var sim_b:=CombatSimulator.new(state_b,balance,31); sim_b.max_rounds=1; sim_b.run_duel("bow_with","target_b")
+	for event in state_b.event_log:
+		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="bow_with": return true
+	return false
 
 static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) -> CombatState:
 	var state := CombatState.new()
