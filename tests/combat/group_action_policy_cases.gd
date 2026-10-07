@@ -20,15 +20,15 @@ static func run()->bool:
 	var policy:=GroupActionPolicy.new(group,zones)
 
 	# Focus fire is legal in the universal PvE model.
-	var melee:={"min_zone_distance":0,"max_zone_distance":0}
-	var changed:=policy.focus_target(["player","companion"],"enemy_a",melee)
+	var melee:Dictionary={"min_zone_distance":0,"max_zone_distance":0}
+	var changed:Array[String]=policy.focus_target(["player","companion"],"enemy_a",melee)
 	if changed.size()!=2: return false
 	if group.active_opponent("player")!="enemy_a": return false
 	if group.active_opponent("companion")!="enemy_a": return false
 
 	# A selected target outside the current action reach is not a valid action target.
 	group.set_active_opponent("player","enemy_b")
-	var context:=policy.primary_action_context("player",melee)
+	var context:Dictionary=policy.primary_action_context("player",melee)
 	if String(context.get("target_id",""))!="" or context.get("valid_enemy_targets",[]).has("enemy_b"): return false
 	group.set_active_opponent("player","enemy_a")
 
@@ -38,12 +38,12 @@ static func run()->bool:
 	if group.active_opponent("enemy_a")!="player" or group.active_opponent("enemy_b")!="player": return false
 
 	# Every living party member has a full primary action context.
-	var contexts:=policy.team_action_contexts("party",melee)
+	var contexts:Array[Dictionary]=policy.team_action_contexts("party",melee)
 	if contexts.size()!=2: return false
 	for context in contexts:
 		if String(context.get("target_id",""))!="enemy_a": return false
 
-	var commands:=PartyCommandPolicy.new()
+	var commands:PartyCommandPolicy=PartyCommandPolicy.new()
 	commands.need_heal("companion","player")
 	var heal:Dictionary={"ai_role":"HEAL"}
 	var damage:Dictionary={"ai_role":"DAMAGE"}
