@@ -2,7 +2,7 @@ class_name ZoneCombatCases
 extends RefCounted
 
 static func run()->bool:
-	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules()
+	return _direction_relative_to_flag() and _front_blocks_forward_only() and _reach_is_zone_based() and _tempo_only_accepts_or_rejects_declared_move() and _special_move_can_break_front() and _root_blocks_all_movement() and _movement_contest_has_no_initiative() and _engine_rejects_friendly_fire_and_out_of_reach() and _magic_hit_and_heal_follow_spatial_rules()
 
 static func _fixture()->Dictionary:
 	var state:=CombatState.new()
@@ -107,3 +107,22 @@ static func _magic_hit_and_heal_follow_spatial_rules()->bool:
 	var heal:=AbilityRuntime.build_action_event(state,"a","a2","HEAL",{"delivery_type":"DIRECT","max_zone_distance":1,"components":[{"kind":"heal","amount":20.0}]})
 	state.queue_event(heal); engine.resolve_pending_events()
 	return state.get_combatant("a2").hp==70 and heal.result.get("resolved_target_ids",[]).has("a2")
+
+
+static func _movement_contest_has_no_initiative()->bool:
+	var f:=_fixture()
+	var zones:CombatZoneState=f["zones"]
+	zones.set_zone("a",CombatZoneState.ZONE_1)
+	zones.set_zone("b",CombatZoneState.ZONE_2)
+	var resolver:=CombatMovementResolver.new(zones)
+	var tied:=resolver.resolve_simultaneous([
+		{"combatant_id":"a","to_zone":CombatZoneState.ZONE_2,"tempo":0.0,"tempo_roll":1,"bypass_front":true,"contest_power":20.0},
+		{"combatant_id":"b","to_zone":CombatZoneState.ZONE_1,"tempo":0.0,"tempo_roll":1,"bypass_front":true,"contest_power":20.0}
+	])
+	if bool(tied[0].get("moved",false)) or bool(tied[1].get("moved",false)): return false
+	if zones.zone_of("a")!=CombatZoneState.ZONE_1 or zones.zone_of("b")!=CombatZoneState.ZONE_2: return false
+	var won:=resolver.resolve_simultaneous([
+		{"combatant_id":"a","to_zone":CombatZoneState.ZONE_2,"tempo":0.0,"tempo_roll":1,"bypass_front":true,"contest_power":30.0},
+		{"combatant_id":"b","to_zone":CombatZoneState.ZONE_1,"tempo":0.0,"tempo_roll":1,"bypass_front":true,"contest_power":20.0}
+	])
+	return bool(won[0].get("moved",false)) and not bool(won[1].get("moved",false)) and zones.zone_of("a")==CombatZoneState.ZONE_2 and zones.zone_of("b")==CombatZoneState.ZONE_2
