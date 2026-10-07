@@ -15,6 +15,8 @@ static func run(balance:Dictionary) -> bool:
 		"kill_attribution":_kill_attribution_uses_fatal_round_total(balance),
 		"combined_forced_movement":_combined_forced_movement_uses_one_step(balance),
 		"forced_tie":_opposing_forced_tie_stays_put(balance),
+		"forced_formula":_forced_movement_uses_data_driven_contest(balance),
+		"forced_invalid_jump":_forced_movement_rejects_non_adjacent_effect(balance),
 		"movement_edges":_movement_edges_and_root(balance),
 		"navigation_forced_exclusive":_navigation_and_forced_are_exclusive(balance)
 	}
@@ -227,6 +229,38 @@ static func _opposing_forced_tie_stays_put(balance:Dictionary)->bool:
 	var results:=orchestrator.resolve_movement_phase()
 	return results.size()==1 and not bool(results[0].get("moved",true)) and String(results[0].get("reason",""))=="movement_locked" and zones.zone_of("a")==CombatZoneState.ZONE_2
 
+
+
+static func _forced_movement_uses_data_driven_contest(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	var a:=CombatantState.new("a","A",1,100)
+	a.stats["STR"]=4.0
+	state.add_combatant(a); state.add_combatant(CombatantState.new("b","B",1,100))
+	var groups:=GroupCombatState.new(state)
+	groups.add_member("A","a"); groups.add_member("B","b")
+	var zones:=CombatZoneState.new(groups)
+	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
+	zones.set_zone("a",CombatZoneState.ZONE_2); zones.set_zone("b",CombatZoneState.ZONE_3)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	orchestrator.begin_round()
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":["STR"],"flat_power":1.0,"multiplier":2.0}): return false
+	var results:=orchestrator.resolve_movement_phase()
+	return results.size()==1 and bool(results[0].get("moved",false)) and float(results[0].get("contest_power",0.0))==10.0 and zones.zone_of("a")==CombatZoneState.ZONE_3
+
+
+static func _forced_movement_rejects_non_adjacent_effect(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	state.add_combatant(CombatantState.new("a","A",1,100)); state.add_combatant(CombatantState.new("b","B",1,100))
+	var groups:=GroupCombatState.new(state)
+	groups.add_member("A","a"); groups.add_member("B","b")
+	var zones:=CombatZoneState.new(groups)
+	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
+	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	orchestrator.begin_round()
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"flat_power":99.0}): return false
+	var results:=orchestrator.resolve_movement_phase()
+	return results.size()==1 and not bool(results[0].get("moved",true)) and zones.zone_of("a")==CombatZoneState.ZONE_1
 
 static func _movement_edges_and_root(balance:Dictionary)->bool:
 	var state:=CombatState.new()
