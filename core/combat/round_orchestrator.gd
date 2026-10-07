@@ -74,8 +74,9 @@ func resolve_movement_phase() -> Array[Dictionary]:
 			_resolve_forced_direction(enriched)
 		var combatant_id:=String(request.get("combatant_id",""))
 		var snap:Dictionary=start_snapshot.get(combatant_id,{})
-		enriched["movement_locked"]=bool(snap.get("movement_locked",false))
-		enriched["contest_power"]=_movement_contest_power(combatant_id,request)
+		enriched["movement_locked"]=bool(enriched.get("movement_locked",false)) or bool(snap.get("movement_locked",false))
+		if not enriched.has("contest_power"):
+			enriched["contest_power"]=_movement_contest_power(combatant_id,enriched)
 		requests.append(enriched)
 	movement_requests.clear()
 	return movement_resolver.resolve_simultaneous(requests)
