@@ -7,7 +7,15 @@ static func run() -> bool:
 	var axe := TestFixtureLoader.build_combatant("TEST_AXE_FIGHTER")
 	var shield := TestFixtureLoader.build_combatant("TEST_SHIELD_FIGHTER")
 	if dagger == null or sword == null or axe == null or shield == null: return false
+	var dagger_profiles:Array=dagger.combat_stats.get("weapon_profiles",[])
+	if dagger_profiles.size()!=2: return false
+	var first_dagger:Dictionary=dagger_profiles[0]
+	var second_dagger:Dictionary=dagger_profiles[1]
 	return (
+		String(first_dagger.get("item_id",""))=="TEST_DAGGER"
+		and String(second_dagger.get("item_id",""))=="TEST_DAGGER"
+		and is_equal_approx(float(first_dagger.get("damage_min",0.0)),2.0)
+		and is_equal_approx(float(second_dagger.get("damage_max",0.0)),3.0)
 		dagger.hp == 100
 		and is_equal_approx(float(dagger.combat_stats.get("dodge",0.0)),15.0)
 		and int(dagger.combat_stats.get("weapon_attack_count",0)) == 2
