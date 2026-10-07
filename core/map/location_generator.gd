@@ -97,6 +97,38 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			var patrol_id:="GEN_PATROL_00"
 			if map.place_entity(patrol_id,patrol_start):
 				patrols.append({"patrol_id":patrol_id,"start":patrol_start,"goal":patrol_goal,"path":patrol_path})
+	var boss_groups:Array[Dictionary]=[]
+	var boss_candidates:Array[Vector2i]=content_cells.duplicate()
+	while not boss_candidates.is_empty() and boss_groups.is_empty():
+		var boss_index:int=rng.randi_range(0,boss_candidates.size()-1)
+		var boss_pos:Vector2i=boss_candidates[boss_index]
+		boss_candidates.remove_at(boss_index)
+		var boss_id:="GEN_BOSS_00"
+		if not map.place_entity(boss_id,boss_pos):
+			continue
+		var guard_ids:Array[String]=[]
+		var guard_positions:Array[Vector2i]=[]
+		var boss_neighbors:Array[Vector2i]=map.neighbors(boss_pos,true)
+		for i in range(boss_neighbors.size()-1,0,-1):
+			var j:int=rng.randi_range(0,i)
+			var swap:Vector2i=boss_neighbors[i]
+			boss_neighbors[i]=boss_neighbors[j]
+			boss_neighbors[j]=swap
+		for guard_pos in boss_neighbors:
+			if guard_ids.size()>=2:
+				break
+			if guard_pos==entrance or guard_pos==exit:
+				continue
+			var guard_id:="GEN_BOSS_GUARD_%02d"%guard_ids.size()
+			if map.place_entity(guard_id,guard_pos):
+				guard_ids.append(guard_id)
+				guard_positions.append(guard_pos)
+		var member_ids:Array[String]=[boss_id]
+		member_ids.append_array(guard_ids)
+		var encounter_id:="GEN_BOSS_ENCOUNTER_00"
+		var boss_encounter:=HexEncounter.new(encounter_id,HexEncounter.TRIGGER_ENTER,"combat",{"group_id":"GEN_BOSS_GROUP_00","boss_id":boss_id,"member_ids":member_ids},true)
+		if encounter_service.add_encounter(boss_encounter,boss_pos,map):
+			boss_groups.append({"group_id":"GEN_BOSS_GROUP_00","encounter_id":encounter_id,"boss_id":boss_id,"boss_pos":boss_pos,"guard_ids":guard_ids,"guard_positions":guard_positions,"member_ids":member_ids})
 	var guarded_objects:Array[Dictionary]=[]
 	var reserved_guard_cells:Dictionary={}
 	for object_pos in object_cells:
@@ -111,4 +143,4 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		if map.place_entity(guard_id,guard_pos):
 			reserved_guard_cells[guard_pos]=true
 			guarded_objects.append({"object_pos":object_pos,"guard_pos":guard_pos,"guard_id":guard_id})
-	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols}
+	return {"map":map,"entrance":entrance,"exit":exit,"seed":seed_value,"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols,"boss_groups":boss_groups}
