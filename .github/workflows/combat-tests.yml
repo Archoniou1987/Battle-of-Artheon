@@ -6,7 +6,7 @@ on:
 jobs:
   combat-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
       - name: Setup Godot
@@ -16,8 +16,8 @@ jobs:
           use-dotnet: false
           include-templates: false
       - name: Import project and register script classes
-        run: timeout 120s godot --headless --editor --path . --quit
+        run: timeout --signal=KILL 90s godot --headless --editor --path . --quit
       - name: Run combat regression gate
-        run: timeout 120s godot --headless --path . --script res://tests/combat/combat_regression_runner.gd
+        run: timeout --signal=KILL 45s godot --headless --path . --script res://tests/combat/combat_regression_runner.gd
       - name: Run first tournament
-        run: timeout 120s godot --headless --path . --script res://tests/combat/tournament_runner.gd
+        run: timeout --signal=KILL 45s godot --headless --path . --script res://tests/combat/tournament_runner.gd
