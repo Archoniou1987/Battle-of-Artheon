@@ -67,6 +67,8 @@ func _resolve_action(event: CombatEvent) -> void:
 			child = state.create_event(CombatEvent.Kind.EFFECT, event.source_id, event.target_id, {
 				"effect_id": String(component.get("effect_id", "")),
 				"base_chance": float(component.get("base_chance", 100.0)),
+				"resist_type": String(component.get("resist_type", component.get("element", ""))),
+				"effect_roll": int(component.get("effect_roll", event.payload.get("effect_roll", 1))),
 				"source_type": "ability",
 				"ability_id": String(event.payload.get("ability_id", "")),
 				"delivery_type": String(event.payload.get("delivery_type", "DIRECT"))
@@ -139,6 +141,11 @@ func _resolve_damage(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
 	if target == null: event.set_result("error", "target_not_found"); return
 	var amount := float(event.payload.get("amount", 0.0))
+	var damage_type := String(event.payload.get("damage_type", ""))
+	var magic_resist := _magic_resist(target, damage_type)
+	if _is_magic_damage_type(damage_type):
+		amount *= 1.0 - magic_resist
+		event.set_result("magic_resist", magic_resist)
 	amount *= 1.0 - clampf(_active_effect_value(target, "damage_reduction"), 0.0, 1.0)
 	var final_damage := CombatMath.final_damage_floor(amount)
 	var applied := target.apply_damage(final_damage)
@@ -149,6 +156,23 @@ func _resolve_effect(event: CombatEvent) -> void:
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if target == null or definition.is_empty(): event.set_result("resolved", false); return
+	if target.effect_immunities.has(effect_id):
+		event.set_result("effect_id", effect_id)
+		event.set_result("resolved", false)
+		event.set_result("outcome", "immune")
+		return
+	var base_chance := clampf(float(event.payload.get("base_chance", 100.0)), 0.0, 100.0)
+	var resist_type := String(event.payload.get("resist_type", ""))
+	var resist := _magic_resist(target, resist_type)
+	var effective_chance := base_chance * (1.0 - resist)
+	event.set_result("base_chance", base_chance)
+	event.set_result("resist", resist)
+	event.set_result("effective_chance", effective_chance)
+	if not CombatMath.roll_success(effective_chance, int(event.payload.get("effect_roll", 1))):
+		event.set_result("effect_id", effect_id)
+		event.set_result("resolved", false)
+		event.set_result("outcome", "resisted")
+		return
 	var kind := String(definition.get("kind", ""))
 	if kind == "heal":
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
@@ -244,3 +268,15 @@ func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
 	return CombatMath.roll_success(float(attacker.combat_stats.get("block_crush", 0.0)), int(rolls.get("block_crush", 100)))
 func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
 	var zone_armour: Dictionary = defender.armour.get(zone, {}); return float(zone_armour.get(damage_type, 0.0))
+
+
+func _is_magic_damage_type(damage_type:String) -> bool:
+	return ["fire","water","frost","air","earth","dark","light","lightning"].has(damage_type.to_lower())
+
+func _magic_resist(target:CombatantState, resist_type:String) -> float:
+	if resist_type.is_empty():
+		return 0.0
+	var raw := float(target.magic_resists.get(resist_type.to_lower(), 0.0))
+	if raw > 1.0:
+		raw /= 100.0
+	return clampf(raw, 0.0, 1.0)
