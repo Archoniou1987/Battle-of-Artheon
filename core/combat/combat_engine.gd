@@ -182,8 +182,14 @@ func _resolve_damage(event: CombatEvent) -> void:
 		event.set_result("magic_resist", magic_resist)
 	amount *= 1.0 - clampf(_active_effect_value(target, "damage_reduction"), 0.0, 1.0)
 	var final_damage := CombatMath.final_damage_floor(amount)
+	var hp_before := target.hp
 	var applied := target.apply_damage(final_damage)
-	event.set_result("final_damage", final_damage); event.set_result("hp_removed", applied); event.set_result("connected", true)
+	event.set_result("final_damage", final_damage)
+	event.set_result("hp_removed", applied)
+	event.set_result("hp_before", hp_before)
+	event.set_result("hp_after", target.hp)
+	event.set_result("visible_hp_after", target.visible_hp())
+	event.set_result("connected", true)
 
 func _resolve_effect(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
