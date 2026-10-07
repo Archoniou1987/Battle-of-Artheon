@@ -429,6 +429,6 @@ func _magic_resist(target:CombatantState, resist_type:String) -> float:
 func _physical_ranged_distance_hit_modifier(event:CombatEvent)->float:
 	if zone_state==null or String(event.payload.get("delivery_type",""))!="PROJECTILE":
 		return 0.0
-	if bool(event.payload.get("bypass_physical_mitigation",false)):
+	if bool(event.payload.get("uses_magic_hit",false)):
 		return 0.0
 	return _distance_modifier(event,event.target_id)
