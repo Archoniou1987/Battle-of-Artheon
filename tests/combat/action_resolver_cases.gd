@@ -82,7 +82,7 @@ static func run() -> bool:
 		ok = ok and String(miss_events[0].result.get("outcome", "")) == "magic_miss"
 		ok = ok and source.mana == 7
 	ok = ok and not AbilityRuntime.can_use("ABI_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 1)
-	ok = ok and AbilityRuntime.can_use("ABI_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 3)
+	ok = ok and AbilityRuntime.can_use("ABI_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 2)
 
 	if not ok:
 		print("ACTION_RESOLVER_CASES=FAIL hp=",target.hp," projectile=",projectile.result," mixed=",mixed.result," unsupported=",unsupported.result," scheduled=",scheduled.size())
