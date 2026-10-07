@@ -2,6 +2,7 @@ class_name ZoneCombatCases
 extends RefCounted
 
 static func run()->bool:
+	print("CASE_SUITE_START=zone_combat_cases")
 	var cases:Dictionary={
 		"direction":_direction_relative_to_flag(),
 		"front":_front_blocks_forward_only(),
