@@ -13,6 +13,11 @@ static func normalized_definition(ability_id: String, definition: Dictionary) ->
 	normalized["delivery_type"] = String(definition.get("delivery_type", "DIRECT")).to_upper()
 	normalized["target_scope"] = String(definition.get("target_scope", "SINGLE")).to_upper()
 	normalized["duration_rounds"] = maxi(0, int(definition.get("duration_rounds", 0)))
+	normalized["min_zone_distance"] = maxi(0, int(definition.get("min_zone_distance", 0)))
+	normalized["max_zone_distance"] = maxi(normalized["min_zone_distance"], int(definition.get("max_zone_distance", 0 if normalized["delivery_type"]=="MELEE" else 2)))
+	normalized["two_zone_hit_modifier"] = float(definition.get("two_zone_hit_modifier", -50.0))
+	normalized["uses_magic_hit"] = bool(definition.get("uses_magic_hit", false))
+	normalized["magic_hit_modifier"] = float(definition.get("magic_hit_modifier", 0.0))
 	normalized["engagement"] = definition.get("engagement", {}).duplicate(true) if definition.get("engagement", {}) is Dictionary else {}
 	var components:Array = definition.get("components", []).duplicate(true) if definition.get("components", []) is Array else []
 	if components.is_empty() and (definition.has("damage") or definition.has("damage_type")):
@@ -50,6 +55,11 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"delivery_type": normalized["delivery_type"],
 		"target_scope": normalized["target_scope"],
 		"duration_rounds": normalized["duration_rounds"],
+		"min_zone_distance": normalized["min_zone_distance"],
+		"max_zone_distance": normalized["max_zone_distance"],
+		"two_zone_hit_modifier": normalized["two_zone_hit_modifier"],
+		"uses_magic_hit": normalized["uses_magic_hit"],
+		"magic_hit_modifier": normalized["magic_hit_modifier"],
 		"engagement": normalized["engagement"],
 		"components": normalized["components"],
 		"target_ids": [target_id]
