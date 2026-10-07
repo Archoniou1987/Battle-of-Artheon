@@ -25,7 +25,25 @@ func _initialize()->void:
 		for i in range(generated.npc_cells.size()):
 			valid=valid and map.entity_positions.get("GEN_NPC_%02d"%i,Vector2i(-1,-1))==generated.npc_cells[i]
 		var service:HexEncounterService=generated.encounter_service
-		valid=valid and service.encounters.size()==generated.encounter_cells.size()
+		valid=valid and service.encounters.size()==generated.encounter_cells.size()+generated.boss_groups.size()
+		for boss_group in generated.boss_groups:
+			var boss_pos:Vector2i=boss_group.boss_pos
+			valid=valid and map.in_bounds(boss_pos) and map.cell(boss_pos).is_passable()
+			valid=valid and boss_pos!=entrance and boss_pos!=exit
+			valid=valid and map.entity_positions.get(boss_group.boss_id,Vector2i(-1,-1))==boss_pos
+			valid=valid and boss_group.member_ids.size()==1+boss_group.guard_ids.size()
+			valid=valid and boss_group.guard_ids.size()==boss_group.guard_positions.size()
+			valid=valid and service.encounters.has(boss_group.encounter_id)
+			var boss_encounter:HexEncounter=service.encounters.get(boss_group.encounter_id)
+			valid=valid and boss_encounter.consequence_type=="combat"
+			valid=valid and boss_encounter.payload.get("group_id","")==boss_group.group_id
+			valid=valid and boss_encounter.payload.get("boss_id","")==boss_group.boss_id
+			valid=valid and boss_encounter.payload.get("member_ids",[])==boss_group.member_ids
+			for i in range(boss_group.guard_ids.size()):
+				var guard_pos:Vector2i=boss_group.guard_positions[i]
+				var guard_id:String=boss_group.guard_ids[i]
+				valid=valid and HexGrid.distance(boss_pos,guard_pos)==1
+				valid=valid and map.entity_positions.get(guard_id,Vector2i(-1,-1))==guard_pos
 		for patrol in generated.patrols:
 			var patrol_path:Array=patrol.path
 			valid=valid and patrol_path.size()>=2
@@ -57,5 +75,6 @@ func _initialize()->void:
 	valid=valid and first.npc_cells==second.npc_cells
 	valid=valid and first.object_cells==second.object_cells
 	valid=valid and first.encounter_cells==second.encounter_cells
+	valid=valid and first.boss_groups==second.boss_groups
 	print("LOCATION_GENERATOR_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
