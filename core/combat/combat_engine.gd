@@ -156,7 +156,8 @@ func _resolve_effect(event: CombatEvent) -> void:
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if target == null or definition.is_empty(): event.set_result("resolved", false); return
-	if target.effect_immunities.has(effect_id):
+	var effect_kind := String(definition.get("kind", ""))
+	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
 		event.set_result("effect_id", effect_id)
 		event.set_result("resolved", false)
 		event.set_result("outcome", "immune")
@@ -173,7 +174,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 		event.set_result("resolved", false)
 		event.set_result("outcome", "resisted")
 		return
-	var kind := String(definition.get("kind", ""))
+	var kind := effect_kind
 	if kind == "heal":
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
 	else:
