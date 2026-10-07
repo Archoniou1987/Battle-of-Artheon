@@ -24,12 +24,14 @@ static func run() -> bool:
 	ok = ok and child_ids.size() == 1
 	engine.resolve_pending_events()
 	ok = ok and target.hp == 93
-	var child:CombatEvent = state.event_log[state.event_log.size() - 1]
-	ok = ok and child.parent_event_id == projectile.event_id
-	ok = ok and child.parent_event_id == projectile.event_id
+	var projectile_damage:CombatEvent=state.event_log[state.event_log.size()-1]
 	var projectile_attack:CombatEvent=state.event_log[state.event_log.size()-2]
+	ok = ok and projectile_attack.parent_event_id == projectile.event_id
+	ok = ok and projectile_damage.parent_event_id == projectile_attack.event_id
 	ok = ok and String(projectile_attack.payload.get("ability_id",""))=="ABI_TEST"
 	ok = ok and String(projectile_attack.payload.get("delivery_type",""))=="PROJECTILE"
+	ok = ok and String(projectile_damage.payload.get("ability_id",""))=="ABI_TEST"
+	ok = ok and String(projectile_damage.payload.get("delivery_type",""))=="PROJECTILE"
 
 	var legacy := AbilityRuntime.build_damage_event(state, "source", "target", "ABI_LEGACY", {
 		"damage": 3,
