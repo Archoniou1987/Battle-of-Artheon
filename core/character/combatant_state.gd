@@ -32,6 +32,9 @@ func lock_combat_loadout(snapshot:Dictionary)->void:
 func can_manual_block()->bool:
 	return bool(combat_loadout.get("can_manual_block",combat_stats.get("can_manual_block",true)))
 
+func can_auto_block()->bool:
+	return bool(combat_loadout.get("can_auto_block",combat_stats.get("can_auto_block",true)))
+
 func weapon_skill(weapon_class: String) -> int:
 	return clampi(int(weapon_skills.get(weapon_class, 1)), 1, 100)
 
