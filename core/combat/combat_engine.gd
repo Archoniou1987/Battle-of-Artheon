@@ -245,6 +245,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	var final_damage := CombatMath.final_damage_floor(amount)
 	var hp_before := target.hp
 	var applied := target.apply_damage(final_damage)
+	state.record_damage(event.target_id,event.source_id,final_damage)
 	event.set_result("final_damage", final_damage)
 	event.set_result("hp_removed", applied)
 	event.set_result("hp_before", hp_before)
