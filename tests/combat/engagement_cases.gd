@@ -2,7 +2,7 @@ class_name EngagementCases
 extends RefCounted
 
 static func run(balance:Dictionary)->bool:
-	return _player_priority() and _npc_contest() and _two_round_lock() and _player_overrides_npc_lock() and _death_bypass(balance)
+	return _player_priority() and _npc_contest() and _two_round_lock() and _player_overrides_npc_lock() and _dead_requester_cannot_force_target(balance) and _death_bypass(balance)
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
@@ -77,3 +77,17 @@ static func _death_bypass(balance:Dictionary)->bool:
 	var summary:=orchestrator.end_round()
 	controller.after_end_round(summary)
 	return group.active_opponent("player")=="e0" and not controller.engagement.is_locked("player",state.round_number)
+
+
+static func _dead_requester_cannot_force_target(balance:Dictionary)->bool:
+	var x:=_context()
+	var state:CombatState=x["state"]
+	var controller:GroupCombatController=x["controller"]
+	var engine:=CombatEngine.new(state,balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	orchestrator.begin_round()
+	controller.engagement.request_change("player","e1","e1","NPC",1)
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"player","e1",{"amount":150.0,"damage_type":"physical"}))
+	var summary:=orchestrator.end_round()
+	controller.after_end_round(summary)
+	return x["group"].active_opponent("player")=="e0"
