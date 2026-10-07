@@ -4,7 +4,30 @@ extends RefCounted
 ## Very small integration cases. These test engine behaviour, not balance.
 
 static func run(balance: Dictionary) -> bool:
-	return _equal_duel_finishes(balance) and _locked_actions_survive_death(balance) and _tempo_minus_100_cannot_attack(balance) and _mixed_weapons_keep_attack_profiles(balance) and _weapon_skill_penalties(balance) and _bow_requires_quiver(balance) and _abi_v2_schema() and _abi_v2_scheduler_payload()
+	var equal_duel := _equal_duel_finishes(balance)
+	print("DUEL_CASE=equal_duel ok=", equal_duel)
+	if not equal_duel: return false
+	var locked := _locked_actions_survive_death(balance)
+	print("DUEL_CASE=locked_actions ok=", locked)
+	if not locked: return false
+	var tempo := _tempo_minus_100_cannot_attack(balance)
+	print("DUEL_CASE=tempo_minus_100 ok=", tempo)
+	if not tempo: return false
+	var mixed := _mixed_weapons_keep_attack_profiles(balance)
+	print("DUEL_CASE=mixed_weapons ok=", mixed)
+	if not mixed: return false
+	var skill := _weapon_skill_penalties(balance)
+	print("DUEL_CASE=weapon_skill ok=", skill)
+	if not skill: return false
+	var bow := _bow_requires_quiver(balance)
+	print("DUEL_CASE=bow_quiver ok=", bow)
+	if not bow: return false
+	var schema := _abi_v2_schema()
+	print("DUEL_CASE=abi_schema ok=", schema)
+	if not schema: return false
+	var payload := _abi_v2_scheduler_payload()
+	print("DUEL_CASE=abi_payload ok=", payload)
+	return payload
 
 
 static func _equal_duel_finishes(balance: Dictionary) -> bool:
