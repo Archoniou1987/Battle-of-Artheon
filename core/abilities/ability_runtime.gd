@@ -61,6 +61,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"uses_magic_hit": normalized["uses_magic_hit"],
 		"magic_hit_modifier": normalized["magic_hit_modifier"],
 		"engagement": normalized["engagement"],
+		"rolls": definition.get("rolls", {}).duplicate(true) if definition.get("rolls", {}) is Dictionary else {},
 		"components": normalized["components"],
 		"target_ids": [target_id]
 	})
