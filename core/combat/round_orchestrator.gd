@@ -84,14 +84,16 @@ func resolve_movement_phase() -> Array[Dictionary]:
 
 func _resolve_forced_direction(request:Dictionary)->void:
 	var from_zone:=int(request.get("from_zone",-1))
+	var combatant_id:=String(request.get("combatant_id",""))
 	var totals:Dictionary={}
 	for raw_effect in request.get("forced_effects",[]):
 		var effect:Dictionary=raw_effect
 		var to_zone:=int(effect.get("to_zone",-1))
+		if to_zone<CombatZoneState.ZONE_1 or to_zone>CombatZoneState.ZONE_3 or absi(to_zone-from_zone)!=1:
+			continue
 		var direction:=signi(to_zone-from_zone)
-		if direction==0: continue
 		var contest:Dictionary=effect.get("contest",{})
-		totals[direction]=float(totals.get(direction,0.0))+float(contest.get("flat_power",0.0))
+		totals[direction]=float(totals.get(direction,0.0))+_contest_definition_power(combatant_id,contest)
 	var forward:=float(totals.get(1,0.0))
 	var backward:=float(totals.get(-1,0.0))
 	if forward==backward:
@@ -100,21 +102,23 @@ func _resolve_forced_direction(request:Dictionary)->void:
 	request["to_zone"]=from_zone+(1 if forward>backward else -1)
 	request["contest_power"]=absf(forward-backward)
 
-func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
-	if request.has("contest_power"):
-		return float(request.get("contest_power",0.0))
+func _contest_definition_power(combatant_id:String,contest:Dictionary)->float:
 	var combatant:=state.get_combatant(combatant_id)
 	if combatant==null:
 		return 0.0
-	var contest:Dictionary=request.get("contest",{})
 	var stats:Array=contest.get("stats",["STR","STA"])
 	var power:=float(contest.get("flat_power",0.0))
 	for raw_stat in stats:
 		var stat:=String(raw_stat)
 		var fallback:float=float(combatant.stats.get("END",0.0)) if stat=="STA" else 0.0
 		power+=float(combatant.stats.get(stat,fallback))
-	power*=float(contest.get("multiplier",1.0))
-	return power
+	return power*float(contest.get("multiplier",1.0))
+
+func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
+	if request.has("contest_power"):
+		return float(request.get("contest_power",0.0))
+	var contest:Dictionary=request.get("contest",{})
+	return _contest_definition_power(combatant_id,contest)
 
 func defer_event(event:CombatEvent, require_source_alive:bool=true, require_target_alive:bool=true) -> void:
 	deferred_events.append({"event":event,"require_source_alive":require_source_alive,"require_target_alive":require_target_alive})
