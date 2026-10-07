@@ -5,12 +5,14 @@ const HIT_ZONES := ["head", "chest", "arms", "waist", "legs"]
 var state: CombatState
 var engine: CombatEngine
 var ability_scheduler: AbilityScheduler
+var orchestrator: RoundOrchestrator
 var rng := RandomNumberGenerator.new()
 var max_rounds: int = 100
 
 func _init(combat_state: CombatState, balance: Dictionary = {}, seed_value: int = 1) -> void:
 	state = combat_state
 	engine = CombatEngine.new(state, balance)
+	orchestrator = RoundOrchestrator.new(state, engine)
 	rng.seed = seed_value
 	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/test/abilities.json"), AbilityCatalog.load_json("res://data/test/ability_loadouts.json"))
 
@@ -31,10 +33,18 @@ func run_duel(first_id: String, second_id: String) -> Dictionary:
 	return {"outcome":outcome,"winner_id":winner_id,"loser_id":loser_id,"rounds":state.round_number,"first_hp":first.hp,"second_hp":second.hp,"first_mana":first.mana,"second_mana":second.mana,"events":state.event_log.size()}
 
 func _run_round(first_id:String,second_id:String)->void:
-	state.begin_round(); _regenerate_mana(); _process_round_start_effects(); engine.resolve_pending_events()
-	var round:=CombatRound.new(state.round_number); var first:=state.get_combatant(first_id); var second:=state.get_combatant(second_id)
-	if first.is_alive() and second.is_alive(): _queue_ready_abilities(first,second); _queue_ready_abilities(second,first); engine.resolve_pending_events()
-	_lock_basic_attack(round,first,second); _lock_basic_attack(round,second,first); round.resolve(engine); _finish_effect_rounds()
+	var round:=orchestrator.begin_round()
+	_regenerate_mana()
+	var first:=state.get_combatant(first_id)
+	var second:=state.get_combatant(second_id)
+	if first!=null and second!=null and not first.is_death_finalized() and not second.is_death_finalized():
+		_queue_ready_abilities(first,second)
+		_queue_ready_abilities(second,first)
+		engine.resolve_pending_events()
+	_lock_basic_attack(round,first,second)
+	_lock_basic_attack(round,second,first)
+	orchestrator.resolve_locked_actions(round)
+	orchestrator.end_round()
 
 func _regenerate_mana()->void:
 	for combatant in state.combatants.values():
@@ -43,22 +53,8 @@ func _regenerate_mana()->void:
 
 func _queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
-func _process_round_start_effects()->void:
-	for combatant in state.combatants.values():
-		for active in combatant.active_effects:
-			if state.round_number<int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0))<=0: continue
-			var definition:Dictionary=active.get("definition",{})
-			if String(definition.get("kind",""))=="dot": state.queue_event(state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id",combatant.combatant_id)),combatant.combatant_id,{"amount":float(definition.get("damage",0)),"damage_type":"bleeding","source":"effect","effect_id":String(active.get("effect_id",""))}))
-func _finish_effect_rounds()->void:
-	for combatant in state.combatants.values():
-		for active in combatant.active_effects:
-			if state.round_number>=int(active.get("start_round",999999)): active["remaining_rounds"]=int(active.get("remaining_rounds",0))-1
-		var kept:Array[Dictionary]=[]
-		for active in combatant.active_effects:
-			if int(active.get("remaining_rounds",0))>0: kept.append(active)
-		combatant.active_effects=kept
 func _lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
-	if not attacker.is_alive() or not _tempo_allows_attack(attacker.tempo): return
+	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(attacker.tempo): return
 	var weapon_attacks:=maxi(1,int(attacker.combat_stats.get("weapon_attack_count",1)))
 	for weapon_index in range(weapon_attacks):
 		if _weapon_attack_available(attacker,weapon_index):
@@ -90,4 +86,4 @@ func _tempo_allows_attack(tempo:float)->bool:
 func _attack_rolls()->Dictionary:
 	return {"hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"counterattack":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll(),"counterattack_rolls":{"hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll()}}
 func _roll()->int:return rng.randi_range(1,100)
-func _both_alive(first_id:String,second_id:String)->bool:return state.get_combatant(first_id).is_alive() and state.get_combatant(second_id).is_alive()
+func _both_alive(first_id:String,second_id:String)->bool:return not state.get_combatant(first_id).is_death_finalized() and not state.get_combatant(second_id).is_death_finalized()
