@@ -76,7 +76,14 @@ func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
 	var combatant:=state.get_combatant(combatant_id)
 	if combatant==null:
 		return 0.0
-	return float(combatant.stats.get("STR",0.0))+float(combatant.stats.get("STA",combatant.stats.get("END",0.0)))
+	var contest:Dictionary=request.get("contest",{})
+	var stats:Array=contest.get("stats",["STR","STA"])
+	var power:=float(contest.get("flat_power",0.0))
+	for raw_stat in stats:
+		var stat:=String(raw_stat)
+		var fallback:=combatant.stats.get("END",0.0) if stat=="STA" else 0.0
+		power+=float(combatant.stats.get(stat,fallback))
+	return power*float(contest.get("multiplier",1.0))
 
 func defer_event(event:CombatEvent, require_source_alive:bool=true, require_target_alive:bool=true) -> void:
 	deferred_events.append({"event":event,"require_source_alive":require_source_alive,"require_target_alive":require_target_alive})
