@@ -42,17 +42,9 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
 	return errors
 
-static func build_damage_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
+static func build_action_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
 	var normalized := normalized_definition(ability_id, definition)
-	var damage_component:Dictionary = {}
-	for raw_component in normalized.get("components", []):
-		if raw_component is Dictionary and String(raw_component.get("kind", "")) == "damage":
-			damage_component = raw_component
-			break
-	return state.create_event(CombatEvent.Kind.DAMAGE, source_id, target_id, {
-		"amount": float(damage_component.get("amount", 0)),
-		"raw_damage": float(damage_component.get("amount", 0)),
-		"damage_type": String(damage_component.get("damage_type", "physical")),
+	return state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
 		"ability_id": ability_id,
 		"source_kind": "ability",
 		"delivery_type": normalized["delivery_type"],
@@ -61,3 +53,8 @@ static func build_damage_event(state: CombatState, source_id: String, target_id:
 		"engagement": normalized["engagement"],
 		"components": normalized["components"]
 	})
+
+
+static func build_damage_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
+	# Legacy compatibility: callers now receive the universal action intent.
+	return build_action_event(state, source_id, target_id, ability_id, definition)
