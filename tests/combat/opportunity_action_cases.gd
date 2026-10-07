@@ -67,7 +67,7 @@ static func _base_attack_uses_attack_pipeline()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
 	var decision:Dictionary={"kind":"BASE_ATTACK","source_id":"e1","target_id":"player"}
-	var event:=resolver.base_attack_event(decision,{
+	var event:Variant=resolver.base_attack_event(decision,{
 		"raw_damage":10.0,
 		"damage_type":"slashing",
 		"zone":"chest",
@@ -80,7 +80,7 @@ static func _ability_uses_action_pipeline()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
 	var decision:Dictionary={"kind":"ABILITY","source_id":"e1","target_id":"player"}
-	var event:=resolver.ability_event(decision,"ABI_EXT",{
+	var event:Variant=resolver.ability_event(decision,"ABI_EXT",{
 		"delivery_type":"PROJECTILE",
 		"target_scope":"SINGLE",
 		"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]
@@ -98,9 +98,9 @@ static func _zone_reach_controls_opportunity_events()->bool:
 	zones.set_zone("e1",CombatZoneState.ZONE_3)
 	var resolver:=OpportunityActionResolver.new(group,25.0,20.0,zones)
 	var decision:Dictionary={"source_id":"e1","target_id":"player"}
-	var melee:=resolver.base_attack_event(decision,{"raw_damage":10.0,"damage_type":"physical"})
+	var melee:Variant=resolver.base_attack_event(decision,{"raw_damage":10.0,"damage_type":"physical"})
 	if melee!=null: return false
-	var short_abi:=resolver.ability_event(decision,"ABI_SHORT",{"delivery_type":"PROJECTILE","max_zone_distance":1,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
+	var short_abi:Variant=resolver.ability_event(decision,"ABI_SHORT",{"delivery_type":"PROJECTILE","max_zone_distance":1,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
 	if short_abi!=null: return false
-	var ranged_abi:=resolver.ability_event(decision,"ABI_LONG",{"delivery_type":"PROJECTILE","max_zone_distance":2,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
+	var ranged_abi:Variant=resolver.ability_event(decision,"ABI_LONG",{"delivery_type":"PROJECTILE","max_zone_distance":2,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
 	return ranged_abi!=null
