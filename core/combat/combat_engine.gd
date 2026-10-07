@@ -374,9 +374,24 @@ func _event_uses_physical_block(event: CombatEvent) -> bool:
 func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
 	if not defender.can_manual_block():
 		return false
-	var attack_zone := String(event.payload.get("zone", "")); var chosen_zones: Array = defender.combat_stats.get("manual_block_zones", [])
-	if chosen_zones.has(attack_zone): return true
-	var legacy_zone := String(defender.combat_stats.get("manual_block_zone", "")); return not legacy_zone.is_empty() and legacy_zone == attack_zone
+	var attack_zone:=String(event.payload.get("zone",""))
+	var chosen_zones:Array=defender.combat_stats.get("manual_block_zones",[])
+	if chosen_zones.is_empty():
+		var legacy_zone:=String(defender.combat_stats.get("manual_block_zone",""))
+		if not legacy_zone.is_empty():
+			chosen_zones=[legacy_zone]
+	for blocked_zone in chosen_zones:
+		if _block_zone_covers(String(blocked_zone),attack_zone):
+			return true
+	return false
+
+func _block_zone_covers(blocked_zone:String,attack_zone:String)->bool:
+	if blocked_zone==attack_zone:
+		return true
+	var order:=["head","chest","arms","waist","legs"]
+	var blocked_index:=order.find(blocked_zone)
+	var attack_index:=order.find(attack_zone)
+	return blocked_index>=0 and attack_index>=0 and absi(blocked_index-attack_index)==1
 func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
 	return CombatMath.roll_success(float(attacker.combat_stats.get("block_crush", 0.0)), int(rolls.get("block_crush", 100)))
 func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
