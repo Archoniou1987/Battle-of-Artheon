@@ -2,7 +2,7 @@ class_name OpportunityActionCases
 extends RefCounted
 
 static func run()->bool:
-	return _independent_rolls() and _active_opponent_not_restricted() and _dead_actor_cannot_start_opportunity() and _base_attack_uses_attack_pipeline() and _ability_uses_action_pipeline()
+	return _independent_rolls() and _active_opponent_not_restricted() and _dead_actor_cannot_start_opportunity() and _base_attack_uses_attack_pipeline() and _ability_uses_action_pipeline() and _zone_reach_controls_opportunity_events()
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
@@ -86,3 +86,21 @@ static func _ability_uses_action_pipeline()->bool:
 		"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]
 	})
 	return event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI_EXT" and bool(event.payload.get("opportunity_action",false))
+
+
+static func _zone_reach_controls_opportunity_events()->bool:
+	var x:=_context()
+	var group:GroupCombatState=x["group"]
+	var zones:=CombatZoneState.new(group)
+	zones.set_team_flag("players",CombatZoneState.ZONE_1)
+	zones.set_team_flag("enemies",CombatZoneState.ZONE_3)
+	zones.set_zone("player",CombatZoneState.ZONE_1)
+	zones.set_zone("e1",CombatZoneState.ZONE_3)
+	var resolver:=OpportunityActionResolver.new(group,25.0,20.0,zones)
+	var decision:Dictionary={"source_id":"e1","target_id":"player"}
+	var melee:=resolver.base_attack_event(decision,{"raw_damage":10.0,"damage_type":"physical"})
+	if melee!=null: return false
+	var short_abi:=resolver.ability_event(decision,"ABI_SHORT",{"delivery_type":"PROJECTILE","max_zone_distance":1,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
+	if short_abi!=null: return false
+	var ranged_abi:=resolver.ability_event(decision,"ABI_LONG",{"delivery_type":"PROJECTILE","max_zone_distance":2,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
+	return ranged_abi!=null
