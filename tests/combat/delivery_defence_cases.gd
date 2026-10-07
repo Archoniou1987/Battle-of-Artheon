@@ -6,6 +6,7 @@ static func run(balance: Dictionary) -> bool:
 		_case_projectile_can_dodge(balance)
 		and _case_projectile_magic_ignores_physical_block(balance)
 		and _case_melee_physical_can_block(balance)
+		and _case_manual_block_covers_adjacent_zone(balance)
 		and _case_direct_bypasses_active_defence(balance)
 	)
 
@@ -73,3 +74,12 @@ static func _has_direct_damage_child(state:CombatState, parent_id:int) -> bool:
 		if logged.parent_event_id == parent_id and logged.kind == CombatEvent.Kind.DAMAGE:
 			return true
 	return false
+
+
+static func _case_manual_block_covers_adjacent_zone(balance:Dictionary)->bool:
+	var state:=_state()
+	state.get_combatant("target").combat_stats["manual_block_zones"]=["chest"]
+	var event:=_action(state,"MELEE","physical",{"hit":1,"dodge":100,"block_crush":100})
+	event.payload["components"][0]["zone"]="head"
+	_resolve(state,balance,event)
+	return state.get_combatant("target").hp==100 and _child_outcome(state,event.event_id)=="manual_block"
