@@ -36,7 +36,7 @@ func decide_against(target_id:String,actors:Array[String],rolls_by_actor:Diction
 			decisions.append({"kind":"ABILITY","source_id":actor_id,"target_id":target_id,"roll":abi_roll})
 	return decisions
 
-func base_attack_event(decision:Dictionary,payload:Dictionary)->CombatEvent:
+func base_attack_event(decision:Dictionary,payload:Dictionary):
 	var source_id:=String(decision.get("source_id",""))
 	var target_id:=String(decision.get("target_id",""))
 	if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,{"min_zone_distance":0,"max_zone_distance":0}).has(target_id):
@@ -52,7 +52,7 @@ func base_attack_event(decision:Dictionary,payload:Dictionary)->CombatEvent:
 	)
 
 
-func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,target_ids:Array[String]=[])->CombatEvent:
+func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,target_ids:Array[String]=[]):
 	var source_id:=String(decision.get("source_id",""))
 	var target_id:=String(decision.get("target_id",""))
 	if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,definition).has(target_id):
