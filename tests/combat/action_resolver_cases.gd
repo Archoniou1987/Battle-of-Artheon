@@ -13,7 +13,8 @@ static func run() -> bool:
 	var projectile := AbilityRuntime.build_action_event(state, "source", "target", "ABI_TEST", {
 		"delivery_type": "PROJECTILE",
 		"target_scope": "SINGLE",
-		"components": [{"kind":"damage","amount":7,"damage_type":"fire"}]
+		"components": [{"kind":"damage","amount":7,"damage_type":"fire"}],
+		"rolls":{"hit":1}
 	})
 	ok = ok and projectile.kind == CombatEvent.Kind.ACTION
 	ok = ok and String(projectile.payload.get("delivery_type", "")) == "PROJECTILE"
