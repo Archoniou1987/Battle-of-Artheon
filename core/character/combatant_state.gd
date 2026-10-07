@@ -8,6 +8,7 @@ var display_name: String
 var level: int
 var max_hp: int
 var hp: int
+var death_finalized: bool = false
 var max_mana: int
 var mana: int
 var action_points: int = 0
@@ -46,6 +47,9 @@ func _init(id: String, name: String, character_level: int, health: int, mana_poo
 
 func is_alive() -> bool:
 	return hp > 0
+
+func is_death_finalized() -> bool:
+	return death_finalized
 
 
 func apply_damage(amount: int) -> int:
