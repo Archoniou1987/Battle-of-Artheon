@@ -72,13 +72,12 @@ static func run() -> bool:
 
 	# Casting commits resource and cooldown before resolution. A later Magic Hit miss
 	# must not refund either cost.
-	var miss_definitions := {"ABI_MAGIC_MISS":{"delivery_type":"DIRECT","target_scope":"SINGLE","uses_magic_hit":true,"components":[{"kind":"damage","amount":10,"damage_type":"fire"}],"mana_cost":3,"cooldown_rounds":2}}
+	var miss_definitions := {"ABI_MAGIC_MISS":{"delivery_type":"DIRECT","target_scope":"SINGLE","uses_magic_hit":true,"magic_hit_roll":100,"components":[{"kind":"damage","amount":10,"damage_type":"fire"}],"mana_cost":3,"cooldown_rounds":2}}
 	var miss_scheduler := AbilityScheduler.new(miss_definitions, {"source":["ABI_MAGIC_MISS"]})
 	source.mana = 10
 	var miss_events:Array[CombatEvent] = miss_scheduler.ready_events(state, "source", "target")
 	ok = ok and miss_events.size() == 1 and source.mana == 7
 	if not miss_events.is_empty():
-		miss_events[0].payload["magic_hit_roll"] = 100
 		engine.resolve_event(miss_events[0])
 		ok = ok and String(miss_events[0].result.get("outcome", "")) == "magic_miss"
 		ok = ok and source.mana == 7
