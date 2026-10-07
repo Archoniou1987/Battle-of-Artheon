@@ -67,5 +67,8 @@ static func run() -> bool:
 	ok = ok and scheduled[0].kind == CombatEvent.Kind.ACTION
 	ok = ok and String(scheduled[0].payload.get("ability_id", "")) == "ABI_SCHEDULED"
 
-	if not ok: print("ACTION_RESOLVER_CASES=FAIL hp=",target.hp," projectile=",projectile.result," mixed=",mixed.result," unsupported=",unsupported.result," scheduled=",scheduled.size())
+	if not ok:
+		print("ACTION_RESOLVER_CASES=FAIL hp=",target.hp," projectile=",projectile.result," mixed=",mixed.result," unsupported=",unsupported.result," scheduled=",scheduled.size())
+		for logged_event in state.event_log:
+			print("ACTION_EVENT id=",logged_event.event_id," kind=",logged_event.kind," parent=",logged_event.parent_event_id," payload=",logged_event.payload," result=",logged_event.result)
 	return ok
