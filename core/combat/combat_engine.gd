@@ -191,7 +191,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 	if attacker == null or defender == null:
 		event.set_result("outcome", "invalid_combatant"); return
 	var rolls: Dictionary = event.payload.get("rolls", {})
-	var hit_chance := _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0)))
+	var distance_hit_modifier:=_physical_ranged_distance_hit_modifier(event)
+	var hit_chance := _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0))) + distance_hit_modifier
+	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty", _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0))))
 	if not CombatMath.roll_success(hit_chance, int(rolls.get("hit", 100))):
 		event.set_result("outcome", "miss"); _gain_basic_attack_ap(attacker, event); return
@@ -415,3 +417,11 @@ func _magic_resist(target:CombatantState, resist_type:String) -> float:
 	if raw > 1.0:
 		raw /= 100.0
 	return clampf(raw, 0.0, 1.0)
+
+
+func _physical_ranged_distance_hit_modifier(event:CombatEvent)->float:
+	if zone_state==null or String(event.payload.get("delivery_type",""))!="PROJECTILE":
+		return 0.0
+	if bool(event.payload.get("bypass_physical_mitigation",false)):
+		return 0.0
+	return _distance_modifier(event,event.target_id)
