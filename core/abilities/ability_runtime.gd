@@ -51,7 +51,8 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"target_scope": normalized["target_scope"],
 		"duration_rounds": normalized["duration_rounds"],
 		"engagement": normalized["engagement"],
-		"components": normalized["components"]
+		"components": normalized["components"],
+		"target_ids": [target_id]
 	})
 
 
