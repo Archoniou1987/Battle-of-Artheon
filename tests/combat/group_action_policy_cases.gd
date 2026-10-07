@@ -40,8 +40,8 @@ static func run()->bool:
 	# Every living party member has a full primary action context.
 	var contexts:Array[Dictionary]=policy.team_action_contexts("party",melee)
 	if contexts.size()!=2: return false
-	for context in contexts:
-		if String(context.get("target_id",""))!="enemy_a": return false
+	for team_context in contexts:
+		if String(team_context.get("target_id",""))!="enemy_a": return false
 
 	var commands:PartyCommandPolicy=PartyCommandPolicy.new()
 	commands.need_heal("companion","player")
