@@ -63,7 +63,7 @@ func _resolve_action(event: CombatEvent) -> void:
 			if child != null:
 				state.queue_event(child)
 				child_event_ids.append(child.event_id)
-	var has_supported_components:=unsupported_components.size()<event.payload.get("components",[]).size()
+	var has_supported_components:bool=unsupported_components.size()<Array(event.payload.get("components",[])).size()
 	var outcome:="dispatched" if not child_event_ids.is_empty() else ("magic_miss" if bool(event.payload.get("uses_magic_hit",false)) and has_supported_components else "no_supported_components")
 	event.set_result("outcome", outcome)
 	event.set_result("child_event_ids", child_event_ids)
