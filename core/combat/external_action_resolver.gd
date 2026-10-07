@@ -41,3 +41,13 @@ func base_attack_event(decision:Dictionary,payload:Dictionary)->CombatEvent:
 		String(decision.get("target_id","")),
 		data
 	)
+
+
+func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,target_ids:Array[String]=[])->CombatEvent:
+	var source_id:=String(decision.get("source_id",""))
+	var target_id:=String(decision.get("target_id",""))
+	var event:=AbilityRuntime.build_action_event(group.combat_state,source_id,target_id,ability_id,definition)
+	if not target_ids.is_empty():
+		event.payload["target_ids"]=target_ids.duplicate()
+	event.payload["external_action"]=true
+	return event
