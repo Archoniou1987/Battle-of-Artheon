@@ -143,10 +143,14 @@ static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool
 	orchestrator.end_round()
 	if state.get_combatant("leaver").hp!=100: return false
 	orchestrator.begin_round()
+	# Both enemies move in the same direction relative to team B: leaver retreats
+	# to its edge while enterer advances into the active effect zone.
 	if not orchestrator.queue_movement_request("leaver",CombatZoneState.ZONE_3,1,false): return false
 	if not orchestrator.queue_movement_request("enterer",CombatZoneState.ZONE_2,1,false): return false
 	orchestrator.end_round()
-	return state.get_combatant("leaver").hp==100 and state.get_combatant("enterer").hp==90 and zones.zone_of("leaver")==CombatZoneState.ZONE_3 and zones.zone_of("enterer")==CombatZoneState.ZONE_2
+	var ok:=state.get_combatant("leaver").hp==100 and state.get_combatant("enterer").hp==90 and zones.zone_of("leaver")==CombatZoneState.ZONE_3 and zones.zone_of("enterer")==CombatZoneState.ZONE_2
+	if not ok: print("ZONE_AOE_STATE leaver_hp=",state.get_combatant("leaver").hp," enterer_hp=",state.get_combatant("enterer").hp," leaver_zone=",zones.zone_of("leaver")," enterer_zone=",zones.zone_of("enterer"))
+	return ok
 
 
 static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
