@@ -7,6 +7,8 @@ var _next_effect_stack_id: int = 1
 var group_state:GroupCombatState
 var zone_state:CombatZoneState
 
+const HIT_ZONES:=["head","chest","arms","waist","legs"]
+
 func configure_spatial_context(groups:GroupCombatState,zones:CombatZoneState)->void:
 	group_state=groups
 	zone_state=zones
@@ -409,7 +411,7 @@ func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool
 func _block_zone_covers(blocked_zone:String,attack_zone:String)->bool:
 	if blocked_zone==attack_zone:
 		return true
-	var order:=["head","chest","arms","waist","legs"]
+	var order:=HIT_ZONES
 	var blocked_index:=order.find(blocked_zone)
 	var attack_index:=order.find(attack_zone)
 	return blocked_index>=0 and attack_index>=0 and absi(blocked_index-attack_index)==1
