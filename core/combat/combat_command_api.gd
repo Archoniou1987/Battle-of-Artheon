@@ -172,6 +172,35 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 		"abilities":abilities
 	}
 
+
+func cast_zone_ability(source_id:String,zone_id:int,ability_id:String)->Dictionary:
+	if ability_scheduler==null or zones==null:
+		return {"ok":false,"reason":"scheduler_unavailable"}
+	var source:=state.get_combatant(source_id)
+	if source==null or source.is_death_finalized():
+		return {"ok":false,"reason":"invalid_combatant"}
+	if zone_id<CombatZoneState.MIN_ZONE or zone_id>CombatZoneState.MAX_ZONE:
+		return {"ok":false,"reason":"invalid_zone"}
+	var definition:=AbilityCatalog.definition(ability_scheduler.definitions,ability_id)
+	if definition.is_empty() or not AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id):
+		return {"ok":false,"reason":"ability_unavailable"}
+	var source_zone:=zones.zone_of(source_id)
+	var distance:=absi(zone_id-source_zone)
+	var min_distance:=int(definition.get("min_zone_distance",0))
+	var max_distance:=int(definition.get("max_zone_distance",2 if String(definition.get("delivery_type","DIRECT")).to_upper()!="MELEE" else 0))
+	if not CombatReachPolicy.can_reach(distance,min_distance,max_distance):
+		return {"ok":false,"reason":"target_out_of_reach"}
+	var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
+	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
+		return {"ok":false,"reason":"cooldown"}
+	if source.mana<int(definition.get("mana_cost",0)):
+		return {"ok":false,"reason":"insufficient_resource"}
+	var event:=ability_scheduler.cast_zone_event(state,source_id,zone_id,ability_id)
+	if event==null:
+		return {"ok":false,"reason":"cast_rejected"}
+	state.queue_event(event)
+	return {"ok":true,"reason":"queued","event_id":event.event_id,"target_zone_id":zone_id}
+
 func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictionary:
 	if ability_scheduler==null:
 		return {"ok":false,"reason":"scheduler_unavailable"}
