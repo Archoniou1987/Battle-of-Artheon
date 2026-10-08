@@ -56,5 +56,15 @@ func _initialize()->void:
 	var combat_state:CombatState=session.get("state") as CombatState
 	valid=valid and combat_state!=null and combat_state.combatants.size()==3
 	valid=valid and map.entity_positions["ALLY"]==Vector2i(5,4)
+	var coordinator:=HexEncounterCoordinator.new()
+	var automatic:=coordinator.try_start(map,bridge,"PLAYER",RandomNumberGenerator.new())
+	valid=valid and bool(automatic.get("ok",false))
+	valid=valid and automatic.get("npc_instance_ids",[]).has("PRIMARY")
+	valid=valid and automatic.get("npc_instance_ids",[]).has("ALLY")
+	valid=valid and not automatic.get("npc_instance_ids",[]).has("NEUTRAL")
+	valid=valid and not automatic.get("npc_instance_ids",[]).has("FAR")
+	valid=valid and coordinator.try_start(map,bridge,"PLAYER",RandomNumberGenerator.new()).get("reason","")=="combat_active"
+	coordinator.finish_combat()
+	valid=valid and not coordinator.combat_active
 	print("HEX_NPC_DETECTION_JOIN_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
