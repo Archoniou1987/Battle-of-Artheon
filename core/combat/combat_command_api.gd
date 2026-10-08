@@ -321,6 +321,9 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 	# must never leave an already queued MH attack behind.
 	for attack_index in range(attacks.size()):
 		var request:Dictionary=attacks[attack_index]
+		var requested_zone:=String(request.get("zone",Dictionary(request.get("rolls",{})).get("zone","chest")))
+		if not BODY_ZONES.has(requested_zone):
+			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":"invalid_body_zone","body_zone":requested_zone,"queued_event_ids":[]}
 		var intent:=basic_attack_intent(source_id,String(request.get("attack_profile_id","basic")),int(request.get("weapon_index",-1)))
 		if not bool(intent.get("ok",false)):
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
