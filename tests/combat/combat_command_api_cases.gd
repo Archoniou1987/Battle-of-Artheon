@@ -40,7 +40,7 @@ static func run()->bool:
 	if enemy.hp!=94: return false
 	var zone_cast:=api.cast_zone_ability("hero",CombatZoneState.ZONE_2,"ZONE")
 	if not bool(zone_cast.get("ok",false)) or int(zone_cast.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
-	var zone_event:=state.pending_events.back()
+	var zone_event:CombatEvent=state.pending_events.back()
 	if int(zone_event.payload.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
 	if hero.mana!=9: return false
 	if not bool(api.ability_intent("hero","enemy",{"min_zone_distance":0,"max_zone_distance":1}).get("ok",false)): return false
