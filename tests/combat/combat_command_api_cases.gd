@@ -60,4 +60,10 @@ static func run()->bool:
 	var movement:=api.request_navigation("hero",CombatZoneState.ZONE_2,1)
 	if not bool(movement.get("ok",false)): return false
 	var results:=orchestrator.resolve_movement_phase()
-	return results.size()==1 and bool(results[0].get("moved",false)) and zones.zone_of("hero")==CombatZoneState.ZONE_2
+	if results.size()!=1 or not bool(results[0].get("moved",false)) or zones.zone_of("hero")!=CombatZoneState.ZONE_2: return false
+	hero.combat_stats["main_hand_damage"]=9.0
+	hero.combat_stats["main_hand_damage_type"]="slashing"
+	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100})
+	if not bool(attack.get("ok",false)): return false
+	engine.resolve_pending_events()
+	return enemy.hp==84
