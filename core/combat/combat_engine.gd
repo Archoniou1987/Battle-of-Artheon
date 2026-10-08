@@ -445,8 +445,16 @@ func _counterattack_weapon_profile(combatant:CombatantState)->Dictionary:
 			return selected.duplicate(true)
 	return {}
 func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void:
-	if bool(event.payload.get("generates_ap", true)) and not bool(event.payload.get("is_counterattack", false)) and not bool(event.payload.get("is_extra_attack", false)):
-		event.set_result("ap_gained", attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain", 1))))
+	if not bool(event.payload.get("generates_ap",true)) or bool(event.payload.get("is_counterattack",false)) or bool(event.payload.get("is_extra_attack",false)):
+		return
+	# A Base Attack earns AP only when one of its constituent attacks connects.
+	if String(event.result.get("outcome",""))!="connected":
+		return
+	var ap_group_id:=int(event.payload.get("ap_group_id",event.event_id))
+	for logged_event in state.event_log:
+		if int(logged_event.payload.get("ap_group_id",logged_event.event_id))==ap_group_id and int(logged_event.result.get("ap_gained",0))>0:
+			return
+	event.set_result("ap_gained",attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain",1))))
 
 func _weapon_skill_hit_penalty(attacker: CombatantState, weapon_index: int) -> float:
 	var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
