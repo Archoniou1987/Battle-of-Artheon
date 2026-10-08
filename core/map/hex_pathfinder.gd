@@ -4,7 +4,14 @@ extends RefCounted
 func find_path(map:TacticalMapState, start:Vector2i, goal:Vector2i)->Dictionary:
 	if not map.in_bounds(start) or not map.in_bounds(goal):
 		return {"ok":false, "reason":"out_of_bounds", "path":[], "cost":0.0}
-	if not map.cell(goal).is_passable():
+	if not map.cell(start).is_passable() or not map.cell(goal).is_passable():
+		return {"ok":false, "reason":"blocked", "path":[], "cost":0.0}
+	var min_step_cost:=INF
+	for raw_cell in map.cells.values():
+		var candidate_cell:=raw_cell as MapCell
+		if candidate_cell!=null and candidate_cell.is_passable():
+			min_step_cost=minf(min_step_cost,candidate_cell.movement_cost)
+	if is_inf(min_step_cost):
 		return {"ok":false, "reason":"blocked", "path":[], "cost":0.0}
 	var frontier:Array[Vector2i] = [start]
 	var frontier_set:Dictionary = {start:true}
@@ -12,7 +19,7 @@ func find_path(map:TacticalMapState, start:Vector2i, goal:Vector2i)->Dictionary:
 	var cost_so_far:Dictionary = {start:0.0}
 	var closed:Dictionary = {}
 	while not frontier.is_empty():
-		var best_index:=_lowest_score_index(frontier, cost_so_far, goal)
+		var best_index:=_lowest_score_index(frontier, cost_so_far, goal, min_step_cost)
 		var current:Vector2i=frontier[best_index]
 		frontier.remove_at(best_index)
 		frontier_set.erase(current)
@@ -42,12 +49,12 @@ func find_path(map:TacticalMapState, start:Vector2i, goal:Vector2i)->Dictionary:
 	path.reverse()
 	return {"ok":true, "path":path, "cost":float(cost_so_far[goal])}
 
-func _lowest_score_index(frontier:Array[Vector2i], costs:Dictionary, goal:Vector2i)->int:
+func _lowest_score_index(frontier:Array[Vector2i], costs:Dictionary, goal:Vector2i, min_step_cost:float)->int:
 	var best_index:=0
-	var best_score:=float(costs[frontier[0]]) + float(HexGrid.distance(frontier[0], goal))
+	var best_score:=float(costs[frontier[0]]) + float(HexGrid.distance(frontier[0], goal)) * min_step_cost
 	for i in range(1,frontier.size()):
 		var candidate:=frontier[i]
-		var score:=float(costs[candidate]) + float(HexGrid.distance(candidate, goal))
+		var score:=float(costs[candidate]) + float(HexGrid.distance(candidate, goal)) * min_step_cost
 		if score < best_score:
 			best_index = i
 			best_score = score
