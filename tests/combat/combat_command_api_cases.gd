@@ -76,10 +76,10 @@ static func run()->bool:
 	if not bool(movement.get("ok",false)): return false
 	var results:=orchestrator.resolve_movement_phase()
 	if results.size()!=1 or not bool(results[0].get("moved",false)) or zones.zone_of("hero")!=CombatZoneState.ZONE_2: return false
-	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"staff_strike")
+	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100,"damage":0.0},"staff_strike")
 	if not bool(attack.get("ok",false)): return false
 	engine.resolve_pending_events()
-	if enemy.hp!=74: return false
+	if enemy.hp!=75: return false
 	# Duplicate profile ids across weapons must never silently select the first weapon.
 	hero.combat_stats["weapon_profiles"].append({
 		"damage_min":3.0,"damage_max":3.0,"damage_type":"piercing",
@@ -90,4 +90,8 @@ static func run()->bool:
 	var offhand_intent:=api.basic_attack_intent("hero","arcane_bolt",1)
 	if not bool(offhand_intent.get("ok",false)) or int(offhand_intent.get("weapon_index",-1))!=1: return false
 	var mainhand_intent:=api.basic_attack_intent("hero","arcane_bolt",0)
-	return bool(mainhand_intent.get("ok",false)) and int(mainhand_intent.get("weapon_index",-1))==0
+	if not bool(mainhand_intent.get("ok",false)) or int(mainhand_intent.get("weapon_index",-1))!=0: return false
+	# Damage range rolls are deterministic when supplied, so replay/CI can cover both bounds.
+	if CombatMath.roll_damage(8.0,10.0,0.0)!=8.0: return false
+	if CombatMath.roll_damage(8.0,10.0,1.0)!=10.0: return false
+	return CombatMath.roll_damage(8.0,10.0,0.5)==9.0
