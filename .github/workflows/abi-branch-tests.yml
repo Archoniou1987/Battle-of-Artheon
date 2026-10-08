@@ -75,6 +75,9 @@ jobs:
       - name: Damage all equipped items after defeat
         run: timeout 120s godot --headless --path . --script res://tests/items/defeat_equipment_wear_runner.gd
 
+      - name: Validate grouped NPC combat and loot on hex map
+        run: timeout 120s godot --headless --path . --script res://tests/map/hex_map_group_encounter_e2e_runner.gd
+
       - name: Validate map coin visibility
         run: timeout 120s godot --headless --path . --script res://tests/map/debug_map_viewer_runner.gd
 
