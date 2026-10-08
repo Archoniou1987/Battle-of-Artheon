@@ -36,13 +36,25 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 		combatant.combat_stats["weapon_attack_count"]=weapon_profiles.size()
 		combatant.combat_stats["manual_block_zone_capacity"]=maxi(int(combatant.combat_stats.get("manual_block_zone_capacity",0)),int(item.get("manual_block_zones_added",0)))
 		var weapon_effects:Array=combatant.combat_stats.get("weapon_on_hit_effects",[])
-		weapon_effects.append(weapon_profile["on_hit_effect"].duplicate(true))
+		var weapon_effect:Dictionary=weapon_profile["on_hit_effect"].duplicate(true)
+		if not weapon_effect.is_empty():
+			weapon_effect["weapon_index"]=weapon_profiles.size()-1
+			weapon_effects.append(weapon_effect)
 		combatant.combat_stats["weapon_on_hit_effects"]=weapon_effects
 		# Legacy aliases remain during Combat v2 migration. New attack code uses weapon_profiles.
 		if weapon_profiles.size()==1:
 			combatant.combat_stats["main_hand_damage_min"]=weapon_profile["damage_min"]; combatant.combat_stats["main_hand_damage_max"]=weapon_profile["damage_max"]; combatant.combat_stats["main_hand_damage"]=(weapon_profile["damage_min"]+weapon_profile["damage_max"])/2.0; combatant.combat_stats["main_hand_damage_type"]=weapon_profile["damage_type"]
 	else:
 		var added:=int(item.get("manual_block_zones_added",0)); combatant.combat_stats["manual_block_zone_capacity"]=int(combatant.combat_stats.get("manual_block_zone_capacity",0))+added
+		if item.has("on_hit_effect"):
+			var item_effect:Dictionary=item.get("on_hit_effect",{}).duplicate(true)
+			if not item_effect.is_empty():
+				item_effect["source_type"]="item"
+				item_effect["source_instance_id"]=String(item.get("instance_id",item.get("id","")))
+				item_effect["weapon_index"]=-1
+				var global_weapon_effects:Array=combatant.combat_stats.get("weapon_on_hit_effects",[])
+				global_weapon_effects.append(item_effect)
+				combatant.combat_stats["weapon_on_hit_effects"]=global_weapon_effects
 	if item.has("on_manual_block_effect"):
 		var triggers:Array=combatant.combat_stats.get("on_manual_block_effects",[])
 		var block_effect:Dictionary=item.on_manual_block_effect.duplicate(true); block_effect["source_type"]="item"; block_effect["source_instance_id"]=String(item.get("instance_id",item.get("id","")))
