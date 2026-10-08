@@ -10,6 +10,8 @@ var commands:CombatCommandApi
 var hero_id:="hero"
 
 @onready var round_label:Label=$Margin/VBox/Header/Round
+@onready var outcome_label:Label=$Margin/VBox/Header/Outcome
+@onready var block_zone:OptionButton=$Margin/VBox/Defence/BlockZone
 @onready var zone_labels:Array[Label]=[$Margin/VBox/Zones/Zone1,$Margin/VBox/Zones/Zone2,$Margin/VBox/Zones/Zone3]
 @onready var hero_label:Label=$Margin/VBox/Status/Hero
 @onready var enemy_label:Label=$Margin/VBox/Status/Enemy
@@ -19,6 +21,10 @@ var hero_id:="hero"
 func _ready()->void:
 	_build_debug_combat()
 	$Margin/VBox/Header/Back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
+	$Margin/VBox/Header/Reset.pressed.connect(_reset_combat)
+	$Margin/VBox/Defence/SetBlock.pressed.connect(_set_block)
+	for body_zone in ["head","chest","arms","waist","legs"]:
+		block_zone.add_item(body_zone)
 	_refresh()
 
 func _build_debug_combat()->void:
@@ -45,11 +51,14 @@ func _build_debug_combat()->void:
 func _refresh()->void:
 	var snap:=api.snapshot()
 	round_label.text="Round %d" % int(snap.get("round",0))
+	var outcome:=orchestrator.battle_outcome()
+	outcome_label.text="ONGOING" if outcome=="ongoing" else "RESULT: %s" % outcome
 	for i in range(3):
 		var ids:Array=snap.get("zones",{}).get(str(i+1),[])
 		zone_labels[i].text="ZONE %d\n%s" % [i+1,", ".join(ids) if not ids.is_empty() else "—"]
 	var hero:=api.combatant(hero_id); var enemy:=api.combatant("enemy")
-	hero_label.text="HERO  HP %d/%d   Mana %d/%d   Zone %d" % [hero.hp,hero.max_hp,hero.mana,hero.max_mana,hero.zone_id]
+	var block_zones:Array=state.get_combatant(hero_id).combat_stats.get("manual_block_zones",[])
+	hero_label.text="HERO  HP %d/%d   Mana %d/%d   Zone %d   Block: %s" % [hero.hp,hero.max_hp,hero.mana,hero.max_mana,hero.zone_id,", ".join(block_zones) if not block_zones.is_empty() else "—"]
 	enemy_label.text="ENEMY  HP %d/%d   Zone %d" % [enemy.hp,enemy.max_hp,enemy.zone_id]
 	_rebuild_actions()
 	var lines:Array[String]=[]
@@ -64,6 +73,15 @@ func _rebuild_actions()->void:
 	for zone_id in available.get("navigation",[]):
 		var move:=Button.new(); move.text="Move → Z%d" % int(zone_id); move.pressed.connect(_move.bind(int(zone_id))); actions.add_child(move)
 	var end_round:=Button.new(); end_round.text="End Round"; end_round.pressed.connect(_end_round); actions.add_child(end_round)
+
+func _set_block()->void:
+	if block_zone.item_count==0: return
+	commands.set_manual_block(hero_id,[block_zone.get_item_text(block_zone.selected)])
+	_refresh()
+
+func _reset_combat()->void:
+	_build_debug_combat()
+	_refresh()
 
 func _attack()->void:
 	var result:=commands.queue_basic_attack(hero_id,{"hit":1,"crit":100})
