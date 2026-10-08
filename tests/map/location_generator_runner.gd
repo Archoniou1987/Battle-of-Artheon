@@ -95,35 +95,10 @@ func _initialize()->void:
 			valid=valid and HexGrid.distance(entrance,boss_group.boss_pos)>3
 			for guard_pos in boss_group.guard_positions:
 				valid=valid and HexGrid.distance(entrance,guard_pos)>3
-		checkpoint="entity_uniqueness"
-		var entity_cells:Dictionary={}
-		for entity_id in map.entity_positions.keys():
-			var entity_pos:Vector2i=map.entity_positions[entity_id]
-			if entity_cells.has(entity_pos):
-				print("ENTITY_DUPLICATE_DIAG pos=",entity_pos," first=",entity_cells[entity_pos]," second=",entity_id)
-				valid=false
-			entity_cells[entity_pos]=entity_id
+// Multiple NPC/entities may legitimately share a map cell. Encounter assembly
+		// is responsible for turning co-located hostile entities into group combat.
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
-			print("LOCATION_GENERATOR_DIAG path_ok=",bool(result.get("ok",false))," path_size=",path.size()," resources=",generated.resource_cells.size()," npcs=",generated.npc_cells.size()," objects=",generated.object_cells.size()," encounters=",generated.encounter_cells.size()," bosses=",generated.boss_groups.size()," patrols=",generated.patrols.size()," route_guards=",generated.route_guards.size()," guarded_objects=",generated.guarded_objects.size()," entities=",map.entity_positions.size())
-			for patrol in generated.patrols:
-				var unsafe_steps:=0
-				for step in patrol.path:
-					if HexGrid.distance(entrance,step)<=3: unsafe_steps+=1
-				print("PATROL_DIAG id=",patrol.patrol_id," size=",patrol.path.size()," unsafe=",unsafe_steps," start=",patrol.start," goal=",patrol.goal)
-			for guarded in generated.guarded_objects:
-				print("GUARDED_DIAG object=",guarded.object_pos," guard=",guarded.guard_pos," exits=",map.neighbors(guarded.object_pos,true))
-			for boss_group in generated.boss_groups:
-				print("BOSS_DIAG boss=",boss_group.boss_pos," guards=",boss_group.guard_positions," members=",boss_group.member_ids)
-			var duplicate_cells:Dictionary={}
-			for entity_id in map.entity_positions.keys():
-				var entity_pos:Vector2i=map.entity_positions[entity_id]
-				if duplicate_cells.has(entity_pos): print("ENTITY_DUPLICATE_DIAG pos=",entity_pos," first=",duplicate_cells[entity_pos]," second=",entity_id)
-				duplicate_cells[entity_pos]=entity_id
-			for npc_pos in generated.npc_cells:
-				if HexGrid.distance(entrance,npc_pos)<=3: print("NPC_SAFE_RADIUS_DIAG pos=",npc_pos)
-			for encounter_pos in generated.encounter_cells:
-				if HexGrid.distance(entrance,encounter_pos)<=3: print("ENCOUNTER_SAFE_RADIUS_DIAG pos=",encounter_pos)
 			break
 	var first:=LocationGenerator.generate(20,20,777)
 	var second:=LocationGenerator.generate(20,20,777)
