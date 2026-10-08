@@ -6,7 +6,7 @@ var group:GroupCombatState
 var controller:GroupCombatController
 var engine:CombatEngine
 var orchestrator:RoundOrchestrator
-var attack_pipeline:CombatSimulator
+var attack_pipeline:CombatAttackPipeline
 var max_rounds:int=999
 
 func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Dictionary={}) -> void:
@@ -15,11 +15,7 @@ func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Diction
 	controller=GroupCombatController.new(group)
 	engine=CombatEngine.new(state,balance)
 	orchestrator=RoundOrchestrator.new(state,engine,group)
-	attack_pipeline=CombatSimulator.new(state,balance,1)
-	# Share the group engine/orchestrator so Base Attack events resolve in the
-	# same round and group context instead of creating a parallel combat path.
-	attack_pipeline.engine=engine
-	attack_pipeline.orchestrator=orchestrator
+	attack_pipeline=CombatAttackPipeline.new(state,1)
 	controller.initialize_active_opponents()
 
 func run() -> Dictionary:
