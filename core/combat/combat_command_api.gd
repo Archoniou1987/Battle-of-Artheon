@@ -245,7 +245,8 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
 			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
 			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
-			"generates_ap":true
+			# AP belongs to the Base Attack action, not to every hit of a multi-hit profile.
+			"generates_ap":hit_index==0
 		})
 		state.queue_event(event)
 		event_ids.append(event.event_id)
