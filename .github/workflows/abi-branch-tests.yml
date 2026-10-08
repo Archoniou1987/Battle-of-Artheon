@@ -55,6 +55,8 @@ jobs:
 
       - name: Open dungeon chest and award loot once
         run: timeout 120s godot --headless --path . --script res://tests/loot/chest_loot_runner.gd
+      - name: Validate loot persistence across repository inventory and expedition restart
+        run: timeout 120s godot --headless --path . --script res://tests/loot/loot_persistence_restart_runner.gd
       - name: Validate item durability lifetime
         run: timeout 120s godot --headless --path . --script res://tests/items/item_durability_runner.gd
       - name: Generate crafted and worn loot conditions
