@@ -1,8 +1,34 @@
 class_name EncounterLootPool
 extends RefCounted
 
+const LIFETIME_SECONDS:=15*60
+
+var created_at_unix:int=0
+var expires_at_unix:int=0
+var hex_cell:Vector2i=Vector2i.ZERO
 var entries:Array[Dictionary]=[]
 var assigned_player_by_item:Dictionary={}
+
+func place_on_hex(cell:Vector2i,now_unix:int)->void:
+	hex_cell=cell
+	created_at_unix=now_unix
+	expires_at_unix=now_unix+LIFETIME_SECONDS
+
+func is_expired(now_unix:int)->bool:
+	return expires_at_unix>0 and now_unix>=expires_at_unix
+
+func has_visible_loot(now_unix:int)->bool:
+	return not entries.is_empty() and not is_expired(now_unix)
+
+func expire(now_unix:int,repository:ItemRepository)->bool:
+	if not is_expired(now_unix):
+		return false
+	for item_id in item_ids():
+		if repository!=null:
+			repository.remove_item(item_id)
+	entries.clear()
+	assigned_player_by_item.clear()
+	return true
 
 func add_drop(item_id:String,source_npc_instance_id:String)->bool:
 	if item_id.is_empty() or item_ids().has(item_id):
@@ -29,7 +55,7 @@ func available_for(player_id:String)->Array[String]:
 	return result
 
 func claim(item_id:String,player:CharacterState,repository:ItemRepository)->bool:
-	if player==null or not item_ids().has(item_id) or String(assigned_player_by_item.get(item_id,""))!=player.character_id:
+	if is_expired(int(Time.get_unix_time_from_system())) or player==null or not item_ids().has(item_id) or String(assigned_player_by_item.get(item_id,""))!=player.character_id:
 		return false
 	if player.inventory.owns(item_id):
 		return false
@@ -48,12 +74,20 @@ func claim(item_id:String,player:CharacterState,repository:ItemRepository)->bool
 
 func to_dict()->Dictionary:
 	return {
+		"created_at_unix":created_at_unix,
+		"expires_at_unix":expires_at_unix,
+		"hex_cell":[hex_cell.x,hex_cell.y],
 		"entries":entries.duplicate(true),
 		"assigned_player_by_item":assigned_player_by_item.duplicate(true)
 	}
 
 static func from_dict(data:Dictionary)->EncounterLootPool:
 	var pool:=EncounterLootPool.new()
+	pool.created_at_unix=int(data.get("created_at_unix",0))
+	pool.expires_at_unix=int(data.get("expires_at_unix",0))
+	var raw_cell:Array=data.get("hex_cell",[0,0])
+	if raw_cell.size()>=2:
+		pool.hex_cell=Vector2i(int(raw_cell[0]),int(raw_cell[1]))
 	for raw_entry in data.get("entries",[]):
 		if not raw_entry is Dictionary:
 			continue
