@@ -29,6 +29,7 @@ func run_round() -> Dictionary:
 		return {"ok":false,"reason":"combat_finished","battle_outcome":"winner:"+controller.winning_team()}
 	var round:=orchestrator.begin_round()
 	attack_pipeline.regenerate_mana()
+	var round_targets:Dictionary={}
 	var actors:Array[String]=[]
 	for raw_id in group.combatant_team.keys():
 		actors.append(String(raw_id))
@@ -41,6 +42,7 @@ func run_round() -> Dictionary:
 		var target:=state.get_combatant(target_id)
 		if target==null or target.is_death_finalized():
 			continue
+		round_targets[actor_id]=target_id
 		attack_pipeline.lock_basic_attack(round,actor,target)
 	orchestrator.resolve_locked_actions(round)
 	# ABI is the same second immediate phase as in duel combat. Combatants that
@@ -49,7 +51,9 @@ func run_round() -> Dictionary:
 		var actor:=state.get_combatant(actor_id)
 		if actor==null or actor.is_death_finalized():
 			continue
-		var target_id:=controller.ensure_active_opponent(actor_id)
+		# ABI keeps the target selected for this round, even if its HP fell below zero.
+		# Retargeting happens only after end-round death finalization.
+		var target_id:=String(round_targets.get(actor_id,""))
 		var target:=state.get_combatant(target_id)
 		if target==null or target.is_death_finalized():
 			continue
