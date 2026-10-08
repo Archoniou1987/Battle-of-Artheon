@@ -243,12 +243,18 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 	var profile:Dictionary=intent.get("attack_profile",{})
 	var damage_min:=float(profile.get("damage_min",0.0))
 	var damage_max:=float(profile.get("damage_max",damage_min))
-	var raw_damage:=(damage_min+damage_max)/2.0
+	var event_rolls:=rolls.duplicate(true)
+	var damage_roll:=float(event_rolls.get("damage",randf()))
+	event_rolls["damage"]=damage_roll
+	var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)
 	var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{
 		"raw_damage":raw_damage,
+		"damage_min":damage_min,
+		"damage_max":damage_max,
+		"damage_roll":damage_roll,
 		"zone":"chest",
 		"damage_type":String(profile.get("damage_type","slashing")),
-		"rolls":rolls.duplicate(true),
+		"rolls":event_rolls,
 		"weapon_index":int(profile.get("weapon_index",0)),
 		"delivery_type":String(profile.get("delivery_type","MELEE")),
 		"min_zone_distance":int(profile.get("min_zone_distance",0)),
