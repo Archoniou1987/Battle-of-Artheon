@@ -188,13 +188,11 @@ static func run()->bool:
 		print("COMMAND_AP_FALLBACK queue=",fallback_sequence)
 		return false
 	engine.resolve_pending_events()
-	print("COMMAND_AP_FALLBACK before=",ap_before_fallback," after=",hero.action_points," ids=",fallback_sequence.get("event_ids",[]))
 	if hero.action_points!=ap_before_fallback+1: return false
 	var fallback_ap_events:=0
 	for logged_event in state.event_log:
 		if Array(fallback_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			fallback_ap_events+=1
-	print("COMMAND_AP_FALLBACK ap_events=",fallback_ap_events)
 	if fallback_ap_events!=1: return false
 	# Normal Base Attack derives one default attack per equipped weapon automatically.
 	var automatic:=api.queue_default_weapon_attacks("hero",{
@@ -203,7 +201,8 @@ static func run()->bool:
 	})
 	if not bool(automatic.get("ok",false)) or int(automatic.get("attack_count",0))!=2: return false
 	engine.resolve_pending_events()
-	if enemy.hp!=55: return false
+	# The fallback sequence above dealt another 5 damage before this 8-damage automatic sequence.
+	if enemy.hp!=50: return false
 	var automatic_weapons:Array[int]=[]
 	var automatic_zones:Array[String]=[]
 	for logged_event in state.event_log:
@@ -258,7 +257,7 @@ static func run()->bool:
 	])
 	if not bool(shield_sequence.get("ok",false)): return false
 	engine.resolve_pending_events()
-	if enemy.hp!=50: return false
+	if enemy.hp!=45: return false
 	var shield_outcomes:Array[String]=[]
 	for logged_event in state.event_log:
 		if Array(shield_sequence.get("event_ids",[])).has(logged_event.event_id):
