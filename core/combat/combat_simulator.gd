@@ -70,13 +70,14 @@ func _lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Comba
 		if not weapon_indices.has(weapon_index):
 			weapon_indices.append(weapon_index)
 	weapon_indices.sort()
-	var queued_weapon_actions:=0
+	# One normal Base Attack (all MH/OH and multi-hit constituents) shares one AP group.
+	# Tempo-generated extra attacks remain outside that AP-producing action.
+	var ap_group_id:=state.next_event_id
 	for raw_weapon_index in weapon_indices:
 		var weapon_index:=int(raw_weapon_index)
 		if _weapon_attack_available(attacker,weapon_index):
-			for event in _make_basic_attacks(attacker,defender,queued_weapon_actions>0,weapon_index):
+			for event in _make_basic_attacks(attacker,defender,false,weapon_index,ap_group_id):
 				round.lock_action(event)
-			queued_weapon_actions+=1
 	if attacker.tempo>0.0 and CombatMath.roll_success(minf(attacker.tempo,100.0),_roll()):
 		for event in _make_basic_attacks(attacker,defender,true,0):
 			round.lock_action(event)
@@ -89,7 +90,7 @@ func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var equipped_types:Array=attacker.combat_stats.get("equipped_item_types",[])
 	return equipped_types.has(requirement)
 
-func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int)->Array[CombatEvent]:
+func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int,ap_group_id:int=-1)->Array[CombatEvent]:
 	var profile:=_weapon_profile(attacker,weapon_index)
 	var result:Array[CombatEvent]=[]
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
@@ -104,7 +105,7 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 			"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
 			"zone":HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],
 			"damage_type":String(profile.get("damage_type","slashing")),"rolls":rolls,
-			"is_extra_attack":extra,"generates_ap":not extra,"weapon_index":weapon_index,
+			"is_extra_attack":extra,"generates_ap":not extra,"ap_group_id":ap_group_id if ap_group_id>=0 else state.next_event_id,"weapon_index":weapon_index,
 			"is_weapon_attack":true,"attack_profile_id":String(profile.get("id","basic")),
 			"hit_index":hit_index,"hit_count":hit_count,
 			"delivery_type":String(profile.get("delivery_type","MELEE")),
