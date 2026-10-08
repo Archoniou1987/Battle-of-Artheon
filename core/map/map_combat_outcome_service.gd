@@ -5,9 +5,14 @@ static func resolve_victory(result:Dictionary,map,bridge:MapNpcBridge,npc:NpcIns
 	if npc==null: return {"ok":false,"reason":"missing_npc"}
 	if String(result.get("winner_id",""))!=player.character_id or String(result.get("loser_id",""))!=npc.instance_id:
 		return {"ok":false,"reason":"not_player_victory"}
-	var drops:=loot_service.roll(npc,repository,player,quality_chances)
+	var pool:=EncounterLootPool.new()
+	for drop in loot_service.roll_drops(npc,repository,quality_chances):
+		var item_id:=String(drop.get("instance_id",""))
+		if not item_id.is_empty():
+			pool.add_drop(item_id,npc.instance_id)
 	if not bridge.resolve_death(map,npc.instance_id): return {"ok":false,"reason":"death_resolution_failed"}
-	return {"ok":true,"npc_instance_id":npc.instance_id,"npc_state":npc.life_state,"drops":drops,"drop_count":drops.size()}
+	pool.assign_all(player.character_id)
+	return {"ok":true,"npc_instance_id":npc.instance_id,"npc_state":npc.life_state,"loot_pool":pool,"drops":pool.item_ids(),"drop_count":pool.entries.size()}
 
 
 static func resolve_group_victory(result:Dictionary,map,bridge:MapNpcBridge,npcs:Array[NpcInstance],player:CharacterState,repository:ItemRepository,loot_service:NpcPossessionLootService,quality_chances:Dictionary)->Dictionary:
