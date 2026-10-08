@@ -76,6 +76,9 @@ func _resolve_action(event: CombatEvent) -> void:
 func _valid_action_targets(event:CombatEvent) -> Array[String]:
 	var result:Array[String]=[]
 	var raw_targets:Array=event.payload.get("target_ids",[event.target_id])
+	var target_zone_id:=int(event.payload.get("target_zone_id",-1))
+	if zone_state!=null and target_zone_id>=CombatZoneState.MIN_ZONE and target_zone_id<=CombatZoneState.MAX_ZONE:
+		raw_targets=zone_state.occupants(target_zone_id)
 	var source_team:=group_state.team_of(event.source_id) if group_state!=null else ""
 	var support_action:=_action_is_support(event)
 	var reach_definition:Dictionary={
