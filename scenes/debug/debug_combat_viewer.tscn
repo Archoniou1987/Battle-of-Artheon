@@ -39,9 +39,17 @@ theme_override_font_sizes/font_size = 26
 text = "COMBAT DEBUG"
 horizontal_alignment = 1
 
+[node name="Outcome" type="Label" parent="Margin/VBox/Header"]
+layout_mode = 2
+text = "ONGOING"
+
 [node name="Round" type="Label" parent="Margin/VBox/Header"]
 layout_mode = 2
 text = "Round 1"
+
+[node name="Reset" type="Button" parent="Margin/VBox/Header"]
+layout_mode = 2
+text = "Reset"
 
 [node name="Zones" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -80,6 +88,21 @@ text = "Hero"
 [node name="Enemy" type="Label" parent="Margin/VBox/Status"]
 layout_mode = 2
 text = "Enemy"
+
+[node name="Defence" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="DefenceLabel" type="Label" parent="Margin/VBox/Defence"]
+layout_mode = 2
+text = "Manual Block"
+
+[node name="BlockZone" type="OptionButton" parent="Margin/VBox/Defence"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SetBlock" type="Button" parent="Margin/VBox/Defence"]
+layout_mode = 2
+text = "Set Block"
 
 [node name="Actions" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
