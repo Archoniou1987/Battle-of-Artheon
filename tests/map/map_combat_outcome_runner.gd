@@ -16,7 +16,15 @@ func _initialize()->void:
 	valid=valid and not map.entity_positions.has("WORLD_BANDIT_001")
 	valid=valid and bridge.instances.has("WORLD_BANDIT_001")
 	valid=valid and bridge.npc_at(map,Vector2i(5,5)).is_empty()
-	valid=valid and player.inventory.owns("BANDIT_DAGGER_001") and int(outcome.get("drop_count",0))==1
+	valid=valid and not player.inventory.owns("BANDIT_DAGGER_001") and int(outcome.get("drop_count",0))==1
+	var pool:EncounterLootPool=outcome.get("loot_pool")
+	valid=valid and pool!=null and pool.available_for("PLAYER")==["BANDIT_DAGGER_001"]
+	var saved_pool:=pool.to_dict()
+	var restored:=EncounterLootPool.from_dict(saved_pool)
+	valid=valid and restored.available_for("PLAYER")==["BANDIT_DAGGER_001"]
+	valid=valid and String(restored.entries[0].get("source_npc_instance_id",""))=="WORLD_BANDIT_001"
+	valid=valid and restored.claim("BANDIT_DAGGER_001",player,item_repo)
+	valid=valid and player.inventory.owns("BANDIT_DAGGER_001") and restored.entries.is_empty()
 	print("MAP_COMBAT_OUTCOME npc=%s state=%s drops=%d inventory=%d"%[npc.instance_id,npc.life_state,int(outcome.drop_count),player.inventory.size()])
 	print("MAP_COMBAT_OUTCOME_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
