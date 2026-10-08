@@ -50,9 +50,11 @@ static func _run_case(seed:int)->bool:
 				if distance==0:
 					var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{"raw_damage":source.combat_stats.get("main_hand_damage",5.0),"zone":"chest","damage_type":"slashing","rolls":{"hit":rng.randi_range(1,100),"dodge":rng.randi_range(1,100),"crit":rng.randi_range(1,100)}})
 					state.queue_event(event)
-				elif distance==1:
-					var direction:=zones.direction(source_id,target_id)
-					orchestrator.queue_movement_request(source_id,zones.zone_of(source_id)+direction,rng.randi_range(1,100))
+				elif distance>0:
+					var source_zone:=zones.zone_of(source_id)
+					var target_zone:=zones.zone_of(target_id)
+					var coordinate_step:=signi(target_zone-source_zone)
+					orchestrator.queue_movement_request(source_id,source_zone+coordinate_step,rng.randi_range(1,100))
 		engine.resolve_pending_events()
 		var round_result:=orchestrator.end_round()
 		if String(round_result.get("battle_outcome","ongoing"))!="ongoing":
