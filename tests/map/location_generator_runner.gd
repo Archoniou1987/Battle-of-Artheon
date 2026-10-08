@@ -16,14 +16,19 @@ func _initialize()->void:
 		var checkpoint:="base"
 		for group_name in ["resource_cells","npc_cells","object_cells","encounter_cells"]:
 			for pos in generated[group_name]:
-				valid=valid and map.in_bounds(pos) and map.cell(pos).is_passable()
+				valid=valid and map.in_bounds(pos)
+				# Guarded object cells are deliberately allowed to be blocked: the player
+				# interacts with the object from its guarded adjacent access cell.
+				if group_name!="object_cells":
+					valid=valid and map.cell(pos).is_passable()
 				valid=valid and pos!=entrance and pos!=exit and not occupied.has(pos)
 				occupied[pos]=true
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=base_content"%seed_value)
 			for group_name in ["resource_cells","npc_cells","object_cells","encounter_cells"]:
 				for pos in generated[group_name]:
-					if not map.in_bounds(pos) or not map.cell(pos).is_passable() or pos==entrance or pos==exit:
+					var passability_invalid:=map.in_bounds(pos) and group_name!="object_cells" and not map.cell(pos).is_passable()
+					if not map.in_bounds(pos) or passability_invalid or pos==entrance or pos==exit:
 						print("BASE_CONTENT_FAIL group=",group_name," pos=",pos," in_bounds=",map.in_bounds(pos)," passable=",(map.cell(pos).is_passable() if map.in_bounds(pos) else false)," entrance=",pos==entrance," exit=",pos==exit)
 			break
 		checkpoint="resource_areas"
