@@ -47,7 +47,7 @@ vertical_scroll_mode = 1
 [node name="Canvas" type="Control" parent="Root/MapPanel/Scroll"]
 custom_minimum_size = Vector2(900, 680)
 layout_mode = 2
-mouse_filter = 2
+mouse_filter = 1
 script = ExtResource("2")
 
 [node name="Sidebar" type="VBoxContainer" parent="Root"]
