@@ -66,7 +66,7 @@ static func run()->bool:
 	if hero.combat_stats.has("manual_block_zones"): return false
 	var cast_result:=api.cast_ability("hero","enemy","RANGED")
 	if not bool(cast_result.get("ok",false)): return false
-	if hero.mana!=5: return false
+	if hero.mana!=4: return false
 	engine.resolve_pending_events()
 	if enemy.hp!=87: return false
 	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
