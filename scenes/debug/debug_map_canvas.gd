@@ -6,6 +6,11 @@ const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
 var _entity_roles:Dictionary={}
+var loot_markers:Array[Vector2i]=[]
+
+func set_loot_markers(cells:Array[Vector2i])->void:
+	loot_markers=cells.duplicate()
+	queue_redraw()
 
 func set_generated(value:Dictionary)->void:
 	generated=value
@@ -50,6 +55,7 @@ func _draw()->void:
 			if pause_index>=0 and pause_index<patrol.path.size():
 				draw_circle(_hex_center(patrol.path[pause_index]),5.0,Color(1.0,0.90,0.35),false,2.0,true)
 	_draw_markers(map)
+	_draw_loot_markers()
 
 func _draw_markers(map:TacticalMapState)->void:
 	_draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
@@ -69,6 +75,13 @@ func _draw_markers(map:TacticalMapState)->void:
 		elif role=="RG": color=Color(0.45,0.60,0.95)
 		elif role=="OG": color=Color(0.72,0.52,0.30)
 		_draw_badge(_hex_center(map.entity_positions[entity_id]),role,color)
+
+func _draw_loot_markers()->void:
+	for cell in loot_markers:
+		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
+		draw_circle(center,7.0,Color(0.98,0.77,0.25))
+		draw_arc(center,6.0,0.0,TAU,20,Color(0.48,0.28,0.07),1.4,true)
+		draw_line(center+Vector2(-2.0,0.0),center+Vector2(2.0,0.0),Color(0.48,0.28,0.07),1.5,true)
 
 func _cell_color(cell:MapCell)->Color:
 	if cell.blocked:
