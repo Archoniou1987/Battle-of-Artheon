@@ -60,8 +60,6 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 	if selected.is_empty():
 		return null
 	var rolls:Dictionary=Dictionary(payload.get("rolls",{})).duplicate(true)
-	var damage_roll:=float(rolls.get("damage",randf()))
-	rolls["damage"]=damage_roll
 	var hit_count:=maxi(1,int(selected.get("hit_count",1)))
 	var hit_index:=int(payload.get("hit_index",0))
 	if hit_index<0 or hit_index>=hit_count:
@@ -72,6 +70,8 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 		merged.erase("hits")
 		for key in Dictionary(per_hit[hit_index]).keys(): merged[key]=Dictionary(per_hit[hit_index])[key]
 		rolls=merged
+	var damage_roll:=float(rolls.get("damage",randf()))
+	rolls["damage"]=damage_roll
 	var damage_min:=float(selected.get("damage_min",0.0))
 	var damage_max:=float(selected.get("damage_max",damage_min))
 	var data:Dictionary={
