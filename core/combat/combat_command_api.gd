@@ -296,18 +296,22 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->Dictionary:
 	if attacks.is_empty():
 		return {"ok":false,"reason":"empty_attack_sequence"}
-	var sequence_event_ids:Array[int]=[]
-	var attack_results:Array[Dictionary]=[]
+	# Validate the whole sequence before queueing anything. A rejected OH/profile
+	# must never leave an already queued MH attack behind.
 	for attack_index in range(attacks.size()):
 		var request:Dictionary=attacks[attack_index]
+		var intent:=basic_attack_intent(source_id,String(request.get("attack_profile_id","basic")),int(request.get("weapon_index",-1)))
+		if not bool(intent.get("ok",false)):
+			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
+	var sequence_event_ids:Array[int]=[]
+	var attack_results:Array[Dictionary]=[]
+	for request in attacks:
 		var profile_id:=String(request.get("attack_profile_id","basic"))
 		var weapon_index:=int(request.get("weapon_index",-1))
 		var attack_rolls:Dictionary=Dictionary(request.get("rolls",{})).duplicate(true)
 		if request.has("zone"):
 			attack_rolls["zone"]=String(request.get("zone","chest"))
 		var result:=queue_basic_attack(source_id,attack_rolls,profile_id,weapon_index)
-		if not bool(result.get("ok",false)):
-			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(result.get("reason","")),"queued_event_ids":sequence_event_ids}
 		attack_results.append(result)
 		for event_id in Array(result.get("event_ids",[])):
 			sequence_event_ids.append(int(event_id))
