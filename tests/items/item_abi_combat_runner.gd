@@ -13,14 +13,15 @@ func _init() -> void:
 	var state := CombatState.new()
 	var first := CombatantState.new("ITEM_ABI_HERO", "Item ABI Hero", 50, 100, 25)
 	var second := CombatantState.new("ITEM_ABI_ENEMY", "Enemy", 50, 100, 0)
-	first.combat_stats = {"mana_regen":2,"main_hand_damage_min":2.0,"main_hand_damage_max":2.0,"main_hand_damage_type":"slashing"}
-	second.combat_stats = {"mana_regen":0,"main_hand_damage_min":2.0,"main_hand_damage_max":2.0,"main_hand_damage_type":"slashing"}
+	first.combat_stats = {"mana_regen":2,"main_hand_damage_min":2.0,"main_hand_damage_max":2.0,"main_hand_damage_type":"slashing","hit_modifier":100.0}
+	second.combat_stats = {"mana_regen":0,"main_hand_damage_min":2.0,"main_hand_damage_max":2.0,"main_hand_damage_type":"slashing","hit_modifier":100.0}
 	state.add_combatant(first)
 	state.add_combatant(second)
 
 	var definitions := AbilityCatalog.load_json("res://data/test/abilities.json")
 	var item_loadouts := {"ITEM_ABI_HERO": active, "ITEM_ABI_ENEMY": []}
 	var simulator := CombatSimulator.new(state, {}, 4242)
+	simulator.max_rounds = 3
 	simulator.ability_scheduler = AbilityScheduler.new(definitions, item_loadouts)
 	var result: Dictionary = simulator.run_duel("ITEM_ABI_HERO", "ITEM_ABI_ENEMY")
 
