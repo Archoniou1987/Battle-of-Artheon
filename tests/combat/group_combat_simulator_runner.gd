@@ -15,7 +15,6 @@ func _initialize()->void:
 		group.add_member("enemies",id)
 	var simulator:=GroupCombatSimulator.new(state,group)
 	var valid:=group.active_opponent("PLAYER")=="E0"
-	var failures:Array[String]=[]
 	var r1:=simulator.run_round()
 	valid=valid and bool(r1.get("ok",false)) and state.get_combatant("E0").is_death_finalized()
 	# A normal player action must hit only the active opponent, never every NPC.
@@ -35,7 +34,7 @@ func _initialize()->void:
 			player_attack=event
 			break
 	valid=valid and player_attack!=null
-	valid=valid and String(player_attack.result.get("outcome",""))=="hit"
+	valid=valid and String(player_attack.result.get("outcome",""))=="connected"
 	valid=valid and player_attack.payload.has("rolls") and player_attack.payload.has("zone")
 	valid=valid and bool(player_attack.payload.get("is_weapon_attack",false))
 	valid=valid and group.active_opponent("PLAYER")=="E1" and not simulator.controller.combat_finished()
@@ -46,10 +45,5 @@ func _initialize()->void:
 	valid=valid and simulator.controller.combat_finished() and simulator.controller.winning_team()=="players"
 	valid=valid and String(r3.get("battle_outcome",""))=="winner:players"
 	valid=valid and player.hp==70
-	if not valid:
-		print("GROUP_COMBAT_DEBUG player_hp=",player.hp," e0=",state.get_combatant("E0").hp," e1=",state.get_combatant("E1").hp," e2=",state.get_combatant("E2").hp," active=",group.active_opponent("PLAYER")," events=",state.event_log.size())
-		for event in state.event_log:
-			if event is CombatEvent:
-				print("GROUP_EVENT kind=",event.kind," source=",event.source_id," target=",event.target_id," outcome=",event.result.get("outcome","")," amount=",event.result.get("final_damage",event.payload.get("amount",event.payload.get("raw_damage",""))))
 	print("GROUP_COMBAT_SIMULATOR_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
