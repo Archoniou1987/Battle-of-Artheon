@@ -4,6 +4,11 @@ extends RefCounted
 var state: CombatState
 var engine: CombatEngine
 var attack_pipeline:CombatAttackPipeline
+var ability_scheduler:AbilityScheduler:
+	get:
+		return attack_pipeline.ability_scheduler
+	set(value):
+		attack_pipeline.ability_scheduler=value
 var orchestrator: RoundOrchestrator
 var max_rounds: int = 999
 
