@@ -54,13 +54,14 @@ func available_for(player_id:String)->Array[String]:
 			result.append(item_id)
 	return result
 
-func claim(item_id:String,player:CharacterState,repository:ItemRepository)->bool:
-	if is_expired(int(Time.get_unix_time_from_system())) or player==null or not item_ids().has(item_id) or String(assigned_player_by_item.get(item_id,""))!=player.character_id:
+func claim(item_id:String,player:CharacterState,repository:ItemRepository,now_unix:int=-1)->bool:
+	var checked_at:=now_unix if now_unix>=0 else int(Time.get_unix_time_from_system())
+	if is_expired(checked_at) or player==null or repository==null or not item_ids().has(item_id) or String(assigned_player_by_item.get(item_id,""))!=player.character_id:
 		return false
 	if player.inventory.owns(item_id):
 		return false
 	var item=repository.get_item(item_id)
-	if item==null:
+	if item==null or (item is Dictionary and item.is_empty()):
 		return false
 	if not player.inventory.add_instance(item_id,repository):
 		return false
