@@ -95,8 +95,8 @@ func _initialize()->void:
 			valid=valid and HexGrid.distance(entrance,boss_group.boss_pos)>3
 			for guard_pos in boss_group.guard_positions:
 				valid=valid and HexGrid.distance(entrance,guard_pos)>3
-// Multiple NPC/entities may legitimately share a map cell. Encounter assembly
-		// is responsible for turning co-located hostile entities into group combat.
+# Multiple NPC/entities may legitimately share a map cell. Encounter assembly
+		# is responsible for turning co-located hostile entities into group combat.
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
 			break
