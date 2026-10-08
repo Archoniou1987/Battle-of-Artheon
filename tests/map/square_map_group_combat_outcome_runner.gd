@@ -28,6 +28,14 @@ func _initialize()->void:
 	var pool:EncounterLootPool=outcome.get("loot_pool")
 	valid=valid and pool!=null and pool.entries.size()==3
 	valid=valid and pool.available_for("PLAYER").size()==3
+	var other_player:=CharacterState.new("OTHER_PLAYER","Other Hero",5)
+	pool.assign_all(other_player.character_id)
+	valid=valid and pool.available_for("PLAYER").size()==3
+	valid=valid and pool.available_for("OTHER_PLAYER").is_empty()
+	valid=valid and not pool.claim("GROUP_ITEM_001",other_player,item_repo)
+	var tampered:=EncounterLootPool.from_dict(pool.to_dict())
+	tampered.entries.clear()
+	valid=valid and not tampered.claim("GROUP_ITEM_001",player,item_repo)
 	valid=valid and not pool.add_drop("GROUP_ITEM_001","GROUP_LOOT_001")
 	valid=valid and pool.entries.size()==3
 	var restored_pool:=EncounterLootPool.from_dict(pool.to_dict())
