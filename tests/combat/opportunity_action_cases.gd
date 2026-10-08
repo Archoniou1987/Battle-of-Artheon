@@ -2,7 +2,7 @@ class_name OpportunityActionCases
 extends RefCounted
 
 static func run()->bool:
-	return _independent_rolls() and _active_opponent_not_restricted() and _dead_actor_cannot_start_opportunity() and _base_attack_uses_attack_pipeline() and _ability_uses_action_pipeline() and _zone_reach_controls_opportunity_events()
+	return _independent_rolls() and _active_opponent_not_restricted() and _dead_actor_cannot_start_opportunity() and _base_attack_uses_attack_pipeline() and _full_base_attack_sequence() and _ability_uses_action_pipeline() and _zone_reach_controls_opportunity_events()
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
@@ -86,6 +86,32 @@ static func _base_attack_uses_attack_pipeline()->bool:
 		and String(event.payload.get("damage_type",""))=="chopping"
 		and is_equal_approx(float(event.payload.get("raw_damage",0.0)),7.0)
 	)
+
+
+static func _full_base_attack_sequence()->bool:
+	var x:=_context()
+	var resolver:OpportunityActionResolver=x["resolver"]
+	var actor:CombatantState=x["state"].get_combatant("e1")
+	actor.combat_stats["weapon_profiles"]=[
+		{"damage_min":2.0,"damage_max":2.0,"damage_type":"piercing","attack_profiles":[{"id":"mh_double","delivery_type":"MELEE","hit_count":2}]},
+		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"oh_single","delivery_type":"MELEE"}]}
+	]
+	var decision:Dictionary={"kind":"BASE_ATTACK","source_id":"e1","target_id":"player"}
+	var result:=resolver.queue_base_attack(decision,{"rolls_by_weapon":{
+		0:{"hits":[{"zone":"head","damage":0.0},{"zone":"chest","damage":0.0}]},
+		1:{"zone":"arms","damage":0.0}
+	}})
+	if not bool(result.get("ok",false)) or int(result.get("attack_count",0))!=3: return false
+	var ids:Array=result.get("event_ids",[])
+	if ids.size()!=3: return false
+	var weapons:Array[int]=[]; var hits:Array[int]=[]; var zones:Array[String]=[]
+	for event in x["state"].pending_events:
+		if ids.has(event.event_id):
+			weapons.append(int(event.payload.get("weapon_index",-1)))
+			hits.append(int(event.payload.get("hit_index",-1)))
+			zones.append(String(event.payload.get("zone","")))
+			if not bool(event.payload.get("is_extra_attack",false)) or bool(event.payload.get("generates_ap",true)): return false
+	return weapons==[0,0,1] and hits==[0,1,0] and zones==["head","chest","arms"]
 
 
 static func _ability_uses_action_pipeline()->bool:
