@@ -30,6 +30,10 @@ func _initialize()->void:
 	valid=valid and pool.available_for("PLAYER").size()==3
 	valid=valid and not pool.add_drop("GROUP_ITEM_001","GROUP_LOOT_001")
 	valid=valid and pool.entries.size()==3
+	var restored_pool:=EncounterLootPool.from_dict(pool.to_dict())
+	valid=valid and restored_pool.entries.size()==3
+	valid=valid and restored_pool.available_for("PLAYER").size()==3
+	valid=valid and String(restored_pool.entries[2].get("source_npc_instance_id",""))=="GROUP_LOOT_003"
 	valid=valid and bridge.npc_at(map,cell).is_empty()
 	for i in range(3):
 		var id:="GROUP_LOOT_%03d"%(i+1)
