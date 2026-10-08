@@ -19,7 +19,7 @@ static func run(balance:Dictionary) -> bool:
 		"forced_formula":_forced_movement_uses_data_driven_contest(balance),
 		"forced_invalid_jump":_forced_movement_rejects_non_adjacent_effect(balance),
 		"movement_edges":_movement_edges_and_root(balance),
-		"navigation_forced_exclusive":_navigation_and_forced_are_exclusive(balance)
+		"forced_overrides_navigation":_forced_movement_overrides_navigation(balance)
 	}
 	for case_name in cases:
 		if not bool(cases[case_name]): print("ROUND_CASE_FAIL=",case_name)
@@ -283,7 +283,7 @@ static func _movement_edges_and_root(balance:Dictionary)->bool:
 	return zones.zone_of("a")==CombatZoneState.ZONE_1
 
 
-static func _navigation_and_forced_are_exclusive(balance:Dictionary)->bool:
+static func _forced_movement_overrides_navigation(balance:Dictionary)->bool:
 	var state:=CombatState.new()
 	state.add_combatant(CombatantState.new("a","A",1,100))
 	state.add_combatant(CombatantState.new("b","B",1,100))
@@ -295,6 +295,6 @@ static func _navigation_and_forced_are_exclusive(balance:Dictionary)->bool:
 	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"navigation"): return false
-	if orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"flat_power":100.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":100.0}): return false
 	var results:=orchestrator.resolve_movement_phase()
-	return results.size()==1 and zones.zone_of("a")==CombatZoneState.ZONE_2
+	return results.size()==1 and bool(results[0].get("moved",false)) and String(results[0].get("movement_kind",""))=="forced" and zones.zone_of("a")==CombatZoneState.ZONE_2
