@@ -13,19 +13,23 @@ func _initialize()->void:
 		valid=valid and bool(result.get("ok",false)) and not path.is_empty()
 		valid=valid and path[0]==entrance and path[path.size()-1]==exit
 		var occupied:Dictionary={}
+		var checkpoint:="base"
 		for group_name in ["resource_cells","npc_cells","object_cells","encounter_cells"]:
 			for pos in generated[group_name]:
 				valid=valid and map.in_bounds(pos) and map.cell(pos).is_passable()
 				valid=valid and pos!=entrance and pos!=exit and not occupied.has(pos)
 				occupied[pos]=true
+		checkpoint="resource_areas"
 		for i in range(generated.resource_cells.size()):
 			valid=valid and map.areas_at(generated.resource_cells[i]).has("GEN_RESOURCE_%02d"%i)
 		for i in range(generated.object_cells.size()):
 			valid=valid and map.cell(generated.object_cells[i]).object_ids.has("GEN_OBJECT_%02d"%i)
 		for i in range(generated.npc_cells.size()):
 			valid=valid and map.entity_positions.get("GEN_NPC_%02d"%i,Vector2i(-1,-1))==generated.npc_cells[i]
+		checkpoint="encounter_service"
 		var service:HexEncounterService=generated.encounter_service
 		valid=valid and service.encounters.size()==generated.encounter_cells.size()+generated.boss_groups.size()
+		checkpoint="boss_groups"
 		for boss_group in generated.boss_groups:
 			var boss_pos:Vector2i=boss_group.boss_pos
 			valid=valid and map.in_bounds(boss_pos) and map.cell(boss_pos).is_passable()
@@ -46,6 +50,7 @@ func _initialize()->void:
 				valid=valid and HexGrid.distance(boss_pos,guard_pos)==1
 				valid=valid and map.entity_positions.get(guard_id,Vector2i(-1,-1))==guard_pos
 				valid=valid and map.entities_at(guard_pos).size()==1
+		checkpoint="patrols"
 		valid=valid and generated.patrols.size()>=5
 		for patrol in generated.patrols:
 			var patrol_path:Array=patrol.path
@@ -63,12 +68,14 @@ func _initialize()->void:
 				valid=valid and float(pause.get("pause_seconds",0.0))>0.0
 			for i in range(1,patrol_path.size()):
 				valid=valid and HexGrid.distance(patrol_path[i-1],patrol_path[i])==1
+		checkpoint="route_guards"
 		for route_guard in generated.route_guards:
 			var route_guard_pos:Vector2i=route_guard.guard_pos
 			valid=valid and generated.guaranteed_path.has(route_guard_pos)
 			valid=valid and route_guard_pos!=entrance and route_guard_pos!=exit
 			valid=valid and HexGrid.distance(entrance,route_guard_pos)>3
 			valid=valid and map.entity_positions.get(route_guard.guard_id,Vector2i(-1,-1))==route_guard_pos
+		checkpoint="guarded_objects"
 		for guarded in generated.guarded_objects:
 			var object_pos:Vector2i=guarded.object_pos
 			var guard_pos:Vector2i=guarded.guard_pos
@@ -79,6 +86,7 @@ func _initialize()->void:
 			valid=valid and map.cell(object_pos).object_ids.size()>0
 			valid=valid and map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
 			valid=valid and map.entities_at(guard_pos).size()==1
+		checkpoint="safe_radius"
 		for npc_pos in generated.npc_cells:
 			valid=valid and HexGrid.distance(entrance,npc_pos)>3
 		for encounter_pos in generated.encounter_cells:
@@ -87,13 +95,14 @@ func _initialize()->void:
 			valid=valid and HexGrid.distance(entrance,boss_group.boss_pos)>3
 			for guard_pos in boss_group.guard_positions:
 				valid=valid and HexGrid.distance(entrance,guard_pos)>3
+		checkpoint="entity_uniqueness"
 		var entity_cells:Dictionary={}
 		for entity_id in map.entity_positions.keys():
 			var entity_pos:Vector2i=map.entity_positions[entity_id]
 			valid=valid and not entity_cells.has(entity_pos)
 			entity_cells[entity_pos]=entity_id
 		if not valid:
-			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
 			print("LOCATION_GENERATOR_DIAG path_ok=",bool(result.get("ok",false))," path_size=",path.size()," resources=",generated.resource_cells.size()," npcs=",generated.npc_cells.size()," objects=",generated.object_cells.size()," encounters=",generated.encounter_cells.size()," bosses=",generated.boss_groups.size()," patrols=",generated.patrols.size()," route_guards=",generated.route_guards.size()," guarded_objects=",generated.guarded_objects.size()," entities=",map.entity_positions.size())
 			for patrol in generated.patrols:
 				var unsafe_steps:=0
