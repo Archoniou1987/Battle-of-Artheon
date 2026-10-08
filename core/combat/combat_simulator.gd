@@ -7,7 +7,7 @@ var engine: CombatEngine
 var ability_scheduler: AbilityScheduler
 var orchestrator: RoundOrchestrator
 var rng := RandomNumberGenerator.new()
-var max_rounds: int = 100
+var max_rounds: int = 999
 
 func _init(combat_state: CombatState, balance: Dictionary = {}, seed_value: int = 1) -> void:
 	state = combat_state
@@ -64,11 +64,19 @@ func _queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
 func _lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
 	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(attacker.tempo): return
-	var weapon_attacks:=maxi(1,int(attacker.combat_stats.get("weapon_attack_count",1)))
-	for weapon_index in range(weapon_attacks):
+	var weapon_indices:Array=[]
+	for profile in WeaponAttackProfile.all(attacker):
+		var weapon_index:=int(profile.get("weapon_index",-1))
+		if not weapon_indices.has(weapon_index):
+			weapon_indices.append(weapon_index)
+	weapon_indices.sort()
+	var queued_weapon_actions:=0
+	for raw_weapon_index in weapon_indices:
+		var weapon_index:=int(raw_weapon_index)
 		if _weapon_attack_available(attacker,weapon_index):
-			for event in _make_basic_attacks(attacker,defender,weapon_index>0,weapon_index):
+			for event in _make_basic_attacks(attacker,defender,queued_weapon_actions>0,weapon_index):
 				round.lock_action(event)
+			queued_weapon_actions+=1
 	if attacker.tempo>0.0 and CombatMath.roll_success(minf(attacker.tempo,100.0),_roll()):
 		for event in _make_basic_attacks(attacker,defender,true,0):
 			round.lock_action(event)
@@ -110,11 +118,19 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 	return result
 
 func _weapon_profile(attacker:CombatantState,weapon_index:int)->Dictionary:
-	var profiles:=WeaponAttackProfile.all(attacker)
-	for profile in profiles:
+	var matches:Array[Dictionary]=[]
+	for profile in WeaponAttackProfile.all(attacker):
 		if int(profile.get("weapon_index",-1))==weapon_index:
-			return profile
-	return profiles[0] if not profiles.is_empty() else {}
+			matches.append(profile)
+	if matches.size()==1:
+		return matches[0]
+	var selected:Dictionary={}
+	for profile in matches:
+		if bool(profile.get("is_default",false)):
+			if not selected.is_empty():
+				return {}
+			selected=profile
+	return selected
 func _weapon_damage(profile:Dictionary)->float:
 	var minimum:=float(profile.get("damage_min",1.0)); var maximum:=float(profile.get("damage_max",minimum))
 	if maximum<minimum: var swap:=minimum; minimum=maximum; maximum=swap
