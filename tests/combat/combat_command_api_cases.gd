@@ -21,8 +21,20 @@ static func run()->bool:
 	var scheduler:=AbilityScheduler.new({"RANGED":{"delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"mana_cost":5,"cooldown_rounds":2,"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]}},{"hero":["RANGED"]})
 	scheduler.cooldowns_by_combatant["hero"]={"COOLDOWN":state.round_number+2}
 	var api:=CombatCommandApi.new(state,group,zones,orchestrator,scheduler)
+	hero.combat_stats["weapon_profiles"]=[{
+		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
+		"attack_profiles":[
+			{"id":"staff_strike","delivery_type":"MELEE","min_zone_distance":0,"max_zone_distance":0},
+			{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2,"damage_min":6.0,"damage_max":6.0,"damage_type":"fire"}
+		]
+	}]
 	if not bool(api.select_active_opponent("hero","enemy",{"max_zone_distance":1}).get("ok",false)): return false
-	if bool(api.basic_attack_intent("hero").get("ok",true)): return false
+	if bool(api.basic_attack_intent("hero","staff_strike").get("ok",true)): return false
+	if not bool(api.basic_attack_intent("hero","arcane_bolt").get("ok",false)): return false
+	var ranged_basic:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"arcane_bolt")
+	if not bool(ranged_basic.get("ok",false)): return false
+	engine.resolve_pending_events()
+	if enemy.hp!=94: return false
 	if not bool(api.ability_intent("hero","enemy",{"min_zone_distance":0,"max_zone_distance":1}).get("ok",false)): return false
 	var actions:=api.available_actions("hero",{
 		"RANGED":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":5},
@@ -46,7 +58,7 @@ static func run()->bool:
 	if not bool(cast_result.get("ok",false)): return false
 	if hero.mana!=5: return false
 	engine.resolve_pending_events()
-	if enemy.hp!=93: return false
+	if enemy.hp!=87: return false
 	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
 	var second_cast:=api.cast_ability("hero","enemy","RANGED")
 	if bool(second_cast.get("ok",true)): return false
@@ -54,9 +66,7 @@ static func run()->bool:
 	if not bool(movement.get("ok",false)): return false
 	var results:=orchestrator.resolve_movement_phase()
 	if results.size()!=1 or not bool(results[0].get("moved",false)) or zones.zone_of("hero")!=CombatZoneState.ZONE_2: return false
-	hero.combat_stats["main_hand_damage"]=9.0
-	hero.combat_stats["main_hand_damage_type"]="slashing"
-	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100})
+	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"staff_strike")
 	if not bool(attack.get("ok",false)): return false
 	engine.resolve_pending_events()
-	return enemy.hp==84
+	return enemy.hp==78
