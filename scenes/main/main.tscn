@@ -42,3 +42,7 @@ horizontal_alignment = 1
 [node name="DebugMapViewer" type="Button" parent="Center/VBox"]
 layout_mode = 2
 text = "Open Debug Map Viewer"
+
+[node name="DebugCombatViewer" type="Button" parent="Center/VBox"]
+layout_mode = 2
+text = "Open Combat Debug"
