@@ -43,6 +43,14 @@ static func run()->bool:
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
 	if hero.combat_stats.has("manual_block_zones"): return false
 	var cast_result:=api.cast_ability("hero","enemy","RANGED")
+	if not bool(cast_result.get("ok",false)): return false
+	if hero.mana!=5: return false
+	engine.resolve_pending_events()
+	if enemy.hp!=93: return false
+	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
+	var second_cast:=api.cast_ability("hero","enemy","RANGED")
+	if bool(second_cast.get("ok",true)): return false
+	var cast_result:=api.cast_ability("hero","enemy","RANGED")
 	if not bool(cast_result.get("ok",false)) or hero.mana!=5: return false
 	engine.resolve_pending_events()
 	if enemy.hp!=93: return false
