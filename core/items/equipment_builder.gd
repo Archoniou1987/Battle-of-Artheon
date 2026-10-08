@@ -25,7 +25,8 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 			"damage_min":float(damage.get("min",0.0)),
 			"damage_max":float(damage.get("max",0.0)),
 			"damage_type":String(damage.get("type","slashing")),
-			"on_hit_effect":item.get("on_hit_effect",{}).duplicate(true)
+			"on_hit_effect":item.get("on_hit_effect",{}).duplicate(true),
+			"attack_profiles":item.get("attack_profiles",[]).duplicate(true)
 		}
 		if not weapon_profile["on_hit_effect"].is_empty():
 			weapon_profile["on_hit_effect"]["source_type"]="item"
