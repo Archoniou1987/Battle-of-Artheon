@@ -13,7 +13,7 @@ func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Diction
 	group=group_state
 	controller=GroupCombatController.new(group)
 	engine=CombatEngine.new(state,balance)
-	orchestrator=RoundOrchestrator.new(state,engine)
+	orchestrator=RoundOrchestrator.new(state,engine,group)
 	controller.initialize_active_opponents()
 
 func run() -> Dictionary:
