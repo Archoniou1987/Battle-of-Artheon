@@ -273,6 +273,7 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			"damage_type":String(profile.get("damage_type","slashing")),
 			"rolls":event_rolls,
 			"weapon_index":int(profile.get("weapon_index",0)),
+			"is_weapon_attack":true,
 			"attack_profile_id":attack_profile_id,
 			"hit_index":hit_index,
 			"hit_count":hit_count,
