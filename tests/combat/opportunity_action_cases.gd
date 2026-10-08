@@ -2,7 +2,19 @@ class_name OpportunityActionCases
 extends RefCounted
 
 static func run()->bool:
-	return _independent_rolls() and _active_opponent_not_restricted() and _dead_actor_cannot_start_opportunity() and _base_attack_uses_attack_pipeline() and _full_base_attack_sequence() and _ability_uses_action_pipeline() and _zone_reach_controls_opportunity_events()
+	var cases:Dictionary={
+		"independent_rolls":_independent_rolls(),
+		"active_opponent":_active_opponent_not_restricted(),
+		"dead_actor":_dead_actor_cannot_start_opportunity(),
+		"base_pipeline":_base_attack_uses_attack_pipeline(),
+		"full_sequence":_full_base_attack_sequence(),
+		"ability_pipeline":_ability_uses_action_pipeline(),
+		"zone_reach":_zone_reach_controls_opportunity_events()
+	}
+	for case_name in cases:
+		print("OPPORTUNITY_CASE=",case_name," ok=",bool(cases[case_name]))
+		if not bool(cases[case_name]): return false
+	return true
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
