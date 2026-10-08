@@ -64,6 +64,7 @@ func _weapon_attack_profiles(combatant:CombatantState)->Array[Dictionary]:
 			profile["damage_type"]=String(profile.get("damage_type",weapon.get("damage_type","slashing")))
 			profile["uses_magic_hit"]=bool(profile.get("uses_magic_hit",weapon.get("uses_magic_hit",false)))
 			profile["magic_hit_modifier"]=float(profile.get("magic_hit_modifier",weapon.get("magic_hit_modifier",0.0)))
+			profile["hit_count"]=maxi(1,int(profile.get("hit_count",weapon.get("hit_count",1))))
 			result.append(profile)
 	if result.is_empty():
 		result.append({
@@ -72,7 +73,7 @@ func _weapon_attack_profiles(combatant:CombatantState)->Array[Dictionary]:
 			"damage_min":float(combatant.combat_stats.get("main_hand_damage",0.0)),
 			"damage_max":float(combatant.combat_stats.get("main_hand_damage",0.0)),
 			"damage_type":String(combatant.combat_stats.get("main_hand_damage_type","slashing")),
-			"uses_magic_hit":false,"magic_hit_modifier":0.0
+			"uses_magic_hit":false,"magic_hit_modifier":0.0,"hit_count":1
 		})
 	return result
 
@@ -246,29 +247,49 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 	var profile:Dictionary=intent.get("attack_profile",{})
 	var damage_min:=float(profile.get("damage_min",0.0))
 	var damage_max:=float(profile.get("damage_max",damage_min))
-	var event_rolls:=rolls.duplicate(true)
-	var damage_roll:=float(event_rolls.get("damage",randf()))
-	event_rolls["damage"]=damage_roll
-	var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)
-	var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{
-		"raw_damage":raw_damage,
-		"damage_min":damage_min,
-		"damage_max":damage_max,
-		"damage_roll":damage_roll,
-		"zone":"chest",
-		"damage_type":String(profile.get("damage_type","slashing")),
-		"rolls":event_rolls,
-		"weapon_index":int(profile.get("weapon_index",0)),
-		"delivery_type":String(profile.get("delivery_type","MELEE")),
-		"min_zone_distance":int(profile.get("min_zone_distance",0)),
-		"max_zone_distance":int(profile.get("max_zone_distance",0)),
-		"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
-		"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
-		"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
-		"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
-		"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
-		"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
-		"generates_ap":true
-	})
-	state.queue_event(event)
-	return {"ok":true,"reason":"queued","event_id":event.event_id,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile_id":attack_profile_id}
+	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
+	var event_ids:Array[int]=[]
+	for hit_index in range(hit_count):
+		var event_rolls:=_basic_attack_hit_rolls(rolls,hit_index)
+		var damage_roll:=float(event_rolls.get("damage",randf()))
+		event_rolls["damage"]=damage_roll
+		var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)
+		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{
+			"raw_damage":raw_damage,
+			"damage_min":damage_min,
+			"damage_max":damage_max,
+			"damage_roll":damage_roll,
+			"zone":"chest",
+			"damage_type":String(profile.get("damage_type","slashing")),
+			"rolls":event_rolls,
+			"weapon_index":int(profile.get("weapon_index",0)),
+			"attack_profile_id":attack_profile_id,
+			"hit_index":hit_index,
+			"hit_count":hit_count,
+			"delivery_type":String(profile.get("delivery_type","MELEE")),
+			"min_zone_distance":int(profile.get("min_zone_distance",0)),
+			"max_zone_distance":int(profile.get("max_zone_distance",0)),
+			"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
+			"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
+			"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
+			"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
+			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
+			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
+			"generates_ap":true
+		})
+		state.queue_event(event)
+		event_ids.append(event.event_id)
+	return {"ok":true,"reason":"queued","event_id":event_ids[0],"event_ids":event_ids,"hit_count":hit_count,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile_id":attack_profile_id}
+
+
+func _basic_attack_hit_rolls(rolls:Dictionary,hit_index:int)->Dictionary:
+	var per_hit:Array=rolls.get("hits",[])
+	if hit_index<per_hit.size() and per_hit[hit_index] is Dictionary:
+		var merged:=rolls.duplicate(true)
+		merged.erase("hits")
+		for raw_key in Dictionary(per_hit[hit_index]).keys():
+			merged[raw_key]=Dictionary(per_hit[hit_index])[raw_key]
+		return merged
+	var shared:=rolls.duplicate(true)
+	shared.erase("hits")
+	return shared
