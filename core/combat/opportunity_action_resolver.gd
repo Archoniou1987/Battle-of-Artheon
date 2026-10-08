@@ -43,7 +43,12 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 		return null
 	var data:=payload.duplicate(true)
 	data["source"]="opportunity_base_attack"
+	data["source_kind"]="weapon"
 	data["opportunity_action"]=true
+	data["is_weapon_attack"]=true
+	data["is_extra_attack"]=true
+	data["generates_ap"]=false
+	data["weapon_index"]=int(data.get("weapon_index",0))
 	return group.combat_state.create_event(
 		CombatEvent.Kind.ATTACK,
 		source_id,
