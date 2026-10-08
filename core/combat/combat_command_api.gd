@@ -253,6 +253,60 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 	return {"ok":true,"reason":"queued","event_id":event_ids[0],"event_ids":event_ids,"hit_count":hit_count,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile_id":attack_profile_id}
 
 
+func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary={})->Dictionary:
+	var combatant:=state.get_combatant(source_id)
+	if combatant==null or combatant.is_death_finalized():
+		return {"ok":false,"reason":"invalid_combatant"}
+	var target_id:=group.active_opponent(source_id)
+	if target_id.is_empty():
+		return {"ok":false,"reason":"no_active_opponent"}
+	var by_weapon:Dictionary={}
+	for profile in _weapon_attack_profiles(combatant):
+		var weapon_index:=int(profile.get("weapon_index",-1))
+		if not by_weapon.has(weapon_index):
+			by_weapon[weapon_index]=[]
+		by_weapon[weapon_index].append(profile)
+	var attacks:Array[Dictionary]=[]
+	var weapon_indices:Array=by_weapon.keys()
+	weapon_indices.sort()
+	for raw_weapon_index in weapon_indices:
+		var weapon_index:=int(raw_weapon_index)
+		var profiles:Array=by_weapon[weapon_index]
+		var selected:Dictionary={}
+		if profiles.size()==1:
+			selected=Dictionary(profiles[0])
+		else:
+			for raw_profile in profiles:
+				var candidate:Dictionary=raw_profile
+				if bool(candidate.get("is_default",false)):
+					if not selected.is_empty():
+						return {"ok":false,"reason":"multiple_default_attack_profiles","weapon_index":weapon_index}
+					selected=candidate
+			if selected.is_empty():
+				continue
+		var requirement:=String(selected.get("requires_off_hand_type",""))
+		if not requirement.is_empty() and not Array(combatant.combat_stats.get("equipped_item_types",[])).has(requirement):
+			continue
+		if not action_policy.valid_targets(source_id,selected).has(target_id):
+			continue
+		var request:Dictionary={"weapon_index":weapon_index,"attack_profile_id":String(selected.get("id","basic"))}
+		if rolls_by_weapon.has(weapon_index):
+			request["rolls"]=Dictionary(rolls_by_weapon[weapon_index]).duplicate(true)
+		elif rolls_by_weapon.has(String.num_int64(weapon_index)):
+			request["rolls"]=Dictionary(rolls_by_weapon[String.num_int64(weapon_index)]).duplicate(true)
+		attacks.append(request)
+	if attacks.is_empty():
+		return {"ok":false,"reason":"no_default_weapon_attacks"}
+	return {"ok":true,"reason":"ready","attacks":attacks}
+
+
+func queue_default_weapon_attacks(source_id:String,rolls_by_weapon:Dictionary={})->Dictionary:
+	var sequence:=default_weapon_attack_sequence(source_id,rolls_by_weapon)
+	if not bool(sequence.get("ok",false)):
+		return sequence
+	return queue_weapon_attack_sequence(source_id,Array(sequence.get("attacks",[])))
+
+
 func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->Dictionary:
 	if attacks.is_empty():
 		return {"ok":false,"reason":"empty_attack_sequence"}
