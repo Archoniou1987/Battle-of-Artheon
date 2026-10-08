@@ -18,7 +18,7 @@ static func run()->bool:
 	var engine:=CombatEngine.new(state,{})
 	var orchestrator:=RoundOrchestrator.new(state,engine,group,zones)
 	orchestrator.begin_round()
-	var scheduler:=AbilityScheduler.new()
+	var scheduler:=AbilityScheduler.new({"RANGED":{"delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"mana_cost":5,"cooldown_rounds":2,"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]}},{"hero":["RANGED"]})
 	scheduler.cooldowns_by_combatant["hero"]={"COOLDOWN":state.round_number+2}
 	var api:=CombatCommandApi.new(state,group,zones,orchestrator,scheduler)
 	if not bool(api.select_active_opponent("hero","enemy",{"max_zone_distance":1}).get("ok",false)): return false
@@ -42,6 +42,13 @@ static func run()->bool:
 	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
 	if hero.combat_stats.has("manual_block_zones"): return false
+	var cast_result:=api.cast_ability("hero","enemy","RANGED")
+	if not bool(cast_result.get("ok",false)) or hero.mana!=5: return false
+	engine.resolve_pending_events()
+	if enemy.hp!=93: return false
+	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
+	var second_cast:=api.cast_ability("hero","enemy","RANGED")
+	if bool(second_cast.get("ok",true)): return false
 	var movement:=api.request_navigation("hero",CombatZoneState.ZONE_2,1)
 	if not bool(movement.get("ok",false)): return false
 	var results:=orchestrator.resolve_movement_phase()
