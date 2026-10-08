@@ -85,10 +85,12 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		if reserved_guard_cells.has(guard_pos) or HexGrid.distance(entrance,guard_pos)<=SAFE_ENTRANCE_RADIUS:
 			continue
 		var can_shape:=true
+		# A new pocket must not block the access guard of any pocket already committed.
+		# This can happen even when the new object cell itself is still free.
 		for neighbor in passable_neighbors:
 			if neighbor==guard_pos:
 				continue
-			if protected.has(neighbor) or neighbor==entrance or neighbor==exit:
+			if protected.has(neighbor) or neighbor==entrance or neighbor==exit or reserved_guard_cells.has(neighbor):
 				can_shape=false
 				break
 		if not can_shape:
