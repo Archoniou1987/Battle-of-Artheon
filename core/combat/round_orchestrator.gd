@@ -133,7 +133,7 @@ func register_from_action(event:CombatEvent) -> void:
 	var duration_rounds:=int(event.payload.get("duration_rounds",0))
 	if duration_rounds<=1:
 		return
-	var zone_id:=int(event.payload.get("zone_id",-1))
+	var zone_id:=int(event.payload.get("target_zone_id",event.payload.get("zone_id",-1)))
 	if zone_id>=CombatZoneState.ZONE_1 and zone_id<=CombatZoneState.ZONE_3 and group_state!=null and zone_state!=null:
 		register_zone_effect(event.source_id,zone_id,event.payload,duration_rounds)
 		return
@@ -277,12 +277,9 @@ func _has_active_movement_lock(combatant:CombatantState) -> bool:
 
 func _persistent_targets(record:Dictionary) -> Array[String]:
 	if record.has("zone_id") and group_state!=null and zone_state!=null:
-		var source_id:=String(record.get("source_id",""))
-		var own_team:=group_state.team_of(source_id)
 		var targets:Array[String]=[]
 		for combatant_id in zone_state.occupants(int(record.get("zone_id",-1))):
-			if group_state.team_of(combatant_id)!=own_team:
-				targets.append(combatant_id)
+			targets.append(combatant_id)
 		return targets
 	var result:Array[String]=[]
 	for raw_id in record.get("target_ids",[]):
