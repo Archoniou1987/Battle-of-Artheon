@@ -52,3 +52,6 @@ func _run_round(first_id:String,second_id:String)->void:
 		engine.resolve_pending_events()
 	orchestrator.end_round()
 
+
+func _both_alive(first_id:String,second_id:String)->bool:
+	return not state.get_combatant(first_id).is_death_finalized() and not state.get_combatant(second_id).is_death_finalized()
