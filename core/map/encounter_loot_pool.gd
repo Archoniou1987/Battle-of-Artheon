@@ -33,7 +33,7 @@ func claim(item_id:String,player:CharacterState,repository:ItemRepository)->bool
 	var item=repository.get_item(item_id)
 	if item==null:
 		return false
-	if not player.inventory.add(item_id):
+	if not player.inventory.add_instance(item_id,repository):
 		return false
 	assigned_player_by_item.erase(item_id)
 	for i in range(entries.size()):
