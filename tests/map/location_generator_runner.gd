@@ -99,7 +99,9 @@ func _initialize()->void:
 		var entity_cells:Dictionary={}
 		for entity_id in map.entity_positions.keys():
 			var entity_pos:Vector2i=map.entity_positions[entity_id]
-			valid=valid and not entity_cells.has(entity_pos)
+			if entity_cells.has(entity_pos):
+				print("ENTITY_DUPLICATE_DIAG pos=",entity_pos," first=",entity_cells[entity_pos]," second=",entity_id)
+				valid=false
 			entity_cells[entity_pos]=entity_id
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
