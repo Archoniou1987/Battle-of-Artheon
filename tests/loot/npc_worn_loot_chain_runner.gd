@@ -18,16 +18,23 @@ func _initialize() -> void:
 	var sim:=CombatSimulator.new(state,TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),7070)
 	sim.max_rounds=10
 	var result:=sim.run_duel(player.character_id,npc.combatant_id)
-	var drops:=CombatRewardService.award_duel_loot(result,npc.combatant_id,player,table,templates,ItemGenerator.new(20261006),repository,LootService.new(4242))
-	var valid:=String(result.get("winner_id",""))==player.character_id and drops.size()==2
+	var pool:=CombatRewardService.create_duel_loot_pool(result,npc.combatant_id,player,table,templates,ItemGenerator.new(20261006),repository,LootService.new(4242))
+	var drops:Array[Dictionary]=[]
+	for item_id in pool.item_ids():
+		drops.append(repository.get_item(item_id))
+	var valid:=not pool.item_ids().is_empty() and player.inventory.size()==0
+	valid=valid and String(result.get("winner_id",""))==player.character_id and drops.size()==2
 	for item in drops:
 		var maximum:=int(item.get("durability_max",0))
 		var current:=int(item.get("durability_current",0))
 		valid=valid and String(item.get("origin",""))=="loot"
 		valid=valid and maximum>=33 and maximum<=45 and current>=0 and current<maximum
 		valid=valid and String(item.get("loot_source_id",""))==npc.combatant_id
-		valid=valid and player.inventory.owns(String(item.get("instance_id","")))
+		valid=valid and pool.available_for(player.character_id).has(String(item.get("instance_id","")))
 		valid=valid and repository.has_item(String(item.get("instance_id","")))
+	for item_id in pool.item_ids().duplicate():
+		valid=valid and pool.claim(item_id,player,repository)
+	valid=valid and player.inventory.size()==2 and pool.item_ids().is_empty()
 	print("NPC_LOOT_CONDITION_CHAIN outcome=%s drops=%d" % [String(result.get("outcome","")),drops.size()])
 	for item in drops:
 		print("NPC_LOOT_CONDITION_ITEM "+JSON.stringify(ItemDurabilityService.public_summary(item)))
