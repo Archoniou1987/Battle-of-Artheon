@@ -246,6 +246,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 		state.queue_event(ability_damage)
 		event.set_result("outcome", "connected")
 		event.set_result("damage_event_id", ability_damage.event_id)
+		# Non-physical weapon attacks still complete the weapon pipeline.
+		if is_weapon_attack:
+			_trigger_weapon_on_hit(event, attacker, defender, rolls)
+		_gain_basic_attack_ap(attacker, event)
 		return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
@@ -401,7 +405,7 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 		"is_counterattack":true,
 		"is_weapon_attack":true,
 		"generates_ap":false,
-		"weapon_index":0,
+		"weapon_index":int(weapon.get("weapon_index",0)),
 		"attack_profile_id":String(weapon.get("id","basic")),
 		"delivery_type":String(weapon.get("delivery_type","MELEE")),
 		"min_zone_distance":int(weapon.get("min_zone_distance",0)),
@@ -415,16 +419,31 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 	state.queue_event(child); parent.set_result("counterattack_event_id", child.event_id)
 
 func _counterattack_weapon_profile(combatant:CombatantState)->Dictionary:
-	var profiles:=WeaponAttackProfile.all(combatant)
-	if profiles.is_empty():
-		return {}
-	# Counterattack currently happens after a successful dodge against an incoming
-	# attack, so prefer a canonical profile that can operate at contact distance.
-	for profile in profiles:
-		if int(profile.get("min_zone_distance",0))<=0 and int(profile.get("max_zone_distance",0))>=0:
-			return profile.duplicate(true)
+	var by_weapon:Dictionary={}
+	for profile in WeaponAttackProfile.all(combatant):
+		if int(profile.get("min_zone_distance",0))>0 or int(profile.get("max_zone_distance",0))<0:
+			continue
+		var weapon_index:=int(profile.get("weapon_index",-1))
+		if not by_weapon.has(weapon_index):
+			by_weapon[weapon_index]=[]
+		by_weapon[weapon_index].append(profile)
+	var weapon_indices:Array=by_weapon.keys()
+	weapon_indices.sort()
+	for raw_weapon_index in weapon_indices:
+		var profiles:Array=by_weapon[raw_weapon_index]
+		if profiles.size()==1:
+			return Dictionary(profiles[0]).duplicate(true)
+		var selected:Dictionary={}
+		for raw_profile in profiles:
+			var candidate:Dictionary=raw_profile
+			if bool(candidate.get("is_default",false)):
+				if not selected.is_empty():
+					selected={}
+					break
+				selected=candidate
+		if not selected.is_empty():
+			return selected.duplicate(true)
 	return {}
-
 func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void:
 	if bool(event.payload.get("generates_ap", true)) and not bool(event.payload.get("is_counterattack", false)) and not bool(event.payload.get("is_extra_attack", false)):
 		event.set_result("ap_gained", attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain", 1))))
