@@ -87,6 +87,19 @@ func basic_attack_intent(source_id:String,attack_profile_id:String="basic")->Dic
 			return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id,"attack_profile":profile}
 	return {"ok":false,"reason":"target_out_of_reach"}
 
+func _available_basic_attacks(source_id:String)->Array[Dictionary]:
+	var combatant:=state.get_combatant(source_id)
+	if combatant==null or combatant.is_death_finalized():
+		return []
+	var target_id:=group.active_opponent(source_id)
+	if target_id.is_empty():
+		return []
+	var result:Array[Dictionary]=[]
+	for profile in _weapon_attack_profiles(combatant):
+		if action_policy.valid_targets(source_id,profile).has(target_id):
+			result.append(profile.duplicate(true))
+	return result
+
 func ability_intent(source_id:String,target_id:String,definition:Dictionary)->Dictionary:
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
@@ -152,7 +165,8 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 		"ok":true,
 		"reason":"ok",
 		"active_opponent_id":group.active_opponent(source_id),
-		"basic_attack":bool(basic_attack_intent(source_id).get("ok",false)),
+		"basic_attack":not _available_basic_attacks(source_id).is_empty(),
+		"basic_attacks":_available_basic_attacks(source_id),
 		"manual_block":combatant.can_manual_block(),
 		"navigation":navigation,
 		"abilities":abilities
