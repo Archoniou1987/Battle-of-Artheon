@@ -73,7 +73,14 @@ static func _base_attack_uses_attack_pipeline()->bool:
 		"zone":"chest",
 		"rolls":{"hit":1,"reaction":100,"crit":100}
 	})
-	return event.kind==CombatEvent.Kind.ATTACK and bool(event.payload.get("opportunity_action",false))
+	return (
+		event.kind==CombatEvent.Kind.ATTACK
+		and bool(event.payload.get("opportunity_action",false))
+		and bool(event.payload.get("is_weapon_attack",false))
+		and bool(event.payload.get("is_extra_attack",false))
+		and not bool(event.payload.get("generates_ap",true))
+		and int(event.payload.get("weapon_index",-1))==0
+	)
 
 
 static func _ability_uses_action_pipeline()->bool:
