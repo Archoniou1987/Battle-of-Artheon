@@ -26,3 +26,24 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		AbilityRuntime.start_cooldown(ability_id, cooldowns, state.round_number, int(definition.get("cooldown_rounds", 0)))
 	cooldowns_by_combatant[source_id] = cooldowns
 	return events
+
+
+func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:String)->CombatEvent:
+	var source:=state.get_combatant(source_id)
+	if source==null:
+		return null
+	if not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
+		return null
+	var definition:=AbilityCatalog.definition(definitions,ability_id)
+	if definition.is_empty():
+		return null
+	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
+	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
+		return null
+	var mana_cost:=int(definition.get("mana_cost",0))
+	if source.mana<mana_cost or not source.spend_mana(mana_cost):
+		return null
+	var event:=AbilityRuntime.build_action_event(state,source_id,target_id,ability_id,definition)
+	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
+	cooldowns_by_combatant[source_id]=cooldowns
+	return event
