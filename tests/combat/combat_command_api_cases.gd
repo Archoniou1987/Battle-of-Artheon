@@ -146,6 +146,11 @@ static func run()->bool:
 		if Array(multi.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			multi_ap_events+=1
 	if multi_ap_events!=1: return false
+	# Per-hit body zones are validated before any multi-hit event is queued.
+	var nested_pending_before:=state.pending_events.size()
+	var invalid_nested:=api.queue_basic_attack("hero",{"hits":[{"zone":"head"},{"zone":"hands"}]},"dual_slash",0)
+	if bool(invalid_nested.get("ok",true)) or String(invalid_nested.get("reason",""))!="invalid_body_zone": return false
+	if int(invalid_nested.get("hit_index",-1))!=1 or state.pending_events.size()!=nested_pending_before: return false
 	enemy.combat_stats["dodge"]=0.0
 	# MH/OH are independent weapon attacks and may target different body zones.
 	hero.combat_stats["weapon_profiles"]=[
