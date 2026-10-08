@@ -157,6 +157,15 @@ static func run()->bool:
 			sequence_zones.append(String(logged_event.payload.get("zone","")))
 			sequence_weapons.append(int(logged_event.payload.get("weapon_index",-1)))
 	if sequence_zones!=["chest","arms"] or sequence_weapons!=[0,1]: return false
+	# Sequence validation is atomic: an invalid OH/profile cannot leave MH queued.
+	var pending_before:=state.pending_events.size()
+	var rejected_sequence:=api.queue_weapon_attack_sequence("hero",[
+		{"weapon_index":0,"attack_profile_id":"weapon_slash","rolls":{"hit":1}},
+		{"weapon_index":1,"attack_profile_id":"missing_profile","rolls":{"hit":1}}
+	])
+	if bool(rejected_sequence.get("ok",true)): return false
+	if state.pending_events.size()!=pending_before: return false
+	if not Array(rejected_sequence.get("queued_event_ids",[])).is_empty(): return false
 	# Shield sectors block only their explicit contiguous zones; open zones continue through defence.
 	enemy.combat_stats["manual_block_zone_count"]=2
 	enemy.combat_stats["manual_block_zones"]=["chest","arms"]
