@@ -7,6 +7,7 @@ var npc_type:String
 var level:int
 var rank:String
 var aggression:float
+var detection_radius:int
 var base:Dictionary
 var abilities:Array
 var traits:Array
@@ -19,7 +20,8 @@ func _init(data:Dictionary)->void:
 	npc_type=String(data.get("type","humanoid"))
 	level=maxi(1,int(data.get("level",1)))
 	rank=String(data.get("rank","normal"))
-	aggression=float(data.get("aggression",0.0))
+	aggression=clampf(float(data.get("aggression",0.0)),0.0,100.0)
+	detection_radius=maxi(0,int(data.get("detection_radius",0)))
 	base=(data.get("base",{}) as Dictionary).duplicate(true)
 	abilities=(data.get("abilities",[]) as Array).duplicate(true)
 	traits=(data.get("traits",[]) as Array).duplicate(true)
