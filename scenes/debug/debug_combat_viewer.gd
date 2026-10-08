@@ -17,12 +17,14 @@ var hero_id:="hero"
 @onready var enemy_label:Label=$Margin/VBox/Status/Enemy
 @onready var actions:HBoxContainer=$Margin/VBox/Actions
 @onready var log_label:RichTextLabel=$Margin/VBox/Log
+@onready var target_select:OptionButton=$Margin/VBox/Targeting/TargetSelect
 
 func _ready()->void:
 	_build_debug_combat()
 	$Margin/VBox/Header/Back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
 	$Margin/VBox/Header/Reset.pressed.connect(_reset_combat)
 	$Margin/VBox/Defence/SetBlock.pressed.connect(_set_block)
+	target_select.item_selected.connect(_on_target_selected)
 	for body_zone in ["head","chest","arms","waist","legs"]:
 		block_zone.add_item(body_zone)
 	_refresh()
@@ -31,17 +33,18 @@ func _build_debug_combat()->void:
 	state=CombatState.new()
 	var hero:=CombatantState.new(hero_id,"Hero",1,100,30)
 	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
+	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
 	hero.combat_stats["main_hand_damage"]=12.0
 	hero.combat_stats["main_hand_damage_type"]="slashing"
 	enemy.combat_stats["main_hand_damage"]=7.0
 	enemy.combat_stats["main_hand_damage_type"]="blunt"
-	state.add_combatant(hero); state.add_combatant(enemy)
+	state.add_combatant(hero); state.add_combatant(enemy); state.add_combatant(enemy_two)
 	groups=GroupCombatState.new(state)
-	groups.add_member("A",hero_id); groups.add_member("B","enemy")
+	groups.add_member("A",hero_id); groups.add_member("B","enemy"); groups.add_member("B","enemy_two")
 	groups.set_active_opponent(hero_id,"enemy"); groups.set_active_opponent("enemy",hero_id)
 	zones=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
-	zones.set_zone(hero_id,CombatZoneState.ZONE_2); zones.set_zone("enemy",CombatZoneState.ZONE_2)
+	zones.set_zone(hero_id,CombatZoneState.ZONE_2); zones.set_zone("enemy",CombatZoneState.ZONE_2); zones.set_zone("enemy_two",CombatZoneState.ZONE_3)
 	engine=CombatEngine.new(state)
 	orchestrator=RoundOrchestrator.new(state,engine,groups,zones)
 	api=CombatApi.new(state,groups,zones)
@@ -55,16 +58,35 @@ func _refresh()->void:
 	outcome_label.text="ONGOING" if outcome=="ongoing" else "RESULT: %s" % outcome
 	for i in range(3):
 		var ids:Array=snap.get("zones",{}).get(str(i+1),[])
-		zone_labels[i].text="ZONE %d\n%s" % [i+1,", ".join(ids) if not ids.is_empty() else "—"]
+		var cards:Array[String]=[]
+		for id in ids:
+			var unit:=api.combatant(String(id))
+			var marker:=" [TARGET]" if String(unit.id)==groups.active_opponent(hero_id) else ""
+			cards.append("%s%s\nHP %d/%d" % [unit.name,marker,unit.hp,unit.max_hp])
+		zone_labels[i].text="ZONE %d\n\n%s" % [i+1,"\n\n".join(cards) if not cards.is_empty() else "—"]
 	var hero:=api.combatant(hero_id); var enemy:=api.combatant("enemy")
 	var block_zones:Array=state.get_combatant(hero_id).combat_stats.get("manual_block_zones",[])
 	hero_label.text="HERO  HP %d/%d   Mana %d/%d   Zone %d   Block: %s" % [hero.hp,hero.max_hp,hero.mana,hero.max_mana,hero.zone_id,", ".join(block_zones) if not block_zones.is_empty() else "—"]
-	enemy_label.text="ENEMY  HP %d/%d   Zone %d" % [enemy.hp,enemy.max_hp,enemy.zone_id]
+	enemy_label.text="ACTIVE TARGET  %s  HP %d/%d   Zone %d" % [enemy.name,enemy.hp,enemy.max_hp,enemy.zone_id]
+	_rebuild_targets()
 	_rebuild_actions()
 	var lines:Array[String]=[]
 	for e in api.recent_events(maxi(0,state.event_log.size()-8)):
 		lines.append("#%d  %s → %s  %s" % [e.id,e.source_id,e.target_id,e.outcome])
 	log_label.text="\n".join(lines) if not lines.is_empty() else "Combat log is empty."
+
+func _rebuild_targets()->void:
+	target_select.clear()
+	var options:=api.target_options(hero_id)
+	var target_ids:Array=[String(options.get("active",""))]
+	target_ids.append_array(options.get("alternatives",[]))
+	for target_id in target_ids:
+		if target_id.is_empty(): continue
+		var unit:=api.combatant(target_id)
+		target_select.add_item("%s — Z%d — HP %d/%d" % [unit.name,unit.zone_id,unit.hp,unit.max_hp])
+		target_select.set_item_metadata(target_select.item_count-1,target_id)
+	if target_select.item_count>0:
+		target_select.select(0)
 
 func _rebuild_actions()->void:
 	for child in actions.get_children(): child.queue_free()
@@ -73,6 +95,11 @@ func _rebuild_actions()->void:
 	for zone_id in available.get("navigation",[]):
 		var move:=Button.new(); move.text="Move → Z%d" % int(zone_id); move.pressed.connect(_move.bind(int(zone_id))); actions.add_child(move)
 	var end_round:=Button.new(); end_round.text="End Round"; end_round.pressed.connect(_end_round); actions.add_child(end_round)
+
+func _on_target_selected(index:int)->void:
+	var target_id:=String(target_select.get_item_metadata(index))
+	commands.select_active_opponent(hero_id,target_id)
+	_refresh()
 
 func _set_block()->void:
 	if block_zone.item_count==0: return
