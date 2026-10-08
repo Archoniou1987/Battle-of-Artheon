@@ -39,22 +39,51 @@ func decide_against(target_id:String,actors:Array[String],rolls_by_actor:Diction
 func base_attack_event(decision:Dictionary,payload:Dictionary):
 	var source_id:=String(decision.get("source_id",""))
 	var target_id:=String(decision.get("target_id",""))
-	if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,{"min_zone_distance":0,"max_zone_distance":0}).has(target_id):
+	var source:=group.combat_state.get_combatant(source_id)
+	if source==null or source.is_death_finalized():
 		return null
-	var data:=payload.duplicate(true)
-	data["source"]="opportunity_base_attack"
-	data["source_kind"]="weapon"
-	data["opportunity_action"]=true
-	data["is_weapon_attack"]=true
-	data["is_extra_attack"]=true
-	data["generates_ap"]=false
-	data["weapon_index"]=int(data.get("weapon_index",0))
-	return group.combat_state.create_event(
-		CombatEvent.Kind.ATTACK,
-		source_id,
-		target_id,
-		data
-	)
+	var requested_weapon_index:=int(payload.get("weapon_index",-1))
+	var requested_profile_id:=String(payload.get("attack_profile_id",""))
+	var selected:Dictionary={}
+	for profile in WeaponAttackProfile.all(source):
+		if requested_weapon_index>=0 and int(profile.get("weapon_index",-1))!=requested_weapon_index:
+			continue
+		if not requested_profile_id.is_empty() and String(profile.get("id",""))!=requested_profile_id:
+			continue
+		if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,profile).has(target_id):
+			continue
+		if selected.is_empty():
+			selected=profile
+		elif requested_weapon_index<0 and requested_profile_id.is_empty():
+			# Never guess between multiple canonical weapon profiles.
+			return null
+	if selected.is_empty():
+		return null
+	var rolls:Dictionary=Dictionary(payload.get("rolls",{})).duplicate(true)
+	var damage_roll:=float(rolls.get("damage",randf()))
+	rolls["damage"]=damage_roll
+	var damage_min:=float(selected.get("damage_min",0.0))
+	var damage_max:=float(selected.get("damage_max",damage_min))
+	var data:Dictionary={
+		"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
+		"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
+		"damage_type":String(selected.get("damage_type","slashing")),
+		"zone":String(payload.get("zone","chest")),"rolls":rolls,
+		"source":"opportunity_base_attack","source_kind":"weapon","opportunity_action":true,
+		"is_weapon_attack":true,"is_extra_attack":true,"generates_ap":false,
+		"weapon_index":int(selected.get("weapon_index",0)),
+		"attack_profile_id":String(selected.get("id","basic")),
+		"delivery_type":String(selected.get("delivery_type","MELEE")),
+		"min_zone_distance":int(selected.get("min_zone_distance",0)),
+		"max_zone_distance":int(selected.get("max_zone_distance",0)),
+		"two_zone_hit_modifier":float(selected.get("two_zone_hit_modifier",-50.0)),
+		"uses_magic_hit":bool(selected.get("uses_magic_hit",false)),
+		"magic_hit_modifier":float(selected.get("magic_hit_modifier",0.0)),
+		"magic_hit_roll":int(rolls.get("magic_hit",1)),
+		"uses_physical_block":not bool(selected.get("uses_magic_hit",false)),
+		"bypass_physical_mitigation":not String(selected.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
+	}
+	return group.combat_state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,data)
 
 
 func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,target_ids:Array[String]=[]):
