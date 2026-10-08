@@ -65,7 +65,11 @@ func _queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 func _lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
 	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(attacker.tempo): return
 	var weapon_indices:Array=[]
-	for profile in WeaponAttackProfile.all(attacker):
+	var canonical_profiles:=WeaponAttackProfile.all(attacker)
+	# Legacy damage fields describe one main-hand attack. Canonical multi-weapon
+	# profiles may expose additional weapon indices, but the compatibility
+	# fallback must never invent a second/off-hand attack.
+	for profile in canonical_profiles:
 		var weapon_index:=int(profile.get("weapon_index",-1))
 		if not weapon_indices.has(weapon_index):
 			weapon_indices.append(weapon_index)
