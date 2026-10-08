@@ -104,6 +104,15 @@ func _initialize()->void:
 				print("GUARDED_DIAG object=",guarded.object_pos," guard=",guarded.guard_pos," exits=",map.neighbors(guarded.object_pos,true))
 			for boss_group in generated.boss_groups:
 				print("BOSS_DIAG boss=",boss_group.boss_pos," guards=",boss_group.guard_positions," members=",boss_group.member_ids)
+			var duplicate_cells:Dictionary={}
+			for entity_id in map.entity_positions.keys():
+				var entity_pos:Vector2i=map.entity_positions[entity_id]
+				if duplicate_cells.has(entity_pos): print("ENTITY_DUPLICATE_DIAG pos=",entity_pos," first=",duplicate_cells[entity_pos]," second=",entity_id)
+				duplicate_cells[entity_pos]=entity_id
+			for npc_pos in generated.npc_cells:
+				if HexGrid.distance(entrance,npc_pos)<=3: print("NPC_SAFE_RADIUS_DIAG pos=",npc_pos)
+			for encounter_pos in generated.encounter_cells:
+				if HexGrid.distance(entrance,encounter_pos)<=3: print("ENCOUNTER_SAFE_RADIUS_DIAG pos=",encounter_pos)
 			break
 	var first:=LocationGenerator.generate(20,20,777)
 	var second:=LocationGenerator.generate(20,20,777)
