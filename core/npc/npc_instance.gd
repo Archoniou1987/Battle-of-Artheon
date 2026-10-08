@@ -5,6 +5,8 @@ var instance_id:String
 var template_id:String
 var display_name:String
 var level:int
+var aggression:float
+var detection_radius:int
 var equipment:EquipmentState
 var bag:InventoryState
 var life_state:String="alive"
@@ -14,6 +16,8 @@ func _init(p_instance_id:String, template:NpcState)->void:
 	template_id=template.npc_id
 	display_name=template.display_name
 	level=template.level
+	aggression=template.aggression
+	detection_radius=template.detection_radius
 	equipment=EquipmentState.new()
 	bag=InventoryState.new(instance_id)
 
