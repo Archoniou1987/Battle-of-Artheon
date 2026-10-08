@@ -141,8 +141,10 @@ func base_attack_events(decision:Dictionary,payload:Dictionary)->Array[CombatEve
 		weapon_payload["weapon_index"]=int(selected.get("weapon_index",-1))
 		weapon_payload["attack_profile_id"]=String(selected.get("id","basic"))
 		var rolls_by_weapon:Dictionary=payload.get("rolls_by_weapon",{})
-		if rolls_by_weapon.has(raw_index): weapon_payload["rolls"]=Dictionary(rolls_by_weapon[raw_index]).duplicate(true)
-		elif rolls_by_weapon.has(String.num_int64(int(raw_index))): weapon_payload["rolls"]=Dictionary(rolls_by_weapon[String.num_int64(int(raw_index))]).duplicate(true)
+		var numeric_key:=int(raw_index)
+		var string_key:=str(numeric_key)
+		if rolls_by_weapon.has(numeric_key): weapon_payload["rolls"]=Dictionary(rolls_by_weapon[numeric_key]).duplicate(true)
+		elif rolls_by_weapon.has(string_key): weapon_payload["rolls"]=Dictionary(rolls_by_weapon[string_key]).duplicate(true)
 		var count:=maxi(1,int(selected.get("hit_count",1)))
 		for hit_index in range(count):
 			weapon_payload["hit_index"]=hit_index
