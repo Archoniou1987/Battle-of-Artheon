@@ -24,3 +24,12 @@ static func effective_armour(raw_armour: float, flat_penetration: float, percent
 
 static func final_damage_floor(value: float) -> int:
 	return maxi(0, int(floor(value)))
+
+
+static func roll_damage(damage_min:float,damage_max:float,roll:float)->float:
+	var low:=minf(damage_min,damage_max)
+	var high:=maxf(damage_min,damage_max)
+	if is_equal_approx(low,high):
+		return low
+	var normalized:=clampf(roll,0.0,1.0)
+	return lerpf(low,high,normalized)
