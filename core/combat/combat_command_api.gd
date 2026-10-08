@@ -94,7 +94,7 @@ func set_manual_block(source_id:String,body_zones:Array[String])->Dictionary:
 			normalized.append(body_zone)
 	if normalized.is_empty():
 		return {"ok":false,"reason":"invalid_block_zone"}
-	var block_zone_count:=maxi(1,int(combatant.combat_stats.get("manual_block_zone_count",1)))
+	var block_zone_count:=clampi(int(combatant.combat_stats.get("manual_block_zone_count",combatant.combat_stats.get("manual_block_zone_capacity",1))),1,3)
 	if normalized.size()!=block_zone_count:
 		return {"ok":false,"reason":"invalid_block_zone_count","required_zone_count":block_zone_count}
 	var indices:Array[int]=[]
