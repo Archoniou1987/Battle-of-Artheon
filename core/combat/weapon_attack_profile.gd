@@ -32,6 +32,7 @@ static func all(combatant:CombatantState)->Array[Dictionary]:
 static func normalize(weapon:Dictionary,raw_profile:Dictionary,weapon_index:int)->Dictionary:
 	var profile:Dictionary=raw_profile.duplicate(true)
 	profile["id"]=String(profile.get("id","basic"))
+	profile["is_default"]=bool(profile.get("is_default",profile.get("default",false)))
 	profile["weapon_index"]=weapon_index
 	profile["weapon_class"]=String(profile.get("weapon_class",weapon.get("weapon_class","")))
 	profile["item_level"]=maxi(1,int(profile.get("item_level",weapon.get("item_level",1))))
