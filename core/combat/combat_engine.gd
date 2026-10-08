@@ -208,13 +208,17 @@ func _resolve_attack(event: CombatEvent) -> void:
 	if attacker == null or defender == null:
 		event.set_result("outcome", "invalid_combatant"); return
 	var rolls: Dictionary = event.payload.get("rolls", {})
-	var distance_hit_modifier:=_physical_ranged_distance_hit_modifier(event)
-	var hit_chance := _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0))) + distance_hit_modifier
+	var uses_magic_hit:=bool(event.payload.get("uses_magic_hit",false))
+	var distance_hit_modifier:=_distance_modifier(event,event.target_id) if uses_magic_hit else _physical_ranged_distance_hit_modifier(event)
+	var weapon_skill_penalty:=0.0 if uses_magic_hit else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0)))
+	var hit_chance:=float(attacker.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - weapon_skill_penalty + distance_hit_modifier
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
-	event.set_result("weapon_skill_hit_penalty", _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0))))
-	if not CombatMath.roll_success(hit_chance, int(rolls.get("hit", 100))):
-		event.set_result("outcome", "miss"); _gain_basic_attack_ap(attacker, event); return
-	var active_defence_available := _active_defence_available(defender.tempo, int(rolls.get("reaction", 100)))
+	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
+	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
+	var hit_roll:=int(event.payload.get("magic_hit_roll",rolls.get("magic_hit",1))) if uses_magic_hit else int(rolls.get("hit",100))
+	if not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
+		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
+	var active_defence_available := not uses_magic_hit and _active_defence_available(defender.tempo, int(rolls.get("reaction", 100)))
 	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(float(defender.combat_stats.get("dodge", 0.0)), float(attacker.combat_stats.get("anti_dodge", 0.0)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
