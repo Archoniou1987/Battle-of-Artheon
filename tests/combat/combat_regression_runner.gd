@@ -51,8 +51,11 @@ func _init() -> void:
 	print("REGRESSION_START=zone")
 	var zone_ok := ZoneCombatCases.run()
 	print("REGRESSION_DONE=zone ok=",zone_ok)
-	var ok := equipment_ok and physical_ok and duel_ok and action_ok and defence_ok and resist_ok and aoe_ok and round_ok and group_ok and engagement_ok and group_action_ok and opportunity_ok and zone_ok
+	print("REGRESSION_START=api")
+	var api_ok := CombatApiCases.run()
+	print("REGRESSION_DONE=api ok=",api_ok)
+	var ok := equipment_ok and physical_ok and duel_ok and action_ok and defence_ok and resist_ok and aoe_ok and round_ok and group_ok and engagement_ok and group_action_ok and opportunity_ok and zone_ok and api_ok
 
-	print("COMBAT_V1_BASELINE equipment=", equipment_ok, " physical=", physical_ok, " duel=", duel_ok, " action=", action_ok, " defence=", defence_ok, " resist=", resist_ok, " aoe=", aoe_ok, " round=", round_ok, " group=", group_ok, " engagement=", engagement_ok, " group_action=", group_action_ok, " opportunity=", opportunity_ok, " zone=", zone_ok)
+	print("COMBAT_V1_BASELINE equipment=", equipment_ok, " physical=", physical_ok, " duel=", duel_ok, " action=", action_ok, " defence=", defence_ok, " resist=", resist_ok, " aoe=", aoe_ok, " round=", round_ok, " group=", group_ok, " engagement=", engagement_ok, " group_action=", group_action_ok, " opportunity=", opportunity_ok, " zone=", zone_ok, " api=", api_ok)
 	print("COMBAT_V1_REGRESSION_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
