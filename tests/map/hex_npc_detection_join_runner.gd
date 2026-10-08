@@ -16,6 +16,22 @@ func _initialize()->void:
 	for npc_id in positions.keys():
 		var npc:=NpcInstance.new(npc_id,npc_repo.get_npc("NPC003"))
 		valid=valid and bridge.register_npc(map,npc,positions[npc_id])
+	var ally:NpcInstance=bridge.instances["ALLY"]
+	ally.detection_radius=1
+	ally.aggression=100.0
+	var neutral:NpcInstance=bridge.instances["NEUTRAL"]
+	neutral.detection_radius=1
+	neutral.aggression=0.0
+	var far:NpcInstance=bridge.instances["FAR"]
+	far.detection_radius=1
+	far.aggression=100.0
+	var from_instance:=NpcDetectionService.detect(map,bridge,"PLAYER")
+	valid=valid and from_instance.size()==3
+	var instance_join:=HexCombatJoinService.assemble(map,bridge,Vector2i(4,4),["PRIMARY"],{},RandomNumberGenerator.new())
+	valid=valid and bool(instance_join.get("ok",false))
+	valid=valid and instance_join.get("npc_instance_ids",[]).has("ALLY")
+	valid=valid and not instance_join.get("npc_instance_ids",[]).has("NEUTRAL")
+	valid=valid and not instance_join.get("npc_instance_ids",[]).has("FAR")
 	var radii:Dictionary={"PRIMARY":0,"ALLY":1,"NEUTRAL":1,"FAR":1}
 	var detected:=NpcDetectionService.detect(map,bridge,"PLAYER",radii)
 	valid=valid and detected.size()==3
