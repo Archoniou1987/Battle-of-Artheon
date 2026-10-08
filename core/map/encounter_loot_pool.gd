@@ -4,9 +4,11 @@ extends RefCounted
 var entries:Array[Dictionary]=[]
 var assigned_player_by_item:Dictionary={}
 
-func add_drop(item_id:String,source_npc_id:String)->void:
-	if item_id.is_empty(): return
-	entries.append({"item_id":item_id,"source_npc_id":source_npc_id})
+func add_drop(item_id:String,source_npc_instance_id:String)->bool:
+	if item_id.is_empty() or item_ids().has(item_id):
+		return false
+	entries.append({"item_id":item_id,"source_npc_instance_id":source_npc_instance_id})
+	return true
 
 func item_ids()->Array[String]:
 	var result:Array[String]=[]
