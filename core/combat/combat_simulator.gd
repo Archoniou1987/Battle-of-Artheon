@@ -67,8 +67,11 @@ func _lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Comba
 	var weapon_attacks:=maxi(1,int(attacker.combat_stats.get("weapon_attack_count",1)))
 	for weapon_index in range(weapon_attacks):
 		if _weapon_attack_available(attacker,weapon_index):
-			round.lock_action(_make_basic_attack(attacker,defender,weapon_index>0,weapon_index))
-	if attacker.tempo>0.0 and CombatMath.roll_success(minf(attacker.tempo,100.0),_roll()): round.lock_action(_make_basic_attack(attacker,defender,true,0))
+			for event in _make_basic_attacks(attacker,defender,weapon_index>0,weapon_index):
+				round.lock_action(event)
+	if attacker.tempo>0.0 and CombatMath.roll_success(minf(attacker.tempo,100.0),_roll()):
+		for event in _make_basic_attacks(attacker,defender,true,0):
+			round.lock_action(event)
 func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var profile:=_weapon_profile(attacker,weapon_index)
 	var requirement:=String(profile.get("requires_off_hand_type",""))
@@ -76,30 +79,36 @@ func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var equipped_types:Array=attacker.combat_stats.get("equipped_item_types",[])
 	return equipped_types.has(requirement)
 
-func _make_basic_attack(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int)->CombatEvent:
+func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int)->Array[CombatEvent]:
 	var profile:=_weapon_profile(attacker,weapon_index)
-	var rolls:=_attack_rolls()
-	var damage_roll:=rng.randf()
-	rolls["damage"]=damage_roll
-	var damage_min:=float(profile.get("damage_min",0.0))
-	var damage_max:=float(profile.get("damage_max",damage_min))
-	return state.create_event(CombatEvent.Kind.ATTACK,attacker.combatant_id,defender.combatant_id,{
-		"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
-		"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
-		"zone":HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],
-		"damage_type":String(profile.get("damage_type","slashing")),"rolls":rolls,
-		"is_extra_attack":extra,"generates_ap":not extra,"weapon_index":weapon_index,
-		"is_weapon_attack":true,"attack_profile_id":String(profile.get("id","basic")),
-		"delivery_type":String(profile.get("delivery_type","MELEE")),
-		"min_zone_distance":int(profile.get("min_zone_distance",0)),
-		"max_zone_distance":int(profile.get("max_zone_distance",0)),
-		"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
-		"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
-		"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
-		"magic_hit_roll":int(rolls.get("magic_hit",1)),
-		"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
-		"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
-	})
+	var result:Array[CombatEvent]=[]
+	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
+	for hit_index in range(hit_count):
+		var rolls:=_attack_rolls()
+		var damage_roll:=rng.randf()
+		rolls["damage"]=damage_roll
+		var damage_min:=float(profile.get("damage_min",0.0))
+		var damage_max:=float(profile.get("damage_max",damage_min))
+		result.append(state.create_event(CombatEvent.Kind.ATTACK,attacker.combatant_id,defender.combatant_id,{
+			"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
+			"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
+			"zone":HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],
+			"damage_type":String(profile.get("damage_type","slashing")),"rolls":rolls,
+			"is_extra_attack":extra,"generates_ap":not extra,"weapon_index":weapon_index,
+			"is_weapon_attack":true,"attack_profile_id":String(profile.get("id","basic")),
+			"hit_index":hit_index,"hit_count":hit_count,
+			"delivery_type":String(profile.get("delivery_type","MELEE")),
+			"min_zone_distance":int(profile.get("min_zone_distance",0)),
+			"max_zone_distance":int(profile.get("max_zone_distance",0)),
+			"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
+			"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
+			"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
+			"magic_hit_roll":int(rolls.get("magic_hit",1)),
+			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
+			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
+		}))
+	return result
+
 func _weapon_profile(attacker:CombatantState,weapon_index:int)->Dictionary:
 	var profiles:=WeaponAttackProfile.all(attacker)
 	for profile in profiles:
