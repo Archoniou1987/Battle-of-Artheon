@@ -6,13 +6,15 @@ var group:GroupCombatState
 var zones:CombatZoneState
 var orchestrator:RoundOrchestrator
 var action_policy:GroupActionPolicy
+var ability_scheduler:AbilityScheduler
 
-func _init(combat_state:CombatState,group_state:GroupCombatState,zone_state:CombatZoneState,round_orchestrator:RoundOrchestrator)->void:
+func _init(combat_state:CombatState,group_state:GroupCombatState,zone_state:CombatZoneState,round_orchestrator:RoundOrchestrator,scheduler:AbilityScheduler=null)->void:
 	state=combat_state
 	group=group_state
 	zones=zone_state
 	orchestrator=round_orchestrator
 	action_policy=GroupActionPolicy.new(group_state,zone_state)
+	ability_scheduler=scheduler
 
 func select_active_opponent(source_id:String,target_id:String,definition:Dictionary={})->Dictionary:
 	if not action_policy.valid_targets(source_id,definition).has(target_id):
@@ -89,7 +91,20 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 	for raw_id in ability_definitions.keys():
 		var ability_id:=String(raw_id)
 		var definition:Dictionary=ability_definitions[raw_id]
-		abilities[ability_id]=action_policy.valid_targets(source_id,definition)
+		var targets:=action_policy.valid_targets(source_id,definition)
+		var cooldown_ready:=true
+		if ability_scheduler!=null:
+			var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
+			cooldown_ready=AbilityRuntime.can_use(ability_id,cooldowns,state.round_number)
+		var mana_cost:=int(definition.get("mana_cost",0))
+		var resource_ready:=combatant.mana>=mana_cost
+		abilities[ability_id]={
+			"available":cooldown_ready and resource_ready and not targets.is_empty(),
+			"targets":targets,
+			"cooldown_ready":cooldown_ready,
+			"resource_ready":resource_ready,
+			"mana_cost":mana_cost
+		}
 	return {
 		"ok":true,
 		"reason":"ok",
