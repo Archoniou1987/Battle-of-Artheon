@@ -19,6 +19,13 @@ func _initialize()->void:
 				valid=valid and map.in_bounds(pos) and map.cell(pos).is_passable()
 				valid=valid and pos!=entrance and pos!=exit and not occupied.has(pos)
 				occupied[pos]=true
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=base_content"%seed_value)
+			for group_name in ["resource_cells","npc_cells","object_cells","encounter_cells"]:
+				for pos in generated[group_name]:
+					if not map.in_bounds(pos) or not map.cell(pos).is_passable() or pos==entrance or pos==exit:
+						print("BASE_CONTENT_FAIL group=",group_name," pos=",pos," in_bounds=",map.in_bounds(pos)," passable=",(map.cell(pos).is_passable() if map.in_bounds(pos) else false)," entrance=",pos==entrance," exit=",pos==exit)
+			break
 		checkpoint="resource_areas"
 		for i in range(generated.resource_cells.size()):
 			valid=valid and map.areas_at(generated.resource_cells[i]).has("GEN_RESOURCE_%02d"%i)
