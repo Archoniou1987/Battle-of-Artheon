@@ -18,7 +18,10 @@ static func run()->bool:
 	var engine:=CombatEngine.new(state,{})
 	var orchestrator:=RoundOrchestrator.new(state,engine,group,zones)
 	orchestrator.begin_round()
-	var scheduler:=AbilityScheduler.new({"RANGED":{"delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"mana_cost":5,"cooldown_rounds":2,"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]}},{"hero":["RANGED"]})
+	var scheduler:=AbilityScheduler.new({
+		"RANGED":{"delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"mana_cost":5,"cooldown_rounds":2,"components":[{"kind":"damage","amount":7,"damage_type":"fire"}]},
+		"ZONE":{"delivery_type":"AREA","target_scope":"ALL_ENEMIES","min_zone_distance":0,"max_zone_distance":2,"mana_cost":1,"components":[{"kind":"damage","amount":4,"damage_type":"fire"}]}
+	},{"hero":["RANGED","ZONE"]})
 	scheduler.cooldowns_by_combatant["hero"]={"COOLDOWN":state.round_number+2}
 	var api:=CombatCommandApi.new(state,group,zones,orchestrator,scheduler)
 	hero.combat_stats["weapon_profiles"]=[{
@@ -35,6 +38,11 @@ static func run()->bool:
 	if not bool(ranged_basic.get("ok",false)): return false
 	engine.resolve_pending_events()
 	if enemy.hp!=94: return false
+	var zone_cast:=api.cast_zone_ability("hero",CombatZoneState.ZONE_2,"ZONE")
+	if not bool(zone_cast.get("ok",false)) or int(zone_cast.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
+	var zone_event:=state.pending_events.back()
+	if int(zone_event.payload.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
+	if hero.mana!=9: return false
 	if not bool(api.ability_intent("hero","enemy",{"min_zone_distance":0,"max_zone_distance":1}).get("ok",false)): return false
 	var actions:=api.available_actions("hero",{
 		"RANGED":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":5},
