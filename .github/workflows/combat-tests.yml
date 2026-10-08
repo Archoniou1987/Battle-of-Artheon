@@ -5,10 +5,10 @@ on:
 
 jobs:
   combat-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
@@ -23,7 +23,7 @@ jobs:
           timeout --signal=KILL 45s stdbuf -oL -eL godot --headless --path . --script res://tests/combat/combat_regression_runner.gd 2>&1 | tee combat-regression.log
       - name: Upload combat regression diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: combat-regression-diagnostics
           path: combat-regression.log
