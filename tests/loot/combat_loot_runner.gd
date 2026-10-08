@@ -25,14 +25,21 @@ func _initialize() -> void:
 
 	var generator := ItemGenerator.new(20261006)
 	var loot_service := LootService.new(4242)
-	var drops := CombatRewardService.award_duel_loot(result, bandit.combatant_id, player, loot_table, templates, generator, repository, loot_service)
-	var valid := String(result.get("winner_id", "")) == player.character_id and String(result.get("loser_id", "")) == bandit.combatant_id
-	valid = valid and drops.size() == 2 and repository.size() == 2 and player.inventory.size() == 2
+	var pool:=CombatRewardService.create_duel_loot_pool(result, bandit.combatant_id, player, loot_table, templates, generator, repository, loot_service)
+	var drops:Array[Dictionary]=[]
+	for item_id in pool.item_ids():
+		drops.append(repository.get_item(item_id))
+	var valid:=not pool.item_ids().is_empty() and player.inventory.size()==0
+	valid=valid and  String(result.get("winner_id", "")) == player.character_id and String(result.get("loser_id", "")) == bandit.combatant_id
+	valid = valid and drops.size() == 2 and repository.size() == 2 and pool.item_ids().size() == 2
 	for item in drops:
 		var instance_id := String(item.get("instance_id", ""))
-		valid = valid and player.inventory.owns(instance_id) and repository.has_item(instance_id)
+		valid = valid and pool.available_for(player.character_id).has(instance_id) and repository.has_item(instance_id)
 		valid = valid and String(item.get("loot_source_id", "")) == bandit.combatant_id
 
+	for item_id in pool.item_ids().duplicate():
+		valid=valid and pool.claim(item_id,player,repository)
+	valid=valid and player.inventory.size()==2 and pool.item_ids().is_empty()
 	print("COMBAT_LOOT outcome=%s bandit_hp=%d drops=%d inventory=%d repository=%d" % [String(result.get("outcome", "")), int(result.get("second_hp", -1)), drops.size(), player.inventory.size(), repository.size()])
 	for item in drops:
 		print("COMBAT_LOOT_ITEM " + JSON.stringify(item))
