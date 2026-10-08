@@ -31,3 +31,15 @@ func remove_item(instance_id: String) -> bool:
 
 func size() -> int:
 	return _items.size()
+
+func to_dict()->Dictionary:
+	return {"items":_items.duplicate(true)}
+
+static func from_dict(data:Dictionary)->ItemRepository:
+	var restored:=ItemRepository.new()
+	var raw_items:Dictionary=data.get("items",{})
+	for item_id in raw_items:
+		var item=raw_items[item_id]
+		if item is Dictionary and String(item.get("instance_id",""))==String(item_id):
+			restored.add_item(item)
+	return restored
