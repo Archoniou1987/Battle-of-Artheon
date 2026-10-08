@@ -17,13 +17,27 @@ static func resolve_group_victory(result:Dictionary,map,bridge:MapNpcBridge,npcs
 	for raw_id in result.get("dead_ids",[]):
 		dead_ids.append(String(raw_id))
 	var defeated_ids:Array[String]=[]
-	var drops:Array=[]
+	var pool:=EncounterLootPool.new()
 	for npc in npcs:
 		if npc==null or not dead_ids.has(npc.instance_id):
 			continue
+		var inventory_before:Dictionary={}
+		for item_id in player.inventory.item_ids():
+			inventory_before[String(item_id)]=true
 		var npc_drops:=loot_service.roll(npc,repository,player,quality_chances)
+		for raw_drop in npc_drops:
+			var item_id:=String(raw_drop)
+			if raw_drop is Dictionary:
+				item_id=String(raw_drop.get("instance_id",""))
+			if item_id.is_empty():
+				continue
+			pool.add_drop(item_id,npc.instance_id)
+			# Legacy loot service transfers immediately; undo that transfer so
+			# encounter loot remains unclaimed until the player clicks it.
+			if not inventory_before.has(item_id) and player.inventory.owns(item_id):
+				player.inventory.remove(item_id)
 		if not bridge.resolve_death(map,npc.instance_id):
 			return {"ok":false,"reason":"death_resolution_failed","npc_instance_id":npc.instance_id}
 		defeated_ids.append(npc.instance_id)
-		drops.append_array(npc_drops)
-	return {"ok":true,"defeated_ids":defeated_ids,"defeated_count":defeated_ids.size(),"drops":drops,"drop_count":drops.size()}
+	pool.assign_all(player.character_id)
+	return {"ok":true,"defeated_ids":defeated_ids,"defeated_count":defeated_ids.size(),"loot_pool":pool,"drops":pool.item_ids(),"drop_count":pool.entries.size()}
