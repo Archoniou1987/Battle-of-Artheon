@@ -61,6 +61,18 @@ func _initialize()->void:
 	var persisted_pool:=restored_expedition.restore_loot_pool("GROUP_ENCOUNTER")
 	valid=valid and persisted_pool!=null and persisted_pool.entries.size()==2
 	valid=valid and persisted_pool.available_for("PLAYER").size()==2
+	valid=valid and not persisted_pool.claim("GROUP_ITEM_002",player,item_repo)
+	valid=valid and persisted_pool.claim("GROUP_ITEM_001",player,item_repo)
+	valid=valid and not persisted_pool.claim("GROUP_ITEM_001",player,item_repo)
+	valid=valid and player.inventory.owns("GROUP_ITEM_001")
+	valid=valid and persisted_pool.available_for("PLAYER").size()==1
+	valid=valid and restored_expedition.save_loot_pool("GROUP_ENCOUNTER",persisted_pool)
+	var checkpoint:=ExpeditionState.from_dict(restored_expedition.to_dict())
+	var checkpoint_pool:=checkpoint.restore_loot_pool("GROUP_ENCOUNTER")
+	valid=valid and checkpoint_pool!=null and checkpoint_pool.available_for("PLAYER").size()==1
+	valid=valid and not checkpoint_pool.claim("GROUP_ITEM_001",player,item_repo)
+	valid=valid and checkpoint_pool.claim("GROUP_ITEM_003",player,item_repo)
+	valid=valid and player.inventory.size()==3 and checkpoint_pool.item_ids().is_empty()
 	valid=valid and restored_expedition.remove_loot_pool("GROUP_ENCOUNTER")
 	valid=valid and restored_expedition.restore_loot_pool("GROUP_ENCOUNTER")==null
 	var repeat:=MapCombatOutcomeService.resolve_group_victory(result,map,bridge,npcs,player,item_repo,NpcPossessionLootService.new(1),{"common":100.0})
