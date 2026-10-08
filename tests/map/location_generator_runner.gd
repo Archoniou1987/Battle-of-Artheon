@@ -25,6 +25,11 @@ func _initialize()->void:
 			valid=valid and map.cell(entrance).is_passable() and map.cell(exit).is_passable()
 			valid=valid and bool(result.get("ok",false)) and not path.is_empty()
 			valid=valid and path[0]==entrance and path[path.size()-1]==exit
+			var guaranteed:Array=generated.guaranteed_path
+			valid=valid and not guaranteed.is_empty() and guaranteed.front()==entrance and guaranteed.back()==exit
+			for i in range(1,guaranteed.size()):
+				valid=valid and HexGrid.distance(guaranteed[i-1],guaranteed[i])==1
+				valid=valid and map.in_bounds(guaranteed[i]) and map.cell(guaranteed[i]).is_passable()
 			var occupied:Dictionary={}
 			var checkpoint:="base"
 			for group_name in ["resource_cells","npc_cells","object_cells","encounter_cells"]:
