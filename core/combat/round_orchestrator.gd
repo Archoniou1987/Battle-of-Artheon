@@ -41,11 +41,17 @@ func queue_movement_request(combatant_id:String, to_zone:int, tempo_roll:int=1, 
 	for existing in movement_requests:
 		if String(existing.get("combatant_id",""))!=combatant_id:
 			continue
-		if movement_kind=="forced" and String(existing.get("movement_kind",""))=="forced":
+		if movement_kind=="forced":
+			if String(existing.get("movement_kind",""))!="forced":
+				existing["movement_kind"]="forced"
+				existing["bypass_front"]=true
+				existing["forced_effects"]=[]
 			var effects:Array=Array(existing.get("forced_effects",[]))
 			effects.append({"to_zone":to_zone,"contest":contest.duplicate(true)})
 			existing["forced_effects"]=effects
 			return true
+		if String(existing.get("movement_kind",""))=="forced":
+			return false
 		return false
 	var snap:Dictionary=start_snapshot[combatant_id]
 	if bool(snap.get("movement_locked",false)):
