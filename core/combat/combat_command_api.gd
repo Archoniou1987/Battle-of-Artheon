@@ -126,6 +126,13 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 	var intent:=ability_intent(source_id,target_id,definition)
 	if not bool(intent.get("ok",false)):
 		return intent
+	var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
+	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
+		return {"ok":false,"reason":"cooldown"}
+	var source:=state.get_combatant(source_id)
+	var mana_cost:=int(definition.get("mana_cost",0))
+	if source==null or source.mana<mana_cost:
+		return {"ok":false,"reason":"insufficient_resource"}
 	var event:=ability_scheduler.cast_event(state,source_id,target_id,ability_id)
 	if event==null:
 		return {"ok":false,"reason":"cast_rejected"}
