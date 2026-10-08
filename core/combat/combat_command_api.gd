@@ -62,6 +62,8 @@ func _weapon_attack_profiles(combatant:CombatantState)->Array[Dictionary]:
 			profile["damage_min"]=float(profile.get("damage_min",weapon.get("damage_min",0.0)))
 			profile["damage_max"]=float(profile.get("damage_max",weapon.get("damage_max",profile["damage_min"])))
 			profile["damage_type"]=String(profile.get("damage_type",weapon.get("damage_type","slashing")))
+			profile["uses_magic_hit"]=bool(profile.get("uses_magic_hit",weapon.get("uses_magic_hit",false)))
+			profile["magic_hit_modifier"]=float(profile.get("magic_hit_modifier",weapon.get("magic_hit_modifier",0.0)))
 			result.append(profile)
 	if result.is_empty():
 		result.append({
@@ -69,7 +71,8 @@ func _weapon_attack_profiles(combatant:CombatantState)->Array[Dictionary]:
 			"min_zone_distance":0,"max_zone_distance":0,"two_zone_hit_modifier":-50.0,
 			"damage_min":float(combatant.combat_stats.get("main_hand_damage",0.0)),
 			"damage_max":float(combatant.combat_stats.get("main_hand_damage",0.0)),
-			"damage_type":String(combatant.combat_stats.get("main_hand_damage_type","slashing"))
+			"damage_type":String(combatant.combat_stats.get("main_hand_damage_type","slashing")),
+			"uses_magic_hit":false,"magic_hit_modifier":0.0
 		})
 	return result
 
@@ -260,6 +263,11 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		"min_zone_distance":int(profile.get("min_zone_distance",0)),
 		"max_zone_distance":int(profile.get("max_zone_distance",0)),
 		"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
+		"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
+		"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
+		"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
+		"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
+		"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
 		"generates_ap":true
 	})
 	state.queue_event(event)
