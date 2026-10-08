@@ -23,6 +23,10 @@ func _initialize()->void:
 	valid=valid and restored.loot_hexes_for_player("STRANGER",1800).is_empty()
 	valid=valid and restored.loot_pools_for_player_at_hex("PLAYER",Vector2i(3,7),1800).size()==2
 	valid=valid and restored.loot_pools_for_player_at_hex("STRANGER",Vector2i(3,7),1800).is_empty()
+	valid=valid and restored.cleanup_expired_loot(2300,null)==0
+	valid=valid and restored.restore_loot_pool("FIGHT_1")!=null
+	valid=valid and restored.restore_loot_pool("FIGHT_2")!=null
+	valid=valid and repository.size()==2
 	valid=valid and restored.cleanup_expired_loot(1899,repository)==0
 	valid=valid and restored.cleanup_expired_loot(1900,repository)==1
 	valid=valid and not repository.has_item("HEX_LOOT_1")
