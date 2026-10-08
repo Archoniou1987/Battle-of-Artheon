@@ -1,5 +1,21 @@
 extends Control
 
+var loot_expedition:ExpeditionState
+var loot_player_id:String=""
+
+func set_loot_context(expedition:ExpeditionState,player_id:String)->void:
+	loot_expedition=expedition
+	loot_player_id=player_id
+	refresh_loot_markers()
+
+func refresh_loot_markers()->void:
+	if canvas==null:
+		return
+	if loot_expedition==null:
+		canvas.set_loot_markers([])
+	else:
+		canvas.set_loot_markers(loot_expedition.loot_hexes_for_player(loot_player_id,int(Time.get_unix_time_from_system())))
+
 @onready var seed_input:SpinBox=$Root/Sidebar/SeedRow/Seed
 @onready var canvas:DebugMapCanvas=$Root/MapPanel/Scroll/Canvas
 @onready var summary:Label=$Root/Sidebar/Summary
@@ -12,6 +28,7 @@ func _regenerate()->void:
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
+	refresh_loot_markers()
 	var map:TacticalMapState=generated.map
 	var blocked:=0
 	for pos in map.cells.keys():
