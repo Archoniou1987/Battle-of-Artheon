@@ -213,9 +213,10 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 
 
 func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
+	var zone_validation:=_validate_attack_roll_zones(rolls)
+	if not bool(zone_validation.get("ok",false)):
+		return zone_validation
 	var requested_zone:=String(rolls.get("zone","chest"))
-	if not BODY_ZONES.has(requested_zone):
-		return {"ok":false,"reason":"invalid_body_zone","body_zone":requested_zone,"allowed_body_zones":BODY_ZONES.duplicate()}
 	var intent:=basic_attack_intent(source_id,attack_profile_id,weapon_index)
 	if not bool(intent.get("ok",false)):
 		return intent
@@ -321,9 +322,12 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 	# must never leave an already queued MH attack behind.
 	for attack_index in range(attacks.size()):
 		var request:Dictionary=attacks[attack_index]
-		var requested_zone:=String(request.get("zone",Dictionary(request.get("rolls",{})).get("zone","chest")))
-		if not BODY_ZONES.has(requested_zone):
-			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":"invalid_body_zone","body_zone":requested_zone,"queued_event_ids":[]}
+		var request_rolls:Dictionary=Dictionary(request.get("rolls",{})).duplicate(true)
+		if request.has("zone"):
+			request_rolls["zone"]=String(request.get("zone","chest"))
+		var zone_validation:=_validate_attack_roll_zones(request_rolls)
+		if not bool(zone_validation.get("ok",false)):
+			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":"invalid_body_zone","body_zone":String(zone_validation.get("body_zone","")),"hit_index":int(zone_validation.get("hit_index",-1)),"queued_event_ids":[]}
 		var intent:=basic_attack_intent(source_id,String(request.get("attack_profile_id","basic")),int(request.get("weapon_index",-1)))
 		if not bool(intent.get("ok",false)):
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
@@ -345,6 +349,19 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 			sequence_event_ids.append(int(event_id))
 	return {"ok":true,"reason":"queued","event_ids":sequence_event_ids,"attack_count":attacks.size(),"attacks":attack_results}
 
+
+func _validate_attack_roll_zones(rolls:Dictionary)->Dictionary:
+	var shared_zone:=String(rolls.get("zone","chest"))
+	if not BODY_ZONES.has(shared_zone):
+		return {"ok":false,"reason":"invalid_body_zone","body_zone":shared_zone,"hit_index":-1,"allowed_body_zones":BODY_ZONES.duplicate()}
+	var per_hit:Array=rolls.get("hits",[])
+	for hit_index in range(per_hit.size()):
+		if not per_hit[hit_index] is Dictionary:
+			continue
+		var hit_zone:=String(Dictionary(per_hit[hit_index]).get("zone",shared_zone))
+		if not BODY_ZONES.has(hit_zone):
+			return {"ok":false,"reason":"invalid_body_zone","body_zone":hit_zone,"hit_index":hit_index,"allowed_body_zones":BODY_ZONES.duplicate()}
+	return {"ok":true,"reason":"ok"}
 
 func _basic_attack_hit_rolls(rolls:Dictionary,hit_index:int)->Dictionary:
 	var per_hit:Array=rolls.get("hits",[])
