@@ -16,6 +16,9 @@ static func run(balance: Dictionary) -> bool:
 	var mixed := _mixed_weapons_keep_attack_profiles(balance)
 	print("DUEL_CASE=mixed_weapons ok=", mixed)
 	if not mixed: return false
+	var ap_group := _simulator_base_attack_ap_group(balance)
+	print("DUEL_CASE=base_attack_ap_group ok=", ap_group)
+	if not ap_group: return false
 	var skill := _weapon_skill_penalties(balance)
 	print("DUEL_CASE=weapon_skill ok=", skill)
 	if not skill: return false
@@ -93,6 +96,30 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 		and float(attacks[1].payload.get("raw_damage",0.0))>=4.0
 		and float(attacks[1].payload.get("raw_damage",0.0))<=5.0
 	)
+
+
+static func _simulator_base_attack_ap_group(balance:Dictionary)->bool:
+	var attacker:=CombatantState.new("ap_user","AP User",10,100)
+	attacker.combat_stats["hit_modifier"]=100.0
+	attacker.combat_stats["weapon_profiles"]=[
+		{"damage_min":1.0,"damage_max":1.0,"damage_type":"piercing","hit_count":2},
+		{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}
+	]
+	var defender:=CombatantState.new("ap_target","AP Target",10,1000)
+	defender.combat_stats["dodge"]=0.0
+	var state:=CombatState.new(); state.add_combatant(attacker); state.add_combatant(defender)
+	var simulator:=CombatSimulator.new(state,balance,23); simulator.max_rounds=1
+	simulator.run_duel("ap_user","ap_target")
+	var normal_attacks:Array[CombatEvent]=[]
+	var ap_events:=0
+	var ap_groups:Array[int]=[]
+	for event in state.event_log:
+		if event.kind!=CombatEvent.Kind.ATTACK or event.source_id!="ap_user" or bool(event.payload.get("is_extra_attack",false)): continue
+		normal_attacks.append(event)
+		var group_id:=int(event.payload.get("ap_group_id",-1))
+		if not ap_groups.has(group_id): ap_groups.append(group_id)
+		if int(event.result.get("ap_gained",0))>0: ap_events+=1
+	return normal_attacks.size()==3 and ap_groups.size()==1 and ap_groups[0]>=0 and ap_events<=1
 
 
 static func _weapon_skill_penalties(balance: Dictionary) -> bool:
