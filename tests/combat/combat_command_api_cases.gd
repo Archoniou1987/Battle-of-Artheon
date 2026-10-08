@@ -22,6 +22,18 @@ static func run()->bool:
 	if not bool(api.select_active_opponent("hero","enemy",{"max_zone_distance":1}).get("ok",false)): return false
 	if bool(api.basic_attack_intent("hero").get("ok",true)): return false
 	if not bool(api.ability_intent("hero","enemy",{"min_zone_distance":0,"max_zone_distance":1}).get("ok",false)): return false
+	var actions:=api.available_actions("hero",{
+		"RANGED":{"min_zone_distance":0,"max_zone_distance":1},
+		"MELEE":{"min_zone_distance":0,"max_zone_distance":0}
+	})
+	if bool(actions.get("basic_attack",true)): return false
+	if not Array(actions.get("navigation",[])).has(CombatZoneState.ZONE_2): return false
+	if not Array(Dictionary(actions.get("abilities",{})).get("RANGED",[])).has("enemy"): return false
+	if Array(Dictionary(actions.get("abilities",{})).get("MELEE",[])).has("enemy"): return false
+	if not bool(api.set_manual_block("hero",["chest","arms"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
+	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
+	if hero.combat_stats.has("manual_block_zones"): return false
 	var movement:=api.request_navigation("hero",CombatZoneState.ZONE_2,1)
 	if not bool(movement.get("ok",false)): return false
 	var results:=orchestrator.resolve_movement_phase()
