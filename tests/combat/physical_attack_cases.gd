@@ -9,6 +9,7 @@ static func run(balance: Dictionary) -> bool:
 		and _case_dodge(balance)
 		and _case_block(balance)
 		and _case_counterattack_uses_weapon_profile(balance)
+		and _case_independent_on_hit_sources(balance)
 		and _case_connected_zero_damage(balance)
 	)
 
@@ -93,6 +94,29 @@ static func _case_counterattack_uses_weapon_profile(balance:Dictionary)->bool:
 		if logged.kind==CombatEvent.Kind.EFFECT and String(logged.payload.get("source_instance_id",""))=="counter_weapon":
 			weapon_proc=true
 	return weapon_proc
+
+
+static func _case_independent_on_hit_sources(balance:Dictionary)->bool:
+	var state:=_base_state()
+	var attacker:=state.get_combatant("hero")
+	attacker.combat_stats["weapon_on_hit_effects"]=[
+		{"chance":20.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"weapon_mh","weapon_index":0},
+		{"chance":20.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"ring_a","weapon_index":-1},
+		{"chance":20.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"ring_b","weapon_index":-1},
+		{"chance":100.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"weapon_oh","weapon_index":1}
+	]
+	var event:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":1.0,"zone":"chest","damage_type":"slashing","weapon_index":0,"is_weapon_attack":true,
+		"rolls":{"hit":1,"dodge":100,"crit":100,"on_hit_effects":[100,1,100]}
+	})
+	state.queue_event(event)
+	CombatEngine.new(state,balance).resolve_pending_events()
+	var sources:Array[String]=[]
+	for logged in state.event_log:
+		if logged.kind==CombatEvent.Kind.EFFECT and logged.parent_event_id==event.event_id:
+			sources.append(String(logged.payload.get("source_instance_id","")))
+	# MH fails its own 20% roll, ring A succeeds, ring B fails. OH is ineligible.
+	return sources==["ring_a"]
 
 
 static func _case_connected_zero_damage(balance: Dictionary) -> bool:
