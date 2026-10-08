@@ -145,12 +145,15 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 			"resource_ready":resource_ready,
 			"mana_cost":mana_cost
 		}
+	var basic_attacks:=_available_basic_attacks(source_id)
+	var default_sequence:=default_weapon_attack_sequence(source_id)
 	return {
 		"ok":true,
 		"reason":"ok",
 		"active_opponent_id":group.active_opponent(source_id),
-		"basic_attack":not _available_basic_attacks(source_id).is_empty(),
-		"basic_attacks":_available_basic_attacks(source_id),
+		"basic_attack":not basic_attacks.is_empty(),
+		"basic_attacks":basic_attacks,
+		"default_weapon_attack_sequence":Array(default_sequence.get("attacks",[])) if bool(default_sequence.get("ok",false)) else [],
 		"body_zones":BODY_ZONES.duplicate(),
 		"default_body_zone":"chest",
 		"manual_block":combatant.can_manual_block(),
