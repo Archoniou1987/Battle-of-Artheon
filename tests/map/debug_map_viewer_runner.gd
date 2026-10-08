@@ -34,6 +34,22 @@ func _run()->void:
 	valid=valid and expedition.save_loot_pool("ENCOUNTER",pool)
 	viewer.refresh_loot_markers()
 	valid=valid and canvas.loot_markers.is_empty()
+	var claim_repo:=ItemRepository.new()
+	var claim_player:=CharacterState.new("PLAYER","Tester")
+	var claim_pool:=EncounterLootPool.new()
+	valid=valid and claim_repo.add_item({"instance_id":"CLAIM_ITEM"})
+	valid=valid and claim_pool.add_drop("CLAIM_ITEM","NPC")
+	claim_pool.assign_all("PLAYER")
+	claim_pool.place_on_hex(Vector2i(5,6),int(Time.get_unix_time_from_system()))
+	valid=valid and expedition.save_loot_pool("CLAIM_ENCOUNTER",claim_pool)
+	viewer.set_loot_claim_context(expedition,claim_player,claim_repo)
+	valid=valid and not viewer._loot_dialog.visible
+	viewer._on_loot_hex_selected(Vector2i(5,6))
+	valid=valid and viewer._loot_dialog.visible
+	viewer._claim_all()
+	valid=valid and claim_player.inventory.owns("CLAIM_ITEM")
+	valid=valid and not canvas.loot_markers.has(Vector2i(5,6))
+	valid=valid and not viewer._loot_dialog.visible
 	seed_input.value=1234
 	viewer.call("_regenerate")
 	await process_frame
