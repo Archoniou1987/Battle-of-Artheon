@@ -97,6 +97,70 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 	return group.combat_state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,data)
 
 
+func base_attack_events(decision:Dictionary,payload:Dictionary)->Array[CombatEvent]:
+	var events:Array[CombatEvent]=[]
+	var source_id:=String(decision.get("source_id",""))
+	var target_id:=String(decision.get("target_id",""))
+	var source:=group.combat_state.get_combatant(source_id)
+	if source==null or source.is_death_finalized():
+		return events
+	var explicit:=payload.has("weapon_index") or payload.has("attack_profile_id")
+	if explicit:
+		var selected_event=base_attack_event(decision,payload)
+		if selected_event==null:
+			return events
+		var count:=maxi(1,int(selected_event.payload.get("hit_count",1)))
+		for hit_index in range(count):
+			var hit_payload:=payload.duplicate(true)
+			hit_payload["hit_index"]=hit_index
+			var hit_event=base_attack_event(decision,hit_payload)
+			if hit_event!=null: events.append(hit_event)
+		return events
+	var by_weapon:Dictionary={}
+	for profile in WeaponAttackProfile.all(source):
+		if zones!=null and not CombatReachPolicy.valid_enemy_targets(source_id,zones,profile).has(target_id):
+			continue
+		var weapon_index:=int(profile.get("weapon_index",-1))
+		if not by_weapon.has(weapon_index): by_weapon[weapon_index]=[]
+		by_weapon[weapon_index].append(profile)
+	var indices:Array=by_weapon.keys(); indices.sort()
+	for raw_index in indices:
+		var candidates:Array=by_weapon[raw_index]
+		var selected:Dictionary={}
+		if candidates.size()==1:
+			selected=candidates[0]
+		else:
+			for candidate in candidates:
+				if bool(Dictionary(candidate).get("is_default",false)):
+					if not selected.is_empty():
+						selected={}
+						break
+					selected=candidate
+		if selected.is_empty(): continue
+		var weapon_payload:=payload.duplicate(true)
+		weapon_payload["weapon_index"]=int(selected.get("weapon_index",-1))
+		weapon_payload["attack_profile_id"]=String(selected.get("id","basic"))
+		var rolls_by_weapon:Dictionary=payload.get("rolls_by_weapon",{})
+		if rolls_by_weapon.has(raw_index): weapon_payload["rolls"]=Dictionary(rolls_by_weapon[raw_index]).duplicate(true)
+		elif rolls_by_weapon.has(String.num_int64(int(raw_index))): weapon_payload["rolls"]=Dictionary(rolls_by_weapon[String.num_int64(int(raw_index))]).duplicate(true)
+		var count:=maxi(1,int(selected.get("hit_count",1)))
+		for hit_index in range(count):
+			weapon_payload["hit_index"]=hit_index
+			var event=base_attack_event(decision,weapon_payload)
+			if event!=null: events.append(event)
+	return events
+
+func queue_base_attack(decision:Dictionary,payload:Dictionary)->Dictionary:
+	var events:=base_attack_events(decision,payload)
+	if events.is_empty():
+		return {"ok":false,"reason":"opportunity_attack_unavailable","event_ids":[]}
+	var event_ids:Array[int]=[]
+	for event in events:
+		group.combat_state.queue_event(event)
+		event_ids.append(event.event_id)
+	return {"ok":true,"reason":"queued","event_ids":event_ids,"attack_count":events.size()}
+
+
 func ability_event(decision:Dictionary,ability_id:String,definition:Dictionary,target_ids:Array[String]=[]):
 	var source_id:=String(decision.get("source_id",""))
 	var target_id:=String(decision.get("target_id",""))
