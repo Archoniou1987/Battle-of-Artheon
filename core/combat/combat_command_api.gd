@@ -73,18 +73,27 @@ func _weapon_attack_profiles(combatant:CombatantState)->Array[Dictionary]:
 		})
 	return result
 
-func basic_attack_intent(source_id:String,attack_profile_id:String="basic")->Dictionary:
+func basic_attack_intent(source_id:String,attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
 	var target_id:=group.active_opponent(source_id)
 	if target_id.is_empty():
 		return {"ok":false,"reason":"no_active_opponent"}
+	var matching_profiles:Array[Dictionary]=[]
 	for profile in _weapon_attack_profiles(combatant):
 		if String(profile.get("id",""))!=attack_profile_id:
 			continue
-		if action_policy.valid_targets(source_id,profile).has(target_id):
-			return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id,"attack_profile":profile}
+		if weapon_index>=0 and int(profile.get("weapon_index",-1))!=weapon_index:
+			continue
+		matching_profiles.append(profile)
+	if matching_profiles.is_empty():
+		return {"ok":false,"reason":"attack_profile_unavailable"}
+	if weapon_index<0 and matching_profiles.size()>1:
+		return {"ok":false,"reason":"ambiguous_attack_profile","attack_profile_id":attack_profile_id}
+	var profile:Dictionary=matching_profiles[0]
+	if action_policy.valid_targets(source_id,profile).has(target_id):
+		return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile":profile}
 	return {"ok":false,"reason":"target_out_of_reach"}
 
 func _available_basic_attacks(source_id:String)->Array[Dictionary]:
@@ -226,8 +235,8 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 	return {"ok":true,"reason":"queued","event_id":event.event_id}
 
 
-func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic")->Dictionary:
-	var intent:=basic_attack_intent(source_id,attack_profile_id)
+func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
+	var intent:=basic_attack_intent(source_id,attack_profile_id,weapon_index)
 	if not bool(intent.get("ok",false)):
 		return intent
 	var target_id:=String(intent.get("target_id",""))
@@ -248,4 +257,4 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		"generates_ap":true
 	})
 	state.queue_event(event)
-	return {"ok":true,"reason":"queued","event_id":event.event_id,"target_id":target_id,"attack_profile_id":attack_profile_id}
+	return {"ok":true,"reason":"queued","event_id":event.event_id,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile_id":attack_profile_id}
