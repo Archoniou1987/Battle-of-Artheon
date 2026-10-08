@@ -27,6 +27,11 @@ func _initialize()->void:
 	valid=valid and restored.restore_loot_pool("FIGHT_1")!=null
 	valid=valid and restored.restore_loot_pool("FIGHT_2")!=null
 	valid=valid and repository.size()==2
+	var claim_player:=CharacterState.new("PLAYER","Loot tester")
+	valid=valid and not restored.claim_loot_at_hex(claim_player,Vector2i(3,7),"HEX_LOOT_1",repository,1900)
+	valid=valid and not claim_player.inventory.owns("HEX_LOOT_1")
+	valid=valid and not restored.claim_loot_at_hex(claim_player,Vector2i(0,0),"HEX_LOOT_2",repository,1800)
+	valid=valid and not restored.claim_loot_at_hex(CharacterState.new("STRANGER","Other"),Vector2i(3,7),"HEX_LOOT_2",repository,1800)
 	valid=valid and restored.cleanup_expired_loot(1899,repository)==0
 	valid=valid and restored.cleanup_expired_loot(1900,repository)==1
 	valid=valid and not repository.has_item("HEX_LOOT_1")
