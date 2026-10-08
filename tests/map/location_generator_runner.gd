@@ -106,13 +106,17 @@ func _initialize()->void:
 		for guarded in generated.guarded_objects:
 			var object_pos:Vector2i=guarded.object_pos
 			var guard_pos:Vector2i=guarded.guard_pos
-			valid=valid and HexGrid.distance(object_pos,guard_pos)==1
-			valid=valid and HexGrid.distance(entrance,guard_pos)>3
 			var pocket_exits:Array[Vector2i]=map.neighbors(object_pos,true)
-			valid=valid and pocket_exits.size()==1 and pocket_exits[0]==guard_pos
-			valid=valid and map.cell(object_pos).object_ids.size()>0
-			valid=valid and map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
-			valid=valid and map.entities_at(guard_pos).size()==1
+			var adjacent_ok:=HexGrid.distance(object_pos,guard_pos)==1
+			var radius_ok:=HexGrid.distance(entrance,guard_pos)>3
+			var pocket_ok:=pocket_exits.size()==1 and pocket_exits[0]==guard_pos
+			var object_ok:=map.cell(object_pos).object_ids.size()>0
+			var guard_position_ok:=map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
+			# Co-located NPCs are valid; the guarded object's own guard only needs to be present.
+			var guard_present:=map.entities_at(guard_pos).has(guarded.guard_id)
+			if not (adjacent_ok and radius_ok and pocket_ok and object_ok and guard_position_ok and guard_present):
+				print("GUARDED_OBJECT_FAIL object=",object_pos," guard=",guard_pos," exits=",pocket_exits," adjacent=",adjacent_ok," radius=",radius_ok," pocket=",pocket_ok," object_attached=",object_ok," guard_position=",guard_position_ok," guard_present=",guard_present," entities=",map.entities_at(guard_pos))
+				valid=false
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
 			break
