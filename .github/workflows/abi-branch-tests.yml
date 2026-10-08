@@ -159,5 +159,8 @@ jobs:
       - name: Chain Hex Encounters through persistent world flags
         run: timeout 120s godot --headless --path . --script res://tests/map/hex_encounter_chain_runner.gd
 
+      - name: Validate hex patrol movement and combat pause
+        run: timeout 120s godot --headless --path . --script res://tests/map/hex_patrol_state_runner.gd
+
       - name: Generate 200 traversable tactical Locations
         run: timeout 120s godot --headless --path . --script res://tests/map/location_generator_runner.gd
