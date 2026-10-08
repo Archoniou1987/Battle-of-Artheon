@@ -82,6 +82,8 @@ func _lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Comba
 			round.lock_action(event)
 func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var profile:=_weapon_profile(attacker,weapon_index)
+	if profile.is_empty():
+		return false
 	var requirement:=String(profile.get("requires_off_hand_type",""))
 	if requirement.is_empty(): return true
 	var equipped_types:Array=attacker.combat_stats.get("equipped_item_types",[])
