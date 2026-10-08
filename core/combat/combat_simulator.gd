@@ -1,19 +1,16 @@
 class_name CombatSimulator
 extends RefCounted
 
-const HIT_ZONES := ["head", "chest", "arms", "waist", "legs"]
 var state: CombatState
 var engine: CombatEngine
 var attack_pipeline:CombatAttackPipeline
 var orchestrator: RoundOrchestrator
-var rng := RandomNumberGenerator.new()
 var max_rounds: int = 999
 
 func _init(combat_state: CombatState, balance: Dictionary = {}, seed_value: int = 1) -> void:
 	state = combat_state
 	engine = CombatEngine.new(state, balance)
 	orchestrator = RoundOrchestrator.new(state, engine)
-	rng.seed = seed_value
 	attack_pipeline=CombatAttackPipeline.new(state,seed_value)
 
 func run_duel(first_id: String, second_id: String) -> Dictionary:
