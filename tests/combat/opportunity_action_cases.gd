@@ -113,6 +113,7 @@ static func _full_base_attack_sequence()->bool:
 		0:{"hits":[{"zone":"head","damage":0.0},{"zone":"chest","damage":0.0}]},
 		1:{"zone":"arms","damage":0.0}
 	}})
+	print("OPPORTUNITY_SEQUENCE_RESULT=",result)
 	if not bool(result.get("ok",false)) or int(result.get("attack_count",0))!=3: return false
 	var ids:Array=result.get("event_ids",[])
 	if ids.size()!=3: return false
@@ -123,6 +124,7 @@ static func _full_base_attack_sequence()->bool:
 			hits.append(int(event.payload.get("hit_index",-1)))
 			zones.append(String(event.payload.get("zone","")))
 			if not bool(event.payload.get("is_extra_attack",false)) or bool(event.payload.get("generates_ap",true)): return false
+	print("OPPORTUNITY_SEQUENCE_WEAPONS=",weapons," HITS=",hits," ZONES=",zones)
 	return weapons==[0,0,1] and hits==[0,1,0] and zones==["head","chest","arms"]
 
 
