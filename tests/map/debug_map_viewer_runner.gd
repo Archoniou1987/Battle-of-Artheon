@@ -19,6 +19,21 @@ func _run()->void:
 	valid=valid and not canvas.generated.is_empty()
 	valid=valid and canvas.generated.get("seed",-1)==777
 	valid=valid and summary.text.contains("Map: 20x20")
+	var expedition:=ExpeditionState.new("MAP_LOOT")
+	var pool:=EncounterLootPool.new()
+	pool.add_drop("VISIBLE_ITEM","NPC")
+	pool.assign_all("PLAYER")
+	pool.place_on_hex(Vector2i(3,4),int(Time.get_unix_time_from_system()))
+	valid=valid and expedition.save_loot_pool("ENCOUNTER",pool)
+	viewer.set_loot_context(expedition,"PLAYER")
+	valid=valid and canvas.loot_markers.size()==1 and canvas.loot_markers.has(Vector2i(3,4))
+	viewer.set_loot_context(expedition,"OTHER")
+	valid=valid and canvas.loot_markers.is_empty()
+	viewer.set_loot_context(expedition,"PLAYER")
+	pool.entries.clear()
+	valid=valid and expedition.save_loot_pool("ENCOUNTER",pool)
+	viewer.refresh_loot_markers()
+	valid=valid and canvas.loot_markers.is_empty()
 	seed_input.value=1234
 	viewer.call("_regenerate")
 	await process_frame
