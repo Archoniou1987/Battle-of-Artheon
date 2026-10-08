@@ -184,13 +184,17 @@ static func run()->bool:
 		{"weapon_index":0,"attack_profile_id":"weapon_slash","rolls":{"hit":100,"dodge":100,"crit":100,"damage":0.0}},
 		{"weapon_index":1,"attack_profile_id":"weapon_chop","rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}}
 	])
-	if not bool(fallback_sequence.get("ok",false)): return false
+	if not bool(fallback_sequence.get("ok",false)):
+		print("COMMAND_AP_FALLBACK queue=",fallback_sequence)
+		return false
 	engine.resolve_pending_events()
+	print("COMMAND_AP_FALLBACK before=",ap_before_fallback," after=",hero.action_points," ids=",fallback_sequence.get("event_ids",[]))
 	if hero.action_points!=ap_before_fallback+1: return false
 	var fallback_ap_events:=0
 	for logged_event in state.event_log:
 		if Array(fallback_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			fallback_ap_events+=1
+	print("COMMAND_AP_FALLBACK ap_events=",fallback_ap_events)
 	if fallback_ap_events!=1: return false
 	# Normal Base Attack derives one default attack per equipped weapon automatically.
 	var automatic:=api.queue_default_weapon_attacks("hero",{
