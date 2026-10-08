@@ -26,9 +26,15 @@ func _initialize()->void:
 			valid=valid and map.cell(generated.object_cells[i]).object_ids.has("GEN_OBJECT_%02d"%i)
 		for i in range(generated.npc_cells.size()):
 			valid=valid and map.entity_positions.get("GEN_NPC_%02d"%i,Vector2i(-1,-1))==generated.npc_cells[i]
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
+			break
 		checkpoint="encounter_service"
 		var service:HexEncounterService=generated.encounter_service
 		valid=valid and service.encounters.size()==generated.encounter_cells.size()+generated.boss_groups.size()
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
+			break
 		checkpoint="boss_groups"
 		for boss_group in generated.boss_groups:
 			var boss_pos:Vector2i=boss_group.boss_pos
@@ -50,6 +56,9 @@ func _initialize()->void:
 				valid=valid and HexGrid.distance(boss_pos,guard_pos)==1
 				valid=valid and map.entity_positions.get(guard_id,Vector2i(-1,-1))==guard_pos
 				valid=valid and map.entities_at(guard_pos).size()==1
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
+			break
 		checkpoint="patrols"
 		valid=valid and generated.patrols.size()>=5
 		for patrol in generated.patrols:
@@ -68,6 +77,9 @@ func _initialize()->void:
 				valid=valid and float(pause.get("pause_seconds",0.0))>0.0
 			for i in range(1,patrol_path.size()):
 				valid=valid and HexGrid.distance(patrol_path[i-1],patrol_path[i])==1
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
+			break
 		checkpoint="route_guards"
 		for route_guard in generated.route_guards:
 			var route_guard_pos:Vector2i=route_guard.guard_pos
@@ -75,6 +87,9 @@ func _initialize()->void:
 			valid=valid and route_guard_pos!=entrance and route_guard_pos!=exit
 			valid=valid and HexGrid.distance(entrance,route_guard_pos)>3
 			valid=valid and map.entity_positions.get(route_guard.guard_id,Vector2i(-1,-1))==route_guard_pos
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
+			break
 		checkpoint="guarded_objects"
 		for guarded in generated.guarded_objects:
 			var object_pos:Vector2i=guarded.object_pos
@@ -86,6 +101,9 @@ func _initialize()->void:
 			valid=valid and map.cell(object_pos).object_ids.size()>0
 			valid=valid and map.entity_positions.get(guarded.guard_id,Vector2i(-1,-1))==guard_pos
 			valid=valid and map.entities_at(guard_pos).size()==1
+		if not valid:
+			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=%s"%[seed_value,checkpoint])
+			break
 		checkpoint="safe_radius"
 		for npc_pos in generated.npc_cells:
 			if HexGrid.distance(entrance,npc_pos)<=3:
