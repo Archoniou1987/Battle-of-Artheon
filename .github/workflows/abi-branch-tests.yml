@@ -82,6 +82,9 @@ jobs:
       - name: Validate co-located non-blocking square map entities
         run: timeout 120s godot --headless --path . --script res://tests/map/square_map_entity_runner.gd
 
+      - name: Bridge square map NPC contact into encounter
+        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_encounter_bridge_runner.gd
+
       - name: Validate tactical map movement and resource area
         run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
 
