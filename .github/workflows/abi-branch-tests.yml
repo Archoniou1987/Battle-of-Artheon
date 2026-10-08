@@ -94,6 +94,9 @@ jobs:
       - name: Simulate one versus many combat rounds
         run: timeout 120s godot --headless --path . --script res://tests/combat/group_combat_simulator_runner.gd
 
+      - name: Resolve square map group combat outcome
+        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_group_combat_outcome_runner.gd
+
       - name: Validate tactical map movement and resource area
         run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
 
