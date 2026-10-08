@@ -78,7 +78,7 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 		"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
 		"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
 		"damage_type":String(selected.get("damage_type","slashing")),
-		"zone":String(payload.get("zone","chest")),"rolls":rolls,
+		"zone":String(rolls.get("zone",payload.get("zone","chest"))),"rolls":rolls,
 		"source":"opportunity_base_attack","source_kind":"weapon","opportunity_action":true,
 		"is_weapon_attack":true,"is_extra_attack":true,"generates_ap":false,
 		"weapon_index":int(selected.get("weapon_index",0)),
