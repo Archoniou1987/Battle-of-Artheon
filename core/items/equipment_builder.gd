@@ -62,10 +62,23 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 	var armour:=float(item.get("armour_all_zones_all_physical",0.0))
 	if armour>0.0:_add_universal_physical_armour(combatant,armour)
 static func set_manual_block_zones(combatant:CombatantState,zones:Array)->void:
-	var capacity:=int(combatant.combat_stats.get("manual_block_zone_capacity",0)); var selected:Array[String]=[]
+	var capacity:=clampi(int(combatant.combat_stats.get("manual_block_zone_count",combatant.combat_stats.get("manual_block_zone_capacity",1))),1,3)
+	var selected:Array[String]=[]
 	for zone in zones:
 		var normalized:=String(zone).to_lower()
-		if HIT_ZONES.has(normalized) and not selected.has(normalized) and selected.size()<capacity:selected.append(normalized)
+		if HIT_ZONES.has(normalized) and not selected.has(normalized):
+			selected.append(normalized)
+	if selected.size()!=capacity:
+		combatant.combat_stats.erase("manual_block_zones")
+		return
+	var indices:Array[int]=[]
+	for zone in selected:
+		indices.append(HIT_ZONES.find(zone))
+	indices.sort()
+	for i in range(1,indices.size()):
+		if indices[i]!=indices[i-1]+1:
+			combatant.combat_stats.erase("manual_block_zones")
+			return
 	combatant.combat_stats["manual_block_zones"]=selected
 static func _add_universal_physical_armour(combatant:CombatantState,amount:float)->void:
 	for zone in HIT_ZONES:
