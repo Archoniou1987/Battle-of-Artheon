@@ -37,6 +37,27 @@ func refresh_lifetime(now_unix:int)->Dictionary:
 	status=STATUS_EXPIRED
 	return {"expired":true,"outcome":profile.expiration_outcome,"deadline":deadline}
 
+func save_loot_pool(encounter_id:String,pool:EncounterLootPool)->bool:
+	if encounter_id.is_empty() or pool==null: return false
+	var pools:Dictionary=Dictionary(world_state.get("encounter_loot_pools",{})).duplicate(true)
+	pools[encounter_id]=pool.to_dict()
+	world_state["encounter_loot_pools"]=pools
+	return true
+
+func restore_loot_pool(encounter_id:String)->EncounterLootPool:
+	var pools:Dictionary=world_state.get("encounter_loot_pools",{})
+	if not pools.has(encounter_id): return null
+	var data=pools[encounter_id]
+	if not data is Dictionary: return null
+	return EncounterLootPool.from_dict(data)
+
+func remove_loot_pool(encounter_id:String)->bool:
+	var pools:Dictionary=Dictionary(world_state.get("encounter_loot_pools",{})).duplicate(true)
+	if not pools.has(encounter_id): return false
+	pools.erase(encounter_id)
+	world_state["encounter_loot_pools"]=pools
+	return true
+
 func to_dict()->Dictionary:
 	return {
 		"expedition_id":expedition_id,
