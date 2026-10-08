@@ -17,6 +17,16 @@ func _initialize()->void:
 	var valid:=group.active_opponent("PLAYER")=="E0"
 	var r1:=simulator.run_round()
 	valid=valid and bool(r1.get("ok",false)) and state.get_combatant("E0").is_death_finalized()
+	# A normal player action must hit only the active opponent, never every NPC.
+	valid=valid and state.get_combatant("E0").hp==-10
+	valid=valid and state.get_combatant("E1").hp==50
+	valid=valid and state.get_combatant("E2").hp==50
+	var player_damage_targets:Array[String]=[]
+	for event in state.event_log:
+		if event is CombatEvent and event.kind==CombatEvent.Kind.DAMAGE and event.source_id=="PLAYER":
+			player_damage_targets.append(event.target_id)
+	valid=valid and player_damage_targets.size()==1
+	valid=valid and player_damage_targets[0]=="E0"
 	valid=valid and group.active_opponent("PLAYER")=="E1" and not simulator.controller.combat_finished()
 	simulator.run_round()
 	valid=valid and state.get_combatant("E1").is_death_finalized() and group.active_opponent("PLAYER")=="E2"
