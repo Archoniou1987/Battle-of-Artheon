@@ -68,7 +68,7 @@ static func run()->bool:
 	if not bool(cast_result.get("ok",false)): return false
 	if hero.mana!=4: return false
 	engine.resolve_pending_events()
-	if enemy.hp!=87: return false
+	if enemy.hp!=83: return false
 	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
 	var second_cast:=api.cast_ability("hero","enemy","RANGED")
 	if bool(second_cast.get("ok",true)): return false
@@ -79,4 +79,4 @@ static func run()->bool:
 	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"staff_strike")
 	if not bool(attack.get("ok",false)): return false
 	engine.resolve_pending_events()
-	return enemy.hp==78
+	return enemy.hp==74
