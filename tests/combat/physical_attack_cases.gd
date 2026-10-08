@@ -9,6 +9,7 @@ static func run(balance: Dictionary) -> bool:
 		and _case_dodge(balance)
 		and _case_block(balance)
 		and _case_counterattack_uses_weapon_profile(balance)
+		and _case_magic_counterattack_keeps_profile_semantics(balance)
 		and _case_independent_on_hit_sources(balance)
 		and _case_connected_zero_damage(balance)
 	)
@@ -94,6 +95,28 @@ static func _case_counterattack_uses_weapon_profile(balance:Dictionary)->bool:
 		if logged.kind==CombatEvent.Kind.EFFECT and String(logged.payload.get("source_instance_id",""))=="counter_weapon":
 			weapon_proc=true
 	return weapon_proc
+
+
+static func _case_magic_counterattack_keeps_profile_semantics(balance:Dictionary)->bool:
+	var state:=_base_state()
+	var defender:=state.get_combatant("hero")
+	defender.combat_stats["counterattack"]=100.0
+	defender.combat_stats["dodge"]=100.0
+	defender.combat_stats["weapon_profiles"]=[{
+		"damage_min":6.0,"damage_max":6.0,"damage_type":"fire",
+		"attack_profiles":[{"id":"magic_touch","delivery_type":"MELEE","uses_magic_hit":true,"magic_hit_modifier":12.0}]
+	}]
+	var incoming:=state.create_event(CombatEvent.Kind.ATTACK,"enemy","hero",{
+		"raw_damage":1.0,"zone":"chest","damage_type":"slashing",
+		"rolls":{"hit":1,"dodge":1,"counterattack":1},
+		"counterattack_rolls":{"magic_hit":1,"damage":0.0}
+	})
+	state.queue_event(incoming)
+	CombatEngine.new(state,balance).resolve_pending_events()
+	for logged in state.event_log:
+		if logged.kind==CombatEvent.Kind.ATTACK and bool(logged.payload.get("is_counterattack",false)):
+			return bool(logged.payload.get("uses_magic_hit",false)) and not bool(logged.payload.get("uses_physical_block",true)) and String(logged.payload.get("damage_type",""))=="fire" and is_equal_approx(float(logged.payload.get("magic_hit_modifier",0.0)),12.0)
+	return false
 
 
 static func _case_independent_on_hit_sources(balance:Dictionary)->bool:
