@@ -31,7 +31,7 @@ static func assemble(map:TacticalMapState,bridge:MapNpcBridge,combat_cell:Vector
 		var position:Vector2i=map.entity_positions[npc_id]
 		if HexGrid.distance(position,combat_cell)>1:
 			continue
-		var chance:=clampf(float(aggression.get(npc_id,0.0)),0.0,100.0)
+		var chance:=clampf(float(aggression.get(npc_id,npc.aggression)),0.0,100.0)
 		if chance>=100.0 or (chance>0.0 and rng.randf()*100.0<chance):
 			selected[npc_id]=true
 			members.append(npc)
