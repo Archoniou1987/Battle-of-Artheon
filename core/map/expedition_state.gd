@@ -58,6 +58,29 @@ func remove_loot_pool(encounter_id:String)->bool:
 	world_state["encounter_loot_pools"]=pools
 	return true
 
+func loot_hexes(now_unix:int)->Array[Vector2i]:
+	var cells:Array[Vector2i]=[]
+	var pools:Dictionary=world_state.get("encounter_loot_pools",{})
+	for encounter_id in pools:
+		var pool:=restore_loot_pool(String(encounter_id))
+		if pool!=null and pool.has_visible_loot(now_unix) and not cells.has(pool.hex_cell):
+			cells.append(pool.hex_cell)
+	return cells
+
+func cleanup_expired_loot(now_unix:int,repository:ItemRepository)->int:
+	var removed:=0
+	var pools:Dictionary=Dictionary(world_state.get("encounter_loot_pools",{})).duplicate(true)
+	for encounter_id in pools.keys():
+		var pool:=restore_loot_pool(String(encounter_id))
+		if pool==null:
+			continue
+		if pool.is_expired(now_unix):
+			pool.expire(now_unix,repository)
+			pools.erase(encounter_id)
+			removed+=1
+	world_state["encounter_loot_pools"]=pools
+	return removed
+
 func to_dict()->Dictionary:
 	return {
 		"expedition_id":expedition_id,
