@@ -75,6 +75,9 @@ jobs:
       - name: Damage all equipped items after defeat
         run: timeout 120s godot --headless --path . --script res://tests/items/defeat_equipment_wear_runner.gd
 
+      - name: Validate hex loot expiry
+        run: godot --headless --path . --script res://tests/map/hex_loot_expiry_runner.gd
+
       - name: Validate expedition persistence and square-grid foundation
         run: timeout 120s godot --headless --path . --script res://tests/map/expedition_foundation_runner.gd
 
