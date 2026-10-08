@@ -35,11 +35,20 @@ static func begin(encounter:Dictionary,npc_repository:NpcRepository,player:Comba
 		npc_instance_ids.append(instance.instance_id)
 		npc_template_ids.append(instance.template_id)
 
+	var group:=GroupCombatState.new(state)
+	group.add_member("players",player.combatant_id)
+	for enemy in enemies:
+		group.add_member("enemies",enemy.combatant_id)
+	var controller:=GroupCombatController.new(group)
+	controller.initialize_active_opponents()
+
 	var primary:NpcInstance=instances[0]
 	var primary_enemy:CombatantState=enemies[0]
 	return {
 		"ok":true,
 		"state":state,
+		"group":group,
+		"group_controller":controller,
 		"player":player,
 		"enemy":primary_enemy,
 		"enemies":enemies,
