@@ -62,6 +62,16 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 	var rolls:Dictionary=Dictionary(payload.get("rolls",{})).duplicate(true)
 	var damage_roll:=float(rolls.get("damage",randf()))
 	rolls["damage"]=damage_roll
+	var hit_count:=maxi(1,int(selected.get("hit_count",1)))
+	var hit_index:=int(payload.get("hit_index",0))
+	if hit_index<0 or hit_index>=hit_count:
+		return null
+	var per_hit:Array=rolls.get("hits",[])
+	if hit_index<per_hit.size() and per_hit[hit_index] is Dictionary:
+		var merged:=rolls.duplicate(true)
+		merged.erase("hits")
+		for key in Dictionary(per_hit[hit_index]).keys(): merged[key]=Dictionary(per_hit[hit_index])[key]
+		rolls=merged
 	var damage_min:=float(selected.get("damage_min",0.0))
 	var damage_max:=float(selected.get("damage_max",damage_min))
 	var data:Dictionary={
@@ -73,6 +83,7 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 		"is_weapon_attack":true,"is_extra_attack":true,"generates_ap":false,
 		"weapon_index":int(selected.get("weapon_index",0)),
 		"attack_profile_id":String(selected.get("id","basic")),
+		"hit_index":hit_index,"hit_count":hit_count,
 		"delivery_type":String(selected.get("delivery_type","MELEE")),
 		"min_zone_distance":int(selected.get("min_zone_distance",0)),
 		"max_zone_distance":int(selected.get("max_zone_distance",0)),
