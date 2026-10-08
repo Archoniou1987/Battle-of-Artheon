@@ -111,6 +111,30 @@ static func run()->bool:
 	if String(bow_event.result.get("outcome",""))!="dodge": return false
 	if enemy.hp!=75: return false
 	enemy.combat_stats["dodge"]=0.0
+	# Multi-hit is profile-driven: every hit gets an independent combat roll chain.
+	zones.set_zone("hero",CombatZoneState.ZONE_2)
+	zones.set_zone("enemy",CombatZoneState.ZONE_2)
+	hero.combat_stats["weapon_profiles"]=[{
+		"damage_min":4.0,"damage_max":4.0,"damage_type":"slashing",
+		"attack_profiles":[{"id":"dual_slash","delivery_type":"MELEE","hit_count":2}]
+	}]
+	enemy.combat_stats["dodge"]=50.0
+	var multi:=api.queue_basic_attack("hero",{
+		"hits":[
+			{"hit":1,"dodge":1,"crit":100,"damage":0.0},
+			{"hit":1,"dodge":100,"crit":100,"damage":0.0}
+		]
+	},"dual_slash",0)
+	if not bool(multi.get("ok",false)): return false
+	if int(multi.get("hit_count",0))!=2 or Array(multi.get("event_ids",[])).size()!=2: return false
+	engine.resolve_pending_events()
+	if enemy.hp!=71: return false
+	var multi_outcomes:Array[String]=[]
+	for logged_event in state.event_log:
+		if Array(multi.get("event_ids",[])).has(logged_event.event_id):
+			multi_outcomes.append(String(logged_event.result.get("outcome","")))
+	if multi_outcomes.size()!=2 or multi_outcomes[0]!="dodge" or multi_outcomes[1]!="connected": return false
+	enemy.combat_stats["dodge"]=0.0
 	# Restore the staff fixture before duplicate-profile selection coverage.
 	hero.combat_stats["weapon_profiles"]=[{
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
