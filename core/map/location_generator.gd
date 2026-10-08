@@ -68,6 +68,10 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	for object_pos in pocket_candidates:
 		if object_cells.size()>=BASE_OBJECTS:
 			break
+		# Earlier pockets may have changed this candidate after the candidate list was built.
+		# Never reuse an existing object/guard cell and never shape an already blocked cell.
+		if object_cells.has(object_pos) or reserved_guard_cells.has(object_pos) or not map.cell(object_pos).is_passable():
+			continue
 		var passable_neighbors:Array[Vector2i]=map.neighbors(object_pos,true)
 		if passable_neighbors.is_empty():
 			continue
