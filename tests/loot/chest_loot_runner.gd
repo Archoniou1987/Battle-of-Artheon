@@ -15,11 +15,14 @@ func _initialize() -> void:
 	var loot_service := LootService.new(7007)
 	var first := ChestService.open_chest(chest, player, loot_table, templates, generator, repository, loot_service)
 	var second := ChestService.open_chest(chest, player, loot_table, templates, generator, repository, loot_service)
-	var valid := chest.is_open and first.size() == 2 and second.is_empty()
-	valid = valid and repository.size() == 2 and player.inventory.size() == 2
-	for item in first:
-		var instance_id := String(item.get("instance_id", ""))
-		valid = valid and player.inventory.owns(instance_id) and repository.has_item(instance_id)
+	var valid := chest.is_open and first.item_ids().size() == 2 and second.item_ids().is_empty()
+	valid = valid and repository.size() == 2 and player.inventory.size() == 0
+	for instance_id in first.item_ids().duplicate():
+		var item:=repository.get_item(instance_id)
+		valid = valid and first.available_for(player.character_id).has(instance_id) and repository.has_item(instance_id)
 		valid = valid and String(item.get("loot_source_id", "")) == chest.chest_id
+		valid = valid and first.claim(instance_id,player,repository)
+		valid = valid and not first.claim(instance_id,player,repository)
+	valid = valid and player.inventory.size()==2 and first.item_ids().is_empty()
 	print("CHEST_LOOT_TEST=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
