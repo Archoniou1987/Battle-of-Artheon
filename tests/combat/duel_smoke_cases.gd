@@ -22,6 +22,9 @@ static func run(balance: Dictionary) -> bool:
 	var bow := _bow_requires_quiver(balance)
 	print("DUEL_CASE=bow_quiver ok=", bow)
 	if not bow: return false
+	var defaults := _multiple_profiles_require_default(balance)
+	print("DUEL_CASE=canonical_defaults ok=", defaults)
+	if not defaults: return false
 	var schema := _abi_v2_schema()
 	print("DUEL_CASE=abi_schema ok=", schema)
 	if not schema: return false
@@ -127,6 +130,36 @@ static func _bow_requires_quiver(balance: Dictionary) -> bool:
 	var sim_b:=CombatSimulator.new(state_b,balance,31); sim_b.max_rounds=1; sim_b.run_duel("bow_with","target_b")
 	for event in state_b.event_log:
 		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="bow_with": return true
+	return false
+
+static func _multiple_profiles_require_default(balance:Dictionary)->bool:
+	var attacker:=CombatantState.new("profile_user","Profile User",10,100)
+	var defender:=CombatantState.new("profile_target","Profile Target",10,1000)
+	attacker.combat_stats["weapon_profiles"]=[{
+		"damage_min":3.0,"damage_max":3.0,"damage_type":"blunt",
+		"attack_profiles":[
+			{"id":"strike","delivery_type":"MELEE"},
+			{"id":"bolt","delivery_type":"PROJECTILE","max_zone_distance":2}
+		]
+	}]
+	var state:=CombatState.new(); state.add_combatant(attacker); state.add_combatant(defender)
+	var simulator:=CombatSimulator.new(state,balance,44); simulator.max_rounds=1
+	simulator.run_duel("profile_user","profile_target")
+	for event in state.event_log:
+		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="profile_user": return false
+	attacker.combat_stats["weapon_profiles"][0]["attack_profiles"][0]["is_default"]=true
+	var state2:=CombatState.new(); state2.add_combatant(attacker); state2.add_combatant(CombatantState.new("profile_target2","Profile Target 2",10,1000))
+	attacker.combatant_id="profile_user2"
+	var simulator2:=CombatSimulator.new(state2,balance,44)
+	# Rebuild IDs cleanly because CombatState keys are identity contracts.
+	var clean:=CombatantState.new("profile_user2","Profile User",10,100)
+	clean.combat_stats=attacker.combat_stats.duplicate(true)
+	var clean_state:=CombatState.new(); clean_state.add_combatant(clean); clean_state.add_combatant(CombatantState.new("profile_target2","Profile Target 2",10,1000))
+	simulator2=CombatSimulator.new(clean_state,balance,44); simulator2.max_rounds=1
+	simulator2.run_duel("profile_user2","profile_target2")
+	for event in clean_state.event_log:
+		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="profile_user2":
+			return String(event.payload.get("attack_profile_id",""))=="strike"
 	return false
 
 static func _abi_v2_schema() -> bool:
