@@ -18,7 +18,8 @@ func item_ids()->Array[String]:
 
 func assign_all(player_id:String)->void:
 	for item_id in item_ids():
-		assigned_player_by_item[item_id]=player_id
+		if not assigned_player_by_item.has(item_id) and not player_id.is_empty():
+			assigned_player_by_item[item_id]=player_id
 
 func available_for(player_id:String)->Array[String]:
 	var result:Array[String]=[]
@@ -28,7 +29,7 @@ func available_for(player_id:String)->Array[String]:
 	return result
 
 func claim(item_id:String,player:CharacterState,repository:ItemRepository)->bool:
-	if player==null or String(assigned_player_by_item.get(item_id,""))!=player.character_id:
+	if player==null or not item_ids().has(item_id) or String(assigned_player_by_item.get(item_id,""))!=player.character_id:
 		return false
 	if player.inventory.owns(item_id):
 		return false
