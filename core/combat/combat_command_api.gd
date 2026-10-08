@@ -138,3 +138,31 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 		return {"ok":false,"reason":"cast_rejected"}
 	state.queue_event(event)
 	return {"ok":true,"reason":"queued","event_id":event.event_id}
+
+
+func queue_basic_attack(source_id:String,rolls:Dictionary={})->Dictionary:
+	var intent:=basic_attack_intent(source_id)
+	if not bool(intent.get("ok",false)):
+		return intent
+	var source:=state.get_combatant(source_id)
+	var target_id:=String(intent.get("target_id",""))
+	var profiles:Array=source.combat_stats.get("weapon_profiles",[])
+	var raw_damage:=float(source.combat_stats.get("main_hand_damage",0.0))
+	var damage_type:=String(source.combat_stats.get("main_hand_damage_type","slashing"))
+	var delivery_type:="MELEE"
+	if not profiles.is_empty():
+		var profile:Dictionary=profiles[0]
+		raw_damage=float(profile.get("damage",profile.get("raw_damage",raw_damage)))
+		damage_type=String(profile.get("damage_type",damage_type))
+		delivery_type=String(profile.get("delivery_type","MELEE")).to_upper()
+	var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{
+		"raw_damage":raw_damage,
+		"zone":"chest",
+		"damage_type":damage_type,
+		"rolls":rolls.duplicate(true),
+		"weapon_index":0,
+		"delivery_type":delivery_type,
+		"generates_ap":true
+	})
+	state.queue_event(event)
+	return {"ok":true,"reason":"queued","event_id":event.event_id,"target_id":target_id}
