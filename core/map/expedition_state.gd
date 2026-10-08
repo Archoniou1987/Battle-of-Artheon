@@ -89,6 +89,35 @@ func loot_hexes(now_unix:int)->Array[Vector2i]:
 			cells.append(pool.hex_cell)
 	return cells
 
+func claim_loot_at_hex(player:CharacterState,cell:Vector2i,item_id:String,repository:ItemRepository,now_unix:int)->bool:
+	if player==null or repository==null or item_id.is_empty():
+		return false
+	for encounter_id in loot_pools_for_player_at_hex(player.character_id,cell,now_unix):
+		var pool:=restore_loot_pool(encounter_id)
+		if pool==null or not pool.available_for(player.character_id).has(item_id):
+			continue
+		if not pool.claim(item_id,player,repository):
+			return false
+		if pool.entries.is_empty():
+			remove_loot_pool(encounter_id)
+		else:
+			save_loot_pool(encounter_id,pool)
+		return true
+	return false
+
+func claim_all_loot_at_hex(player:CharacterState,cell:Vector2i,repository:ItemRepository,now_unix:int)->Array[String]:
+	var claimed:Array[String]=[]
+	if player==null or repository==null:
+		return claimed
+	for encounter_id in loot_pools_for_player_at_hex(player.character_id,cell,now_unix):
+		var pool:=restore_loot_pool(encounter_id)
+		if pool==null:
+			continue
+		for item_id in pool.available_for(player.character_id):
+			if claim_loot_at_hex(player,cell,item_id,repository,now_unix):
+				claimed.append(item_id)
+	return claimed
+
 func cleanup_expired_loot(now_unix:int,repository:ItemRepository)->int:
 	var removed:=0
 	var pools:Dictionary=Dictionary(world_state.get("encounter_loot_pools",{})).duplicate(true)
