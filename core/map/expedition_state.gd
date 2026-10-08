@@ -119,6 +119,9 @@ func claim_all_loot_at_hex(player:CharacterState,cell:Vector2i,repository:ItemRe
 	return claimed
 
 func cleanup_expired_loot(now_unix:int,repository:ItemRepository)->int:
+	# Never discard pool ownership records without a repository to clean up instances.
+	if repository==null:
+		return 0
 	var removed:=0
 	var pools:Dictionary=Dictionary(world_state.get("encounter_loot_pools",{})).duplicate(true)
 	for encounter_id in pools.keys():
