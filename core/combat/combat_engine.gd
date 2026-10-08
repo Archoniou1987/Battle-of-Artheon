@@ -383,6 +383,7 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 	var chance := float(defender.combat_stats.get("counterattack", 0.0))
 	if not CombatMath.roll_success(chance, int(rolls.get("counterattack", 100))): return
 	var weapon:=_counterattack_weapon_profile(defender)
+	if weapon.is_empty(): return
 	var counter_rolls:Dictionary=Dictionary(parent.payload.get("counterattack_rolls",{})).duplicate(true)
 	var damage_roll:=float(counter_rolls.get("damage",randf()))
 	counter_rolls["damage"]=damage_roll
@@ -405,26 +406,24 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 		"delivery_type":String(weapon.get("delivery_type","MELEE")),
 		"min_zone_distance":int(weapon.get("min_zone_distance",0)),
 		"max_zone_distance":int(weapon.get("max_zone_distance",0)),
-		"uses_magic_hit":false,
-		"uses_physical_block":true
+		"uses_magic_hit":bool(weapon.get("uses_magic_hit",false)),
+		"magic_hit_modifier":float(weapon.get("magic_hit_modifier",0.0)),
+		"magic_hit_roll":int(counter_rolls.get("magic_hit",1)),
+		"uses_physical_block":not bool(weapon.get("uses_magic_hit",false)),
+		"bypass_physical_mitigation":not String(weapon.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
 	}, parent.event_id)
 	state.queue_event(child); parent.set_result("counterattack_event_id", child.event_id)
 
 func _counterattack_weapon_profile(combatant:CombatantState)->Dictionary:
-	var weapons:Array=combatant.combat_stats.get("weapon_profiles",[])
-	if weapons.is_empty():
-		return {"id":"basic","damage_min":float(combatant.combat_stats.get("main_hand_damage",0.0)),"damage_max":float(combatant.combat_stats.get("main_hand_damage",0.0)),"damage_type":String(combatant.combat_stats.get("main_hand_damage_type","slashing")),"delivery_type":"MELEE"}
-	var weapon:Dictionary=weapons[0]
-	var profiles:Array=weapon.get("attack_profiles",[])
-	var profile:Dictionary=profiles[0].duplicate(true) if not profiles.is_empty() and profiles[0] is Dictionary else {}
-	profile["id"]=String(profile.get("id","basic"))
-	profile["damage_min"]=float(profile.get("damage_min",weapon.get("damage_min",0.0)))
-	profile["damage_max"]=float(profile.get("damage_max",weapon.get("damage_max",profile["damage_min"])))
-	profile["damage_type"]=String(profile.get("damage_type",weapon.get("damage_type","slashing")))
-	profile["delivery_type"]=String(profile.get("delivery_type","MELEE")).to_upper()
-	profile["min_zone_distance"]=int(profile.get("min_zone_distance",0))
-	profile["max_zone_distance"]=int(profile.get("max_zone_distance",0))
-	return profile
+	var profiles:=WeaponAttackProfile.all(combatant)
+	if profiles.is_empty():
+		return {}
+	# Counterattack currently happens after a successful dodge against an incoming
+	# attack, so prefer a canonical profile that can operate at contact distance.
+	for profile in profiles:
+		if int(profile.get("min_zone_distance",0))<=0 and int(profile.get("max_zone_distance",0))>=0:
+			return profile.duplicate(true)
+	return {}
 
 func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void:
 	if bool(event.payload.get("generates_ap", true)) and not bool(event.payload.get("is_counterattack", false)) and not bool(event.payload.get("is_extra_attack", false)):
