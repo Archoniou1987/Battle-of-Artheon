@@ -17,6 +17,9 @@ jobs:
           include-templates: false
       - name: Import project and register script classes
         run: timeout --signal=KILL 90s godot --headless --editor --path . --quit
+      - name: Validate combat debug scene
+        run: timeout --signal=KILL 30s godot --headless --path . res://scenes/debug/debug_combat_viewer.tscn --quit-after 2
+
       - name: Run combat regression gate
         run: |
           set -o pipefail
