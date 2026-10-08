@@ -27,7 +27,7 @@ static func _run_case(seed:int)->bool:
 			zones.set_zone(id,CombatZoneState.ZONE_1 if team_id=="A" else CombatZoneState.ZONE_3)
 	var engine:=CombatEngine.new(state,{})
 	var orchestrator:=RoundOrchestrator.new(state,engine,group,zones)
-	for round_index in range(10):
+	for round_index in range(999):
 		orchestrator.begin_round()
 		for team_id in ["A","B"]:
 			var enemies:=group.round_present_members("B" if team_id=="A" else "A")
@@ -54,11 +54,14 @@ static func _run_case(seed:int)->bool:
 					var direction:=zones.direction(source_id,target_id)
 					orchestrator.queue_movement_request(source_id,zones.zone_of(source_id)+direction,rng.randi_range(1,100))
 		engine.resolve_pending_events()
-		orchestrator.end_round()
+		var round_result:=orchestrator.end_round()
+		if String(round_result.get("battle_outcome","ongoing"))!="ongoing":
+			return true
 		for combatant in state.combatants.values():
 			if combatant.visible_hp()<0 or combatant.visible_hp()>combatant.max_hp:
 				return false
 			var zone:=zones.zone_of(combatant.combatant_id)
 			if zone<CombatZoneState.MIN_ZONE or zone>CombatZoneState.MAX_ZONE:
 				return false
-	return state.event_log.size()<5000
+	print("COMBAT_STRESS_NON_TERMINATING seed=",seed," rounds=999")
+	return false
