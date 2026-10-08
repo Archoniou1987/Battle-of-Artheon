@@ -54,6 +54,7 @@ func resolve_simultaneous(requests:Array[Dictionary])->Array[Dictionary]:
 			bool(request.get("movement_locked",false))
 		)
 		result["contest_power"]=float(request.get("contest_power",0.0))
+		result["movement_kind"]=String(request.get("movement_kind","navigation"))
 		provisional.append(result)
 	var canceled:Dictionary={}
 	for i in range(provisional.size()):
