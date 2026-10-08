@@ -78,12 +78,34 @@ func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 
 func _make_basic_attack(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int)->CombatEvent:
 	var profile:=_weapon_profile(attacker,weapon_index)
-	return state.create_event(CombatEvent.Kind.ATTACK,attacker.combatant_id,defender.combatant_id,{"raw_damage":_weapon_damage(profile),"zone":HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],"damage_type":String(profile.get("damage_type","slashing")),"rolls":_attack_rolls(),"is_extra_attack":extra,"generates_ap":not extra,"weapon_index":weapon_index})
+	var rolls:=_attack_rolls()
+	var damage_roll:=rng.randf()
+	rolls["damage"]=damage_roll
+	var damage_min:=float(profile.get("damage_min",0.0))
+	var damage_max:=float(profile.get("damage_max",damage_min))
+	return state.create_event(CombatEvent.Kind.ATTACK,attacker.combatant_id,defender.combatant_id,{
+		"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
+		"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
+		"zone":HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],
+		"damage_type":String(profile.get("damage_type","slashing")),"rolls":rolls,
+		"is_extra_attack":extra,"generates_ap":not extra,"weapon_index":weapon_index,
+		"is_weapon_attack":true,"attack_profile_id":String(profile.get("id","basic")),
+		"delivery_type":String(profile.get("delivery_type","MELEE")),
+		"min_zone_distance":int(profile.get("min_zone_distance",0)),
+		"max_zone_distance":int(profile.get("max_zone_distance",0)),
+		"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
+		"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
+		"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
+		"magic_hit_roll":int(rolls.get("magic_hit",1)),
+		"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
+		"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
+	})
 func _weapon_profile(attacker:CombatantState,weapon_index:int)->Dictionary:
-	var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
-	if not profiles.is_empty():
-		return profiles[clampi(weapon_index,0,profiles.size()-1)]
-	return {"damage_min":float(attacker.combat_stats.get("main_hand_damage_min",attacker.combat_stats.get("main_hand_damage",1.0))),"damage_max":float(attacker.combat_stats.get("main_hand_damage_max",attacker.combat_stats.get("main_hand_damage",1.0))),"damage_type":String(attacker.combat_stats.get("main_hand_damage_type","slashing"))}
+	var profiles:=WeaponAttackProfile.all(attacker)
+	for profile in profiles:
+		if int(profile.get("weapon_index",-1))==weapon_index:
+			return profile
+	return profiles[0] if not profiles.is_empty() else {}
 func _weapon_damage(profile:Dictionary)->float:
 	var minimum:=float(profile.get("damage_min",1.0)); var maximum:=float(profile.get("damage_max",minimum))
 	if maximum<minimum: var swap:=minimum; minimum=maximum; maximum=swap
@@ -93,6 +115,6 @@ func _tempo_allows_attack(tempo:float)->bool:
 	if tempo>=0.0:return true
 	return CombatMath.roll_success(100.0+tempo,_roll())
 func _attack_rolls()->Dictionary:
-	return {"hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"counterattack":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll(),"counterattack_rolls":{"hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll()}}
+	return {"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"counterattack":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll(),"counterattack_rolls":{"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll()}}
 func _roll()->int:return rng.randi_range(1,100)
 func _both_alive(first_id:String,second_id:String)->bool:return not state.get_combatant(first_id).is_death_finalized() and not state.get_combatant(second_id).is_death_finalized()
