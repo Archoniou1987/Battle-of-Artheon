@@ -21,10 +21,19 @@ func _initialize()->void:
 	var equipped_ok:=npc.equip("main_hand",String(sword.instance_id),items) and npc.equip("head",String(helm.instance_id),items)
 	var player:=CharacterState.new("PLAYER_LOOT","Loot Hero",15)
 	var chances:={"poor":30.0,"common":20.0,"green":10.0,"blue":100.0,"purple":1.0}
-	var drops:=NpcPossessionLootService.new(5151).roll(npc,items,player,chances)
+	var drops:=NpcPossessionLootService.new(5151).roll_drops(npc,items,chances)
+	var pool:=EncounterLootPool.new()
+	for drop in drops:
+		pool.add_drop(String(drop.get("instance_id","")),npc.instance_id)
+	pool.assign_all(player.character_id)
 	var ids:Array=[]
 	for item in drops: ids.append(String(item.instance_id))
-	var valid:=equipped_ok and drops.size()==1 and ids.has(String(sword.instance_id)) and player.inventory.owns(String(sword.instance_id))
+	var valid:=equipped_ok and drops.size()==1 and ids.has(String(sword.instance_id))
+	valid=valid and not player.inventory.owns(String(sword.instance_id))
+	valid=valid and pool.available_for(player.character_id).size()==1
+	valid=valid and pool.claim(String(sword.instance_id),player,items)
+	valid=valid and player.inventory.owns(String(sword.instance_id))
+	valid=valid and not pool.claim(String(sword.instance_id),player,items)
 	valid=valid and not player.inventory.owns(String(helm.instance_id)) and not player.inventory.owns(String(boots.instance_id))
 	print("NPC_POSSESSION before equipment=[%s,%s] bag=%s" % [String(sword.instance_id),String(helm.instance_id),String(boots.instance_id)])
 	print("NPC_POSSESSION blue_sword_condition=%d/%d" % [int(sword.durability_current),int(sword.durability_max)])
