@@ -28,16 +28,26 @@ static func run()->bool:
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
 		"attack_profiles":[
 			{"id":"staff_strike","delivery_type":"MELEE","min_zone_distance":0,"max_zone_distance":0},
-			{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2,"damage_min":6.0,"damage_max":6.0,"damage_type":"fire"}
+			{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2,"damage_min":6.0,"damage_max":6.0,"damage_type":"fire","uses_magic_hit":true}
 		]
 	}]
 	if not bool(api.select_active_opponent("hero","enemy",{"max_zone_distance":1}).get("ok",false)): return false
 	if bool(api.basic_attack_intent("hero","staff_strike").get("ok",true)): return false
 	if not bool(api.basic_attack_intent("hero","arcane_bolt").get("ok",false)): return false
-	var ranged_basic:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"arcane_bolt",0)
+	enemy.combat_stats["dodge"]=100.0
+	var ranged_basic:=api.queue_basic_attack("hero",{"hit":100,"magic_hit":1,"dodge":1,"crit":100},"arcane_bolt",0)
 	if not bool(ranged_basic.get("ok",false)): return false
 	engine.resolve_pending_events()
 	if enemy.hp!=94: return false
+	var ranged_event:CombatEvent=state.event_log.back()
+	# Damage event resolves after the attack; locate the parent attack and verify it used Magic Hit.
+	for logged_event in state.event_log:
+		if logged_event.event_id==int(ranged_basic.get("event_id",-1)):
+			ranged_event=logged_event
+			break
+	if String(ranged_event.result.get("hit_system",""))!="magic": return false
+	if String(ranged_event.result.get("outcome",""))!="connected": return false
+	enemy.combat_stats["dodge"]=0.0
 	var zone_cast:=api.cast_zone_ability("hero",CombatZoneState.ZONE_2,"ZONE")
 	if not bool(zone_cast.get("ok",false)) or int(zone_cast.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
 	var zone_event:CombatEvent=state.pending_events.back()
