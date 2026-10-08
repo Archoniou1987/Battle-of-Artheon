@@ -1,6 +1,8 @@
 class_name CombatCommandApi
 extends RefCounted
 
+const BODY_ZONES:Array[String]=["head","chest","arms","waist","legs"]
+
 var state:CombatState
 var group:GroupCombatState
 var zones:CombatZoneState
@@ -149,6 +151,8 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 		"active_opponent_id":group.active_opponent(source_id),
 		"basic_attack":not _available_basic_attacks(source_id).is_empty(),
 		"basic_attacks":_available_basic_attacks(source_id),
+		"body_zones":BODY_ZONES.duplicate(),
+		"default_body_zone":"chest",
 		"manual_block":combatant.can_manual_block(),
 		"navigation":navigation,
 		"abilities":abilities
@@ -209,6 +213,9 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 
 
 func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
+	var requested_zone:=String(rolls.get("zone","chest"))
+	if not BODY_ZONES.has(requested_zone):
+		return {"ok":false,"reason":"invalid_body_zone","body_zone":requested_zone,"allowed_body_zones":BODY_ZONES.duplicate()}
 	var intent:=basic_attack_intent(source_id,attack_profile_id,weapon_index)
 	if not bool(intent.get("ok",false)):
 		return intent
@@ -228,7 +235,7 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			"damage_min":damage_min,
 			"damage_max":damage_max,
 			"damage_roll":damage_roll,
-			"zone":String(event_rolls.get("zone",profile.get("zone","chest"))),
+			"zone":String(event_rolls.get("zone",requested_zone)),
 			"damage_type":String(profile.get("damage_type","slashing")),
 			"rolls":event_rolls,
 			"weapon_index":int(profile.get("weapon_index",0)),
