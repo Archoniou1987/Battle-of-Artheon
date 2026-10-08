@@ -176,7 +176,7 @@ static func _zone_target_magic_hit_uses_zone_distance()->bool:
 	var group:GroupCombatState=f["group"]
 	var zones:CombatZoneState=f["zones"]
 	zones.set_zone("a",CombatZoneState.ZONE_1)
-	zones.set_zone("b",CombatZoneState.ZONE_2)
+	zones.set_zone("b",CombatZoneState.ZONE_3)
 	state.get_combatant("a").combat_stats["magic_hit"]=75.0
 	var engine:=CombatEngine.new(state,{})
 	engine.configure_spatial_context(group,zones)
