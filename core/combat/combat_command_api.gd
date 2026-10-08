@@ -114,3 +114,20 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 		"navigation":navigation,
 		"abilities":abilities
 	}
+
+func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictionary:
+	if ability_scheduler==null:
+		return {"ok":false,"reason":"scheduler_unavailable"}
+	var definition:=AbilityCatalog.definition(ability_scheduler.definitions,ability_id)
+	if definition.is_empty():
+		return {"ok":false,"reason":"ability_unavailable"}
+	if not AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id):
+		return {"ok":false,"reason":"ability_unavailable"}
+	var intent:=ability_intent(source_id,target_id,definition)
+	if not bool(intent.get("ok",false)):
+		return intent
+	var event:=ability_scheduler.cast_event(state,source_id,target_id,ability_id)
+	if event==null:
+		return {"ok":false,"reason":"cast_rejected"}
+	state.queue_event(event)
+	return {"ok":true,"reason":"queued","event_id":event.event_id}
