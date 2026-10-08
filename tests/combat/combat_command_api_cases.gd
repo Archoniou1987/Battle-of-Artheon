@@ -70,6 +70,8 @@ static func run()->bool:
 	if bool(Dictionary(ability_views.get("MELEE",{})).get("available",true)): return false
 	if bool(Dictionary(ability_views.get("EXPENSIVE",{})).get("resource_ready",true)): return false
 	if bool(Dictionary(ability_views.get("COOLDOWN",{})).get("cooldown_ready",true)): return false
+	hero.combat_stats["manual_block_zone_count"]=2
+	if bool(api.set_manual_block("hero",["head","arms"]).get("ok",true)): return false
 	if not bool(api.set_manual_block("hero",["chest","arms"]).get("ok",false)): return false
 	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
@@ -155,6 +157,23 @@ static func run()->bool:
 			sequence_zones.append(String(logged_event.payload.get("zone","")))
 			sequence_weapons.append(int(logged_event.payload.get("weapon_index",-1)))
 	if sequence_zones!=["chest","arms"] or sequence_weapons!=[0,1]: return false
+	# Shield sectors block only their explicit contiguous zones; open zones continue through defence.
+	enemy.combat_stats["manual_block_zone_count"]=2
+	enemy.combat_stats["manual_block_zones"]=["chest","arms"]
+	enemy.combat_stats["auto_block"]=0.0
+	var shield_sequence:=api.queue_weapon_attack_sequence("hero",[
+		{"weapon_index":0,"attack_profile_id":"weapon_slash","zone":"chest","rolls":{"hit":1,"dodge":100,"block_crush":100,"crit":100,"damage":0.0}},
+		{"weapon_index":1,"attack_profile_id":"weapon_chop","zone":"waist","rolls":{"hit":1,"dodge":100,"auto_block":100,"crit":100,"damage":0.0}}
+	])
+	if not bool(shield_sequence.get("ok",false)): return false
+	engine.resolve_pending_events()
+	if enemy.hp!=58: return false
+	var shield_outcomes:Array[String]=[]
+	for logged_event in state.event_log:
+		if Array(shield_sequence.get("event_ids",[])).has(logged_event.event_id):
+			shield_outcomes.append(String(logged_event.result.get("outcome","")))
+	if shield_outcomes!=["manual_block","connected"]: return false
+	enemy.combat_stats.erase("manual_block_zones")
 	# Restore the staff fixture before duplicate-profile selection coverage.
 	hero.combat_stats["weapon_profiles"]=[{
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
