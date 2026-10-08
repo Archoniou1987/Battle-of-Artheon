@@ -27,7 +27,7 @@ func _initialize()->void:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d checkpoint=base_content"%seed_value)
 			for group_name in ["resource_cells","npc_cells","object_cells","encounter_cells"]:
 				for pos in generated[group_name]:
-					var passability_invalid:=map.in_bounds(pos) and group_name!="object_cells" and not map.cell(pos).is_passable()
+					var passability_invalid:bool=map.in_bounds(pos) and String(group_name)!="object_cells" and not map.cell(pos).is_passable()
 					if not map.in_bounds(pos) or passability_invalid or pos==entrance or pos==exit:
 						print("BASE_CONTENT_FAIL group=",group_name," pos=",pos," in_bounds=",map.in_bounds(pos)," passable=",(map.cell(pos).is_passable() if map.in_bounds(pos) else false)," entrance=",pos==entrance," exit=",pos==exit)
 			break
