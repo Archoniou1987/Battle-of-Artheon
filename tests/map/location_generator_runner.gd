@@ -95,6 +95,15 @@ func _initialize()->void:
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
 			print("LOCATION_GENERATOR_DIAG path_ok=",bool(result.get("ok",false))," path_size=",path.size()," resources=",generated.resource_cells.size()," npcs=",generated.npc_cells.size()," objects=",generated.object_cells.size()," encounters=",generated.encounter_cells.size()," bosses=",generated.boss_groups.size()," patrols=",generated.patrols.size()," route_guards=",generated.route_guards.size()," guarded_objects=",generated.guarded_objects.size()," entities=",map.entity_positions.size())
+			for patrol in generated.patrols:
+				var unsafe_steps:=0
+				for step in patrol.path:
+					if HexGrid.distance(entrance,step)<=3: unsafe_steps+=1
+				print("PATROL_DIAG id=",patrol.patrol_id," size=",patrol.path.size()," unsafe=",unsafe_steps," start=",patrol.start," goal=",patrol.goal)
+			for guarded in generated.guarded_objects:
+				print("GUARDED_DIAG object=",guarded.object_pos," guard=",guarded.guard_pos," exits=",map.neighbors(guarded.object_pos,true))
+			for boss_group in generated.boss_groups:
+				print("BOSS_DIAG boss=",boss_group.boss_pos," guards=",boss_group.guard_positions," members=",boss_group.member_ids)
 			break
 	var first:=LocationGenerator.generate(20,20,777)
 	var second:=LocationGenerator.generate(20,20,777)
