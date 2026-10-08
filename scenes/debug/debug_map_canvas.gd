@@ -6,6 +6,7 @@ const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
 var _entity_roles:Dictionary={}
+signal loot_hex_selected(cell:Vector2i)
 var loot_markers:Array[Vector2i]=[]
 
 func set_loot_markers(cells:Array[Vector2i])->void:
@@ -17,6 +18,16 @@ func set_generated(value:Dictionary)->void:
 	_build_entity_roles()
 	custom_minimum_size=_map_pixel_size()
 	queue_redraw()
+
+func _gui_input(event:InputEvent)->void:
+	if not event is InputEventMouseButton or not event.pressed or event.button_index!=MOUSE_BUTTON_LEFT:
+		return
+	for cell in loot_markers:
+		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
+		if event.position.distance_to(center)<=10.0:
+			loot_hex_selected.emit(cell)
+			accept_event()
+			return
 
 func _build_entity_roles()->void:
 	_entity_roles.clear()
