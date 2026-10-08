@@ -43,3 +43,24 @@ func claim(item_id:String,player:CharacterState,repository:ItemRepository)->bool
 			entries.remove_at(i)
 			break
 	return true
+
+
+func to_dict()->Dictionary:
+	return {
+		"entries":entries.duplicate(true),
+		"assigned_player_by_item":assigned_player_by_item.duplicate(true)
+	}
+
+static func from_dict(data:Dictionary)->EncounterLootPool:
+	var pool:=EncounterLootPool.new()
+	for raw_entry in data.get("entries",[]):
+		if not raw_entry is Dictionary:
+			continue
+		var entry:Dictionary=raw_entry
+		pool.add_drop(String(entry.get("item_id","")),String(entry.get("source_npc_instance_id",entry.get("source_npc_id",""))))
+	var raw_assignments:Dictionary=Dictionary(data.get("assigned_player_by_item",{}))
+	for item_id in pool.item_ids():
+		var player_id:=String(raw_assignments.get(item_id,""))
+		if not player_id.is_empty():
+			pool.assigned_player_by_item[item_id]=player_id
+	return pool
