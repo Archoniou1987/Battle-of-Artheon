@@ -135,8 +135,18 @@ func set_manual_block(source_id:String,body_zones:Array[String])->Dictionary:
 			normalized.append(body_zone)
 	if normalized.is_empty():
 		return {"ok":false,"reason":"invalid_block_zone"}
+	var block_zone_count:=maxi(1,int(combatant.combat_stats.get("manual_block_zone_count",1)))
+	if normalized.size()!=block_zone_count:
+		return {"ok":false,"reason":"invalid_block_zone_count","required_zone_count":block_zone_count}
+	var indices:Array[int]=[]
+	for body_zone in normalized:
+		indices.append(["head","chest","arms","waist","legs"].find(body_zone))
+	indices.sort()
+	for i in range(1,indices.size()):
+		if indices[i]!=indices[i-1]+1:
+			return {"ok":false,"reason":"non_contiguous_block_zones"}
 	combatant.combat_stats["manual_block_zones"]=normalized
-	return {"ok":true,"reason":"ok","zones":normalized}
+	return {"ok":true,"reason":"ok","zones":normalized,"zone_count":block_zone_count}
 
 func clear_manual_block(source_id:String)->Dictionary:
 	var combatant:=state.get_combatant(source_id)
