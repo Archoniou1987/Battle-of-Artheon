@@ -135,6 +135,26 @@ static func run()->bool:
 			multi_outcomes.append(String(logged_event.result.get("outcome","")))
 	if multi_outcomes.size()!=2 or multi_outcomes[0]!="dodge" or multi_outcomes[1]!="connected": return false
 	enemy.combat_stats["dodge"]=0.0
+	# MH/OH are independent weapon attacks and may target different body zones.
+	hero.combat_stats["weapon_profiles"]=[
+		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"weapon_slash","delivery_type":"MELEE"}]},
+		{"damage_min":5.0,"damage_max":5.0,"damage_type":"chopping","attack_profiles":[{"id":"weapon_chop","delivery_type":"MELEE"}]}
+	]
+	var weapon_sequence:=api.queue_weapon_attack_sequence("hero",[
+		{"weapon_index":0,"attack_profile_id":"weapon_slash","zone":"chest","rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}},
+		{"weapon_index":1,"attack_profile_id":"weapon_chop","zone":"arms","rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}}
+	])
+	if not bool(weapon_sequence.get("ok",false)) or int(weapon_sequence.get("attack_count",0))!=2: return false
+	if Array(weapon_sequence.get("event_ids",[])).size()!=2: return false
+	engine.resolve_pending_events()
+	if enemy.hp!=63: return false
+	var sequence_zones:Array[String]=[]
+	var sequence_weapons:Array[int]=[]
+	for logged_event in state.event_log:
+		if Array(weapon_sequence.get("event_ids",[])).has(logged_event.event_id):
+			sequence_zones.append(String(logged_event.payload.get("zone","")))
+			sequence_weapons.append(int(logged_event.payload.get("weapon_index",-1)))
+	if sequence_zones!=["chest","arms"] or sequence_weapons!=[0,1]: return false
 	# Restore the staff fixture before duplicate-profile selection coverage.
 	hero.combat_stats["weapon_profiles"]=[{
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
