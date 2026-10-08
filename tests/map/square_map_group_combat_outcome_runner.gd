@@ -47,6 +47,16 @@ func _initialize()->void:
 	valid=valid and not player.inventory.owns("GROUP_ITEM_001")
 	valid=valid and not player.inventory.owns("GROUP_ITEM_003")
 	valid=valid and pool.entries.size()==2
+	var expedition:=ExpeditionState.new("TEST_EXPEDITION")
+	valid=valid and expedition.save_loot_pool("GROUP_ENCOUNTER",pool)
+	var restored_expedition:=ExpeditionState.from_dict(expedition.to_dict())
+	var persisted_pool:=restored_expedition.restore_loot_pool("GROUP_ENCOUNTER")
+	valid=valid and persisted_pool!=null and persisted_pool.entries.size()==2
+	valid=valid and persisted_pool.available_for("PLAYER").size()==2
+	valid=valid and restored_expedition.remove_loot_pool("GROUP_ENCOUNTER")
+	valid=valid and restored_expedition.restore_loot_pool("GROUP_ENCOUNTER")==null
+	var repeat:=MapCombatOutcomeService.resolve_group_victory(result,map,bridge,npcs,player,item_repo,NpcPossessionLootService.new(1),{"common":100.0})
+	valid=valid and not bool(repeat.get("ok",false))
 	valid=valid and not pool.claim("GROUP_ITEM_002",player,item_repo)
 	print("SQUARE_MAP_GROUP_OUTCOME_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
