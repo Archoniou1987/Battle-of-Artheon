@@ -115,6 +115,8 @@ static func _bow_requires_quiver(balance: Dictionary) -> bool:
 	var with_quiver := TestFixtureLoader.build_combatant("TEST_BOW_WITH_QUIVER")
 	if without == null or with_quiver == null: return false
 	without.combatant_id="bow_without"; with_quiver.combatant_id="bow_with"
+	var canonical_profiles:=WeaponAttackProfile.all(with_quiver)
+	if canonical_profiles.is_empty() or String(canonical_profiles[0].get("requires_off_hand_type",""))!="quiver": return false
 	var target_a:=CombatantState.new("target_a","Target A",10,1000)
 	var state_a:=CombatState.new(); state_a.add_combatant(without); state_a.add_combatant(target_a)
 	var sim_a:=CombatSimulator.new(state_a,balance,31); sim_a.max_rounds=1; sim_a.run_duel("bow_without","target_a")
