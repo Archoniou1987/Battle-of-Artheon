@@ -42,7 +42,9 @@ static func run()->bool:
 		"EXPENSIVE":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":20},
 		"COOLDOWN":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":0}
 	})
-	if bool(actions.get("basic_attack",true)): return false
+	if not bool(actions.get("basic_attack",false)): return false
+	var basic_attacks:Array=actions.get("basic_attacks",[])
+	if basic_attacks.size()!=1 or String(Dictionary(basic_attacks[0]).get("id",""))!="arcane_bolt": return false
 	if not Array(actions.get("navigation",[])).has(CombatZoneState.ZONE_2): return false
 	var ability_views:Dictionary=actions.get("abilities",{})
 	var ranged:Dictionary=ability_views.get("RANGED",{})
