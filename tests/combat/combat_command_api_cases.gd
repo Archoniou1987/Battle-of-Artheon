@@ -90,6 +90,37 @@ static func run()->bool:
 	if not bool(attack.get("ok",false)): return false
 	engine.resolve_pending_events()
 	if enemy.hp!=75: return false
+	# Physical projectile profiles (bows) keep the physical Hit/Dodge path and distance penalty.
+	zones.set_zone("hero",CombatZoneState.ZONE_1)
+	zones.set_zone("enemy",CombatZoneState.ZONE_3)
+	hero.combat_stats["weapon_profiles"]=[{
+		"damage_min":5.0,"damage_max":7.0,"damage_type":"piercing",
+		"attack_profiles":[{"id":"bow_shot","delivery_type":"PROJECTILE","min_zone_distance":1,"max_zone_distance":2,"two_zone_hit_modifier":-50.0}]
+	}]
+	enemy.combat_stats["dodge"]=100.0
+	var bow_attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":1,"crit":100,"damage":0.0},"bow_shot",0)
+	if not bool(bow_attack.get("ok",false)): return false
+	engine.resolve_pending_events()
+	var bow_event:CombatEvent=state.event_log.back()
+	for logged_event in state.event_log:
+		if logged_event.event_id==int(bow_attack.get("event_id",-1)):
+			bow_event=logged_event
+			break
+	if String(bow_event.result.get("hit_system",""))!="physical": return false
+	if float(bow_event.result.get("distance_hit_modifier",0.0))!=-50.0: return false
+	if String(bow_event.result.get("outcome",""))!="dodge": return false
+	if enemy.hp!=75: return false
+	enemy.combat_stats["dodge"]=0.0
+	# Restore the staff fixture before duplicate-profile selection coverage.
+	hero.combat_stats["weapon_profiles"]=[{
+		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
+		"attack_profiles":[
+			{"id":"staff_strike","delivery_type":"MELEE","min_zone_distance":0,"max_zone_distance":0},
+			{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2,"damage_min":6.0,"damage_max":6.0,"damage_type":"fire","uses_magic_hit":true}
+		]
+	}]
+	zones.set_zone("hero",CombatZoneState.ZONE_2)
+	zones.set_zone("enemy",CombatZoneState.ZONE_2)
 	# Duplicate profile ids across weapons must never silently select the first weapon.
 	hero.combat_stats["weapon_profiles"].append({
 		"damage_min":3.0,"damage_max":3.0,"damage_type":"piercing",
