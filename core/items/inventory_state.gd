@@ -26,3 +26,12 @@ func size() -> int:
 
 func instance_ids() -> Array:
 	return _instance_ids.keys().duplicate()
+
+func to_dict()->Dictionary:
+	return {"owner_id":owner_id,"instance_ids":instance_ids()}
+
+static func from_dict(data:Dictionary,repository:ItemRepository)->InventoryState:
+	var restored:=InventoryState.new(String(data.get("owner_id","")))
+	for raw_id in data.get("instance_ids",[]):
+		restored.add_instance(String(raw_id),repository)
+	return restored
