@@ -21,10 +21,10 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	var cursor:=entrance
 	guaranteed_path.append(cursor)
 	while cursor.x<exit.x:
+		# Axial hex coordinates: (q+1,r+1) is NOT an adjacent hex.
+		# Keep each guaranteed-path step at hex distance exactly one.
 		var next:=Vector2i(cursor.x+1,cursor.y)
-		if cursor.y<exit.y and rng.randf()<0.55:
-			next.y+=1
-		elif cursor.y>exit.y and rng.randf()<0.55:
+		if cursor.y>exit.y and rng.randf()<0.55:
 			next.y-=1
 		cursor=next
 		guaranteed_path.append(cursor)
