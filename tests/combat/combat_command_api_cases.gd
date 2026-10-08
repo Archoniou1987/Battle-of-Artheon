@@ -63,6 +63,8 @@ static func run()->bool:
 	if not bool(actions.get("basic_attack",false)): return false
 	if Array(actions.get("body_zones",[]))!=["head","chest","arms","waist","legs"]: return false
 	if String(actions.get("default_body_zone",""))!="chest": return false
+	# Ambiguous weapon profiles without an explicit default expose no automatic sequence.
+	if not Array(actions.get("default_weapon_attack_sequence",[])).is_empty(): return false
 	var invalid_zone:=api.queue_basic_attack("hero",{"zone":"hands"},"arcane_bolt",0)
 	if bool(invalid_zone.get("ok",true)) or String(invalid_zone.get("reason",""))!="invalid_body_zone": return false
 	var basic_attacks:Array=actions.get("basic_attacks",[])
@@ -238,6 +240,15 @@ static func run()->bool:
 	])
 	if bool(rejected_zone_sequence.get("ok",true)) or String(rejected_zone_sequence.get("attack_reason",""))!="invalid_body_zone": return false
 	if state.pending_events.size()!=zone_pending_before: return false
+	# Nested per-hit zones are equally atomic across the complete MH/OH sequence.
+	var nested_sequence_pending_before:=state.pending_events.size()
+	var rejected_nested_zone_sequence:=api.queue_weapon_attack_sequence("hero",[
+		{"weapon_index":0,"attack_profile_id":"weapon_slash","rolls":{"hits":[{"zone":"head"}]}},
+		{"weapon_index":1,"attack_profile_id":"weapon_chop","rolls":{"hits":[{"zone":"hands"}]}}
+	])
+	if bool(rejected_nested_zone_sequence.get("ok",true)) or String(rejected_nested_zone_sequence.get("attack_reason",""))!="invalid_body_zone": return false
+	if int(rejected_nested_zone_sequence.get("attack_index",-1))!=1 or int(rejected_nested_zone_sequence.get("hit_index",-1))!=0: return false
+	if state.pending_events.size()!=nested_sequence_pending_before: return false
 	# Sequence validation is atomic: an invalid OH/profile cannot leave MH queued.
 	var pending_before:=state.pending_events.size()
 	var rejected_sequence:=api.queue_weapon_attack_sequence("hero",[
