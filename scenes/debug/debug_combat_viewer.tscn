@@ -55,7 +55,7 @@ text = "Reset"
 layout_mode = 2
 
 [node name="Zone1" type="Label" parent="Margin/VBox/Zones"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ZONE 1"
@@ -63,7 +63,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Zone2" type="Label" parent="Margin/VBox/Zones"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ZONE 2"
@@ -71,7 +71,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Zone3" type="Label" parent="Margin/VBox/Zones"]
-custom_minimum_size = Vector2(0, 90)
+custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ZONE 3"
@@ -88,6 +88,17 @@ text = "Hero"
 [node name="Enemy" type="Label" parent="Margin/VBox/Status"]
 layout_mode = 2
 text = "Enemy"
+
+[node name="Targeting" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="TargetLabel" type="Label" parent="Margin/VBox/Targeting"]
+layout_mode = 2
+text = "Active Opponent"
+
+[node name="TargetSelect" type="OptionButton" parent="Margin/VBox/Targeting"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Defence" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
