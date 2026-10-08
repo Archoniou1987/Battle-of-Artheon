@@ -163,6 +163,41 @@ static func run()->bool:
 			sequence_zones.append(String(logged_event.payload.get("zone","")))
 			sequence_weapons.append(int(logged_event.payload.get("weapon_index",-1)))
 	if sequence_zones!=["chest","arms"] or sequence_weapons!=[0,1]: return false
+	# Normal Base Attack derives one default attack per equipped weapon automatically.
+	var automatic:=api.queue_default_weapon_attacks("hero",{
+		0:{"zone":"head","hit":1,"dodge":100,"crit":100,"damage":0.0},
+		1:{"zone":"legs","hit":1,"dodge":100,"crit":100,"damage":0.0}
+	})
+	if not bool(automatic.get("ok",false)) or int(automatic.get("attack_count",0))!=2: return false
+	engine.resolve_pending_events()
+	if enemy.hp!=55: return false
+	var automatic_weapons:Array[int]=[]
+	var automatic_zones:Array[String]=[]
+	for logged_event in state.event_log:
+		if Array(automatic.get("event_ids",[])).has(logged_event.event_id):
+			automatic_weapons.append(int(logged_event.payload.get("weapon_index",-1)))
+			automatic_zones.append(String(logged_event.payload.get("zone","")))
+	if automatic_weapons!=[0,1] or automatic_zones!=["head","legs"]: return false
+	# Multiple profiles require an explicit default; never guess between e.g. staff strike and bolt.
+	hero.combat_stats["weapon_profiles"]=[{
+		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
+		"attack_profiles":[
+			{"id":"staff_strike","delivery_type":"MELEE"},
+			{"id":"arcane_bolt","delivery_type":"PROJECTILE","max_zone_distance":2}
+		]
+	}]
+	var no_default:=api.default_weapon_attack_sequence("hero")
+	if bool(no_default.get("ok",true)) or String(no_default.get("reason",""))!="no_default_weapon_attacks": return false
+	hero.combat_stats["weapon_profiles"][0]["attack_profiles"][0]["is_default"]=true
+	var explicit_default:=api.default_weapon_attack_sequence("hero")
+	if not bool(explicit_default.get("ok",false)): return false
+	var default_attacks:Array=explicit_default.get("attacks",[])
+	if default_attacks.size()!=1 or String(Dictionary(default_attacks[0]).get("attack_profile_id",""))!="staff_strike": return false
+	# Restore independent weapons for sequence atomicity and shield coverage.
+	hero.combat_stats["weapon_profiles"]=[
+		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"weapon_slash","delivery_type":"MELEE"}]},
+		{"damage_min":5.0,"damage_max":5.0,"damage_type":"chopping","attack_profiles":[{"id":"weapon_chop","delivery_type":"MELEE"}]}
+	]
 	# Sequence validation is atomic: an invalid OH/profile cannot leave MH queued.
 	var pending_before:=state.pending_events.size()
 	var rejected_sequence:=api.queue_weapon_attack_sequence("hero",[
@@ -182,7 +217,7 @@ static func run()->bool:
 	])
 	if not bool(shield_sequence.get("ok",false)): return false
 	engine.resolve_pending_events()
-	if enemy.hp!=58: return false
+	if enemy.hp!=50: return false
 	var shield_outcomes:Array[String]=[]
 	for logged_event in state.event_log:
 		if Array(shield_sequence.get("event_ids",[])).has(logged_event.event_id):
