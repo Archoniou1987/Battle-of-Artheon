@@ -39,5 +39,6 @@ static func run() -> bool:
 		and is_equal_approx(float(shield.armour.get("head",{}).get("piercing",0.0)),15.0)
 		and is_equal_approx(float(shield.armour.get("legs",{}).get("blunt",0.0)),15.0)
 		and int(shield.combat_stats.get("manual_block_zone_capacity",0)) == 2
+		and not shield.combat_stats.has("manual_block_zone_count")
 		and is_equal_approx(float(shield.combat_stats.get("auto_block",0.0)),0.0)
 	)
