@@ -136,6 +136,12 @@ static func run()->bool:
 		if Array(multi.get("event_ids",[])).has(logged_event.event_id):
 			multi_outcomes.append(String(logged_event.result.get("outcome","")))
 	if multi_outcomes.size()!=2 or multi_outcomes[0]!="dodge" or multi_outcomes[1]!="connected": return false
+	# One Base Attack action grants AP once even when its profile contains multiple hits.
+	var multi_ap_events:=0
+	for logged_event in state.event_log:
+		if Array(multi.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
+			multi_ap_events+=1
+	if multi_ap_events!=1: return false
 	enemy.combat_stats["dodge"]=0.0
 	# MH/OH are independent weapon attacks and may target different body zones.
 	hero.combat_stats["weapon_profiles"]=[
