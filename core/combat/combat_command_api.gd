@@ -253,7 +253,7 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
 			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
 			# AP belongs to the Base Attack action, not to every hit of a multi-hit profile.
-			"generates_ap":hit_index==0
+			"generates_ap":hit_index==0 and not bool(event_rolls.get("suppress_ap",false))
 		})
 		state.queue_event(event)
 		event_ids.append(event.event_id)
@@ -329,12 +329,16 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
 	var sequence_event_ids:Array[int]=[]
 	var attack_results:Array[Dictionary]=[]
-	for request in attacks:
+	for attack_index in range(attacks.size()):
+		var request:Dictionary=attacks[attack_index]
 		var profile_id:=String(request.get("attack_profile_id","basic"))
 		var weapon_index:=int(request.get("weapon_index",-1))
 		var attack_rolls:Dictionary=Dictionary(request.get("rolls",{})).duplicate(true)
 		if request.has("zone"):
 			attack_rolls["zone"]=String(request.get("zone","chest"))
+		# One Base Attack action grants at most one AP across MH/OH and multi-hit.
+		if attack_index>0:
+			attack_rolls["suppress_ap"]=true
 		var result:=queue_basic_attack(source_id,attack_rolls,profile_id,weapon_index)
 		attack_results.append(result)
 		for event_id in Array(result.get("event_ids",[])):
