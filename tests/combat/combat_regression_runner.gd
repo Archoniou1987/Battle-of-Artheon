@@ -57,8 +57,11 @@ func _init() -> void:
 	print("REGRESSION_START=command_api")
 	var command_api_ok := CombatCommandApiCases.run()
 	print("REGRESSION_DONE=command_api ok=",command_api_ok)
-	var ok := equipment_ok and physical_ok and duel_ok and action_ok and defence_ok and resist_ok and aoe_ok and round_ok and group_ok and engagement_ok and group_action_ok and opportunity_ok and zone_ok and api_ok and command_api_ok
+	print("REGRESSION_START=stress")
+	var stress_ok := CombatStressCases.run()
+	print("REGRESSION_DONE=stress ok=",stress_ok)
+	var ok := equipment_ok and physical_ok and duel_ok and action_ok and defence_ok and resist_ok and aoe_ok and round_ok and group_ok and engagement_ok and group_action_ok and opportunity_ok and zone_ok and api_ok and command_api_ok and stress_ok
 
-	print("COMBAT_V1_BASELINE equipment=", equipment_ok, " physical=", physical_ok, " duel=", duel_ok, " action=", action_ok, " defence=", defence_ok, " resist=", resist_ok, " aoe=", aoe_ok, " round=", round_ok, " group=", group_ok, " engagement=", engagement_ok, " group_action=", group_action_ok, " opportunity=", opportunity_ok, " zone=", zone_ok, " api=", api_ok, " command_api=", command_api_ok)
+	print("COMBAT_V1_BASELINE equipment=", equipment_ok, " physical=", physical_ok, " duel=", duel_ok, " action=", action_ok, " defence=", defence_ok, " resist=", resist_ok, " aoe=", aoe_ok, " round=", round_ok, " group=", group_ok, " engagement=", engagement_ok, " group_action=", group_action_ok, " opportunity=", opportunity_ok, " zone=", zone_ok, " api=", api_ok, " command_api=", command_api_ok, " stress=", stress_ok)
 	print("COMBAT_V1_REGRESSION_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
