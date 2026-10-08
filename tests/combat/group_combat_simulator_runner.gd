@@ -1,0 +1,29 @@
+extends SceneTree
+
+func _initialize()->void:
+	var state:=CombatState.new()
+	var player:=CombatantState.new("PLAYER","Player",5,100)
+	player.combat_stats={"main_hand_damage_min":60.0,"main_hand_damage_max":60.0}
+	state.add_combatant(player)
+	var group:=GroupCombatState.new(state)
+	group.add_member("players","PLAYER")
+	for i in range(3):
+		var id:="E%d"%i
+		var enemy:=CombatantState.new(id,id,1,50)
+		enemy.combat_stats={"main_hand_damage_min":5.0,"main_hand_damage_max":5.0}
+		state.add_combatant(enemy)
+		group.add_member("enemies",id)
+	var simulator:=GroupCombatSimulator.new(state,group)
+	var valid:=group.active_opponent("PLAYER")=="E0"
+	var r1:=simulator.run_round()
+	valid=valid and bool(r1.get("ok",false)) and state.get_combatant("E0").is_death_finalized()
+	valid=valid and group.active_opponent("PLAYER")=="E1" and not simulator.controller.combat_finished()
+	simulator.run_round()
+	valid=valid and state.get_combatant("E1").is_death_finalized() and group.active_opponent("PLAYER")=="E2"
+	var r3:=simulator.run_round()
+	valid=valid and state.get_combatant("E2").is_death_finalized()
+	valid=valid and simulator.controller.combat_finished() and simulator.controller.winning_team()=="players"
+	valid=valid and String(r3.get("battle_outcome",""))=="winner:players"
+	valid=valid and player.hp==70
+	print("GROUP_COMBAT_SIMULATOR_TEST="+("PASS" if valid else "FAIL"))
+	quit(0 if valid else 1)
