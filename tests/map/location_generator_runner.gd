@@ -94,6 +94,7 @@ func _initialize()->void:
 			entity_cells[entity_pos]=entity_id
 		if not valid:
 			print("LOCATION_GENERATOR_FAILED_SEED=%d"%seed_value)
+			print("LOCATION_GENERATOR_DIAG path_ok=",bool(result.get("ok",false))," path_size=",path.size()," resources=",generated.resource_cells.size()," npcs=",generated.npc_cells.size()," objects=",generated.object_cells.size()," encounters=",generated.encounter_cells.size()," bosses=",generated.boss_groups.size()," patrols=",generated.patrols.size()," route_guards=",generated.route_guards.size()," guarded_objects=",generated.guarded_objects.size()," entities=",map.entity_positions.size())
 			break
 	var first:=LocationGenerator.generate(20,20,777)
 	var second:=LocationGenerator.generate(20,20,777)
