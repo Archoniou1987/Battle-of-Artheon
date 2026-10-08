@@ -68,7 +68,7 @@ static func _case_counterattack_uses_weapon_profile(balance:Dictionary)->bool:
 	attacker.combat_stats["main_hand_damage_type"]="piercing"
 	attacker.combat_stats["weapon_on_hit_effects"]=[{"chance":100.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"counter_weapon"}]
 	attacker.set_weapon_progress("sword",1)
-	defender.combat_stats["dodge"]=100.0
+	attacker.combat_stats["dodge"]=100.0
 	defender.combat_stats["counterattack"]=100.0
 	var incoming:=state.create_event(CombatEvent.Kind.ATTACK,"enemy","hero",{
 		"raw_damage":20.0,"zone":"chest","damage_type":"slashing",
