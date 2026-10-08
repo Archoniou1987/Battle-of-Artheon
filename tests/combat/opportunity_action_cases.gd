@@ -66,12 +66,14 @@ static func _dead_actor_cannot_start_opportunity()->bool:
 static func _base_attack_uses_attack_pipeline()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
+	var actor:CombatantState=x["state"].get_combatant("e1")
+	actor.combat_stats["weapon_profiles"]=[{"damage_min":7.0,"damage_max":7.0,"damage_type":"chopping","attack_profiles":[{"id":"opportunity_chop","delivery_type":"MELEE"}]}]
 	var decision:Dictionary={"kind":"BASE_ATTACK","source_id":"e1","target_id":"player"}
 	var event:Variant=resolver.base_attack_event(decision,{
-		"raw_damage":10.0,
-		"damage_type":"slashing",
-		"zone":"chest",
-		"rolls":{"hit":1,"reaction":100,"crit":100}
+		"weapon_index":0,"attack_profile_id":"opportunity_chop",
+		# These arbitrary values must not override the canonical weapon profile.
+		"raw_damage":99.0,"damage_type":"fire","zone":"chest",
+		"rolls":{"hit":1,"reaction":100,"crit":100,"damage":0.0}
 	})
 	return (
 		event.kind==CombatEvent.Kind.ATTACK
@@ -80,6 +82,9 @@ static func _base_attack_uses_attack_pipeline()->bool:
 		and bool(event.payload.get("is_extra_attack",false))
 		and not bool(event.payload.get("generates_ap",true))
 		and int(event.payload.get("weapon_index",-1))==0
+		and String(event.payload.get("attack_profile_id",""))=="opportunity_chop"
+		and String(event.payload.get("damage_type",""))=="chopping"
+		and is_equal_approx(float(event.payload.get("raw_damage",0.0)),7.0)
 	)
 
 
@@ -104,8 +109,10 @@ static func _zone_reach_controls_opportunity_events()->bool:
 	zones.set_zone("player",CombatZoneState.ZONE_1)
 	zones.set_zone("e1",CombatZoneState.ZONE_3)
 	var resolver:=OpportunityActionResolver.new(group,25.0,20.0,zones)
+	var actor:CombatantState=x["state"].get_combatant("e1")
+	actor.combat_stats["weapon_profiles"]=[{"damage_min":10.0,"damage_max":10.0,"damage_type":"physical","attack_profiles":[{"id":"melee","delivery_type":"MELEE"}]}]
 	var decision:Dictionary={"source_id":"e1","target_id":"player"}
-	var melee:Variant=resolver.base_attack_event(decision,{"raw_damage":10.0,"damage_type":"physical"})
+	var melee:Variant=resolver.base_attack_event(decision,{"weapon_index":0,"attack_profile_id":"melee"})
 	if melee!=null: return false
 	var short_abi:Variant=resolver.ability_event(decision,"ABI_SHORT",{"delivery_type":"PROJECTILE","max_zone_distance":1,"components":[{"kind":"damage","amount":7,"damage_type":"physical"}]})
 	if short_abi!=null: return false
