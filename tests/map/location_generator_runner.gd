@@ -88,13 +88,21 @@ func _initialize()->void:
 			valid=valid and map.entities_at(guard_pos).size()==1
 		checkpoint="safe_radius"
 		for npc_pos in generated.npc_cells:
-			valid=valid and HexGrid.distance(entrance,npc_pos)>3
+			if HexGrid.distance(entrance,npc_pos)<=3:
+				print("SAFE_RADIUS_FAIL type=npc pos=",npc_pos," distance=",HexGrid.distance(entrance,npc_pos))
+				valid=false
 		for encounter_pos in generated.encounter_cells:
-			valid=valid and HexGrid.distance(entrance,encounter_pos)>3
+			if HexGrid.distance(entrance,encounter_pos)<=3:
+				print("SAFE_RADIUS_FAIL type=encounter pos=",encounter_pos," distance=",HexGrid.distance(entrance,encounter_pos))
+				valid=false
 		for boss_group in generated.boss_groups:
-			valid=valid and HexGrid.distance(entrance,boss_group.boss_pos)>3
+			if HexGrid.distance(entrance,boss_group.boss_pos)<=3:
+				print("SAFE_RADIUS_FAIL type=boss pos=",boss_group.boss_pos," distance=",HexGrid.distance(entrance,boss_group.boss_pos))
+				valid=false
 			for guard_pos in boss_group.guard_positions:
-				valid=valid and HexGrid.distance(entrance,guard_pos)>3
+				if HexGrid.distance(entrance,guard_pos)<=3:
+					print("SAFE_RADIUS_FAIL type=boss_guard pos=",guard_pos," distance=",HexGrid.distance(entrance,guard_pos))
+					valid=false
 # Multiple NPC/entities may legitimately share a map cell. Encounter assembly
 		# is responsible for turning co-located hostile entities into group combat.
 		if not valid:
