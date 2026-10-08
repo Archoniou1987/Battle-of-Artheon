@@ -69,6 +69,17 @@ func loot_hexes_for_player(player_id:String,now_unix:int)->Array[Vector2i]:
 			cells.append(pool.hex_cell)
 	return cells
 
+func loot_pools_for_player_at_hex(player_id:String,cell:Vector2i,now_unix:int)->Array[String]:
+	var ids:Array[String]=[]
+	if player_id.is_empty():
+		return ids
+	var pools:Dictionary=world_state.get("encounter_loot_pools",{})
+	for encounter_id in pools:
+		var pool:=restore_loot_pool(String(encounter_id))
+		if pool!=null and pool.hex_cell==cell and pool.has_visible_loot(now_unix) and not pool.available_for(player_id).is_empty():
+			ids.append(String(encounter_id))
+	return ids
+
 func loot_hexes(now_unix:int)->Array[Vector2i]:
 	var cells:Array[Vector2i]=[]
 	var pools:Dictionary=world_state.get("encounter_loot_pools",{})
