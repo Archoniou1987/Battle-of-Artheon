@@ -61,6 +61,10 @@ static func run()->bool:
 		"COOLDOWN":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":0}
 	})
 	if not bool(actions.get("basic_attack",false)): return false
+	if Array(actions.get("body_zones",[]))!=["head","chest","arms","waist","legs"]: return false
+	if String(actions.get("default_body_zone",""))!="chest": return false
+	var invalid_zone:=api.queue_basic_attack("hero",{"zone":"hands"},"arcane_bolt",0)
+	if bool(invalid_zone.get("ok",true)) or String(invalid_zone.get("reason",""))!="invalid_body_zone": return false
 	var basic_attacks:Array=actions.get("basic_attacks",[])
 	if basic_attacks.size()!=1 or String(Dictionary(basic_attacks[0]).get("id",""))!="arcane_bolt": return false
 	if not Array(actions.get("navigation",[])).has(CombatZoneState.ZONE_2): return false
@@ -198,6 +202,14 @@ static func run()->bool:
 		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"weapon_slash","delivery_type":"MELEE"}]},
 		{"damage_min":5.0,"damage_max":5.0,"damage_type":"chopping","attack_profiles":[{"id":"weapon_chop","delivery_type":"MELEE"}]}
 	]
+	# Body-zone validation is also atomic across an MH/OH sequence.
+	var zone_pending_before:=state.pending_events.size()
+	var rejected_zone_sequence:=api.queue_weapon_attack_sequence("hero",[
+		{"weapon_index":0,"attack_profile_id":"weapon_slash","zone":"head"},
+		{"weapon_index":1,"attack_profile_id":"weapon_chop","zone":"hands"}
+	])
+	if bool(rejected_zone_sequence.get("ok",true)) or String(rejected_zone_sequence.get("attack_reason",""))!="invalid_body_zone": return false
+	if state.pending_events.size()!=zone_pending_before: return false
 	# Sequence validation is atomic: an invalid OH/profile cannot leave MH queued.
 	var pending_before:=state.pending_events.size()
 	var rejected_sequence:=api.queue_weapon_attack_sequence("hero",[
