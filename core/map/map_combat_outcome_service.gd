@@ -3,8 +3,11 @@ extends RefCounted
 
 static func resolve_victory(result:Dictionary,map,bridge:MapNpcBridge,npc:NpcInstance,player:CharacterState,repository:ItemRepository,loot_service:NpcPossessionLootService,quality_chances:Dictionary)->Dictionary:
 	if npc==null: return {"ok":false,"reason":"missing_npc"}
+	if not npc.is_alive(): return {"ok":false,"reason":"npc_already_defeated"}
 	if String(result.get("winner_id",""))!=player.character_id or String(result.get("loser_id",""))!=npc.instance_id:
 		return {"ok":false,"reason":"not_player_victory"}
+	if not bridge.instances.has(npc.instance_id) or not map.entity_positions.has(npc.instance_id):
+		return {"ok":false,"reason":"npc_not_on_map"}
 	var pool:=EncounterLootPool.new()
 	for drop in loot_service.roll_drops(npc,repository,quality_chances):
 		var item_id:=String(drop.get("instance_id",""))
@@ -22,10 +25,18 @@ static func resolve_group_victory(result:Dictionary,map,bridge:MapNpcBridge,npcs
 	for raw_id in result.get("dead_ids",[]):
 		dead_ids.append(String(raw_id))
 	var defeated_ids:Array[String]=[]
-	var pool:=EncounterLootPool.new()
+	var eligible:Array[NpcInstance]=[]
+	var seen_ids:Dictionary={}
 	for npc in npcs:
 		if npc==null or not dead_ids.has(npc.instance_id):
 			continue
+		if seen_ids.has(npc.instance_id) or not npc.is_alive() or not bridge.instances.has(npc.instance_id) or not map.entity_positions.has(npc.instance_id):
+			return {"ok":false,"reason":"invalid_or_already_resolved_npc","npc_instance_id":npc.instance_id}
+		seen_ids[npc.instance_id]=true
+		eligible.append(npc)
+	if eligible.is_empty(): return {"ok":false,"reason":"no_defeated_npcs"}
+	var pool:=EncounterLootPool.new()
+	for npc in eligible:
 		var npc_drops:=loot_service.roll_drops(npc,repository,quality_chances)
 		for drop in npc_drops:
 			var item_id:=String(drop.get("instance_id",""))
