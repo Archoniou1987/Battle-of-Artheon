@@ -21,22 +21,11 @@ static func resolve_group_victory(result:Dictionary,map,bridge:MapNpcBridge,npcs
 	for npc in npcs:
 		if npc==null or not dead_ids.has(npc.instance_id):
 			continue
-		var inventory_before:Dictionary={}
-		for item_id in player.inventory.instance_ids():
-			inventory_before[String(item_id)]=true
-		var npc_drops:=loot_service.roll(npc,repository,player,quality_chances)
-		for raw_drop in npc_drops:
-			if not (raw_drop is Dictionary):
-				continue
-			var drop:Dictionary=raw_drop
+		var npc_drops:=loot_service.roll_drops(npc,repository,quality_chances)
+		for drop in npc_drops:
 			var item_id:=String(drop.get("instance_id",""))
-			if item_id.is_empty():
-				continue
-			pool.add_drop(item_id,npc.instance_id)
-			# Legacy loot service transfers immediately; undo that transfer so
-			# encounter loot remains unclaimed until the player clicks it.
-			if not inventory_before.has(item_id) and player.inventory.owns(item_id):
-				player.inventory.remove_instance(item_id,player.equipment)
+			if not item_id.is_empty():
+				pool.add_drop(item_id,npc.instance_id)
 		if not bridge.resolve_death(map,npc.instance_id):
 			return {"ok":false,"reason":"death_resolution_failed","npc_instance_id":npc.instance_id}
 		defeated_ids.append(npc.instance_id)
