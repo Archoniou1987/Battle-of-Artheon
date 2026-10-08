@@ -6,6 +6,7 @@ var group:GroupCombatState
 var controller:GroupCombatController
 var engine:CombatEngine
 var orchestrator:RoundOrchestrator
+var attack_pipeline:CombatSimulator
 var max_rounds:int=999
 
 func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Dictionary={}) -> void:
@@ -14,6 +15,11 @@ func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Diction
 	controller=GroupCombatController.new(group)
 	engine=CombatEngine.new(state,balance)
 	orchestrator=RoundOrchestrator.new(state,engine,group)
+	attack_pipeline=CombatSimulator.new(state,balance,1)
+	# Share the group engine/orchestrator so Base Attack events resolve in the
+	# same round and group context instead of creating a parallel combat path.
+	attack_pipeline.engine=engine
+	attack_pipeline.orchestrator=orchestrator
 	controller.initialize_active_opponents()
 
 func run() -> Dictionary:
@@ -26,6 +32,7 @@ func run_round() -> Dictionary:
 	if controller.combat_finished():
 		return {"ok":false,"reason":"combat_finished","battle_outcome":"winner:"+controller.winning_team()}
 	var round:=orchestrator.begin_round()
+	attack_pipeline.regenerate_mana()
 	var actors:Array[String]=[]
 	for raw_id in group.combatant_team.keys():
 		actors.append(String(raw_id))
@@ -38,21 +45,11 @@ func run_round() -> Dictionary:
 		var target:=state.get_combatant(target_id)
 		if target==null or target.is_death_finalized():
 			continue
-		round.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,actor_id,target_id,{
-			"amount":_basic_damage(actor),
-			"raw_damage":_basic_damage(actor),
-			"damage_type":"physical",
-			"source":"group_basic_attack"
-		}))
+		attack_pipeline.lock_basic_attack(round,actor,target)
 	orchestrator.resolve_locked_actions(round)
 	var summary:=orchestrator.end_round()
 	var sync:=controller.after_end_round(summary)
 	return {"ok":true,"round":state.round_number,"summary":summary,"sync":sync,"battle_outcome":"winner:"+controller.winning_team() if controller.combat_finished() and not controller.winning_team().is_empty() else ("draw" if controller.combat_finished() else "ongoing")}
-
-func _basic_damage(combatant:CombatantState)->float:
-	var minimum:=float(combatant.combat_stats.get("main_hand_damage_min",1.0))
-	var maximum:=float(combatant.combat_stats.get("main_hand_damage_max",minimum))
-	return maxf(0.0,(minimum+maximum)*0.5)
 
 func _finalized_dead_ids()->Array[String]:
 	var result:Array[String]=[]
