@@ -76,6 +76,9 @@ jobs:
       - name: Validate expedition persistence and square-grid foundation
         run: timeout 120s godot --headless --path . --script res://tests/map/expedition_foundation_runner.gd
 
+      - name: Validate square map movement and pathfinding
+        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_movement_runner.gd
+
       - name: Validate tactical map movement and resource area
         run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
 
