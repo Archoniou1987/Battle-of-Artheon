@@ -167,6 +167,11 @@ static func run()->bool:
 			sequence_zones.append(String(logged_event.payload.get("zone","")))
 			sequence_weapons.append(int(logged_event.payload.get("weapon_index",-1)))
 	if sequence_zones!=["chest","arms"] or sequence_weapons!=[0,1]: return false
+	var sequence_ap_events:=0
+	for logged_event in state.event_log:
+		if Array(weapon_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
+			sequence_ap_events+=1
+	if sequence_ap_events!=1: return false
 	# Normal Base Attack derives one default attack per equipped weapon automatically.
 	var automatic:=api.queue_default_weapon_attacks("hero",{
 		0:{"zone":"head","hit":1,"dodge":100,"crit":100,"damage":0.0},
