@@ -26,11 +26,10 @@ static func resolve_group_victory(result:Dictionary,map,bridge:MapNpcBridge,npcs
 			inventory_before[String(item_id)]=true
 		var npc_drops:=loot_service.roll(npc,repository,player,quality_chances)
 		for raw_drop in npc_drops:
-			var item_id:=""
-			if raw_drop is Dictionary:
-				item_id=String(raw_drop.get("instance_id",""))
-			else:
-				item_id=String(raw_drop)
+			if not (raw_drop is Dictionary):
+				continue
+			var drop:Dictionary=raw_drop
+			var item_id:=String(drop.get("instance_id",""))
 			if item_id.is_empty():
 				continue
 			pool.add_drop(item_id,npc.instance_id)
