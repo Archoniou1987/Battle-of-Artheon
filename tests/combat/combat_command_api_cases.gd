@@ -34,17 +34,6 @@ static func run()->bool:
 	if not bool(api.select_active_opponent("hero","enemy",{"max_zone_distance":1}).get("ok",false)): return false
 	if bool(api.basic_attack_intent("hero","staff_strike").get("ok",true)): return false
 	if not bool(api.basic_attack_intent("hero","arcane_bolt").get("ok",false)): return false
-	# Duplicate profile ids across weapons must never silently select the first weapon.
-	hero.combat_stats["weapon_profiles"].append({
-		"damage_min":3.0,"damage_max":3.0,"damage_type":"piercing",
-		"attack_profiles":[{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2}]
-	})
-	var ambiguous:=api.basic_attack_intent("hero","arcane_bolt")
-	if bool(ambiguous.get("ok",true)) or String(ambiguous.get("reason",""))!="ambiguous_attack_profile": return false
-	var offhand_intent:=api.basic_attack_intent("hero","arcane_bolt",1)
-	if not bool(offhand_intent.get("ok",false)) or int(offhand_intent.get("weapon_index",-1))!=1: return false
-	var mainhand_intent:=api.basic_attack_intent("hero","arcane_bolt",0)
-	if not bool(mainhand_intent.get("ok",false)) or int(mainhand_intent.get("weapon_index",-1))!=0: return false
 	var ranged_basic:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"arcane_bolt",0)
 	if not bool(ranged_basic.get("ok",false)): return false
 	engine.resolve_pending_events()
@@ -90,4 +79,15 @@ static func run()->bool:
 	var attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":100,"crit":100},"staff_strike")
 	if not bool(attack.get("ok",false)): return false
 	engine.resolve_pending_events()
-	return enemy.hp==74
+	if enemy.hp!=74: return false
+	# Duplicate profile ids across weapons must never silently select the first weapon.
+	hero.combat_stats["weapon_profiles"].append({
+		"damage_min":3.0,"damage_max":3.0,"damage_type":"piercing",
+		"attack_profiles":[{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2}]
+	})
+	var ambiguous:=api.basic_attack_intent("hero","arcane_bolt")
+	if bool(ambiguous.get("ok",true)) or String(ambiguous.get("reason",""))!="ambiguous_attack_profile": return false
+	var offhand_intent:=api.basic_attack_intent("hero","arcane_bolt",1)
+	if not bool(offhand_intent.get("ok",false)) or int(offhand_intent.get("weapon_index",-1))!=1: return false
+	var mainhand_intent:=api.basic_attack_intent("hero","arcane_bolt",0)
+	return bool(mainhand_intent.get("ok",false)) and int(mainhand_intent.get("weapon_index",-1))==0
