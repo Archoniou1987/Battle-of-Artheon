@@ -8,6 +8,7 @@ static func run(balance: Dictionary) -> bool:
 		and _case_melee_physical_can_block(balance)
 		and _case_manual_block_uses_explicit_shield_sector(balance)
 		and _case_bow_loadout_has_no_block(balance)
+		and _case_ability_attack_ignores_weapon_semantics(balance)
 		and _case_direct_bypasses_active_defence(balance)
 	)
 
@@ -91,6 +92,22 @@ static func _case_manual_block_uses_explicit_shield_sector(balance:Dictionary)->
 	open_zone.payload["components"][0]["zone"]="arms"
 	_resolve(state,balance,open_zone)
 	return target.hp==90 and _child_outcome(state,open_zone.event_id)=="connected"
+
+
+static func _case_ability_attack_ignores_weapon_semantics(balance:Dictionary)->bool:
+	var state:=_state()
+	var source:=state.get_combatant("source")
+	source.combat_stats["weapon_profiles"]=[{"weapon_class":"dagger","item_level":100}]
+	source.set_weapon_progress("dagger",1)
+	source.combat_stats["weapon_on_hit_effects"]=[{"chance":100.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"weapon_test"}]
+	var event:=_action(state,"MELEE","physical",{"hit":95,"dodge":100,"crit":100,"on_hit_effect":1})
+	_resolve(state,balance,event)
+	if state.get_combatant("target").hp!=90 or _child_outcome(state,event.event_id)!="connected":
+		return false
+	for logged in state.event_log:
+		if logged.kind==CombatEvent.Kind.EFFECT and String(logged.payload.get("source_instance_id",""))=="weapon_test":
+			return false
+	return true
 
 
 static func _case_bow_loadout_has_no_block(balance:Dictionary)->bool:
