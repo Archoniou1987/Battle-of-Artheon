@@ -91,6 +91,9 @@ jobs:
       - name: Validate square map group active opponent progression
         run: timeout 120s godot --headless --path . --script res://tests/map/square_map_active_opponent_runner.gd
 
+      - name: Simulate one versus many combat rounds
+        run: timeout 120s godot --headless --path . --script res://tests/combat/group_combat_simulator_runner.gd
+
       - name: Validate tactical map movement and resource area
         run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
 
