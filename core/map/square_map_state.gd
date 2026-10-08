@@ -5,6 +5,7 @@ var width:int
 var height:int
 var blocked_cells:Dictionary={}
 var player_position:Vector2i=Vector2i.ZERO
+var entity_positions:Dictionary={}
 
 func _init(map_width:int,map_height:int,start:Vector2i=Vector2i.ZERO)->void:
 	width=maxi(1,map_width)
@@ -33,6 +34,26 @@ func passable_neighbors(pos:Vector2i)->Array[Vector2i]:
 			result.append(neighbor)
 	return result
 
+func place_entity(entity_id:String,pos:Vector2i)->bool:
+	if entity_id.is_empty() or not in_bounds(pos):
+		return false
+	entity_positions[entity_id]=pos
+	return true
+
+func remove_entity(entity_id:String)->bool:
+	if not entity_positions.has(entity_id):
+		return false
+	entity_positions.erase(entity_id)
+	return true
+
+func entities_at(pos:Vector2i)->Array[String]:
+	var result:Array[String]=[]
+	for entity_id in entity_positions.keys():
+		if entity_positions[entity_id]==pos:
+			result.append(str(entity_id))
+	result.sort()
+	return result
+
 func move_player(target:Vector2i)->Dictionary:
 	if not in_bounds(target):
 		return {"ok":false,"reason":"out_of_bounds","position":player_position}
@@ -47,11 +68,18 @@ func to_dict()->Dictionary:
 	var blocked:Array=[]
 	for pos in blocked_cells.keys():
 		blocked.append([pos.x,pos.y])
-	return {"width":width,"height":height,"player_position":[player_position.x,player_position.y],"blocked_cells":blocked}
+	var entities:Dictionary={}
+	for entity_id in entity_positions.keys():
+		var pos:Vector2i=entity_positions[entity_id]
+		entities[entity_id]=[pos.x,pos.y]
+	return {"width":width,"height":height,"player_position":[player_position.x,player_position.y],"blocked_cells":blocked,"entity_positions":entities}
 
 static func from_dict(data:Dictionary)->SquareMapState:
 	var player:Array=data.get("player_position",[0,0])
 	var state:=SquareMapState.new(int(data.get("width",1)),int(data.get("height",1)),Vector2i(int(player[0]),int(player[1])))
 	for raw in data.get("blocked_cells",[]):
 		state.set_blocked(Vector2i(int(raw[0]),int(raw[1])),true)
+	for entity_id in data.get("entity_positions",{}).keys():
+		var raw_pos:Array=data["entity_positions"][entity_id]
+		state.place_entity(str(entity_id),Vector2i(int(raw_pos[0]),int(raw_pos[1])))
 	return state
