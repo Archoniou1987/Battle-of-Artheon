@@ -25,12 +25,22 @@ func _initialize()->void:
 	valid=valid and bool(outcome.get("ok",false))
 	valid=valid and int(outcome.get("defeated_count",0))==3
 	valid=valid and int(outcome.get("drop_count",0))==3
+	var pool:EncounterLootPool=outcome.get("loot_pool")
+	valid=valid and pool!=null and pool.entries.size()==3
+	valid=valid and pool.available_for("PLAYER").size()==3
 	valid=valid and bridge.npc_at(map,cell).is_empty()
 	for i in range(3):
 		var id:="GROUP_LOOT_%03d"%(i+1)
 		var item_id:="GROUP_ITEM_%03d"%(i+1)
 		valid=valid and npcs[i].life_state=="dead"
 		valid=valid and not map.entity_positions.has(id)
-		valid=valid and player.inventory.owns(item_id)
+		valid=valid and not player.inventory.owns(item_id)
+		valid=valid and String(pool.entries[i].get("source_npc_id",""))==id
+	valid=valid and pool.claim("GROUP_ITEM_002",player,item_repo)
+	valid=valid and player.inventory.owns("GROUP_ITEM_002")
+	valid=valid and not player.inventory.owns("GROUP_ITEM_001")
+	valid=valid and not player.inventory.owns("GROUP_ITEM_003")
+	valid=valid and pool.entries.size()==2
+	valid=valid and not pool.claim("GROUP_ITEM_002",player,item_repo)
 	print("SQUARE_MAP_GROUP_OUTCOME_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
