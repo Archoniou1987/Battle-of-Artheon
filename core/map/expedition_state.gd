@@ -96,7 +96,7 @@ func claim_loot_at_hex(player:CharacterState,cell:Vector2i,item_id:String,reposi
 		var pool:=restore_loot_pool(encounter_id)
 		if pool==null or not pool.available_for(player.character_id).has(item_id):
 			continue
-		if not pool.claim(item_id,player,repository):
+		if not pool.claim(item_id,player,repository,now_unix):
 			return false
 		if pool.entries.is_empty():
 			remove_loot_pool(encounter_id)
