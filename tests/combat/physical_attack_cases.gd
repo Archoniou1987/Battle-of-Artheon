@@ -10,6 +10,8 @@ static func run(balance: Dictionary) -> bool:
 		and _case_block(balance)
 		and _case_counterattack_uses_weapon_profile(balance)
 		and _case_magic_counterattack_keeps_profile_semantics(balance)
+		and _case_counterattack_uses_canonical_weapon_index(balance)
+		and _case_magic_weapon_completes_weapon_pipeline(balance)
 		and _case_independent_on_hit_sources(balance)
 		and _case_connected_zero_damage(balance)
 	)
@@ -118,6 +120,41 @@ static func _case_magic_counterattack_keeps_profile_semantics(balance:Dictionary
 			return bool(logged.payload.get("uses_magic_hit",false)) and not bool(logged.payload.get("uses_physical_block",true)) and String(logged.payload.get("damage_type",""))=="fire" and is_equal_approx(float(logged.payload.get("magic_hit_modifier",0.0)),12.0)
 	return false
 
+
+static func _case_counterattack_uses_canonical_weapon_index(balance:Dictionary)->bool:
+	var state:=_base_state()
+	var defender:=state.get_combatant("hero")
+	defender.combat_stats["counterattack"]=100.0
+	defender.combat_stats["dodge"]=100.0
+	defender.combat_stats["weapon_profiles"]=[
+		{"damage_min":2.0,"damage_max":2.0,"damage_type":"slashing","attack_profiles":[{"id":"ranged_only","delivery_type":"PROJECTILE","min_zone_distance":1,"max_zone_distance":2}]},
+		{"damage_min":5.0,"damage_max":5.0,"damage_type":"chopping","attack_profiles":[{"id":"offhand_counter","delivery_type":"MELEE"}]}
+	]
+	var incoming:=state.create_event(CombatEvent.Kind.ATTACK,"enemy","hero",{"raw_damage":1.0,"zone":"chest","damage_type":"slashing","rolls":{"hit":1,"dodge":1,"counterattack":1},"counterattack_rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}})
+	state.queue_event(incoming)
+	CombatEngine.new(state,balance).resolve_pending_events()
+	for logged in state.event_log:
+		if logged.kind==CombatEvent.Kind.ATTACK and bool(logged.payload.get("is_counterattack",false)):
+			return int(logged.payload.get("weapon_index",-1))==1 and String(logged.payload.get("attack_profile_id",""))=="offhand_counter"
+	return false
+
+static func _case_magic_weapon_completes_weapon_pipeline(balance:Dictionary)->bool:
+	var state:=_base_state()
+	var attacker:=state.get_combatant("hero")
+	attacker.combat_stats["magic_hit"]=100.0
+	attacker.combat_stats["weapon_on_hit_effects"]=[{"chance":100.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"magic_weapon","weapon_index":0}]
+	var event:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":5.0,"damage_type":"fire","zone":"chest","weapon_index":0,"is_weapon_attack":true,
+		"uses_magic_hit":true,"bypass_physical_mitigation":true,"generates_ap":true,
+		"rolls":{"magic_hit":1,"on_hit_effect":1}
+	})
+	state.queue_event(event)
+	CombatEngine.new(state,balance).resolve_pending_events()
+	if int(event.result.get("ap_gained",0))<=0: return false
+	for logged in state.event_log:
+		if logged.kind==CombatEvent.Kind.EFFECT and String(logged.payload.get("source_instance_id",""))=="magic_weapon":
+			return true
+	return false
 
 static func _case_independent_on_hit_sources(balance:Dictionary)->bool:
 	var state:=_base_state()
