@@ -168,6 +168,33 @@ func register_persistent_action(source_id:String, target_ids:Array[String], payl
 		"remaining_ticks":duration_rounds-1
 	})
 
+func resolve_active_timed_effects() -> Array[int]:
+	var event_ids:Array[int]=[]
+	for combatant in state.combatants.values():
+		for active in combatant.active_effects:
+			if state.round_number<int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0))<=0:
+				continue
+			var definition:Dictionary=active.get("definition",{})
+			if String(definition.get("kind",""))!="dot":
+				continue
+			var amount:=float(definition.get("damage",0.0))
+			if amount<=0.0:
+				continue
+			var event:=state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
+				"amount":amount,
+				"raw_damage":amount,
+				"damage_type":String(definition.get("damage_type","physical")),
+				"source":"effect",
+				"effect_id":String(active.get("effect_id","")),
+				"source_type":String(active.get("source_type","unknown")),
+				"source_instance_id":String(active.get("source_instance_id","")),
+				"stack_id":String(active.get("stack_id",""))
+			})
+			state.queue_event(event)
+			event_ids.append(event.event_id)
+	engine.resolve_pending_events()
+	return event_ids
+
 func resolve_effect_phase() -> Array[int]:
 	var event_ids:Array[int]=[]
 	var kept:Array[Dictionary]=[]
@@ -212,6 +239,7 @@ func end_round() -> Dictionary:
 	engine.resolve_pending_events()
 	var movement_results:=resolve_movement_phase()
 	var effect_event_ids:=resolve_effect_phase()
+	effect_event_ids.append_array(resolve_active_timed_effects())
 	for combatant in state.combatants.values():
 		if not combatant.is_alive():
 			combatant.death_finalized=true
