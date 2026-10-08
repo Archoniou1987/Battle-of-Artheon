@@ -16,6 +16,10 @@ static func run() -> bool:
 	if mixed_profiles.size()!=2: return false
 	var mixed_first:Dictionary=mixed_profiles[0]
 	var mixed_second:Dictionary=mixed_profiles[1]
+	EquipmentBuilder.set_manual_block_zones(shield,["head","legs"])
+	if shield.combat_stats.has("manual_block_zones"): return false
+	EquipmentBuilder.set_manual_block_zones(shield,["chest","arms"])
+	if Array(shield.combat_stats.get("manual_block_zones",[]))!=["chest","arms"]: return false
 	return (
 		String(mixed_first.get("item_id",""))=="TEST_DAGGER"
 		and String(mixed_first.get("damage_type",""))=="piercing"
