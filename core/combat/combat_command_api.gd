@@ -49,3 +49,53 @@ func ability_intent(source_id:String,target_id:String,definition:Dictionary)->Di
 	if not action_policy.valid_targets(source_id,definition).has(target_id):
 		return {"ok":false,"reason":"target_out_of_reach"}
 	return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id}
+
+
+func set_manual_block(source_id:String,body_zones:Array[String])->Dictionary:
+	var combatant:=state.get_combatant(source_id)
+	if combatant==null or combatant.is_death_finalized():
+		return {"ok":false,"reason":"invalid_combatant"}
+	if not combatant.can_manual_block():
+		return {"ok":false,"reason":"manual_block_unavailable"}
+	var normalized:Array[String]=[]
+	for raw_zone in body_zones:
+		var body_zone:=String(raw_zone)
+		if body_zone in ["head","chest","arms","waist","legs"] and not normalized.has(body_zone):
+			normalized.append(body_zone)
+	if normalized.is_empty():
+		return {"ok":false,"reason":"invalid_block_zone"}
+	combatant.combat_stats["manual_block_zones"]=normalized
+	return {"ok":true,"reason":"ok","zones":normalized}
+
+func clear_manual_block(source_id:String)->Dictionary:
+	var combatant:=state.get_combatant(source_id)
+	if combatant==null:
+		return {"ok":false,"reason":"invalid_combatant"}
+	combatant.combat_stats.erase("manual_block_zones")
+	combatant.combat_stats.erase("manual_block_zone")
+	return {"ok":true,"reason":"ok"}
+
+func available_actions(source_id:String,ability_definitions:Dictionary={})->Dictionary:
+	var combatant:=state.get_combatant(source_id)
+	if combatant==null or combatant.is_death_finalized():
+		return {"ok":false,"reason":"invalid_combatant","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
+	var navigation:Array[int]=[]
+	if zones!=null and orchestrator!=null:
+		var current:=zones.zone_of(source_id)
+		for candidate in [current-1,current+1]:
+			if candidate>=CombatZoneState.MIN_ZONE and candidate<=CombatZoneState.MAX_ZONE and zones.ordinary_navigation_allowed(source_id,candidate):
+				navigation.append(candidate)
+	var abilities:Dictionary={}
+	for raw_id in ability_definitions.keys():
+		var ability_id:=String(raw_id)
+		var definition:Dictionary=ability_definitions[raw_id]
+		abilities[ability_id]=action_policy.valid_targets(source_id,definition)
+	return {
+		"ok":true,
+		"reason":"ok",
+		"active_opponent_id":group.active_opponent(source_id),
+		"basic_attack":bool(basic_attack_intent(source_id).get("ok",false)),
+		"manual_block":combatant.can_manual_block(),
+		"navigation":navigation,
+		"abilities":abilities
+	}
