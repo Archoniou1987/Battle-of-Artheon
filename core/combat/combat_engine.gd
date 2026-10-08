@@ -210,7 +210,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var rolls: Dictionary = event.payload.get("rolls", {})
 	var uses_magic_hit:=bool(event.payload.get("uses_magic_hit",false))
 	var distance_hit_modifier:=_distance_modifier(event,event.target_id) if uses_magic_hit else _physical_ranged_distance_hit_modifier(event)
-	var weapon_skill_penalty:=0.0 if uses_magic_hit else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index", 0)))
+	var is_weapon_attack:=bool(event.payload.get("is_weapon_attack",event.payload.has("weapon_index") and String(event.payload.get("source_kind",""))!="ability"))
+	var weapon_skill_penalty:=0.0 if uses_magic_hit or not is_weapon_attack else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index",0)))
 	var hit_chance:=float(attacker.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - weapon_skill_penalty + distance_hit_modifier
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
@@ -259,7 +260,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("raw_damage", raw_damage); event.set_result("damage_event_id", damage_event.event_id)
-	_trigger_weapon_on_hit(event, attacker, defender, rolls)
+	if is_weapon_attack:
+		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 	_gain_basic_attack_ap(attacker, event)
 
 func _resolve_damage(event: CombatEvent) -> void:
