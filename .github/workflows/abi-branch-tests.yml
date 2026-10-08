@@ -97,6 +97,9 @@ jobs:
       - name: Resolve square map group combat outcome
         run: timeout 120s godot --headless --path . --script res://tests/map/square_map_group_combat_outcome_runner.gd
 
+      - name: Validate square map group encounter end to end
+        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_group_encounter_e2e_runner.gd
+
       - name: Validate tactical map movement and resource area
         run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
 
