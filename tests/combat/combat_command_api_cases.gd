@@ -177,6 +177,21 @@ static func run()->bool:
 		if Array(weapon_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			sequence_ap_events+=1
 	if sequence_ap_events!=1: return false
+	# AP follows the first connected constituent, not merely the first queued hit.
+	# MH may miss while OH connects: the action must still earn exactly one AP.
+	var ap_before_fallback:=hero.action_points
+	var fallback_sequence:=api.queue_weapon_attack_sequence("hero",[
+		{"weapon_index":0,"attack_profile_id":"weapon_slash","rolls":{"hit":100,"dodge":100,"crit":100,"damage":0.0}},
+		{"weapon_index":1,"attack_profile_id":"weapon_chop","rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}}
+	])
+	if not bool(fallback_sequence.get("ok",false)): return false
+	engine.resolve_pending_events()
+	if hero.action_points!=ap_before_fallback+1: return false
+	var fallback_ap_events:=0
+	for logged_event in state.event_log:
+		if Array(fallback_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
+			fallback_ap_events+=1
+	if fallback_ap_events!=1: return false
 	# Normal Base Attack derives one default attack per equipped weapon automatically.
 	var automatic:=api.queue_default_weapon_attacks("hero",{
 		0:{"zone":"head","hit":1,"dodge":100,"crit":100,"damage":0.0},
