@@ -2,6 +2,7 @@ class_name DebugMapCanvas
 extends Control
 
 var HEX_SIZE:=20.0
+var map_offset:=Vector2.ZERO
 const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
@@ -141,7 +142,7 @@ func _draw_badge(center:Vector2,label:String,color:Color)->void:
 
 func _hex_center(pos:Vector2i)->Vector2:
 	var stagger:=0.5 if pos.y%2!=0 else 0.0
-	return Vector2(HEX_SIZE*SQRT3*(float(pos.x)+stagger)+HEX_SIZE*1.1,HEX_SIZE*1.5*float(pos.y)+HEX_SIZE*1.1)
+	return map_offset+Vector2(HEX_SIZE*SQRT3*(float(pos.x)+stagger)+HEX_SIZE*1.1,HEX_SIZE*1.5*float(pos.y)+HEX_SIZE*1.1)
 
 func _hex_points(center:Vector2)->PackedVector2Array:
 	var points:=PackedVector2Array()
