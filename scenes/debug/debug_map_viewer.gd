@@ -103,6 +103,7 @@ func _on_loot_refresh()->void:
 
 func _ready()->void:
 	get_viewport().size_changed.connect(_adapt_layout)
+	$Root.resized.connect(_adapt_layout)
 	canvas.visible=false
 	call_deferred("_adapt_layout")
 	var back_button:=Button.new()
@@ -126,17 +127,7 @@ func _ready()->void:
 	mini_map.size=Vector2(155,155)
 	mini_map.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	$Root/MapPanel.add_child(mini_map)
-	mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	mini_map.anchor_left=1.0
-	mini_map.anchor_top=1.0
-	mini_map.anchor_right=1.0
-	mini_map.anchor_bottom=1.0
-	mini_map.offset_left=-167.0
-	mini_map.offset_top=-167.0
-	mini_map.offset_right=-12.0
-	mini_map.offset_bottom=-12.0
-	mini_map.size_flags_horizontal=Control.SIZE_SHRINK_END
-	mini_map.size_flags_vertical=Control.SIZE_SHRINK_END
+	mini_map.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	var controls:=HBoxContainer.new()
 	$Root/Sidebar.add_child(controls)
 	$Root/Sidebar.move_child(controls,1)
@@ -170,7 +161,8 @@ func _regenerate()->void:
 	planned_path.clear()
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
-	call_deferred("_center_on_player")
+	canvas.visible=false
+	call_deferred("_adapt_layout")
 	_camera_ready=false
 	call_deferred("_finish_initial_camera")
 	if move_status!=null:
@@ -194,34 +186,40 @@ func _regenerate()->void:
 	]
 
 func _adapt_layout()->void:
-	var portrait:=size.y>size.x
-	var root_grid:GridContainer=$Root
-	root_grid.columns=1 if portrait else 2
+	# Explicit square map viewport: only the sidebar changes sides.
+	var available:Vector2=$Root.size
+	if available.x<=0.0 or available.y<=0.0: return
+	var portrait:=available.y>=available.x
+	var map_side:float
 	var sidebar:VBoxContainer=$Root/Sidebar
-	sidebar.custom_minimum_size.x=0.0 if portrait else 270.0
-	var map_panel:PanelContainer=$Root/MapPanel
-	map_panel.custom_minimum_size.y=0.0
-	# Portrait: a square camera viewport, with UI below it rather than a full-height map.
+	var map_panel:Control=$Root/MapPanel
 	if portrait:
-		map_panel.size_flags_vertical=Control.SIZE_SHRINK_BEGIN
-		map_panel.custom_minimum_size.y=maxf(200.0,minf(size.x-32.0,size.y*0.60))
+		map_side=available.x
+		map_panel.position=Vector2.ZERO
+		sidebar.position=Vector2(0.0,map_side+12.0)
+		sidebar.size=Vector2(available.x,maxf(0.0,available.y-map_side-12.0))
 	else:
-		map_panel.size_flags_vertical=Control.SIZE_EXPAND_FILL
+		map_side=minf(available.y,maxf(120.0,available.x-260.0))
+		map_panel.position=Vector2.ZERO
+		sidebar.position=Vector2(map_side+12.0,0.0)
+		sidebar.size=Vector2(maxf(0.0,available.x-map_side-12.0),available.y)
+	map_panel.size=Vector2(map_side,map_side)
+	map_scroll.position=Vector2.ZERO
+	map_scroll.size=map_panel.size
 	$Root/Sidebar/LegendTitle.visible=not portrait
 	$Root/Sidebar/Legend.visible=not portrait
 	$Root/Sidebar/Hint.visible=not portrait
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
-	call_deferred("_center_on_player")
-	call_deferred("_position_minimap")
+	_position_minimap()
+	_center_on_player()
 	if not _camera_ready: call_deferred("_finish_initial_camera")
 
 func _position_minimap()->void:
-	if mini_map==null:
-		return
-	var rect:Rect2=$Root/MapPanel.get_global_rect()
-	mini_map.position=rect.position-global_position+rect.size-Vector2(167,167)
-	mini_map.size=Vector2(155,155)
+	if mini_map==null: return
+	var side:=minf(155.0,$Root/MapPanel.size.x*0.24)
+	mini_map.size=Vector2(side,side)
+	mini_map.position=$Root/MapPanel.size-mini_map.size-Vector2(12.0,12.0)
 
 func _visible_cells()->Dictionary:
 	var result:Dictionary={}
@@ -349,26 +347,12 @@ func _center_on_player()->void:
 	canvas.queue_redraw()
 
 func _build_movement_panel()->void:
-	# The map panel is a PanelContainer. A direct child is stretched by its
-	# container layout, regardless of anchors; use a full-size transparent
-	# overlay and position only its small HUD as a floating child.
-	var overlay:=Control.new()
-	overlay.name="MovementOverlay"
-	overlay.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	$Root/MapPanel.add_child(overlay)
+	# Movement HUD belongs to GameUI, never to the map viewport.
 	movement_panel=PanelContainer.new()
 	movement_panel.name="MovementPanel"
-	movement_panel.mouse_filter=Control.MOUSE_FILTER_STOP
-	overlay.add_child(movement_panel)
-	movement_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	movement_panel.anchor_left=0.0
-	movement_panel.anchor_right=0.0
-	movement_panel.anchor_top=1.0
-	movement_panel.anchor_bottom=1.0
-	movement_panel.offset_left=12.0
-	movement_panel.offset_right=260.0
-	movement_panel.offset_top=-66.0
-	movement_panel.offset_bottom=-8.0
+	movement_panel.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	$Root/Sidebar.add_child(movement_panel)
+	$Root/Sidebar.move_child(movement_panel,2)
 	var row:=HBoxContainer.new()
 	movement_panel.add_child(row)
 	var info_column:=VBoxContainer.new()
