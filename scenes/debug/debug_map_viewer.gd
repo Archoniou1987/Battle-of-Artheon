@@ -14,6 +14,7 @@ var zoom_level:float=3.0
 var _map_base_size:=Vector2.ZERO
 var map_scroll:Control
 var mini_map:Control
+var patrol_runtime:=MapPatrolRuntime.new()
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -154,6 +155,7 @@ func _regenerate()->void:
 	playable_map=generated.map
 	player_hex=generated.entrance
 	playable_map.place_entity("PLAYER",player_hex)
+	patrol_runtime.configure(playable_map,generated.patrols)
 	_moving=false
 	_stop_requested=false
 	_next_hex=Vector2i(-1,-1)
@@ -270,6 +272,8 @@ func _prepare_step()->void:
 	move_status.text="Движение: %.0f сек/гекс"%_step_duration
 
 func _process(delta:float)->void:
+	if patrol_runtime.advance(delta):
+		canvas.queue_redraw()
 	if not _moving or _next_hex.x<0: return
 	_step_elapsed+=delta
 	if _step_elapsed<_step_duration: return
