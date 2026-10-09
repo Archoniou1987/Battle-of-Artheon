@@ -5,6 +5,11 @@ var player_hex:=Vector2i(-1,-1)
 var target_hex:=Vector2i(-1,-1)
 var planned_path:Array[Vector2i]=[]
 var move_status:Label
+var movement_panel:PanelContainer
+var movement_info:Label
+var movement_progress:ProgressBar
+var stop_button:Button
+var _camera_ready:=false
 var _moving:=false
 var _stop_requested:=false
 var _step_elapsed:=0.0
@@ -98,6 +103,7 @@ func _on_loot_refresh()->void:
 
 func _ready()->void:
 	get_viewport().size_changed.connect(_adapt_layout)
+	canvas.visible=false
 	call_deferred("_adapt_layout")
 	var back_button:=Button.new()
 	back_button.text="← Поселение"
@@ -139,6 +145,7 @@ func _ready()->void:
 	move_status.clip_text=true
 	move_status.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	controls.add_child(move_status)
+	_build_movement_panel()
 	_loot_refresh_timer=Timer.new()
 	_loot_refresh_timer.wait_time=1.0
 	_loot_refresh_timer.timeout.connect(_on_loot_refresh)
@@ -164,9 +171,11 @@ func _regenerate()->void:
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
 	call_deferred("_center_on_player")
-	get_tree().process_frame.connect(_center_on_player,CONNECT_ONE_SHOT)
+	_camera_ready=false
+	call_deferred("_finish_initial_camera")
 	if move_status!=null:
 		move_status.text="Выберите клетку"
+	_update_movement_panel()
 	refresh_loot_markers()
 	var map:TacticalMapState=generated.map
 	var blocked:=0
@@ -205,6 +214,7 @@ func _adapt_layout()->void:
 	$Root/Sidebar/Summary.visible=not portrait
 	call_deferred("_center_on_player")
 	call_deferred("_position_minimap")
+	if not _camera_ready: call_deferred("_finish_initial_camera")
 
 func _position_minimap()->void:
 	if mini_map==null:
@@ -226,18 +236,17 @@ func _select_destination(pos:Vector2i)->void:
 	if playable_map==null: return
 	if pos==player_hex:
 		if _moving:
-			_stop_requested=true
-			move_status.text="Остановка после перехода"
+			_request_stop()
 		return
 	if not canvas.explored_hexes.has(pos): return
 	if _moving:
-		_stop_requested=true
-		move_status.text="Ожидание остановки"
+		_request_stop()
 		return
 	if pos==target_hex and planned_path.size()>1:
 		_moving=true
 		_stop_requested=false
 		_prepare_step()
+		_update_movement_panel()
 		return
 	target_hex=pos
 	planned_path=_route_to(target_hex)
@@ -249,6 +258,7 @@ func _select_destination(pos:Vector2i)->void:
 	else:
 		move_status.text="Безопасный путь недоступен"
 	canvas.set_player_view(player_hex,target_hex,planned_path)
+	_update_movement_panel()
 
 func _prepare_step()->void:
 	if _stop_requested or planned_path.size()<2:
@@ -256,6 +266,7 @@ func _prepare_step()->void:
 		_stop_requested=false
 		_next_hex=Vector2i(-1,-1)
 		move_status.text="Остановлено" if planned_path.size()>1 else "Прибытие"
+		_update_movement_panel()
 		return
 	var next:Vector2i=planned_path[1]
 	if not playable_map.cell(next).is_passable() or (canvas._is_visible_hex(next) and SafeMapNavigation.static_npc_at(playable_map,canvas._entity_roles,next)):
@@ -264,6 +275,7 @@ func _prepare_step()->void:
 		if planned_path.size()<2:
 			_moving=false
 			move_status.text="Препятствие: остановка"
+			_update_movement_panel()
 			return
 		next=planned_path[1]
 	_next_hex=next
@@ -276,15 +288,18 @@ func _process(delta:float)->void:
 		canvas.queue_redraw()
 	if not _moving or _next_hex.x<0: return
 	_step_elapsed+=delta
+	_update_movement_panel()
 	if _step_elapsed<_step_duration: return
 	if not playable_map.entities_at(_next_hex).is_empty():
 		_moving=false
 		move_status.text="Столкновение: движение остановлено"
+		_update_movement_panel()
 		return
 	var result:Dictionary=playable_map.move_entity("PLAYER",_next_hex)
 	if not bool(result.get("ok",false)):
 		_moving=false
 		move_status.text="Движение: "+str(result.get("reason","ошибка"))
+		_update_movement_panel()
 		return
 	player_hex=_next_hex
 	planned_path.remove_at(0)
@@ -292,6 +307,7 @@ func _process(delta:float)->void:
 	mini_map.update_map(playable_map,player_hex)
 	_center_on_player()
 	_prepare_step()
+	_update_movement_panel()
 
 func _set_fixed_scale()->void:
 	if canvas==null:
@@ -331,3 +347,65 @@ func _center_on_player()->void:
 		desired.y=clampf(desired.y,min_y,max_y)
 	canvas.position=desired.round()
 	canvas.queue_redraw()
+
+func _build_movement_panel()->void:
+	movement_panel=PanelContainer.new()
+	movement_panel.name="MovementPanel"
+	movement_panel.mouse_filter=Control.MOUSE_FILTER_STOP
+	$Root/MapPanel.add_child(movement_panel)
+	movement_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	movement_panel.anchor_left=0.0
+	movement_panel.anchor_right=1.0
+	movement_panel.anchor_top=1.0
+	movement_panel.anchor_bottom=1.0
+	movement_panel.offset_left=12.0
+	movement_panel.offset_right=-12.0
+	movement_panel.offset_top=-74.0
+	movement_panel.offset_bottom=-8.0
+	var row:=HBoxContainer.new()
+	movement_panel.add_child(row)
+	var info_column:=VBoxContainer.new()
+	info_column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	row.add_child(info_column)
+	movement_info=Label.new()
+	movement_info.text="Движение"
+	movement_info.clip_text=true
+	info_column.add_child(movement_info)
+	movement_progress=ProgressBar.new()
+	movement_progress.min_value=0.0
+	movement_progress.max_value=100.0
+	movement_progress.show_percentage=false
+	movement_progress.custom_minimum_size.y=12.0
+	info_column.add_child(movement_progress)
+	stop_button=Button.new()
+	stop_button.text="■ Стоп"
+	stop_button.custom_minimum_size=Vector2(105,48)
+	stop_button.pressed.connect(_request_stop)
+	row.add_child(stop_button)
+	movement_panel.visible=false
+
+func _request_stop()->void:
+	if not _moving: return
+	_stop_requested=true
+	move_status.text="Остановка после перехода"
+	_update_movement_panel()
+
+func _update_movement_panel()->void:
+	if movement_panel==null: return
+	movement_panel.visible=_moving
+	if not _moving: return
+	var remaining:=maxf(0.0,_step_duration-_step_elapsed)
+	for i in range(2,planned_path.size()):
+		remaining+=SafeMapNavigation.terrain_seconds(playable_map.cell(planned_path[i]).terrain_id)
+	movement_info.text="%d гексов · ~%.0f сек%s"%[maxi(0,planned_path.size()-1),remaining," · остановка" if _stop_requested else ""]
+	movement_progress.value=100.0*clampf(_step_elapsed/maxf(0.001,_step_duration),0.0,1.0)
+	stop_button.disabled=_stop_requested
+
+func _finish_initial_camera()->void:
+	if _camera_ready or playable_map==null: return
+	if map_scroll.size.x<=0.0 or map_scroll.size.y<=0.0:
+		call_deferred("_finish_initial_camera")
+		return
+	_center_on_player()
+	_camera_ready=true
+	canvas.visible=true
