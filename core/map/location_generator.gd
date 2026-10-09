@@ -35,10 +35,22 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	var protected:Dictionary={}
 	for pos in guaranteed_path:
 		protected[pos]=true
+	var region_result:Dictionary=MapRegionGenerator.generate(map,entrance,exit,guaranteed_path,rng)
+	var thematic_reserved:Dictionary={}
+	for region in region_result["regions"]:
+		for pos in region["cells"]:
+			thematic_reserved[pos]=true
+	for pocket in region_result["pockets"]:
+		for pos in pocket["cells"]:
+			thematic_reserved[pos]=true
+		for pos in pocket["border"]:
+			thematic_reserved[pos]=true
+		thematic_reserved[pocket["gate"]]=true
+	# Standard terrain is generated only after the thematic regions are fixed.
 	for r in range(safe_height):
 		for q in range(safe_width):
 			var pos:=Vector2i(q,r)
-			if protected.has(pos) or pos==entrance or pos==exit:
+			if protected.has(pos) or pos==entrance or pos==exit or thematic_reserved.has(pos):
 				continue
 			var roll:=rng.randf()
 			if roll<0.12:
@@ -47,13 +59,6 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 				map.set_terrain(pos,"swamp",2.0)
 			elif roll<0.42:
 				map.set_terrain(pos,"rough",1.5)
-	var region_result:Dictionary=MapRegionGenerator.generate(map,entrance,exit,guaranteed_path,rng)
-	var thematic_reserved:Dictionary={}
-	for pocket in region_result["pockets"]:
-		for pos in pocket["cells"]:
-			thematic_reserved[pos]=true
-		for pos in pocket["border"]:
-			thematic_reserved[pos]=true
 	map.mark_visited(entrance)
 
 	# Guarded objects are deliberately built as one-cell dead-end pockets.
