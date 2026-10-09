@@ -12,7 +12,7 @@ func _initialize()->void:
 	var chase:=HexNpcChaseState.new("BOUND",Vector2i(0,2),4,3)
 	var rng:=RandomNumberGenerator.new()
 	var turns:=HexMapTurnService.new()
-	for blocked in [Vector2i(2,2),Vector2i(3,1),Vector2i(4,1),Vector2i(4,2),Vector2i(3,3),Vector2i(2,3)]:
+	for blocked in [Vector2i(1,2),Vector2i(0,3),Vector2i(1,1),Vector2i(2,2),Vector2i(3,1),Vector2i(4,1),Vector2i(4,2),Vector2i(3,3),Vector2i(2,3)]:
 		valid=valid and map.set_obstacle(blocked,"wall",true)
 	var attempt:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and bool(attempt.get("ok",false)) and chase.mode=="idle"
@@ -23,7 +23,7 @@ func _initialize()->void:
 	valid=valid and not map.move_entity("BOUND",Vector2i(-1,2)).get("ok",false)
 	valid=valid and not map.move_entity("BOUND",Vector2i(2,2)).get("ok",false)
 	chase.mode="returning"
-	chase.home_position=Vector2i(6,6)
+	chase.home_position=Vector2i(2,2)
 	var stranded:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and stranded.get("reason","")=="home_unreachable"
 	valid=valid and chase.mode=="returning"
