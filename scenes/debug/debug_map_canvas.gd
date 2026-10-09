@@ -1,7 +1,7 @@
 class_name DebugMapCanvas
 extends Control
 
-const HEX_SIZE:=20.0
+var HEX_SIZE:=20.0
 const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
