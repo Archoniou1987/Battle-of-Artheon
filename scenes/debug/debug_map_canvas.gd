@@ -85,7 +85,7 @@ func _build_entity_roles()->void:
 	for i in range(generated.get("npc_cells",[]).size()):
 		_entity_roles["GEN_NPC_%02d"%i]="NPC"
 	for region_npc in generated.get("region_npcs",[]):
-		_entity_roles[region_npc["entity_id"]]="NPC"
+		_entity_roles[region_npc["entity_id"]]=({"bandit_camp":"BD","graveyard":"UD","beast_den":"BT","ruins":"RN"}).get(str(region_npc["region_type"]),"NPC")
 	for route_guard in generated.get("route_guards",[]):
 		_entity_roles[route_guard.guard_id]="RG"
 	for patrol in generated.get("patrols",[]):
@@ -132,6 +132,7 @@ func _draw()->void:
 			if pause_index>=0 and pause_index<patrol.path.size() and _is_visible_hex(patrol.path[pause_index]):
 				draw_circle(_hex_center(patrol.path[pause_index]),5.0,Color(1.0,0.90,0.35),false,2.0,true)
 	_draw_markers(map)
+	_draw_region_props()
 	_draw_loot_markers()
 	if preview_path.size()>1:
 		var line:=PackedVector2Array()
@@ -198,6 +199,17 @@ func _draw_markers(map:TacticalMapState)->void:
 		elif role=="OG": color=Color(0.72,0.52,0.30)
 		if _is_visible_hex(map.entity_positions[entity_id]):
 			_draw_badge(_hex_center(map.entity_positions[entity_id]),role,color)
+
+func _draw_region_props()->void:
+	for prop in generated.get("region_objects",[]):
+		var pos:Vector2i=prop["pos"]
+		if not _is_visible_hex(pos):
+			continue
+		var symbol:String=({"tent":"T","grave":"G","bones":"X","relic":"A"}).get(str(prop["kind"]),"O")
+		var center:=_hex_center(pos)+Vector2(10.0,10.0)
+		draw_circle(center,9.0,Color(0.08,0.08,0.09))
+		draw_circle(center,7.0,Color(0.95,0.82,0.46))
+		draw_string(ThemeDB.fallback_font,center+Vector2(-4.0,4.0),symbol,HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color(0.10,0.09,0.06))
 
 func _draw_loot_markers()->void:
 	for cell in loot_markers:
