@@ -19,9 +19,11 @@ func _draw()->void:
 		for x in range(map_data.width):
 			var cell:=Vector2i(x,y)
 			var data:MapCell=map_data.cell(cell)
-			var color:=Color(0.22,0.45,0.27) if data.is_passable() else Color(0.12,0.13,0.17)
-			if HexGrid.distance(player_cell,cell)>RADIUS:
-				color=color.darkened(0.55)
+			var color:=Color(0.09,0.10,0.14)
+			if data.discovered:
+				color=Color(0.22,0.45,0.27) if data.is_passable() else Color(0.12,0.13,0.17)
+				if HexGrid.distance(player_cell,cell)>3:
+					color=color.darkened(0.55)
 			draw_rect(Rect2(Vector2(pad,pad)+Vector2(x,y)*cell_size,cell_size-Vector2.ONE),color)
 	if player_cell.x>=0:
 		var center:=Vector2(pad,pad)+(Vector2(player_cell)+Vector2(0.5,0.5))*cell_size
