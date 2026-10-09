@@ -8,6 +8,9 @@ const BASE_OBJECTS:=5
 const BASE_ENCOUNTERS:=6
 const BASE_PATROLS:=5
 const MIN_PATROL_PATH_CELLS:=8
+const REGION_NPC_DENSITY:=0.65
+const REGION_STACK_CHANCE:=0.22
+const REGION_MAX_NPCS_PER_HEX:=4
 
 static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	var safe_width:=maxi(5,width)
@@ -156,20 +159,35 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		map.add_area(area,[resource_cells[i]])
 	for i in range(npc_cells.size()):
 		map.place_entity("GEN_NPC_%02d"%i,npc_cells[i])
-	# Populate thematic pockets independently of ordinary map content.
+	# Hostile regions are intentionally crowded. Multiple enemies may guard one hex.
 	var region_npcs:Array[Dictionary]=[]
 	for region in region_result["regions"]:
 		var available:Array[Vector2i]=[]
 		for pos in region["cells"]:
-			if accessible.has(pos) and map.cell(pos).is_passable() and map.entities_at(pos).is_empty():
+			if accessible.has(pos) and map.cell(pos).is_passable() and map.cell(pos).object_ids.is_empty():
 				available.append(pos)
+		if available.is_empty():
+			continue
 		_shuffle_cells(available,rng)
-		var count:int=mini(3,available.size())
-		for j in range(count):
-			var entity_id:="GEN_REGION_NPC_%02d_%02d"%[region_npcs.size(),j]
-			var npc_pos:Vector2i=available[j]
+		var target_count:=maxi(3,roundi(float(available.size())*REGION_NPC_DENSITY))
+		var placed:=0
+		var per_cell:Dictionary={}
+		var placement_attempts:=0
+		while placed<target_count and placement_attempts<target_count*12:
+			placement_attempts+=1
+			var npc_pos:Vector2i=available[rng.randi_range(0,available.size()-1)]
+			var occupancy:int=int(per_cell.get(npc_pos,0))
+			if occupancy>=REGION_MAX_NPCS_PER_HEX:
+				continue
+			if occupancy>0 and rng.randf()>REGION_STACK_CHANCE:
+				continue
+			if occupancy==0 and not map.entities_at(npc_pos).is_empty():
+				continue
+			var entity_id:="GEN_REGION_NPC_%s_%02d"%[str(region["region_id"]),placed]
 			if map.place_entity(entity_id,npc_pos):
+				per_cell[npc_pos]=occupancy+1
 				region_npcs.append({"entity_id":entity_id,"region_id":region["region_id"],"region_type":region["region_type"],"pos":npc_pos})
+				placed+=1
 	var region_objects:Array[Dictionary]=[]
 	var kinds:Dictionary={"bandit_camp":"tent","graveyard":"grave","beast_den":"bones","ruins":"relic"}
 	for region in region_result["regions"]:
