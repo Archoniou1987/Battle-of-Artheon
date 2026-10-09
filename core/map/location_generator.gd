@@ -247,6 +247,44 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			"pause_points":pause_points
 		})
 
+	# Optional thematic patrols: one short route inside each region.
+	for region in region_result["regions"]:
+		var allowed:Dictionary={}
+		var starts:Array[Vector2i]=[]
+		for cell_pos in region["cells"]:
+			allowed[cell_pos]=true
+			if accessible.has(cell_pos) and map.cell(cell_pos).is_passable() and map.entities_at(cell_pos).is_empty():
+				starts.append(cell_pos)
+		if starts.size()<6:
+			continue
+		_shuffle_cells(starts,rng)
+		var route:Array=[]
+		for start_pos in starts:
+			for goal_pos in starts:
+				if HexGrid.distance(start_pos,goal_pos)<3:
+					continue
+				var found:Dictionary=HexPathfinder.new().find_path(map,start_pos,goal_pos)
+				if not bool(found.get("ok",false)):
+					continue
+				var path_cells:Array=found.get("path",[])
+				if path_cells.size()<4 or path_cells.size()>8:
+					continue
+				var contained:=true
+				for path_pos in path_cells:
+					if not allowed.has(path_pos):
+						contained=false
+						break
+				if contained:
+					route=path_cells
+					break
+			if not route.is_empty():
+				break
+		if route.is_empty():
+			continue
+		var id:="GEN_REGION_PATROL_%s"%str(region["region_id"])
+		if map.place_entity(id,route[0]):
+			patrols.append({"patrol_id":id,"region_id":region["region_id"],"region_type":region["region_type"],"start":route[0],"goal":route[route.size()-1],"path":route,"movement_mode":"ping_pong","pause_points":[{"path_index":0,"pause_seconds":3.0},{"path_index":route.size()-1,"pause_seconds":3.0}]})
+
 	var boss_groups:Array[Dictionary]=[]
 	var boss_candidates:Array[Vector2i]=[]
 	for boss_candidate in content_cells:
