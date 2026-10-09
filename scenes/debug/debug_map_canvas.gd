@@ -144,28 +144,37 @@ func _draw()->void:
 		_draw_badge(_hex_center(player_hex),"YOU",Color(0.35,0.80,1.0))
 
 func _draw_region_outlines()->void:
-	# Region edges are independent of terrain; show only the outer perimeter.
+	# The six sides follow the odd-row offset hex geometry.
+	# A region boundary is drawn only when the adjacent hex is outside its cells.
 	for region in generated.get("regions",[]):
 		var owned:Dictionary={}
 		for pos in region["cells"]:
 			owned[pos]=true
 		for pos in region["cells"]:
-			if not explored_hexes.has(pos):
+			if not _is_visible_hex(pos) and not explored_hexes.has(pos):
 				continue
 			var vertices:=_hex_points(_hex_center(pos))
 			for side in range(6):
 				var a:Vector2=vertices[side]
 				var b:Vector2=vertices[(side+1)%6]
 				var midpoint:Vector2=(a+b)*0.5
-				var nearest:=Vector2i(-1,-1)
-				var distance:=INF
+				var adjacent:=Vector2i(-1,-1)
+				var nearest_distance:=INF
 				for neighbor in HexGrid.neighbors(pos):
 					var d:float=midpoint.distance_squared_to(_hex_center(neighbor))
-					if d<distance:
-						distance=d
-						nearest=neighbor
-				if not owned.has(nearest):
-					draw_line(a,b,Color(1.0,0.86,0.05,1.0),5.0,true)
+					if d<nearest_distance:
+						nearest_distance=d
+						adjacent=neighbor
+				if not owned.has(adjacent):
+					draw_line(a,b,Color(0.08,0.06,0.01,1.0),8.0,true)
+					draw_line(a,b,Color(1.0,0.90,0.02,1.0),5.0,true)
+		# Debug identifier confirms the region exists even when only part is on screen.
+		if debug_reveal_all and not region["cells"].is_empty():
+			var label_pos:Vector2i=region["cells"][0]
+			var center:=_hex_center(label_pos)
+			var title:String=str(region["region_type"])
+			var font:=ThemeDB.fallback_font
+			draw_string(font,center+Vector2(-18.0,-22.0),title,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color(1.0,0.93,0.15))
 
 func _draw_markers(map:TacticalMapState)->void:
 	if _is_visible_hex(generated.entrance): _draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
