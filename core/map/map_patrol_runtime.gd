@@ -42,14 +42,11 @@ func advance(delta:float)->bool:
 			next_index=index+direction
 		if next_index<0 or next_index>=route.size(): continue
 		var next:Vector2i=route[next_index]
-		# Occupied cells are never overwritten. The patrol waits, then retries.
+		# NPCs may share a hex; only contact with PLAYER triggers combat.
 		if map.entities_at(next).has("PLAYER"):
 			collision_entity_id=patrol_id
 			state["remaining"]=RETRY_SECONDS
 			return changed
-		if not map.entities_at(next).is_empty():
-			state["remaining"]=RETRY_SECONDS
-			continue
 		var moved:Dictionary=map.move_entity(patrol_id,next)
 		if not bool(moved.get("ok",false)):
 			state["remaining"]=RETRY_SECONDS
