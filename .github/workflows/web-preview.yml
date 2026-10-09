@@ -2,6 +2,12 @@ name: Web Preview (Godot)
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_to_vercel:
+        description: 'Publish browser build to Vercel (requires VERCEL_TOKEN secret)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,3 +48,22 @@ jobs:
           name: battle-of-artheon-web
           path: build/web/
           retention-days: 7
+
+      - name: Install Node.js for Vercel publishing
+        if: ${{ inputs.publish_to_vercel }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Publish Web build to Vercel
+        if: ${{ inputs.publish_to_vercel }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is missing. Create it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          mkdir -p build/web/.vercel
+          printf '%s\n' '{"projectId":"prj_O8XlqWc2OFjUvp9Z1RojYFiMOVCl","orgId":"team_3X6DttKAdVaDmYJVv5SYCcsA"}' > build/web/.vercel/project.json
+          npx --yes vercel@latest deploy build/web --prod --yes --token "$VERCEL_TOKEN" --scope dryun87-9174
