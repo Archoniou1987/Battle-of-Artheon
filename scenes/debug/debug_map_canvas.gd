@@ -3,6 +3,7 @@ extends Control
 
 var HEX_SIZE:=20.0
 var map_offset:=Vector2.ZERO
+var visibility_radius:=7
 const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
@@ -45,7 +46,7 @@ func _gui_input(event:InputEvent)->void:
 	for r in range(map.height):
 		for q in range(map.width):
 			var pos:=Vector2i(q,r)
-			if Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
+			if _is_visible_hex(pos) and Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
 				hex_selected.emit(pos)
 				accept_event()
 				return
@@ -72,6 +73,8 @@ func _draw()->void:
 	for r in range(map.height):
 		for q in range(map.width):
 			var pos:=Vector2i(q,r)
+			if player_hex.x>=0 and HexGrid.distance(player_hex,pos)>visibility_radius:
+				continue
 			var center:=_hex_center(pos)
 			var cell:MapCell=map.cell(pos)
 			draw_colored_polygon(_hex_points(center),_cell_color(cell))
@@ -79,6 +82,11 @@ func _draw()->void:
 	for patrol in generated.get("patrols",[]):
 		var points:=PackedVector2Array()
 		for pos in patrol.path:
+			if player_hex.x>=0 and HexGrid.distance(player_hex,pos)>visibility_radius:
+				if points.size()>=2:
+					draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
+				points.clear()
+				continue
 			points.append(_hex_center(pos))
 		if points.size()>=2:
 			draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
@@ -91,21 +99,24 @@ func _draw()->void:
 	if preview_path.size()>1:
 		var line:=PackedVector2Array()
 		for pos in preview_path:
-			line.append(_hex_center(pos))
+			if _is_visible_hex(pos): line.append(_hex_center(pos))
 		draw_polyline(line,Color(0.20,0.85,1.0),3.0,true)
-	if selected_hex.x>=0:
+	if selected_hex.x>=0 and _is_visible_hex(selected_hex):
 		draw_polyline(_closed_hex_points(_hex_center(selected_hex)),Color(0.30,0.90,1.0),3.0,true)
 	if player_hex.x>=0:
 		_draw_badge(_hex_center(player_hex),"YOU",Color(0.35,0.80,1.0))
 
 func _draw_markers(map:TacticalMapState)->void:
-	_draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
-	_draw_badge(_hex_center(generated.exit),"OUT",Color(0.25,0.60,1.0))
+	if _is_visible_hex(generated.entrance): _draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
+	if _is_visible_hex(generated.exit): _draw_badge(_hex_center(generated.exit),"OUT",Color(0.25,0.60,1.0))
 	for pos in generated.get("resource_cells",[]):
+		if not _is_visible_hex(pos): continue
 		_draw_badge(_hex_center(pos),"R",Color(0.25,0.75,0.55))
 	for pos in generated.get("object_cells",[]):
+		if not _is_visible_hex(pos): continue
 		_draw_badge(_hex_center(pos),"O",Color(0.70,0.48,0.22))
 	for pos in generated.get("encounter_cells",[]):
+		if not _is_visible_hex(pos): continue
 		_draw_badge(_hex_center(pos),"E",Color(0.75,0.35,0.75))
 	for entity_id in map.entity_positions.keys():
 		var role:String=_entity_roles.get(entity_id,"?")
@@ -115,14 +126,19 @@ func _draw_markers(map:TacticalMapState)->void:
 		elif role=="P": color=Color(0.95,0.72,0.20)
 		elif role=="RG": color=Color(0.45,0.60,0.95)
 		elif role=="OG": color=Color(0.72,0.52,0.30)
-		_draw_badge(_hex_center(map.entity_positions[entity_id]),role,color)
+		if _is_visible_hex(map.entity_positions[entity_id]):
+			_draw_badge(_hex_center(map.entity_positions[entity_id]),role,color)
 
 func _draw_loot_markers()->void:
 	for cell in loot_markers:
+		if not _is_visible_hex(cell): continue
 		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
 		draw_circle(center,7.0,Color(0.98,0.77,0.25))
 		draw_arc(center,6.0,0.0,TAU,20,Color(0.48,0.28,0.07),1.4,true)
 		draw_line(center+Vector2(-2.0,0.0),center+Vector2(2.0,0.0),Color(0.48,0.28,0.07),1.5,true)
+
+func _is_visible_hex(pos:Vector2i)->bool:
+	return player_hex.x<0 or HexGrid.distance(player_hex,pos)<=visibility_radius
 
 func _cell_color(cell:MapCell)->Color:
 	if cell.blocked:
