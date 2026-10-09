@@ -21,7 +21,7 @@ func step_patrol(map:TacticalMapState,bridge:MapNpcBridge,patrol:HexPatrolState,
 		return {"ok":false,"reason":"invalid_context"}
 	var result:=patrol.step(map,coordinator.combat_active,elapsed_seconds,player_id)
 	if result.get("reason","")=="player_contact":
-		var encounter:=coordinator.try_start(map,bridge,player_id,rng)
+		var encounter:=coordinator.try_start_patrol_contact(map,bridge,player_id,patrol.patrol_id,rng)
 		if bool(encounter.get("ok",false)):
 			return {"ok":true,"patrol_contact":result,"encounter":encounter}
 	return result
