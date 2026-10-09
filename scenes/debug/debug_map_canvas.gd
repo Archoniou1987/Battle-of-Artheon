@@ -189,16 +189,28 @@ func _draw_markers(map:TacticalMapState)->void:
 	for pos in generated.get("encounter_cells",[]):
 		if not _is_visible_hex(pos): continue
 		_draw_badge(_hex_center(pos),"E",Color(0.75,0.35,0.75))
+	var grouped:Dictionary={}
 	for entity_id in map.entity_positions.keys():
-		var role:String=_entity_roles.get(entity_id,"?")
+		var pos:Vector2i=map.entity_positions[entity_id]
+		if entity_id=="PLAYER":
+			continue
+		if not grouped.has(pos):
+			grouped[pos]=[]
+		grouped[pos].append(entity_id)
+	for pos in grouped.keys():
+		if not _is_visible_hex(pos):
+			continue
+		var occupants:Array=grouped[pos]
+		var role:String=_entity_roles.get(occupants[0],"?")
 		var color:=Color(0.88,0.88,0.90)
 		if role=="B": color=Color(0.90,0.18,0.20)
 		elif role=="BG": color=Color(0.82,0.32,0.25)
 		elif role=="P": color=Color(0.95,0.72,0.20)
 		elif role=="RG": color=Color(0.45,0.60,0.95)
 		elif role=="OG": color=Color(0.72,0.52,0.30)
-		if _is_visible_hex(map.entity_positions[entity_id]):
-			_draw_badge(_hex_center(map.entity_positions[entity_id]),role,color)
+		_draw_badge(_hex_center(pos),role,color)
+		if occupants.size()>1:
+			draw_string(ThemeDB.fallback_font,_hex_center(pos)+Vector2(10.0,-12.0),"x%d"%occupants.size(),HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color(1.0,0.95,0.75))
 
 func _draw_region_props()->void:
 	for prop in generated.get("region_objects",[]):
