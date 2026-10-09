@@ -21,7 +21,8 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.035, 0.045, 0.065, 1)
 
-[node name="Root" type="HBoxContainer" parent="."]
+[node name="Root" type="GridContainer" parent="."]
+columns = 2
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
