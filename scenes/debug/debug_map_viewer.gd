@@ -112,7 +112,8 @@ func _ready()->void:
 	map_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.follow_focus=false
 	mini_map=DebugMiniMap.new()
-	mini_map.custom_minimum_size=Vector2(155,155)
+	mini_map.custom_minimum_size=Vector2.ZERO
+	mini_map.size=Vector2(155,155)
 	mini_map.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	$Root/MapPanel.add_child(mini_map)
 	mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -194,6 +195,14 @@ func _adapt_layout()->void:
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
 	call_deferred("_refresh_map_extent")
+	call_deferred("_position_minimap")
+
+func _position_minimap()->void:
+	if mini_map==null:
+		return
+	var rect:Rect2=$Root/MapPanel.get_global_rect()
+	mini_map.position=rect.position-global_position+rect.size-Vector2(167,167)
+	mini_map.size=Vector2(155,155)
 
 func _select_destination(pos:Vector2i)->void:
 	if playable_map==null:
