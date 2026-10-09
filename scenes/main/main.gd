@@ -1,8 +1,8 @@
 extends Control
 
 const LOCATION_NAME := "Стартовая деревня"
-const IMAGE_PATH := "res://assets/locations/starting_village.png"
-const DESIGN_SIZE := Vector2(1648.0, 928.0)
+const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
+const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const MOBILE_RATIO := 1.65
 const SERVICES := [
 	{"name": "Кузнец", "symbol": "⚒", "position": Vector2(0.18, 0.49)},
@@ -30,7 +30,6 @@ var panorama_offset := 0.0
 var dragging := false
 var drag_origin := Vector2.ZERO
 var drag_offset := 0.0
-var dragged := false
 
 
 func _ready() -> void:
@@ -113,6 +112,7 @@ func _build_screen() -> void:
 	popup = PanelContainer.new()
 	popup.visible = false
 	popup.custom_minimum_size = Vector2(340, 170)
+	popup.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	add_child(popup)
 	var contents := VBoxContainer.new()
 	popup.add_child(contents)
@@ -192,6 +192,7 @@ func _open_panel(section: String) -> void:
 		_add_debug_button("Отладочная карта", "res://scenes/debug/debug_map_viewer.tscn")
 		_add_debug_button("Отладочный бой", "res://scenes/debug/debug_combat_viewer.tscn")
 	popup.visible = true
+	popup.reset_size()
 	popup.position = (size - popup.size) * 0.5
 
 
