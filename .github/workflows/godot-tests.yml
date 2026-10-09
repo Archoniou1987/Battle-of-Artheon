@@ -30,3 +30,6 @@ jobs:
 
       - name: Run Combat v1 regression baseline
         run: timeout 120s godot --headless --path . --script res://tests/combat/combat_regression_runner.gd
+
+      - name: Run Starting Village UI smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/starting_village_runner.gd
