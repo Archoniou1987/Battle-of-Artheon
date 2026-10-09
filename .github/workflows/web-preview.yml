@@ -5,8 +5,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: godot-web-preview
@@ -16,9 +14,6 @@ jobs:
   export-web:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout selected branch
         uses: actions/checkout@v4
@@ -41,14 +36,9 @@ jobs:
           test -s build/web/index.wasm
           test -s build/web/index.pck
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Save browser build as downloadable artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: build/web
-
-      - name: Deploy preview
-        id: deployment
-        uses: actions/deploy-pages@v4
+          name: battle-of-artheon-web
+          path: build/web/
+          retention-days: 7
