@@ -165,6 +165,9 @@ jobs:
       - name: Validate bounded NPC pursuit and combat contact
         run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_chase_runner.gd
 
+      - name: Validate patrol chase return and route resume
+        run: timeout 120s godot --headless --path . --script res://tests/map/hex_patrol_chase_runner.gd
+
       - name: Validate hex patrol movement and combat pause
         run: timeout 120s godot --headless --path . --script res://tests/map/hex_patrol_state_runner.gd
 
