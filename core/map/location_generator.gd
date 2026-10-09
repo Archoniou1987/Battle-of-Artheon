@@ -259,6 +259,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,
 		"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols,"boss_groups":boss_groups,
 		"pockets":region_result["pockets"],"regions":region_result["regions"],"region_npcs":region_npcs,
+		"region_candidates":region_result["region_candidates"],"pocket_attempts":region_result["pocket_attempts"],"geometry_rejections":region_result["geometry_rejections"],
 		"safe_entrance_radius":SAFE_ENTRANCE_RADIUS
 	}
 
