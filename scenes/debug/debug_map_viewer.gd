@@ -7,6 +7,7 @@ var planned_path:Array[Vector2i]=[]
 var move_status:Label
 var move_button:Button
 var zoom_level:float=1.8
+var _map_base_size:=Vector2.ZERO
 const MIN_ZOOM:=0.8
 const MAX_ZOOM:=3.0
 const ZOOM_STEP:=0.25
@@ -188,13 +189,14 @@ func _adapt_layout()->void:
 	var sidebar:VBoxContainer=$Root/Sidebar
 	sidebar.custom_minimum_size.x=0.0 if portrait else 270.0
 	var map_panel:PanelContainer=$Root/MapPanel
-	map_panel.custom_minimum_size.y=maxf(220.0,size.y*0.66) if portrait else 0.0
+	map_panel.custom_minimum_size.y=0.0
+	map_panel.size_flags_vertical=Control.SIZE_EXPAND_FILL
 	$Root/Sidebar/LegendTitle.visible=not portrait
 	$Root/Sidebar/Legend.visible=not portrait
 	$Root/Sidebar/Hint.visible=not portrait
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
-	call_deferred("_center_on_player")
+	call_deferred("_refresh_map_extent")
 
 func _select_destination(pos:Vector2i)->void:
 	if playable_map==null:
@@ -231,15 +233,26 @@ func _set_zoom(value:float)->void:
 	if canvas==null:
 		return
 	var old_zoom:=zoom_level
-	var old_center:=Vector2(map_scroll.scroll_horizontal,map_scroll.scroll_vertical)+map_scroll.size*0.5
+	var old_center:=Vector2(map_scroll.scroll_horizontal,map_scroll.scroll_vertical)+map_scroll.size*0.5-canvas.map_offset
 	zoom_level=next_zoom
 	canvas.HEX_SIZE=20.0*zoom_level
-	canvas.custom_minimum_size=canvas._map_pixel_size()
+	_map_base_size=canvas._map_pixel_size()
+	_refresh_map_extent()
 	canvas.queue_redraw()
 	if zoom_label!=null:
 		zoom_label.text="%d%%"%roundi(zoom_level*100.0)
-	var new_center:=old_center*zoom_level/maxf(old_zoom,0.01)
+	var new_center:=old_center*zoom_level/maxf(old_zoom,0.01)+canvas.map_offset
 	call_deferred("_scroll_to",new_center-map_scroll.size*0.5)
+
+func _refresh_map_extent()->void:
+	if canvas==null or map_scroll==null:
+		return
+	var viewport_size:=map_scroll.size
+	if viewport_size.x<=0.0 or viewport_size.y<=0.0:
+		return
+	canvas.custom_minimum_size=Vector2(maxf(_map_base_size.x,viewport_size.x),maxf(_map_base_size.y,viewport_size.y))
+	canvas.map_offset=Vector2(maxf(0.0,(viewport_size.x-_map_base_size.x)*0.5),maxf(0.0,(viewport_size.y-_map_base_size.y)*0.5))
+	canvas.queue_redraw()
 
 func _scroll_to(pos:Vector2)->void:
 	map_scroll.scroll_horizontal=maxi(0,roundi(pos.x))
@@ -248,5 +261,6 @@ func _scroll_to(pos:Vector2)->void:
 func _center_on_player()->void:
 	if canvas==null or map_scroll==null or player_hex.x<0:
 		return
+	_refresh_map_extent()
 	var center:=canvas._hex_center(player_hex)
 	_scroll_to(center-map_scroll.size*0.5)
