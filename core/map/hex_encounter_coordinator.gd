@@ -13,16 +13,8 @@ func try_start(map:TacticalMapState,bridge:MapNpcBridge,player_id:String,rng:Ran
 	for npc in bridge.npc_at(map,player_pos):
 		primary.append(npc.instance_id)
 	if primary.is_empty():
-		for detection in NpcDetectionService.detect(map,bridge,player_id):
-			var npc_id:String=String(detection.get("npc_instance_id",""))
-			var npc:NpcInstance=bridge.instances[npc_id]
-			if npc.aggression<=0.0:
-				continue
-			primary.append(npc_id)
-			break
-	if primary.is_empty():
 		return {"ok":false,"reason":"no_hostile_contact"}
-	# Detection can start combat from a distance; the fight remains centered on the player.
+	# Combat requires contact; detection alone never starts combat.
 	var assembled:=_assemble_from_player(map,bridge,player_pos,primary,rng)
 	if bool(assembled.get("ok",false)):
 		combat_active=true
