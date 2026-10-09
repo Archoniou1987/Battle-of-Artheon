@@ -8,7 +8,7 @@ var move_status:Label
 var move_button:Button
 var zoom_level:float=3.0
 var _map_base_size:=Vector2.ZERO
-var map_scroll:ScrollContainer
+var map_scroll:Control
 var mini_map:Control
 
 var loot_expedition:ExpeditionState
@@ -108,10 +108,8 @@ func _ready()->void:
 	canvas.loot_hex_selected.connect(_on_loot_hex_selected)
 	canvas.hex_selected.connect(_select_destination)
 	map_scroll=$Root/MapPanel/Scroll
-	map_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
-	map_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
-	map_scroll.follow_focus=false
-	map_scroll.scroll_deadzone=100000
+	map_scroll.clip_contents=true
+	map_scroll.mouse_filter=Control.MOUSE_FILTER_PASS
 	mini_map=DebugMiniMap.new()
 	mini_map.custom_minimum_size=Vector2.ZERO
 	mini_map.size=Vector2(155,155)
@@ -154,7 +152,6 @@ func _regenerate()->void:
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
 	_set_fixed_scale()
-	call_deferred("_center_on_player")
 	playable_map=generated.map
 	player_hex=generated.entrance
 	playable_map.place_entity("PLAYER",player_hex)
@@ -162,6 +159,7 @@ func _regenerate()->void:
 	planned_path.clear()
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
+	call_deferred("_center_on_player")
 	if move_status!=null:
 		move_status.text="Выберите клетку"
 	refresh_loot_markers()
@@ -195,7 +193,7 @@ func _adapt_layout()->void:
 	$Root/Sidebar/Hint.visible=not portrait
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
-	call_deferred("_refresh_map_extent")
+	call_deferred("_center_on_player")
 	call_deferred("_position_minimap")
 
 func _position_minimap()->void:
@@ -242,27 +240,14 @@ func _set_fixed_scale()->void:
 		return
 	canvas.HEX_SIZE=60.0
 	_map_base_size=canvas._map_pixel_size()
-	_refresh_map_extent()
+	canvas.custom_minimum_size=_map_base_size
+	canvas.size=_map_base_size
+	call_deferred("_center_on_player")
 	canvas.queue_redraw()
-
-func _refresh_map_extent()->void:
-	if canvas==null or map_scroll==null:
-		return
-	var viewport_size:=map_scroll.size
-	if viewport_size.x<=0.0 or viewport_size.y<=0.0:
-		return
-	var padding:=viewport_size*0.5
-	canvas.custom_minimum_size=_map_base_size+viewport_size
-	canvas.map_offset=padding
-	canvas.queue_redraw()
-
-func _scroll_to(pos:Vector2)->void:
-	map_scroll.scroll_horizontal=maxi(0,roundi(pos.x))
-	map_scroll.scroll_vertical=maxi(0,roundi(pos.y))
 
 func _center_on_player()->void:
 	if canvas==null or map_scroll==null or player_hex.x<0:
 		return
-	_refresh_map_extent()
-	var center:=canvas._hex_center(player_hex)
-	_scroll_to(center-map_scroll.size*0.5)
+	var player_center:=canvas._hex_center(player_hex)
+	canvas.position=(map_scroll.size*0.5-player_center).round()
+	canvas.queue_redraw()
