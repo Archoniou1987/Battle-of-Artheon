@@ -4,6 +4,7 @@ extends Control
 var HEX_SIZE:=20.0
 var map_offset:=Vector2.ZERO
 var visibility_radius:int=3 # Gameplay visibility, independent of viewport and camera scale.
+var debug_reveal_all:bool=false
 var vision_talent_bonus:int=0
 var vision_equipment_bonus:int=0
 var vision_effect_bonus:int=0
@@ -42,6 +43,11 @@ var loot_markers:Array[Vector2i]=[]
 
 func set_loot_markers(cells:Array[Vector2i])->void:
 	loot_markers=cells.duplicate()
+	queue_redraw()
+
+func set_debug_reveal_all(enabled:bool)->void:
+	debug_reveal_all=enabled
+	remember_visible()
 	queue_redraw()
 
 func set_generated(value:Dictionary)->void:
@@ -192,6 +198,8 @@ func _draw_loot_markers()->void:
 		draw_line(center+Vector2(-4.0,0.0),center+Vector2(4.0,0.0),Color(0.48,0.28,0.07),1.5,true)
 
 func _is_visible_hex(pos:Vector2i)->bool:
+	if debug_reveal_all and not generated.is_empty():
+		return true
 	if player_hex.x<0:
 		return false
 	# Odd-row offset coordinates -> axial coordinates, then hex distance.
