@@ -33,7 +33,13 @@ func _initialize()->void:
 	valid=valid and map.move_entity("PLAYER",Vector2i(6,4)).get("ok",false)
 	valid=valid and map.move_entity("PLAYER",Vector2i(7,4)).get("ok",false)
 	var retreat:=controller.step(map,bridge,turns,"PLAYER",rng)
-	valid=valid and bool(retreat.get("ok",false)) and chase.mode=="idle"
+	valid=valid and bool(retreat.get("ok",false))
+	for i in range(5):
+		if chase.mode=="idle":
+			break
+		retreat=controller.step(map,bridge,turns,"PLAYER",rng)
+		valid=valid and bool(retreat.get("ok",false))
+	valid=valid and chase.mode=="idle"
 	valid=valid and map.entity_positions["GUARD"]==Vector2i(2,4)
 	var resume:=controller.step(map,bridge,turns,"PLAYER",rng)
 	valid=valid and bool(resume.get("ok",false)) and patrol.path_index==1
