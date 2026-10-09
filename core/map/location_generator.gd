@@ -108,14 +108,21 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 				break
 		if not can_shape:
 			continue
+		var before_reachable:Dictionary=_reachable_cells(map,entrance)
+		var changed_neighbors:Array[Vector2i]=[]
 		for neighbor in passable_neighbors:
 			if neighbor!=guard_pos:
 				map.set_obstacle(neighbor,"object_pocket_wall",true)
-		var access:=HexPathfinder.new().find_path(map,entrance,guard_pos)
-		if not bool(access.get("ok",false)):
-			for neighbor in passable_neighbors:
-				if neighbor!=guard_pos:
-					map.set_obstacle(neighbor,"",false)
+				changed_neighbors.append(neighbor)
+		var after_reachable:Dictionary=_reachable_cells(map,entrance)
+		var valid_access:=after_reachable.has(guard_pos) and after_reachable.has(object_pos)
+		for previous_cell in before_reachable.keys():
+			if not after_reachable.has(previous_cell):
+				valid_access=false
+				break
+		if not valid_access:
+			for neighbor in changed_neighbors:
+				map.set_obstacle(neighbor,"",false)
 			continue
 		var object_id:="GEN_OBJECT_%02d"%object_cells.size()
 		var guard_id:="GEN_GUARD_%02d"%guarded_objects.size()
@@ -125,13 +132,14 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		reserved_guard_cells[guard_pos]=true
 		guarded_objects.append({"object_pos":object_pos,"guard_pos":guard_pos,"guard_id":guard_id})
 
+	var accessible:Dictionary=_reachable_cells(map,entrance)
 	var content_cells:Array[Vector2i]=[]
 	for r in range(safe_height):
 		for q in range(safe_width):
 			var content_pos:=Vector2i(q,r)
 			if content_pos==entrance or content_pos==exit or thematic_reserved.has(content_pos) or object_cells.has(content_pos) or reserved_guard_cells.has(content_pos):
 				continue
-			if map.cell(content_pos).is_passable():
+			if map.cell(content_pos).is_passable() and accessible.has(content_pos):
 				content_cells.append(content_pos)
 	_shuffle_cells(content_cells,rng)
 
@@ -151,7 +159,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	for region in region_result["regions"]:
 		var available:Array[Vector2i]=[]
 		for pos in region["cells"]:
-			if map.cell(pos).is_passable() and map.entities_at(pos).is_empty():
+			if accessible.has(pos) and map.cell(pos).is_passable() and map.entities_at(pos).is_empty():
 				available.append(pos)
 		_shuffle_cells(available,rng)
 		var count:int=mini(3,available.size())
@@ -283,3 +291,20 @@ static func _take_safe_cells(target:Array[Vector2i], source:Array[Vector2i], cou
 			target.append(pos)
 			source.remove_at(i)
 		i-=1
+
+static func _reachable_cells(map:TacticalMapState, start:Vector2i)->Dictionary:
+	var reachable:Dictionary={}
+	if not map.in_bounds(start) or not map.cell(start).is_passable():
+		return reachable
+	var frontier:Array[Vector2i]=[start]
+	reachable[start]=true
+	var index:=0
+	while index<frontier.size():
+		var current:Vector2i=frontier[index]
+		index+=1
+		for neighbor in map.neighbors(current,true):
+			if reachable.has(neighbor):
+				continue
+			reachable[neighbor]=true
+			frontier.append(neighbor)
+	return reachable
