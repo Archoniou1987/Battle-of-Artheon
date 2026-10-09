@@ -22,8 +22,10 @@ func _initialize()->void:
 		item_repo.add_item(item)
 		valid=valid and npc.receive_item(item_id,item_repo)
 
-	valid=valid and bool(map.move_entity("PLAYER",contact).get("ok",false))
-	var encounter:=bridge.encounter_at(map,contact)
+	var turns:=HexMapTurnService.new()
+	var movement:=turns.move_player(map,bridge,"PLAYER",contact,RandomNumberGenerator.new())
+	valid=valid and bool(movement.get("ok",false))
+	var encounter:Dictionary=movement.get("encounter",{})
 	valid=valid and bool(encounter.get("ok",false))
 	valid=valid and encounter.get("npc_instance_ids",[]).size()==3
 
@@ -41,7 +43,8 @@ func _initialize()->void:
 	valid=valid and String(combat_result.get("winning_team",""))=="players"
 	valid=valid and combat_result.get("dead_ids",[]).size()==3
 
-	var outcome:=MapCombatOutcomeService.resolve_group_victory(combat_result,map,bridge,npcs,player_character,item_repo,NpcPossessionLootService.new(1),{"common":100.0})
+	var outcome:=turns.resolve_group_victory(combat_result,map,bridge,encounter,player_character,item_repo,NpcPossessionLootService.new(1),{"common":100.0})
+	valid=valid and not turns.coordinator.combat_active
 	valid=valid and bool(outcome.get("ok",false))
 	valid=valid and int(outcome.get("defeated_count",0))==3
 	valid=valid and bridge.npc_at(map,contact).is_empty()
