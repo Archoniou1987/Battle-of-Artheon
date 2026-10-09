@@ -103,6 +103,7 @@ func _draw()->void:
 			elif explored_hexes.has(pos): tint=_cell_color(cell).lerp(Color(0.30,0.32,0.36),0.55)
 			draw_colored_polygon(_hex_points(center),tint)
 			draw_polyline(_closed_hex_points(center),Color(0.16,0.20,0.27),1.0,true)
+	_draw_region_outlines()
 	for patrol in generated.get("patrols",[]):
 		var points:=PackedVector2Array()
 		for pos in patrol.path:
@@ -133,6 +134,29 @@ func _draw()->void:
 		draw_polyline(_closed_hex_points(_hex_center(selected_hex)),Color(0.30,0.90,1.0),3.0,true)
 	if player_hex.x>=0:
 		_draw_badge(_hex_center(player_hex),"YOU",Color(0.35,0.80,1.0))
+
+func _draw_region_outlines()->void:
+	for region in generated.get("regions",[]):
+		var owned:Dictionary={}
+		for pos in region["cells"]:
+			owned[pos]=true
+		for pos in region["cells"]:
+			if not explored_hexes.has(pos):
+				continue
+			var vertices:=_hex_points(_hex_center(pos))
+			for side in range(6):
+				var a:Vector2=vertices[side]
+				var b:Vector2=vertices[(side+1)%6]
+				var midpoint:Vector2=(a+b)*0.5
+				var nearest:=Vector2i(-1,-1)
+				var distance:=INF
+				for neighbor in HexGrid.neighbors(pos):
+					var d:float=midpoint.distance_squared_to(_hex_center(neighbor))
+					if d<distance:
+						distance=d
+						nearest=neighbor
+				if not owned.has(nearest):
+					draw_line(a,b,Color(1.0,0.83,0.12,0.95),3.0,true)
 
 func _draw_markers(map:TacticalMapState)->void:
 	if _is_visible_hex(generated.entrance): _draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
