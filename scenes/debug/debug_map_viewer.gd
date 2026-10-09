@@ -233,9 +233,9 @@ func _set_zoom(value:float)->void:
 	var old_zoom:=zoom_level
 	var old_center:=Vector2(map_scroll.scroll_horizontal,map_scroll.scroll_vertical)+map_scroll.size*0.5
 	zoom_level=next_zoom
-	canvas.scale=Vector2.ONE*zoom_level
-	# A scaled Control keeps its original layout size. Reserve the scaled extent.
-	canvas.custom_minimum_size=canvas._map_pixel_size()*zoom_level
+	canvas.HEX_SIZE=20.0*zoom_level
+	canvas.custom_minimum_size=canvas._map_pixel_size()
+	canvas.queue_redraw()
 	if zoom_label!=null:
 		zoom_label.text="%d%%"%roundi(zoom_level*100.0)
 	var new_center:=old_center*zoom_level/maxf(old_zoom,0.01)
@@ -248,5 +248,5 @@ func _scroll_to(pos:Vector2)->void:
 func _center_on_player()->void:
 	if canvas==null or map_scroll==null or player_hex.x<0:
 		return
-	var center:=canvas._hex_center(player_hex)*zoom_level
+	var center:=canvas._hex_center(player_hex)
 	_scroll_to(center-map_scroll.size*0.5)
