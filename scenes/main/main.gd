@@ -3,7 +3,7 @@ extends Control
 const LOCATION_NAME := "Стартовая деревня"
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
-const MOBILE_RATIO := 1.65
+const PORTRAIT_NAV_COLUMNS := 3
 const HEADER_HEIGHT := 46.0
 const FOOTER_HEIGHT := 78.0
 const SERVICES := [
@@ -33,6 +33,9 @@ var dragging := false
 var drag_origin := Vector2.ZERO
 var drag_offset := 0.0
 var service_buttons: Array[Button] = []
+var footer: Control
+var portrait_nav: GridContainer
+var landscape_nav: HBoxContainer
 
 
 func _ready() -> void:
@@ -102,7 +105,8 @@ func _build_screen() -> void:
 		service_buttons.append(button)
 		panorama.add_child(button)
 
-	var footer := HBoxContainer.new()
+	landscape_nav = HBoxContainer.new()
+	var footer := landscape_nav
 	footer.custom_minimum_size.y = int(FOOTER_HEIGHT)
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
 	frame.add_child(footer)
@@ -114,6 +118,19 @@ func _build_screen() -> void:
 		button.add_theme_font_size_override("font_size", 14)
 		button.pressed.connect(_open_panel.bind(str(entry["name"])))
 		footer.add_child(button)
+
+	portrait_nav = GridContainer.new()
+	portrait_nav.columns = PORTRAIT_NAV_COLUMNS
+	portrait_nav.visible = false
+	frame.add_child(portrait_nav)
+	for entry in NAVIGATION:
+		var mobile_button := Button.new()
+		mobile_button.text = str(entry["symbol"]) + "\n" + str(entry["name"])
+		mobile_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mobile_button.custom_minimum_size.y = 76
+		mobile_button.add_theme_font_size_override("font_size", 18)
+		mobile_button.pressed.connect(_open_panel.bind(str(entry["name"])))
+		portrait_nav.add_child(mobile_button)
 
 	popup = PanelContainer.new()
 	popup.visible = false
@@ -134,13 +151,14 @@ func _build_screen() -> void:
 	contents.add_child(close)
 
 
-func _is_mobile_layout() -> bool:
-	return OS.has_feature("mobile") or (location_area.size.y > 0.0 and location_area.size.x / location_area.size.y < MOBILE_RATIO)
-
-
 func _layout_panorama() -> void:
 	if location_area == null or panorama == null:
 		return
+	var portrait := size.y > size.x
+	if portrait_nav != null:
+		portrait_nav.visible = portrait
+	if landscape_nav != null:
+		landscape_nav.visible = not portrait
 	var available := location_area.size
 	if available.x <= 0.0 or available.y <= 0.0:
 		return
