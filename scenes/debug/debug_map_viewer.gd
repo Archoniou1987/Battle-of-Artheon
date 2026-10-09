@@ -6,13 +6,10 @@ var target_hex:=Vector2i(-1,-1)
 var planned_path:Array[Vector2i]=[]
 var move_status:Label
 var move_button:Button
-var zoom_level:float=1.8
+var zoom_level:float=3.0
 var _map_base_size:=Vector2.ZERO
-const MIN_ZOOM:=0.8
-const MAX_ZOOM:=3.0
-const ZOOM_STEP:=0.25
 var map_scroll:ScrollContainer
-var zoom_label:Label
+var mini_map:Control
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -114,22 +111,6 @@ func _ready()->void:
 	map_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.follow_focus=false
-	var camera_controls:=HBoxContainer.new()
-	$Root/Sidebar.add_child(camera_controls)
-	$Root/Sidebar.move_child(camera_controls,1)
-	for caption in ["−","+","Центр"]:
-		var control:=Button.new()
-		control.text=caption
-		control.custom_minimum_size=Vector2(75,46)
-		camera_controls.add_child(control)
-		if caption=="−":
-			control.pressed.connect(func()->void: _set_zoom(zoom_level-ZOOM_STEP))
-		elif caption=="+":
-			control.pressed.connect(func()->void: _set_zoom(zoom_level+ZOOM_STEP))
-		else:
-			control.pressed.connect(_center_on_player)
-	zoom_label=Label.new()
-	camera_controls.add_child(zoom_label)
 	var controls:=HBoxContainer.new()
 	$Root/Sidebar.add_child(controls)
 	$Root/Sidebar.move_child(controls,1)
@@ -155,7 +136,7 @@ func _regenerate()->void:
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
-	_set_zoom(zoom_level)
+	_set_fixed_scale()
 	call_deferred("_center_on_player")
 	playable_map=generated.map
 	player_hex=generated.entrance
@@ -227,22 +208,15 @@ func _move_one_step()->void:
 	planned_path.remove_at(0)
 	move_status.text="Прибытие" if planned_path.size()==1 else "Осталось: %d"%(planned_path.size()-1)
 	canvas.set_player_view(player_hex,target_hex,planned_path)
+	call_deferred("_center_on_player")
 
-func _set_zoom(value:float)->void:
-	var next_zoom:=clampf(value,MIN_ZOOM,MAX_ZOOM)
+func _set_fixed_scale()->void:
 	if canvas==null:
 		return
-	var old_zoom:=zoom_level
-	var old_center:=Vector2(map_scroll.scroll_horizontal,map_scroll.scroll_vertical)+map_scroll.size*0.5-canvas.map_offset
-	zoom_level=next_zoom
-	canvas.HEX_SIZE=20.0*zoom_level
+	canvas.HEX_SIZE=60.0
 	_map_base_size=canvas._map_pixel_size()
 	_refresh_map_extent()
 	canvas.queue_redraw()
-	if zoom_label!=null:
-		zoom_label.text="%d%%"%roundi(zoom_level*100.0)
-	var new_center:=old_center*zoom_level/maxf(old_zoom,0.01)+canvas.map_offset
-	call_deferred("_scroll_to",new_center-map_scroll.size*0.5)
 
 func _refresh_map_extent()->void:
 	if canvas==null or map_scroll==null:
@@ -250,8 +224,9 @@ func _refresh_map_extent()->void:
 	var viewport_size:=map_scroll.size
 	if viewport_size.x<=0.0 or viewport_size.y<=0.0:
 		return
-	canvas.custom_minimum_size=Vector2(maxf(_map_base_size.x,viewport_size.x),maxf(_map_base_size.y,viewport_size.y))
-	canvas.map_offset=Vector2(maxf(0.0,(viewport_size.x-_map_base_size.x)*0.5),maxf(0.0,(viewport_size.y-_map_base_size.y)*0.5))
+	var padding:=viewport_size*0.5
+	canvas.custom_minimum_size=_map_base_size+viewport_size
+	canvas.map_offset=padding
 	canvas.queue_redraw()
 
 func _scroll_to(pos:Vector2)->void:
