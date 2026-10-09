@@ -4,6 +4,7 @@ extends RefCounted
 var patrol:HexPatrolState
 var chase:HexNpcChaseState
 var returning_to_route:bool=false
+# Patrol waypoint stays fixed while chasing; return targets the interruption cell.
 
 func _init(p_patrol:HexPatrolState,p_chase:HexNpcChaseState)->void:
 	patrol=p_patrol
