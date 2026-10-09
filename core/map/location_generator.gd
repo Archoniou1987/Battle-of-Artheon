@@ -141,6 +141,20 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		map.add_area(area,[resource_cells[i]])
 	for i in range(npc_cells.size()):
 		map.place_entity("GEN_NPC_%02d"%i,npc_cells[i])
+	# Populate thematic pockets independently of ordinary map content.
+	var region_npcs:Array[Dictionary]=[]
+	for region in region_result["regions"]:
+		var available:Array[Vector2i]=[]
+		for pos in region["cells"]:
+			if map.cell(pos).is_passable() and map.entities_at(pos).is_empty():
+				available.append(pos)
+		_shuffle_cells(available,rng)
+		var count:int=mini(3,available.size())
+		for j in range(count):
+			var entity_id:="GEN_REGION_NPC_%02d_%02d"%[region_npcs.size(),j]
+			var npc_pos:Vector2i=available[j]
+			if map.place_entity(entity_id,npc_pos):
+				region_npcs.append({"entity_id":entity_id,"region_id":region["region_id"],"region_type":region["region_type"],"pos":npc_pos})
 	var encounter_service:=HexEncounterService.new()
 	for i in range(encounter_cells.size()):
 		var encounter:=HexEncounter.new("GEN_ENCOUNTER_%02d"%i,HexEncounter.TRIGGER_ENTER,"damage",{"amount":1},true)
@@ -244,7 +258,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,
 		"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,
 		"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols,"boss_groups":boss_groups,
-		"pockets":region_result["pockets"],"regions":region_result["regions"],
+		"pockets":region_result["pockets"],"regions":region_result["regions"],"region_npcs":region_npcs,
 		"safe_entrance_radius":SAFE_ENTRANCE_RADIUS
 	}
 
