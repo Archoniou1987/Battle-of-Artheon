@@ -11,6 +11,7 @@ var movement_progress:ProgressBar
 var stop_button:Button
 var game_nav:GridContainer
 var reveal_map_toggle:CheckButton
+var random_seed_button:Button
 var _camera_ready:=false
 var _moving:=false
 var _stop_requested:=false
@@ -167,6 +168,25 @@ func _ready()->void:
 	add_child(_loot_refresh_timer)
 	_loot_refresh_timer.start()
 	$Root/Sidebar/SeedRow/Regenerate.pressed.connect(_regenerate)
+	seed_input.custom_minimum_size=Vector2(115,54)
+	seed_input.add_theme_font_size_override("font_size",21)
+	var regenerate_button:Button=$Root/Sidebar/SeedRow/Regenerate
+	regenerate_button.text="Создать"
+	regenerate_button.custom_minimum_size=Vector2(110,54)
+	regenerate_button.add_theme_font_size_override("font_size",19)
+	random_seed_button=Button.new()
+	random_seed_button.text="Случайная"
+	random_seed_button.custom_minimum_size=Vector2(130,54)
+	random_seed_button.add_theme_font_size_override("font_size",18)
+	random_seed_button.pressed.connect(_random_seed)
+	$Root/Sidebar.add_child(random_seed_button)
+	$Root/Sidebar.move_child(random_seed_button,2)
+	_regenerate()
+
+func _random_seed()->void:
+	var rng:=RandomNumberGenerator.new()
+	rng.randomize()
+	seed_input.value=rng.randi_range(1,999999)
 	_regenerate()
 
 func _regenerate()->void:
@@ -207,7 +227,8 @@ func _regenerate()->void:
 	var boss_guard_count:=0
 	for group in generated.boss_groups:
 		boss_guard_count+=group.guard_ids.size()
-	summary.text="Map: %dx%d\nBlocked: %d\nResources: %d\nObjects: %d\nNPC: %d\nEncounters: %d\nObject Guards: %d\nRoute Guards: %d\nPatrols: %d\nBosses: %d\nBoss Guards: %d"%[
+	summary.text="Seed: %d\nCandidates: %d\nPockets: %d\nRegions: %d\nAttempts: %d\nGeometry rejects: %d\nMap: %dx%d\nBlocked: %d\nResources: %d\nObjects: %d\nNPC: %d\nEncounters: %d\nObject Guards: %d\nRoute Guards: %d\nPatrols: %d\nBosses: %d\nBoss Guards: %d"%[
+		seed_value,int(generated.get("region_candidates",0)),generated.get("pockets",[]).size(),generated.get("regions",[]).size(),int(generated.get("pocket_attempts",0)),int(generated.get("geometry_rejections",0)),
 		map.width,map.height,blocked,
 		generated.resource_cells.size(),generated.object_cells.size(),generated.npc_cells.size(),
 		generated.encounter_cells.size(),generated.guarded_objects.size(),generated.route_guards.size(),
