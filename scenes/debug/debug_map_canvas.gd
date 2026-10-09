@@ -3,7 +3,14 @@ extends Control
 
 var HEX_SIZE:=20.0
 var map_offset:=Vector2.ZERO
-var visibility_radius:=4 # Retained for future fog-of-war; camera does not hide map cells.
+var visibility_radius:int=3 # Gameplay visibility, independent of viewport and camera scale.
+var vision_talent_bonus:int=0
+var vision_equipment_bonus:int=0
+var vision_effect_bonus:int=0
+
+func effective_visibility_radius()->int:
+	return maxi(0,visibility_radius+vision_talent_bonus+vision_equipment_bonus+vision_effect_bonus)
+
 const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
@@ -35,6 +42,8 @@ func _gui_input(event:InputEvent)->void:
 	if not event is InputEventMouseButton or not event.pressed or event.button_index!=MOUSE_BUTTON_LEFT:
 		return
 	for cell in loot_markers:
+		if not _is_visible_hex(cell):
+			continue
 		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
 		if event.position.distance_to(center)<=10.0:
 			loot_hex_selected.emit(cell)
@@ -46,7 +55,7 @@ func _gui_input(event:InputEvent)->void:
 	for r in range(map.height):
 		for q in range(map.width):
 			var pos:=Vector2i(q,r)
-			if Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
+			if _is_visible_hex(pos) and Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
 				hex_selected.emit(pos)
 				accept_event()
 				return
@@ -75,12 +84,21 @@ func _draw()->void:
 			var pos:=Vector2i(q,r)
 			var center:=_hex_center(pos)
 			var cell:MapCell=map.cell(pos)
-			draw_colored_polygon(_hex_points(center),_cell_color(cell))
+			draw_colored_polygon(_hex_points(center),_cell_color(cell) if _is_visible_hex(pos) else Color(0.31,0.32,0.34))
 			draw_polyline(_closed_hex_points(center),Color(0.16,0.20,0.27),1.0,true)
 	for patrol in generated.get("patrols",[]):
 		var points:=PackedVector2Array()
 		for pos in patrol.path:
-			points.append(_hex_center(pos))
+			if _is_visible_hex(pos):
+				if points.size()>=2:
+					draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
+				points.clear()
+				points.append(_hex_center(pos))
+			elif points.size()>=2:
+				draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
+				points.clear()
+			else:
+				points.clear()
 		if points.size()>=2:
 			draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
 		for pause in patrol.get("pause_points",[]):
@@ -131,7 +149,14 @@ func _draw_loot_markers()->void:
 		draw_line(center+Vector2(-2.0,0.0),center+Vector2(2.0,0.0),Color(0.48,0.28,0.07),1.5,true)
 
 func _is_visible_hex(pos:Vector2i)->bool:
-	return true
+	if player_hex.x<0:
+		return false
+	# Odd-row offset coordinates -> axial coordinates, then hex distance.
+	var aq:int=pos.x-(pos.y-(pos.y&1))/2
+	var bq:int=player_hex.x-(player_hex.y-(player_hex.y&1))/2
+	var dq:int=aq-bq
+	var dr:int=pos.y-player_hex.y
+	return maxi(absi(dq),maxi(absi(dr),absi(dq+dr)))<=effective_visibility_radius()
 
 func _cell_color(cell:MapCell)->Color:
 	if cell.blocked:
