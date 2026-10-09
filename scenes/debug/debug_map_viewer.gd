@@ -111,6 +111,15 @@ func _ready()->void:
 	map_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.follow_focus=false
+	mini_map=DebugMiniMap.new()
+	mini_map.custom_minimum_size=Vector2(155,155)
+	mini_map.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	mini_map.offset_left=-167.0
+	mini_map.offset_top=-167.0
+	mini_map.offset_right=-12.0
+	mini_map.offset_bottom=-12.0
+	$Root/MapPanel.add_child(mini_map)
 	var controls:=HBoxContainer.new()
 	$Root/Sidebar.add_child(controls)
 	$Root/Sidebar.move_child(controls,1)
@@ -144,6 +153,7 @@ func _regenerate()->void:
 	target_hex=Vector2i(-1,-1)
 	planned_path.clear()
 	canvas.set_player_view(player_hex,target_hex,planned_path)
+	mini_map.update_map(playable_map,player_hex)
 	if move_status!=null:
 		move_status.text="Выберите клетку"
 	refresh_loot_markers()
@@ -208,6 +218,7 @@ func _move_one_step()->void:
 	planned_path.remove_at(0)
 	move_status.text="Прибытие" if planned_path.size()==1 else "Осталось: %d"%(planned_path.size()-1)
 	canvas.set_player_view(player_hex,target_hex,planned_path)
+	mini_map.update_map(playable_map,player_hex)
 	call_deferred("_center_on_player")
 
 func _set_fixed_scale()->void:
