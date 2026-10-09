@@ -111,6 +111,7 @@ func _ready()->void:
 	map_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_scroll.follow_focus=false
+	map_scroll.scroll_deadzone=100000
 	mini_map=DebugMiniMap.new()
 	mini_map.custom_minimum_size=Vector2.ZERO
 	mini_map.size=Vector2(155,155)
