@@ -25,6 +25,9 @@ var mini_map:Control
 var patrol_runtime:=MapPatrolRuntime.new()
 var battle_dialog:AcceptDialog
 var battle_entity_id:String=""
+var battle_group_ids:Array[String]=[]
+var battle_group_state:GroupCombatState
+var battle_combat_state:CombatState
 var battle_active:=false
 var battle_defeat_button:Button
 var chase_entity_id:String=""
@@ -204,6 +207,9 @@ func _regenerate()->void:
 	patrol_runtime.configure(playable_map,generated.patrols)
 	battle_active=false
 	battle_entity_id=""
+	battle_group_ids.clear()
+	battle_group_state=null
+	battle_combat_state=null
 	chase_entity_id=""
 	if battle_dialog!=null: battle_dialog.hide()
 	_moving=false
@@ -508,8 +514,22 @@ func _npc_at(pos:Vector2i)->String:
 
 func _start_test_battle(entity_id:String)->void:
 	if battle_active or entity_id.is_empty() or not playable_map.entity_positions.has(entity_id): return
+	battle_group_ids.clear()
+	var contact_pos:Vector2i=playable_map.entity_positions[entity_id]
+	for candidate in playable_map.entities_at(contact_pos):
+		if candidate!="PLAYER":
+			battle_group_ids.append(candidate)
+	if battle_group_ids.is_empty(): return
+	battle_combat_state=CombatState.new()
+	battle_combat_state.add_combatant(CombatantState.new("PLAYER","Hero",1,100,30))
+	battle_group_state=GroupCombatState.new(battle_combat_state)
+	battle_group_state.add_member("A","PLAYER")
+	for candidate in battle_group_ids:
+		battle_combat_state.add_combatant(CombatantState.new(candidate,candidate,1,80,0))
+		battle_group_state.add_member("B",candidate)
+	battle_group_state.set_active_opponent("PLAYER",battle_group_ids[0])
 	battle_active=true
-	battle_entity_id=entity_id
+	battle_entity_id=battle_group_ids[0]
 	battle_defeat_button.visible=canvas._entity_roles.get(entity_id,"") in ["B","BG"]
 	_moving=false
 	_stop_requested=false
@@ -520,13 +540,18 @@ func _start_test_battle(entity_id:String)->void:
 	move_status.text="Начался бой!"
 	_update_movement_panel()
 	canvas.set_player_view(player_hex,target_hex,planned_path)
-	battle_dialog.popup_centered(Vector2i(320,160))
+	battle_dialog.dialog_text="Тестовое столкновение: %d противников.\nПодключён GroupCombatState; реальное разрешение раундов пока в отладочном бою."%battle_group_ids.size()
+	battle_dialog.popup_centered(Vector2i(380,180))
 
 func _finish_test_battle()->void:
 	if not battle_active: return
 	battle_active=false
-	if not battle_entity_id.is_empty():
-		playable_map.remove_entity(battle_entity_id)
+	# Placeholder victory removes all members of the contacted hex, never just one.
+	for defeated_id in battle_group_ids:
+		playable_map.remove_entity(defeated_id)
+	battle_group_ids.clear()
+	battle_group_state=null
+	battle_combat_state=null
 	battle_entity_id=""
 	battle_dialog.hide()
 	move_status.text="Тестовый бой завершён"
@@ -541,6 +566,9 @@ func _finish_test_defeat()->void:
 	if not battle_active: return
 	battle_active=false
 	battle_entity_id=""
+	battle_group_ids.clear()
+	battle_group_state=null
+	battle_combat_state=null
 	battle_dialog.hide()
 	# Test defeat: retain boss/guard and move player to the safe entrance.
 	playable_map.entity_positions["PLAYER"]=canvas.generated.entrance
