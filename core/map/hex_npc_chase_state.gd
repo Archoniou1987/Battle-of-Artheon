@@ -8,6 +8,7 @@ var detection_radius:int=2
 var chase_radius:int=4
 var decided:bool=false
 var rejected:bool=false
+var wait_for_detection_exit:bool=false
 
 func _init(id:String,home:Vector2i,detect:int=2,chase:int=4)->void:
 	npc_id=id
@@ -29,8 +30,9 @@ func step(map:TacticalMapState,bridge:MapNpcBridge,player_id:String,rng:RandomNu
 		if HexGrid.distance(position,player_pos)>detection_radius:
 			decided=false
 			rejected=false
+			wait_for_detection_exit=false
 			return {"ok":false,"reason":"not_detected","mode":mode}
-		if decided and rejected:
+		if wait_for_detection_exit or (decided and rejected):
 			return {"ok":false,"reason":"not_aggressive","mode":mode}
 		var chance:=clampf(npc.aggression,0.0,100.0)
 		decided=true
@@ -47,6 +49,7 @@ func step(map:TacticalMapState,bridge:MapNpcBridge,player_id:String,rng:RandomNu
 			var next:=_next_step(map,position,player_pos,true)
 			if next==position or HexGrid.distance(home_position,next)>chase_radius:
 				mode="returning"
+				wait_for_detection_exit=true
 			else:
 				var moved:=map.move_entity(npc_id,next)
 				if bool(moved.get("ok",false)):
