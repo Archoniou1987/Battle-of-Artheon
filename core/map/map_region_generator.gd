@@ -22,6 +22,8 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 	for definition in REGION_TYPES:
 		if rng.randf()<float(definition["chance"]):
 			candidates.append(definition)
+	if candidates.is_empty():
+		candidates.append(REGION_TYPES[rng.randi_range(0,REGION_TYPES.size()-1)])
 	candidates.sort_custom(func(a:Dictionary,b:Dictionary)->bool: return int(a["priority"])>int(b["priority"]))
 	var candidate_count:=candidates.size()
 	var cap:int=int(ceil(float(map.width*map.height)*3.0/400.0))
@@ -134,4 +136,31 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 			reserved[pos]=true
 		var region_id:="REGION_%02d"%regions.size()
 		regions.append({"region_id":region_id,"region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""})
+	# A guaranteed thematic region for 20x20 maps, independent of pocket geometry.
+	if regions.is_empty():
+		var fallback:Array[Vector2i]=[]
+		for y in range(map.height):
+			for x in range(map.width):
+				var pos:=Vector2i(x,y)
+				if not protected.has(pos) and not reserved.has(pos) and HexGrid.distance(pos,entrance)>3 and HexGrid.distance(pos,exit)>2:
+					fallback.append(pos)
+		if not fallback.is_empty():
+			var selected:Array[Vector2i]=[fallback[rng.randi_range(0,fallback.size()-1)]]
+			var owned:Dictionary={selected[0]:true}
+			while selected.size()<8:
+				var options:Array[Vector2i]=[]
+				for pos in selected:
+					for neighbor in map.neighbors(pos):
+						if fallback.has(neighbor) and not owned.has(neighbor) and not options.has(neighbor):
+							options.append(neighbor)
+				if options.is_empty():
+					break
+				var next:Vector2i=options[rng.randi_range(0,options.size()-1)]
+				selected.append(next)
+				owned[next]=true
+			for pos in selected:
+				map.set_obstacle(pos,"",false)
+				map.set_terrain(pos,"grass",1.0)
+			var definition:Dictionary=REGION_TYPES[rng.randi_range(0,REGION_TYPES.size()-1)]
+			regions.append({"region_id":"REGION_00","region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""})
 	return {"pockets":pockets,"regions":regions,"region_candidates":candidate_count,"pocket_attempts":attempts_total,"geometry_rejections":rejected_geometry}
