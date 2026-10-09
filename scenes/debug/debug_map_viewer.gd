@@ -314,7 +314,7 @@ func _process(delta:float)->void:
 func _set_fixed_scale()->void:
 	if canvas==null:
 		return
-	canvas.HEX_SIZE=60.0
+	canvas.HEX_SIZE=40.0
 	_map_base_size=canvas._map_pixel_size()
 	canvas.custom_minimum_size=_map_base_size
 	canvas.size=_map_base_size
