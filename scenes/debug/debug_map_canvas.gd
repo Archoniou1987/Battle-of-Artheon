@@ -3,7 +3,7 @@ extends Control
 
 var HEX_SIZE:=20.0
 var map_offset:=Vector2.ZERO
-var visibility_radius:=4
+var visibility_radius:=4 # Retained for future fog-of-war; camera does not hide map cells.
 const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
@@ -36,7 +36,7 @@ func _gui_input(event:InputEvent)->void:
 		return
 	for cell in loot_markers:
 		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
-		if _is_visible_hex(cell) and event.position.distance_to(center)<=10.0:
+		if event.position.distance_to(center)<=10.0:
 			loot_hex_selected.emit(cell)
 			accept_event()
 			return
@@ -46,7 +46,7 @@ func _gui_input(event:InputEvent)->void:
 	for r in range(map.height):
 		for q in range(map.width):
 			var pos:=Vector2i(q,r)
-			if _is_visible_hex(pos) and Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
+			if Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
 				hex_selected.emit(pos)
 				accept_event()
 				return
@@ -73,8 +73,6 @@ func _draw()->void:
 	for r in range(map.height):
 		for q in range(map.width):
 			var pos:=Vector2i(q,r)
-			if player_hex.x>=0 and HexGrid.distance(player_hex,pos)>visibility_radius:
-				continue
 			var center:=_hex_center(pos)
 			var cell:MapCell=map.cell(pos)
 			draw_colored_polygon(_hex_points(center),_cell_color(cell))
@@ -82,11 +80,6 @@ func _draw()->void:
 	for patrol in generated.get("patrols",[]):
 		var points:=PackedVector2Array()
 		for pos in patrol.path:
-			if player_hex.x>=0 and HexGrid.distance(player_hex,pos)>visibility_radius:
-				if points.size()>=2:
-					draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
-				points.clear()
-				continue
 			points.append(_hex_center(pos))
 		if points.size()>=2:
 			draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
@@ -138,7 +131,7 @@ func _draw_loot_markers()->void:
 		draw_line(center+Vector2(-2.0,0.0),center+Vector2(2.0,0.0),Color(0.48,0.28,0.07),1.5,true)
 
 func _is_visible_hex(pos:Vector2i)->bool:
-	return player_hex.x<0 or HexGrid.distance(player_hex,pos)<=visibility_radius
+	return true
 
 func _cell_color(cell:MapCell)->Color:
 	if cell.blocked:
