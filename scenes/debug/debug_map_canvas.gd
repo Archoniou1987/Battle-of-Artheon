@@ -20,11 +20,23 @@ signal hex_selected(cell:Vector2i)
 var player_hex:=Vector2i(-1,-1)
 var selected_hex:=Vector2i(-1,-1)
 var preview_path:Array[Vector2i]=[]
+var explored_hexes:Dictionary={}
+
+func remember_visible()->void:
+	if generated.is_empty() or player_hex.x<0: return
+	var map:TacticalMapState=generated.map
+	for pos in map.cells.keys():
+		if _is_visible_hex(pos):
+			explored_hexes[pos]=true
+			map.cell(pos).discovered=true
+	queue_redraw()
+
 
 func set_player_view(pos:Vector2i,selected:Vector2i,path:Array[Vector2i])->void:
 	player_hex=pos
 	selected_hex=selected
 	preview_path=path.duplicate()
+	remember_visible()
 	queue_redraw()
 var loot_markers:Array[Vector2i]=[]
 
@@ -34,6 +46,8 @@ func set_loot_markers(cells:Array[Vector2i])->void:
 
 func set_generated(value:Dictionary)->void:
 	generated=value
+	explored_hexes.clear()
+	player_hex=Vector2i(-1,-1)
 	_build_entity_roles()
 	custom_minimum_size=_map_pixel_size()
 	queue_redraw()
@@ -55,7 +69,7 @@ func _gui_input(event:InputEvent)->void:
 	for r in range(map.height):
 		for q in range(map.width):
 			var pos:=Vector2i(q,r)
-			if _is_visible_hex(pos) and Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
+			if explored_hexes.has(pos) and Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
 				hex_selected.emit(pos)
 				accept_event()
 				return
@@ -84,7 +98,10 @@ func _draw()->void:
 			var pos:=Vector2i(q,r)
 			var center:=_hex_center(pos)
 			var cell:MapCell=map.cell(pos)
-			draw_colored_polygon(_hex_points(center),_cell_color(cell) if _is_visible_hex(pos) else Color(0.31,0.32,0.34))
+			var tint:=Color(0.12,0.13,0.17)
+			if _is_visible_hex(pos): tint=_cell_color(cell)
+			elif explored_hexes.has(pos): tint=_cell_color(cell).lerp(Color(0.30,0.32,0.36),0.55)
+			draw_colored_polygon(_hex_points(center),tint)
 			draw_polyline(_closed_hex_points(center),Color(0.16,0.20,0.27),1.0,true)
 	for patrol in generated.get("patrols",[]):
 		var points:=PackedVector2Array()
@@ -110,9 +127,9 @@ func _draw()->void:
 	if preview_path.size()>1:
 		var line:=PackedVector2Array()
 		for pos in preview_path:
-			if _is_visible_hex(pos): line.append(_hex_center(pos))
+			if explored_hexes.has(pos): line.append(_hex_center(pos))
 		draw_polyline(line,Color(0.20,0.85,1.0),3.0,true)
-	if selected_hex.x>=0 and _is_visible_hex(selected_hex):
+	if selected_hex.x>=0 and explored_hexes.has(selected_hex):
 		draw_polyline(_closed_hex_points(_hex_center(selected_hex)),Color(0.30,0.90,1.0),3.0,true)
 	if player_hex.x>=0:
 		_draw_badge(_hex_center(player_hex),"YOU",Color(0.35,0.80,1.0))
@@ -154,9 +171,7 @@ func _is_visible_hex(pos:Vector2i)->bool:
 	# Odd-row offset coordinates -> axial coordinates, then hex distance.
 	var aq:int=pos.x-(pos.y-(pos.y&1))/2
 	var bq:int=player_hex.x-(player_hex.y-(player_hex.y&1))/2
-	var dq:int=aq-bq
-	var dr:int=pos.y-player_hex.y
-	return maxi(absi(dq),maxi(absi(dr),absi(dq+dr)))<=effective_visibility_radius()
+	return HexGrid.distance(pos,player_hex)<=effective_visibility_radius()
 
 func _cell_color(cell:MapCell)->Color:
 	if cell.blocked:
