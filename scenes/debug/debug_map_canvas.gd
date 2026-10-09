@@ -3,7 +3,7 @@ extends Control
 
 var HEX_SIZE:=20.0
 var map_offset:=Vector2.ZERO
-var visibility_radius:=7
+var visibility_radius:=4
 const SQRT3:=1.7320508075688772
 
 var generated:Dictionary={}
@@ -36,7 +36,7 @@ func _gui_input(event:InputEvent)->void:
 		return
 	for cell in loot_markers:
 		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
-		if event.position.distance_to(center)<=10.0:
+		if _is_visible_hex(cell) and event.position.distance_to(center)<=10.0:
 			loot_hex_selected.emit(cell)
 			accept_event()
 			return
@@ -92,7 +92,7 @@ func _draw()->void:
 			draw_polyline(points,Color(0.95,0.72,0.20),3.0,true)
 		for pause in patrol.get("pause_points",[]):
 			var pause_index:int=int(pause.get("path_index",-1))
-			if pause_index>=0 and pause_index<patrol.path.size():
+			if pause_index>=0 and pause_index<patrol.path.size() and _is_visible_hex(patrol.path[pause_index]):
 				draw_circle(_hex_center(patrol.path[pause_index]),5.0,Color(1.0,0.90,0.35),false,2.0,true)
 	_draw_markers(map)
 	_draw_loot_markers()
