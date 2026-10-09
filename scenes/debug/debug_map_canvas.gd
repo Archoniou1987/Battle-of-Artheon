@@ -59,7 +59,7 @@ func _gui_input(event:InputEvent)->void:
 		if not _is_visible_hex(cell):
 			continue
 		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
-		if event.position.distance_to(center)<=10.0:
+		if event.position.distance_to(center)<=14.0:
 			loot_hex_selected.emit(cell)
 			accept_event()
 			return
@@ -161,16 +161,14 @@ func _draw_loot_markers()->void:
 	for cell in loot_markers:
 		if not _is_visible_hex(cell): continue
 		var center:=_hex_center(cell)+Vector2(HEX_SIZE*0.48,-HEX_SIZE*0.42)
-		draw_circle(center,7.0,Color(0.98,0.77,0.25))
-		draw_arc(center,6.0,0.0,TAU,20,Color(0.48,0.28,0.07),1.4,true)
-		draw_line(center+Vector2(-2.0,0.0),center+Vector2(2.0,0.0),Color(0.48,0.28,0.07),1.5,true)
+		draw_circle(center,11.0,Color(0.98,0.77,0.25))
+		draw_arc(center,10.0,0.0,TAU,20,Color(0.48,0.28,0.07),1.4,true)
+		draw_line(center+Vector2(-4.0,0.0),center+Vector2(4.0,0.0),Color(0.48,0.28,0.07),1.5,true)
 
 func _is_visible_hex(pos:Vector2i)->bool:
 	if player_hex.x<0:
 		return false
 	# Odd-row offset coordinates -> axial coordinates, then hex distance.
-	var aq:int=pos.x-(pos.y-(pos.y&1))/2
-	var bq:int=player_hex.x-(player_hex.y-(player_hex.y&1))/2
 	return HexGrid.distance(pos,player_hex)<=effective_visibility_radius()
 
 func _cell_color(cell:MapCell)->Color:
@@ -183,11 +181,12 @@ func _cell_color(cell:MapCell)->Color:
 	return Color(0.20,0.38,0.24)
 
 func _draw_badge(center:Vector2,label:String,color:Color)->void:
-	draw_circle(center,8.5,color)
+	draw_circle(center,17.0,Color(0.035,0.045,0.06))
+	draw_circle(center,15.0,color)
 	var font:=ThemeDB.fallback_font
-	var size:=9 if label.length()<=2 else 7
+	var size:=17 if label.length()<=2 else 13
 	var width:=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,size).x
-	draw_string(font,center+Vector2(-width*0.5,3.0),label,HORIZONTAL_ALIGNMENT_LEFT,-1,size,Color(0.04,0.05,0.07))
+	draw_string(font,center+Vector2(-width*0.5,float(size)*0.34),label,HORIZONTAL_ALIGNMENT_LEFT,-1,size,Color(0.04,0.05,0.07))
 
 func _hex_center(pos:Vector2i)->Vector2:
 	var stagger:=0.5 if pos.y%2!=0 else 0.0
