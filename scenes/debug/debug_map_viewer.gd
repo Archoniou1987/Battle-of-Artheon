@@ -249,5 +249,27 @@ func _center_on_player()->void:
 	if canvas==null or map_scroll==null or player_hex.x<0:
 		return
 	var player_center:=canvas._hex_center(player_hex)
-	canvas.position=(map_scroll.size*0.5-player_center).round()
+	var viewport_size:=map_scroll.size
+	var desired:=viewport_size*0.5-player_center
+	# Clamp camera to the real map edges. At a border the player moves off-center,
+	# rather than allowing empty space beyond the map.
+	var first:=canvas._hex_center(Vector2i(0,0))
+	var last:=canvas._hex_center(Vector2i(playable_map.width-1,playable_map.height-1))
+	var left_edge:=first.x-canvas.HEX_SIZE*0.8660254
+	var right_edge:=last.x+canvas.HEX_SIZE*0.8660254
+	var top_edge:=first.y-canvas.HEX_SIZE
+	var bottom_edge:=last.y+canvas.HEX_SIZE
+	var min_x:=viewport_size.x-right_edge
+	var max_x:=-left_edge
+	var min_y:=viewport_size.y-bottom_edge
+	var max_y:=-top_edge
+	if min_x>max_x:
+		desired.x=(min_x+max_x)*0.5
+	else:
+		desired.x=clampf(desired.x,min_x,max_x)
+	if min_y>max_y:
+		desired.y=(min_y+max_y)*0.5
+	else:
+		desired.y=clampf(desired.y,min_y,max_y)
+	canvas.position=desired.round()
 	canvas.queue_redraw()
