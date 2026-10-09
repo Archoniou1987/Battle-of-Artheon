@@ -8,6 +8,22 @@ const REGION_TYPES := [
 	{"id":"ruins","chance":0.40,"priority":10}
 ]
 const ATTEMPTS := 60
+const DIFFICULTY_MIN := 1
+const DIFFICULTY_MAX := 5
+
+static func difficulty_profile(tier:int)->Dictionary:
+	var level:int=clampi(tier,DIFFICULTY_MIN,DIFFICULTY_MAX)
+	return {
+		"difficulty_tier":level,
+		"npc_density_multiplier":1.0+float(level-1)*0.25,
+		"npc_power_multiplier":1.0+float(level-1)*0.20,
+		"loot_quality_multiplier":1.0+float(level-1)*0.35,
+		"max_npcs_per_hex":mini(4,1+level)
+	}
+
+static func _set_region_difficulty(region:Dictionary,rng:RandomNumberGenerator)->void:
+	region.merge(difficulty_profile(rng.randi_range(DIFFICULTY_MIN,DIFFICULTY_MAX)),true)
+
 
 static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, main_path:Array[Vector2i], rng:RandomNumberGenerator)->Dictionary:
 	var protected:Dictionary={}
@@ -95,7 +111,9 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 		if regions.size()<cap and not candidates.is_empty():
 			var definition:Dictionary=candidates.pop_front()
 			var region_id:="REGION_%02d"%regions.size()
-			regions.append({"region_id":region_id,"region_type":definition["id"],"cells":cells.duplicate(),"entrances":[pocket["gate"]],"pocket_id":pocket_id})
+			var new_region:Dictionary={"region_id":region_id,"region_type":definition["id"],"cells":cells.duplicate(),"entrances":[pocket["gate"]],"pocket_id":pocket_id}
+			_set_region_difficulty(new_region,rng)
+			regions.append(new_region)
 	# Thematic regions are not required to be pockets. Place remaining
 	# successful probability rolls as open regions if pocket shaping failed.
 	# No walls are introduced here, so the guaranteed route stays intact.
@@ -135,7 +153,9 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 			map.set_terrain(pos,"grass",1.0)
 			reserved[pos]=true
 		var region_id:="REGION_%02d"%regions.size()
-		regions.append({"region_id":region_id,"region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""})
+		var new_region:Dictionary={"region_id":region_id,"region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""}
+		_set_region_difficulty(new_region,rng)
+		regions.append(new_region)
 	# A guaranteed thematic region for 20x20 maps, independent of pocket geometry.
 	if regions.is_empty():
 		var fallback:Array[Vector2i]=[]
@@ -162,5 +182,7 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 				map.set_obstacle(pos,"",false)
 				map.set_terrain(pos,"grass",1.0)
 			var definition:Dictionary=REGION_TYPES[rng.randi_range(0,REGION_TYPES.size()-1)]
-			regions.append({"region_id":"REGION_00","region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""})
+			var new_region:Dictionary={"region_id":"REGION_00","region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""}
+			_set_region_difficulty(new_region,rng)
+			regions.append(new_region)
 	return {"pockets":pockets,"regions":regions,"region_candidates":candidate_count,"pocket_attempts":attempts_total,"geometry_rejections":rejected_geometry}
