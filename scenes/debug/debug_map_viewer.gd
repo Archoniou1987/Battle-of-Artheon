@@ -81,6 +81,14 @@ func _on_loot_refresh()->void:
 @onready var summary:Label=$Root/Sidebar/Summary
 
 func _ready()->void:
+	get_viewport().size_changed.connect(_adapt_layout)
+	call_deferred("_adapt_layout")
+	var back_button:=Button.new()
+	back_button.text="← Поселение"
+	back_button.custom_minimum_size.y=44
+	back_button.pressed.connect(func()->void: get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
+	$Root/Sidebar.add_child(back_button)
+	$Root/Sidebar.move_child(back_button,0)
 	_loot_dialog=AcceptDialog.new()
 	_loot_dialog.title="Добыча"
 	add_child(_loot_dialog)
@@ -115,3 +123,17 @@ func _regenerate()->void:
 		generated.encounter_cells.size(),generated.guarded_objects.size(),generated.route_guards.size(),
 		generated.patrols.size(),boss_count,boss_guard_count
 	]
+
+func _adapt_layout()->void:
+	var portrait:=size.y>size.x
+	var root_grid:GridContainer=$Root
+	root_grid.columns=1 if portrait else 2
+	var sidebar:VBoxContainer=$Root/Sidebar
+	sidebar.custom_minimum_size.x=0.0 if portrait else 270.0
+	var map_panel:PanelContainer=$Root/MapPanel
+	map_panel.custom_minimum_size.y=maxf(220.0,size.y*0.66) if portrait else 0.0
+	$Root/Sidebar/LegendTitle.visible=not portrait
+	$Root/Sidebar/Legend.visible=not portrait
+	$Root/Sidebar/Hint.visible=not portrait
+	$Root/Sidebar/SummaryTitle.visible=not portrait
+	$Root/Sidebar/Summary.visible=not portrait
