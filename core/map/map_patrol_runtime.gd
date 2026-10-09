@@ -4,6 +4,7 @@ extends RefCounted
 var map:TacticalMapState
 var patrols:Array[Dictionary]=[]
 var states:Dictionary={}
+var collision_entity_id:String=""
 const STEP_SECONDS:=4.0
 const RETRY_SECONDS:=1.0
 
@@ -11,6 +12,7 @@ func configure(world:TacticalMapState,definitions:Array)->void:
 	map=world
 	patrols.clear()
 	states.clear()
+	collision_entity_id=""
 	for raw_patrol in definitions:
 		var patrol:Dictionary=raw_patrol
 		var route:Array=patrol.get("path",[])
@@ -26,7 +28,7 @@ func advance(delta:float)->bool:
 	for patrol in patrols:
 		var patrol_id:String=str(patrol.get("patrol_id",""))
 		var state:Dictionary=states.get(patrol_id,{})
-		if state.is_empty(): continue
+		if state.is_empty() or not map.entity_positions.has(patrol_id): continue
 		var remaining:float=float(state.get("remaining",0.0))-delta
 		if remaining>0.0:
 			state["remaining"]=remaining
@@ -41,6 +43,10 @@ func advance(delta:float)->bool:
 		if next_index<0 or next_index>=route.size(): continue
 		var next:Vector2i=route[next_index]
 		# Occupied cells are never overwritten. The patrol waits, then retries.
+		if map.entities_at(next).has("PLAYER"):
+			collision_entity_id=patrol_id
+			state["remaining"]=RETRY_SECONDS
+			return changed
 		if not map.entities_at(next).is_empty():
 			state["remaining"]=RETRY_SECONDS
 			continue
