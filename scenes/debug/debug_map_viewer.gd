@@ -6,6 +6,12 @@ var target_hex:=Vector2i(-1,-1)
 var planned_path:Array[Vector2i]=[]
 var move_status:Label
 var move_button:Button
+var zoom_level:float=1.8
+const MIN_ZOOM:=0.8
+const MAX_ZOOM:=3.0
+const ZOOM_STEP:=0.25
+var map_scroll:ScrollContainer
+var zoom_label:Label
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -103,6 +109,26 @@ func _ready()->void:
 	_loot_dialog.add_child(_loot_list)
 	canvas.loot_hex_selected.connect(_on_loot_hex_selected)
 	canvas.hex_selected.connect(_select_destination)
+	map_scroll=$Root/MapPanel/Scroll
+	map_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	map_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	map_scroll.follow_focus=false
+	var camera_controls:=HBoxContainer.new()
+	$Root/Sidebar.add_child(camera_controls)
+	$Root/Sidebar.move_child(camera_controls,1)
+	for caption in ["−","+","Центр"]:
+		var control:=Button.new()
+		control.text=caption
+		control.custom_minimum_size=Vector2(75,46)
+		camera_controls.add_child(control)
+		if caption=="−":
+			control.pressed.connect(func()->void: _set_zoom(zoom_level-ZOOM_STEP))
+		elif caption=="+":
+			control.pressed.connect(func()->void: _set_zoom(zoom_level+ZOOM_STEP))
+		else:
+			control.pressed.connect(_center_on_player)
+	zoom_label=Label.new()
+	camera_controls.add_child(zoom_label)
 	var controls:=HBoxContainer.new()
 	$Root/Sidebar.add_child(controls)
 	$Root/Sidebar.move_child(controls,1)
@@ -128,6 +154,8 @@ func _regenerate()->void:
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
+	_set_zoom(zoom_level)
+	call_deferred("_center_on_player")
 	playable_map=generated.map
 	player_hex=generated.entrance
 	playable_map.place_entity("PLAYER",player_hex)
@@ -166,6 +194,7 @@ func _adapt_layout()->void:
 	$Root/Sidebar/Hint.visible=not portrait
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
+	call_deferred("_center_on_player")
 
 func _select_destination(pos:Vector2i)->void:
 	if playable_map==null:
@@ -196,3 +225,28 @@ func _move_one_step()->void:
 	planned_path.remove_at(0)
 	move_status.text="Прибытие" if planned_path.size()==1 else "Осталось: %d"%(planned_path.size()-1)
 	canvas.set_player_view(player_hex,target_hex,planned_path)
+
+func _set_zoom(value:float)->void:
+	var next_zoom:=clampf(value,MIN_ZOOM,MAX_ZOOM)
+	if canvas==null:
+		return
+	var old_zoom:=zoom_level
+	var old_center:=Vector2(map_scroll.scroll_horizontal,map_scroll.scroll_vertical)+map_scroll.size*0.5
+	zoom_level=next_zoom
+	canvas.scale=Vector2.ONE*zoom_level
+	# A scaled Control keeps its original layout size. Reserve the scaled extent.
+	canvas.custom_minimum_size=canvas._map_pixel_size()*zoom_level
+	if zoom_label!=null:
+		zoom_label.text="%d%%"%roundi(zoom_level*100.0)
+	var new_center:=old_center*zoom_level/maxf(old_zoom,0.01)
+	call_deferred("_scroll_to",new_center-map_scroll.size*0.5)
+
+func _scroll_to(pos:Vector2)->void:
+	map_scroll.scroll_horizontal=maxi(0,roundi(pos.x))
+	map_scroll.scroll_vertical=maxi(0,roundi(pos.y))
+
+func _center_on_player()->void:
+	if canvas==null or map_scroll==null or player_hex.x<0:
+		return
+	var center:=canvas._hex_center(player_hex)*zoom_level
+	_scroll_to(center-map_scroll.size*0.5)
