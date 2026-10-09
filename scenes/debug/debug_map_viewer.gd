@@ -21,6 +21,9 @@ var _map_base_size:=Vector2.ZERO
 var map_scroll:Control
 var mini_map:Control
 var patrol_runtime:=MapPatrolRuntime.new()
+var battle_dialog:AcceptDialog
+var battle_entity_id:String=""
+var battle_active:=false
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -113,6 +116,13 @@ func _ready()->void:
 	back_button.pressed.connect(func()->void: get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
 	$Root/Sidebar.add_child(back_button)
 	$Root/Sidebar.move_child(back_button,0)
+	battle_dialog=AcceptDialog.new()
+	battle_dialog.title="Начался бой!"
+	battle_dialog.dialog_text="Начался бой!"
+	battle_dialog.ok_button_text="Закрыть"
+	battle_dialog.confirmed.connect(_finish_test_battle)
+	battle_dialog.close_requested.connect(_finish_test_battle)
+	add_child(battle_dialog)
 	_loot_dialog=AcceptDialog.new()
 	_loot_dialog.title="Добыча"
 	add_child(_loot_dialog)
@@ -156,6 +166,9 @@ func _regenerate()->void:
 	player_hex=generated.entrance
 	playable_map.place_entity("PLAYER",player_hex)
 	patrol_runtime.configure(playable_map,generated.patrols)
+	battle_active=false
+	battle_entity_id=""
+	if battle_dialog!=null: battle_dialog.hide()
 	_moving=false
 	_stop_requested=false
 	_next_hex=Vector2i(-1,-1)
@@ -235,7 +248,12 @@ func _route_to(destination:Vector2i)->Array[Vector2i]:
 	return SafeMapNavigation.find_route(playable_map,canvas.explored_hexes,player_hex,destination,_visible_cells(),canvas._entity_roles)
 
 func _select_destination(pos:Vector2i)->void:
-	if playable_map==null: return
+	if playable_map==null or battle_active: return
+	if HexGrid.distance(player_hex,pos)==1:
+		var npc_id:=_npc_at(pos)
+		if not npc_id.is_empty():
+			_start_test_battle(npc_id)
+			return
 	if pos==player_hex:
 		if _moving:
 			_request_stop()
@@ -286,13 +304,22 @@ func _prepare_step()->void:
 	move_status.text="Движение: %.0f сек/гекс"%_step_duration
 
 func _process(delta:float)->void:
+	if battle_active: return
 	if patrol_runtime.advance(delta):
 		canvas.queue_redraw()
+	if not patrol_runtime.collision_entity_id.is_empty():
+		_start_test_battle(patrol_runtime.collision_entity_id)
+		patrol_runtime.collision_entity_id=""
+		return
 	if not _moving or _next_hex.x<0: return
 	_step_elapsed+=delta
 	_update_movement_panel()
 	if _step_elapsed<_step_duration: return
 	if not playable_map.entities_at(_next_hex).is_empty():
+		var npc_id:=_npc_at(_next_hex)
+		if not npc_id.is_empty():
+			_start_test_battle(npc_id)
+			return
 		_moving=false
 		move_status.text="Столкновение: движение остановлено"
 		_update_movement_panel()
@@ -423,3 +450,33 @@ func _finish_initial_camera()->void:
 	_center_on_player()
 	_camera_ready=true
 	canvas.visible=true
+
+func _npc_at(pos:Vector2i)->String:
+	for entity_id in playable_map.entities_at(pos):
+		if entity_id!="PLAYER": return entity_id
+	return ""
+
+func _start_test_battle(entity_id:String)->void:
+	if battle_active or entity_id.is_empty() or not playable_map.entity_positions.has(entity_id): return
+	battle_active=true
+	battle_entity_id=entity_id
+	_moving=false
+	_stop_requested=false
+	_next_hex=Vector2i(-1,-1)
+	planned_path.clear()
+	target_hex=Vector2i(-1,-1)
+	move_status.text="Начался бой!"
+	_update_movement_panel()
+	canvas.set_player_view(player_hex,target_hex,planned_path)
+	battle_dialog.popup_centered(Vector2i(320,160))
+
+func _finish_test_battle()->void:
+	if not battle_active: return
+	battle_active=false
+	if not battle_entity_id.is_empty():
+		playable_map.remove_entity(battle_entity_id)
+	battle_entity_id=""
+	battle_dialog.hide()
+	move_status.text="Тестовый бой завершён"
+	canvas.set_player_view(player_hex,target_hex,planned_path)
+	mini_map.update_map(playable_map,player_hex)
