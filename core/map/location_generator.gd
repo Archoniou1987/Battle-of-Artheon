@@ -204,14 +204,14 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	while patrols.size()<BASE_PATROLS and not patrol_starts.is_empty() and patrol_attempts<200:
 		patrol_attempts+=1
 		var patrol_start:Vector2i=patrol_starts.pop_back()
-		if HexGrid.distance(entrance,patrol_start)<=SAFE_ENTRANCE_RADIUS or not map.entities_at(patrol_start).is_empty():
+		if thematic_reserved.has(patrol_start) or HexGrid.distance(entrance,patrol_start)<=SAFE_ENTRANCE_RADIUS or not map.entities_at(patrol_start).is_empty():
 			continue
 		var goals:=content_cells.duplicate()
 		_shuffle_cells(goals,rng)
 		var chosen_path:Array=[]
 		var chosen_goal:=patrol_start
 		for patrol_goal in goals:
-			if patrol_goal==patrol_start or HexGrid.distance(entrance,patrol_goal)<=SAFE_ENTRANCE_RADIUS:
+			if patrol_goal==patrol_start or thematic_reserved.has(patrol_goal) or HexGrid.distance(entrance,patrol_goal)<=SAFE_ENTRANCE_RADIUS:
 				continue
 			var patrol_result:Dictionary=HexPathfinder.new().find_path(map,patrol_start,patrol_goal)
 			var candidate_path:Array=patrol_result.get("path",[])
@@ -219,7 +219,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 				continue
 			var safe_path:=true
 			for step in candidate_path:
-				if HexGrid.distance(entrance,step)<=SAFE_ENTRANCE_RADIUS:
+				if thematic_reserved.has(step) or HexGrid.distance(entrance,step)<=SAFE_ENTRANCE_RADIUS:
 					safe_path=false
 					break
 			if not safe_path:
