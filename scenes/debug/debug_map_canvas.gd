@@ -144,6 +144,7 @@ func _draw()->void:
 		_draw_badge(_hex_center(player_hex),"YOU",Color(0.35,0.80,1.0))
 
 func _draw_region_outlines()->void:
+	# Region edges are independent of terrain; show only the outer perimeter.
 	for region in generated.get("regions",[]):
 		var owned:Dictionary={}
 		for pos in region["cells"]:
@@ -164,7 +165,7 @@ func _draw_region_outlines()->void:
 						distance=d
 						nearest=neighbor
 				if not owned.has(nearest):
-					draw_line(a,b,Color(1.0,0.83,0.12,0.95),3.0,true)
+					draw_line(a,b,Color(1.0,0.86,0.05,1.0),5.0,true)
 
 func _draw_markers(map:TacticalMapState)->void:
 	if _is_visible_hex(generated.entrance): _draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
