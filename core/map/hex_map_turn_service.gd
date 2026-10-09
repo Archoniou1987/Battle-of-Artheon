@@ -26,6 +26,16 @@ func step_patrol(map:TacticalMapState,bridge:MapNpcBridge,patrol:HexPatrolState,
 			return {"ok":true,"patrol_contact":result,"encounter":encounter}
 	return result
 
+func step_chase(map:TacticalMapState,bridge:MapNpcBridge,chase:HexNpcChaseState,player_id:String,rng:RandomNumberGenerator)->Dictionary:
+	if chase==null:
+		return {"ok":false,"reason":"invalid_chase"}
+	var result:=chase.step(map,bridge,player_id,rng,coordinator.combat_active)
+	if bool(result.get("contact",false)):
+		var encounter:=coordinator.try_start_patrol_contact(map,bridge,player_id,chase.npc_id,rng)
+		if bool(encounter.get("ok",false)):
+			return {"ok":true,"chase":result,"encounter":encounter}
+	return result
+
 func resolve_group_victory(result:Dictionary,map:TacticalMapState,bridge:MapNpcBridge,encounter:Dictionary,player:CharacterState,repository:ItemRepository,loot_service:NpcPossessionLootService,quality_chances:Dictionary)->Dictionary:
 	if not coordinator.combat_active:
 		return {"ok":false,"reason":"no_active_combat"}
