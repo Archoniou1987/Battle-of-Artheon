@@ -26,5 +26,20 @@ func step_patrol(map:TacticalMapState,bridge:MapNpcBridge,patrol:HexPatrolState,
 			return {"ok":true,"patrol_contact":result,"encounter":encounter}
 	return result
 
+func resolve_group_victory(result:Dictionary,map:TacticalMapState,bridge:MapNpcBridge,encounter:Dictionary,player:CharacterState,repository:ItemRepository,loot_service:NpcPossessionLootService,quality_chances:Dictionary)->Dictionary:
+	if not coordinator.combat_active:
+		return {"ok":false,"reason":"no_active_combat"}
+	if not bool(encounter.get("ok",false)):
+		return {"ok":false,"reason":"invalid_encounter"}
+	var npcs:Array[NpcInstance]=[]
+	for raw_npc in encounter.get("npcs",[]):
+		var npc:=raw_npc as NpcInstance
+		if npc!=null:
+			npcs.append(npc)
+	var outcome:=MapCombatOutcomeService.resolve_group_victory(result,map,bridge,npcs,player,repository,loot_service,quality_chances)
+	if bool(outcome.get("ok",false)):
+		coordinator.finish_combat()
+	return outcome
+
 func finish_combat()->void:
 	coordinator.finish_combat()
