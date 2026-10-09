@@ -19,9 +19,10 @@ func _initialize()->void:
 	var latched:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and latched.get("reason","")=="not_aggressive"
 	valid=valid and map.move_entity("PLAYER",Vector2i(5,3)).get("ok",false)
+	valid=valid and map.move_entity("PLAYER",Vector2i(6,3)).get("ok",false)
 	var escape:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and escape.get("reason","")=="not_detected" and not chase.decided
-	valid=valid and map.move_entity("PLAYER",Vector2i(4,3)).get("ok",false)
+	valid=valid and map.move_entity("PLAYER",Vector2i(5,3)).get("ok",false)
 	var reentry:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and bool(reentry.get("ok",false)) and chase.mode=="chasing"
 	turns.coordinator.combat_active=true
