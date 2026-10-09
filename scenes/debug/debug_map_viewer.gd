@@ -24,6 +24,8 @@ var patrol_runtime:=MapPatrolRuntime.new()
 var battle_dialog:AcceptDialog
 var battle_entity_id:String=""
 var battle_active:=false
+var battle_defeat_button:Button
+var chase_entity_id:String=""
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -120,6 +122,8 @@ func _ready()->void:
 	battle_dialog.title="Начался бой!"
 	battle_dialog.dialog_text="Начался бой!"
 	battle_dialog.ok_button_text="Закрыть"
+	battle_defeat_button=battle_dialog.add_button("Поражение",true,"defeat")
+	battle_dialog.custom_action.connect(_on_battle_custom_action)
 	battle_dialog.confirmed.connect(_finish_test_battle)
 	battle_dialog.close_requested.connect(_finish_test_battle)
 	add_child(battle_dialog)
@@ -168,6 +172,7 @@ func _regenerate()->void:
 	patrol_runtime.configure(playable_map,generated.patrols)
 	battle_active=false
 	battle_entity_id=""
+	chase_entity_id=""
 	if battle_dialog!=null: battle_dialog.hide()
 	_moving=false
 	_stop_requested=false
@@ -244,16 +249,11 @@ func _visible_cells()->Dictionary:
 		if canvas._is_visible_hex(pos): result[pos]=true
 	return result
 
-func _route_to(destination:Vector2i)->Array[Vector2i]:
-	return SafeMapNavigation.find_route(playable_map,canvas.explored_hexes,player_hex,destination,_visible_cells(),canvas._entity_roles)
+func _route_to(destination:Vector2i,allow_target_npc:bool=false)->Array[Vector2i]:
+	return SafeMapNavigation.find_route(playable_map,canvas.explored_hexes,player_hex,destination,_visible_cells(),canvas._entity_roles,allow_target_npc)
 
 func _select_destination(pos:Vector2i)->void:
 	if playable_map==null or battle_active: return
-	if HexGrid.distance(player_hex,pos)==1:
-		var npc_id:=_npc_at(pos)
-		if not npc_id.is_empty():
-			_start_test_battle(npc_id)
-			return
 	if pos==player_hex:
 		if _moving:
 			_request_stop()
@@ -269,7 +269,8 @@ func _select_destination(pos:Vector2i)->void:
 		_update_movement_panel()
 		return
 	target_hex=pos
-	planned_path=_route_to(target_hex)
+	chase_entity_id=_npc_at(pos) if canvas._is_visible_hex(pos) else ""
+	planned_path=_route_to(target_hex,not chase_entity_id.is_empty())
 	if planned_path.size()>1:
 		var seconds:=0.0
 		for i in range(1,planned_path.size()):
@@ -288,16 +289,33 @@ func _prepare_step()->void:
 		move_status.text="Остановлено" if planned_path.size()>1 else "Прибытие"
 		_update_movement_panel()
 		return
-	var next:Vector2i=planned_path[1]
-	if not playable_map.cell(next).is_passable() or (canvas._is_visible_hex(next) and SafeMapNavigation.static_npc_at(playable_map,canvas._entity_roles,next)):
-		planned_path=_route_to(target_hex)
-		canvas.set_player_view(player_hex,target_hex,planned_path)
-		if planned_path.size()<2:
+	# Only chase mode recalculates a moving target, at step boundaries.
+	if not chase_entity_id.is_empty():
+		if not playable_map.entity_positions.has(chase_entity_id):
 			_moving=false
-			move_status.text="Препятствие: остановка"
+			move_status.text="Цель исчезла"
 			_update_movement_panel()
 			return
-		next=planned_path[1]
+		var observed:Vector2i=playable_map.entity_positions[chase_entity_id]
+		if canvas._is_visible_hex(observed):
+			target_hex=observed
+			planned_path=_route_to(target_hex,true)
+			canvas.set_player_view(player_hex,target_hex,planned_path)
+		else:
+			chase_entity_id=""
+			# Last known destination only; never use hidden NPC coordinates.
+			planned_path=_route_to(target_hex,true)
+		if planned_path.size()<2:
+			_moving=false
+			move_status.text="Цель недоступна"
+			_update_movement_panel()
+			return
+	var next:Vector2i=planned_path[1]
+	if not playable_map.cell(next).is_passable():
+		_moving=false
+		move_status.text="Маршрут заблокирован"
+		_update_movement_panel()
+		return
 	_next_hex=next
 	_step_elapsed=0.0
 	_step_duration=SafeMapNavigation.terrain_seconds(playable_map.cell(next).terrain_id)
@@ -315,15 +333,6 @@ func _process(delta:float)->void:
 	_step_elapsed+=delta
 	_update_movement_panel()
 	if _step_elapsed<_step_duration: return
-	if not playable_map.entities_at(_next_hex).is_empty():
-		var npc_id:=_npc_at(_next_hex)
-		if not npc_id.is_empty():
-			_start_test_battle(npc_id)
-			return
-		_moving=false
-		move_status.text="Столкновение: движение остановлено"
-		_update_movement_panel()
-		return
 	var result:Dictionary=playable_map.move_entity("PLAYER",_next_hex)
 	if not bool(result.get("ok",false)):
 		_moving=false
@@ -332,6 +341,13 @@ func _process(delta:float)->void:
 		return
 	player_hex=_next_hex
 	planned_path.remove_at(0)
+	var encountered_id:=_npc_at(player_hex)
+	if not encountered_id.is_empty():
+		canvas.set_player_view(player_hex,target_hex,planned_path)
+		mini_map.update_map(playable_map,player_hex)
+		_center_on_player()
+		_start_test_battle(encountered_id)
+		return
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
 	_center_on_player()
@@ -460,10 +476,12 @@ func _start_test_battle(entity_id:String)->void:
 	if battle_active or entity_id.is_empty() or not playable_map.entity_positions.has(entity_id): return
 	battle_active=true
 	battle_entity_id=entity_id
+	battle_defeat_button.visible=canvas._entity_roles.get(entity_id,"") in ["B","BG"]
 	_moving=false
 	_stop_requested=false
 	_next_hex=Vector2i(-1,-1)
 	planned_path.clear()
+	chase_entity_id=""
 	target_hex=Vector2i(-1,-1)
 	move_status.text="Начался бой!"
 	_update_movement_panel()
@@ -480,3 +498,27 @@ func _finish_test_battle()->void:
 	move_status.text="Тестовый бой завершён"
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
+
+func _on_battle_custom_action(action:StringName)->void:
+	if action==&"defeat":
+		_finish_test_defeat()
+
+func _finish_test_defeat()->void:
+	if not battle_active: return
+	battle_active=false
+	battle_entity_id=""
+	battle_dialog.hide()
+	# Test defeat: retain boss/guard and move player to the safe entrance.
+	playable_map.entity_positions["PLAYER"]=canvas.generated.entrance
+	player_hex=canvas.generated.entrance
+	_moving=false
+	_stop_requested=false
+	_next_hex=Vector2i(-1,-1)
+	planned_path.clear()
+	chase_entity_id=""
+	target_hex=Vector2i(-1,-1)
+	move_status.text="Поражение: возвращение ко входу"
+	_update_movement_panel()
+	canvas.set_player_view(player_hex,target_hex,planned_path)
+	mini_map.update_map(playable_map,player_hex)
+	_center_on_player()
