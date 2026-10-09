@@ -168,6 +168,19 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			var npc_pos:Vector2i=available[j]
 			if map.place_entity(entity_id,npc_pos):
 				region_npcs.append({"entity_id":entity_id,"region_id":region["region_id"],"region_type":region["region_type"],"pos":npc_pos})
+	var region_objects:Array[Dictionary]=[]
+	var kinds:Dictionary={"bandit_camp":"tent","graveyard":"grave","beast_den":"bones","ruins":"relic"}
+	for region in region_result["regions"]:
+		var choices:Array[Vector2i]=[]
+		for pos in region["cells"]:
+			if accessible.has(pos) and map.cell(pos).is_passable() and map.entities_at(pos).is_empty() and map.cell(pos).object_ids.is_empty():
+				choices.append(pos)
+		_shuffle_cells(choices,rng)
+		for j in range(mini(3,choices.size())):
+			var object_id:="GEN_REGION_PROP_%s_%02d"%[str(region["region_id"]),j]
+			var prop_pos:Vector2i=choices[j]
+			if map.add_object(object_id,prop_pos):
+				region_objects.append({"object_id":object_id,"region_id":region["region_id"],"region_type":region["region_type"],"kind":kinds.get(region["region_type"],"relic"),"pos":prop_pos})
 	var encounter_service:=HexEncounterService.new()
 	for i in range(encounter_cells.size()):
 		var encounter:=HexEncounter.new("GEN_ENCOUNTER_%02d"%i,HexEncounter.TRIGGER_ENTER,"damage",{"amount":1},true)
@@ -271,7 +284,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,
 		"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,
 		"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols,"boss_groups":boss_groups,
-		"pockets":region_result["pockets"],"regions":region_result["regions"],"region_npcs":region_npcs,
+		"pockets":region_result["pockets"],"regions":region_result["regions"],"region_npcs":region_npcs,"region_objects":region_objects,
 		"region_candidates":region_result["region_candidates"],"pocket_attempts":region_result["pocket_attempts"],"geometry_rejections":region_result["geometry_rejections"],
 		"safe_entrance_radius":SAFE_ENTRANCE_RADIUS
 	}
