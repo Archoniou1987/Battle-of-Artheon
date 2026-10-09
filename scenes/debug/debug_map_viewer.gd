@@ -1,5 +1,12 @@
 extends Control
 
+var playable_map:TacticalMapState
+var player_hex:=Vector2i(-1,-1)
+var target_hex:=Vector2i(-1,-1)
+var planned_path:Array[Vector2i]=[]
+var move_status:Label
+var move_button:Button
+
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
 var loot_character:CharacterState
@@ -95,6 +102,20 @@ func _ready()->void:
 	_loot_list=VBoxContainer.new()
 	_loot_dialog.add_child(_loot_list)
 	canvas.loot_hex_selected.connect(_on_loot_hex_selected)
+	canvas.hex_selected.connect(_select_destination)
+	var controls:=HBoxContainer.new()
+	$Root/Sidebar.add_child(controls)
+	$Root/Sidebar.move_child(controls,1)
+	move_button=Button.new()
+	move_button.text="Шаг →"
+	move_button.custom_minimum_size=Vector2(110,48)
+	move_button.pressed.connect(_move_one_step)
+	controls.add_child(move_button)
+	move_status=Label.new()
+	move_status.text="Коснитесь гексагона"
+	move_status.clip_text=true
+	move_status.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	controls.add_child(move_status)
 	_loot_refresh_timer=Timer.new()
 	_loot_refresh_timer.wait_time=1.0
 	_loot_refresh_timer.timeout.connect(_on_loot_refresh)
@@ -107,6 +128,14 @@ func _regenerate()->void:
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
+	playable_map=generated.map
+	player_hex=generated.entrance
+	playable_map.place_entity("PLAYER",player_hex)
+	target_hex=Vector2i(-1,-1)
+	planned_path.clear()
+	canvas.set_player_view(player_hex,target_hex,planned_path)
+	if move_status!=null:
+		move_status.text="Выберите клетку"
 	refresh_loot_markers()
 	var map:TacticalMapState=generated.map
 	var blocked:=0
@@ -137,3 +166,33 @@ func _adapt_layout()->void:
 	$Root/Sidebar/Hint.visible=not portrait
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
+
+func _select_destination(pos:Vector2i)->void:
+	if playable_map==null:
+		return
+	target_hex=pos
+	var result:=HexPathfinder.new().find_path(playable_map,player_hex,target_hex)
+	planned_path.clear()
+	if bool(result.get("ok",false)):
+		for step in result.get("path",[]):
+			planned_path.append(step)
+		move_status.text="Путь: %d шагов"%(planned_path.size()-1)
+	else:
+		move_status.text="Недоступно: "+str(result.get("reason",""))
+	canvas.set_player_view(player_hex,target_hex,planned_path)
+
+func _move_one_step()->void:
+	if playable_map==null or planned_path.size()<2:
+		return
+	var next:Vector2i=planned_path[1]
+	if not playable_map.entities_at(next).is_empty():
+		move_status.text="Клетка занята NPC"
+		return
+	var result:=playable_map.move_entity("PLAYER",next)
+	if not bool(result.get("ok",false)):
+		move_status.text="Движение: "+str(result.get("reason",""))
+		return
+	player_hex=next
+	planned_path.remove_at(0)
+	move_status.text="Прибытие" if planned_path.size()==1 else "Осталось: %d"%(planned_path.size()-1)
+	canvas.set_player_view(player_hex,target_hex,planned_path)
