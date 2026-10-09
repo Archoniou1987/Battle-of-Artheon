@@ -47,6 +47,13 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 				map.set_terrain(pos,"swamp",2.0)
 			elif roll<0.42:
 				map.set_terrain(pos,"rough",1.5)
+	var region_result:Dictionary=MapRegionGenerator.generate(map,entrance,exit,guaranteed_path,rng)
+	var thematic_reserved:Dictionary={}
+	for pocket in region_result["pockets"]:
+		for pos in pocket["cells"]:
+			thematic_reserved[pos]=true
+		for pos in pocket["border"]:
+			thematic_reserved[pos]=true
 	map.mark_visited(entrance)
 
 	# Guarded objects are deliberately built as one-cell dead-end pockets.
@@ -59,7 +66,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	for r in range(safe_height):
 		for q in range(safe_width):
 			var candidate:=Vector2i(q,r)
-			if candidate==entrance or candidate==exit or protected.has(candidate):
+			if candidate==entrance or candidate==exit or protected.has(candidate) or thematic_reserved.has(candidate):
 				continue
 			if HexGrid.distance(entrance,candidate)<=SAFE_ENTRANCE_RADIUS+1:
 				continue
@@ -71,7 +78,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			break
 		# Earlier pockets may have changed this candidate after the candidate list was built.
 		# Never reuse an existing object/guard cell and never shape an already blocked cell.
-		if object_cells.has(object_pos) or reserved_guard_cells.has(object_pos) or not map.cell(object_pos).is_passable():
+		if object_cells.has(object_pos) or reserved_guard_cells.has(object_pos) or thematic_reserved.has(object_pos) or not map.cell(object_pos).is_passable():
 			continue
 		var passable_neighbors:Array[Vector2i]=map.neighbors(object_pos,true)
 		if passable_neighbors.is_empty():
@@ -91,7 +98,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		for neighbor in passable_neighbors:
 			if neighbor==guard_pos:
 				continue
-			if protected.has(neighbor) or neighbor==entrance or neighbor==exit or reserved_guard_cells.has(neighbor):
+			if protected.has(neighbor) or thematic_reserved.has(neighbor) or neighbor==entrance or neighbor==exit or reserved_guard_cells.has(neighbor):
 				can_shape=false
 				break
 		if not can_shape:
@@ -117,7 +124,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	for r in range(safe_height):
 		for q in range(safe_width):
 			var content_pos:=Vector2i(q,r)
-			if content_pos==entrance or content_pos==exit or object_cells.has(content_pos) or reserved_guard_cells.has(content_pos):
+			if content_pos==entrance or content_pos==exit or thematic_reserved.has(content_pos) or object_cells.has(content_pos) or reserved_guard_cells.has(content_pos):
 				continue
 			if map.cell(content_pos).is_passable():
 				content_cells.append(content_pos)
@@ -237,6 +244,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		"guaranteed_path":guaranteed_path,"resource_cells":resource_cells,"npc_cells":npc_cells,
 		"object_cells":object_cells,"encounter_cells":encounter_cells,"encounter_service":encounter_service,
 		"guarded_objects":guarded_objects,"route_guards":route_guards,"patrols":patrols,"boss_groups":boss_groups,
+		"pockets":region_result["pockets"],"regions":region_result["regions"],
 		"safe_entrance_radius":SAFE_ENTRANCE_RADIUS
 	}
 
