@@ -17,15 +17,19 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 	var pockets:Array[Dictionary]=[]
 	var regions:Array[Dictionary]=[]
 	var candidates:Array[Dictionary]=[]
+	var attempts_total:=0
+	var rejected_geometry:=0
 	for definition in REGION_TYPES:
 		if rng.randf()<float(definition["chance"]):
 			candidates.append(definition)
 	candidates.sort_custom(func(a:Dictionary,b:Dictionary)->bool: return int(a["priority"])>int(b["priority"]))
+	var candidate_count:=candidates.size()
 	var cap:int=int(ceil(float(map.width*map.height)*3.0/400.0))
 	var pocket_cap:int=int(ceil(float(map.width*map.height)*4.0/400.0))
 	for pocket_index in range(pocket_cap):
 		var pocket:Dictionary={}
 		for attempt in range(ATTEMPTS):
+			attempts_total+=1
 			var gate:Vector2i=main_path[rng.randi_range(0,main_path.size()-1)]
 			if gate==entrance or gate==exit or HexGrid.distance(gate,entrance)<=4 or reserved.has(gate):
 				continue
@@ -67,6 +71,7 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 					valid=false
 					break
 			if not valid:
+				rejected_geometry+=1
 				continue
 			pocket={"cells":cells,"gate":gate,"border":border.keys()}
 			break
@@ -89,4 +94,4 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 			var definition:Dictionary=candidates.pop_front()
 			var region_id:="REGION_%02d"%regions.size()
 			regions.append({"region_id":region_id,"region_type":definition["id"],"cells":cells.duplicate(),"entrances":[pocket["gate"]],"pocket_id":pocket_id})
-	return {"pockets":pockets,"regions":regions}
+	return {"pockets":pockets,"regions":regions,"region_candidates":candidate_count,"pocket_attempts":attempts_total,"geometry_rejections":rejected_geometry}
