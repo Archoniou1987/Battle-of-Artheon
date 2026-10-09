@@ -89,9 +89,49 @@ static func generate(map:TacticalMapState, entrance:Vector2i, exit:Vector2i, mai
 			reserved[pos]=true
 		map.set_obstacle(pocket["gate"],"",false)
 		var pocket_id:="POCKET_%02d"%pockets.size()
-		pockets.append({"pocket_id":pocket_id,"cells":cells,"gate":pocket["gate"]})
+		pockets.append({"pocket_id":pocket_id,"cells":cells,"gate":pocket["gate"],"border":pocket["border"]})
 		if regions.size()<cap and not candidates.is_empty():
 			var definition:Dictionary=candidates.pop_front()
 			var region_id:="REGION_%02d"%regions.size()
 			regions.append({"region_id":region_id,"region_type":definition["id"],"cells":cells.duplicate(),"entrances":[pocket["gate"]],"pocket_id":pocket_id})
+	# Thematic regions are not required to be pockets. Place remaining
+	# successful probability rolls as open regions if pocket shaping failed.
+	# No walls are introduced here, so the guaranteed route stays intact.
+	for definition in candidates:
+		if regions.size()>=cap:
+			break
+		var selected:Array[Vector2i]=[]
+		for attempt in range(ATTEMPTS*4):
+			var seed:=Vector2i(rng.randi_range(1,map.width-2),rng.randi_range(0,map.height-1))
+			if protected.has(seed) or reserved.has(seed) or HexGrid.distance(seed,entrance)<=3 or HexGrid.distance(seed,exit)<=2:
+				continue
+			var cells:Array[Vector2i]=[seed]
+			var owned:Dictionary={seed:true}
+			var target_size:=rng.randi_range(8,25)
+			while cells.size()<target_size:
+				var options:Array[Vector2i]=[]
+				for pos in cells:
+					for neighbor in map.neighbors(pos):
+						if owned.has(neighbor) or reserved.has(neighbor) or protected.has(neighbor):
+							continue
+						if HexGrid.distance(neighbor,entrance)<=3 or HexGrid.distance(neighbor,exit)<=2:
+							continue
+						if not options.has(neighbor):
+							options.append(neighbor)
+				if options.is_empty():
+					break
+				var chosen:Vector2i=options[rng.randi_range(0,options.size()-1)]
+				owned[chosen]=true
+				cells.append(chosen)
+			if cells.size()>=8:
+				selected=cells
+				break
+		if selected.is_empty():
+			continue
+		for pos in selected:
+			map.set_obstacle(pos,"",false)
+			map.set_terrain(pos,"grass",1.0)
+			reserved[pos]=true
+		var region_id:="REGION_%02d"%regions.size()
+		regions.append({"region_id":region_id,"region_type":definition["id"],"cells":selected,"entrances":[],"pocket_id":""})
 	return {"pockets":pockets,"regions":regions,"region_candidates":candidate_count,"pocket_attempts":attempts_total,"geometry_rejections":rejected_geometry}
