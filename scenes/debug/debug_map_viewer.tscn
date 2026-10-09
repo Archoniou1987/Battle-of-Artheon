@@ -40,10 +40,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="Scroll" type="ScrollContainer" parent="Root/MapPanel"]
+[node name="Scroll" type="Control" parent="Root/MapPanel"]
 layout_mode = 2
-horizontal_scroll_mode = 1
-vertical_scroll_mode = 1
+clip_contents = true
+mouse_filter = 1
 
 [node name="Canvas" type="Control" parent="Root/MapPanel/Scroll"]
 custom_minimum_size = Vector2(900, 680)
