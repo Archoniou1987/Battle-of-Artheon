@@ -187,7 +187,12 @@ func _adapt_layout()->void:
 	sidebar.custom_minimum_size.x=0.0 if portrait else 270.0
 	var map_panel:PanelContainer=$Root/MapPanel
 	map_panel.custom_minimum_size.y=0.0
-	map_panel.size_flags_vertical=Control.SIZE_EXPAND_FILL
+	# Portrait: a square camera viewport, with UI below it rather than a full-height map.
+	if portrait:
+		map_panel.size_flags_vertical=Control.SIZE_SHRINK_BEGIN
+		map_panel.custom_minimum_size.y=maxf(200.0,minf(size.x-32.0,size.y*0.60))
+	else:
+		map_panel.size_flags_vertical=Control.SIZE_EXPAND_FILL
 	$Root/Sidebar/LegendTitle.visible=not portrait
 	$Root/Sidebar/Legend.visible=not portrait
 	$Root/Sidebar/Hint.visible=not portrait
