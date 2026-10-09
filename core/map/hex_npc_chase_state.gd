@@ -7,6 +7,7 @@ var home_position:Vector2i
 var detection_radius:int=2
 var chase_radius:int=4
 var decided:bool=false
+var rejected:bool=false
 
 func _init(id:String,home:Vector2i,detect:int=2,chase:int=4)->void:
 	npc_id=id
@@ -26,9 +27,15 @@ func step(map:TacticalMapState,bridge:MapNpcBridge,player_id:String,rng:RandomNu
 	var player_pos:Vector2i=map.entity_positions[player_id]
 	if mode=="idle":
 		if HexGrid.distance(position,player_pos)>detection_radius:
+			decided=false
+			rejected=false
 			return {"ok":false,"reason":"not_detected","mode":mode}
+		if decided and rejected:
+			return {"ok":false,"reason":"not_aggressive","mode":mode}
 		var chance:=clampf(npc.aggression,0.0,100.0)
-		if chance<=0.0 or (chance<100.0 and rng.randf()*100.0>=chance):
+		decided=true
+		rejected=chance<=0.0 or (chance<100.0 and rng.randf()*100.0>=chance)
+		if rejected:
 			return {"ok":false,"reason":"not_aggressive","mode":mode}
 		mode="chasing"
 	if mode=="chasing":
@@ -48,6 +55,8 @@ func step(map:TacticalMapState,bridge:MapNpcBridge,player_id:String,rng:RandomNu
 	if mode=="returning":
 		if position==home_position:
 			mode="idle"
+			decided=false
+			rejected=false
 			return {"ok":true,"mode":mode,"returned":true}
 		var next_home:=_next_step(map,position,home_position,false)
 		if next_home==position:
@@ -56,6 +65,8 @@ func step(map:TacticalMapState,bridge:MapNpcBridge,player_id:String,rng:RandomNu
 		if bool(back.get("ok",false)):
 			if next_home==home_position:
 				mode="idle"
+				decided=false
+				rejected=false
 			return {"ok":true,"mode":mode,"movement":back}
 		return back
 	return {"ok":false,"reason":"invalid_mode"}
