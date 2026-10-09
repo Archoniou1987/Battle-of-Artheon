@@ -111,7 +111,8 @@ func _draw_badge(center:Vector2,label:String,color:Color)->void:
 	draw_string(font,center+Vector2(-width*0.5,3.0),label,HORIZONTAL_ALIGNMENT_LEFT,-1,size,Color(0.04,0.05,0.07))
 
 func _hex_center(pos:Vector2i)->Vector2:
-	return Vector2(HEX_SIZE*SQRT3*(float(pos.x)+float(pos.y)*0.5)+HEX_SIZE*1.1,HEX_SIZE*1.5*float(pos.y)+HEX_SIZE*1.1)
+	var stagger:=0.5 if pos.y%2!=0 else 0.0
+	return Vector2(HEX_SIZE*SQRT3*(float(pos.x)+stagger)+HEX_SIZE*1.1,HEX_SIZE*1.5*float(pos.y)+HEX_SIZE*1.1)
 
 func _hex_points(center:Vector2)->PackedVector2Array:
 	var points:=PackedVector2Array()
@@ -129,4 +130,4 @@ func _map_pixel_size()->Vector2:
 	if generated.is_empty():
 		return Vector2(900,680)
 	var map:TacticalMapState=generated.map
-	return Vector2(HEX_SIZE*SQRT3*(float(map.width)+float(map.height)*0.5)+HEX_SIZE*2.5,HEX_SIZE*1.5*float(map.height)+HEX_SIZE*2.5)
+	return Vector2(HEX_SIZE*SQRT3*(float(map.width)+0.5)+HEX_SIZE*2.5,HEX_SIZE*1.5*float(map.height)+HEX_SIZE*2.5)
