@@ -4,6 +4,8 @@ const LOCATION_NAME := "Стартовая деревня"
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const MOBILE_RATIO := 1.65
+const HEADER_HEIGHT := 46.0
+const FOOTER_HEIGHT := 78.0
 const SERVICES := [
 	{"name": "Кузнец", "symbol": "⚒", "position": Vector2(0.18, 0.49)},
 	{"name": "Рынок", "symbol": "◆", "position": Vector2(0.37, 0.54)},
@@ -51,7 +53,7 @@ func _build_screen() -> void:
 	add_child(frame)
 
 	var header := HBoxContainer.new()
-	header.custom_minimum_size.y = 54
+	header.custom_minimum_size.y = int(HEADER_HEIGHT)
 	frame.add_child(header)
 	var title := _label(LOCATION_NAME, 23, Color("#f1ddbb"))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -92,16 +94,16 @@ func _build_screen() -> void:
 		var button := Button.new()
 		button.name = str(service["name"])
 		button.text = str(service["symbol"]) + "\n" + str(service["name"])
-		button.custom_minimum_size = Vector2(160, 64)
-		button.size = Vector2(160, 64)
-		button.add_theme_font_size_override("font_size", 16)
+		button.custom_minimum_size = Vector2(190, 76)
+		button.size = Vector2(190, 76)
+		button.add_theme_font_size_override("font_size", 19)
 		button.pressed.connect(_open_panel.bind(str(service["name"])))
 		button.gui_input.connect(_on_panorama_input)
 		service_buttons.append(button)
 		panorama.add_child(button)
 
 	var footer := HBoxContainer.new()
-	footer.custom_minimum_size.y = 76
+	footer.custom_minimum_size.y = int(FOOTER_HEIGHT)
 	footer.alignment = BoxContainer.ALIGNMENT_CENTER
 	frame.add_child(footer)
 	for entry in NAVIGATION:
@@ -142,10 +144,9 @@ func _layout_panorama() -> void:
 	var available := location_area.size
 	if available.x <= 0.0 or available.y <= 0.0:
 		return
-	var mobile := _is_mobile_layout()
-	var scale_factor := maxf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y) if mobile else minf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y)
+	var scale_factor := maxf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y)
 	var scaled := DESIGN_SIZE * scale_factor
-	# Keep the entire illustration visible on desktop; crop only on compact screens.
+	# Cover the play area at every aspect ratio, avoiding letterboxing.
 	panorama.size = scaled
 	backdrop.size = scaled
 	var max_offset := maxf(0.0, scaled.x - available.x)
@@ -161,7 +162,7 @@ func _layout_panorama() -> void:
 
 
 func _on_panorama_input(event: InputEvent) -> void:
-	if not _is_mobile_layout():
+	if panorama == null or location_area == null or panorama.size.x <= location_area.size.x:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
