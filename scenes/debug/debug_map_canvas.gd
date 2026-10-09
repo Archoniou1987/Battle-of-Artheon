@@ -7,6 +7,16 @@ const SQRT3:=1.7320508075688772
 var generated:Dictionary={}
 var _entity_roles:Dictionary={}
 signal loot_hex_selected(cell:Vector2i)
+signal hex_selected(cell:Vector2i)
+var player_hex:=Vector2i(-1,-1)
+var selected_hex:=Vector2i(-1,-1)
+var preview_path:Array[Vector2i]=[]
+
+func set_player_view(pos:Vector2i,selected:Vector2i,path:Array[Vector2i])->void:
+	player_hex=pos
+	selected_hex=selected
+	preview_path=path.duplicate()
+	queue_redraw()
 var loot_markers:Array[Vector2i]=[]
 
 func set_loot_markers(cells:Array[Vector2i])->void:
@@ -28,6 +38,16 @@ func _gui_input(event:InputEvent)->void:
 			loot_hex_selected.emit(cell)
 			accept_event()
 			return
+	if generated.is_empty():
+		return
+	var map:TacticalMapState=generated.map
+	for r in range(map.height):
+		for q in range(map.width):
+			var pos:=Vector2i(q,r)
+			if Geometry2D.is_point_in_polygon(event.position,_hex_points(_hex_center(pos))):
+				hex_selected.emit(pos)
+				accept_event()
+				return
 
 func _build_entity_roles()->void:
 	_entity_roles.clear()
@@ -67,6 +87,15 @@ func _draw()->void:
 				draw_circle(_hex_center(patrol.path[pause_index]),5.0,Color(1.0,0.90,0.35),false,2.0,true)
 	_draw_markers(map)
 	_draw_loot_markers()
+	if preview_path.size()>1:
+		var line:=PackedVector2Array()
+		for pos in preview_path:
+			line.append(_hex_center(pos))
+		draw_polyline(line,Color(0.20,0.85,1.0),3.0,true)
+	if selected_hex.x>=0:
+		draw_polyline(_closed_hex_points(_hex_center(selected_hex)),Color(0.30,0.90,1.0),3.0,true)
+	if player_hex.x>=0:
+		_draw_badge(_hex_center(player_hex),"YOU",Color(0.35,0.80,1.0))
 
 func _draw_markers(map:TacticalMapState)->void:
 	_draw_badge(_hex_center(generated.entrance),"IN",Color(0.20,0.80,0.45))
