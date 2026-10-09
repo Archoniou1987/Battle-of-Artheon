@@ -15,7 +15,7 @@ static func static_npc_at(map:TacticalMapState,roles:Dictionary,pos:Vector2i)->b
 		return true
 	return false
 
-static func find_route(map:TacticalMapState,explored:Dictionary,origin:Vector2i,destination:Vector2i,visible:Dictionary,roles:Dictionary)->Array[Vector2i]:
+static func find_route(map:TacticalMapState,explored:Dictionary,origin:Vector2i,destination:Vector2i,visible:Dictionary,roles:Dictionary,allow_destination_npc:bool=false)->Array[Vector2i]:
 	var empty:Array[Vector2i]=[]
 	if not map.in_bounds(origin) or not map.in_bounds(destination): return empty
 	if not explored.has(destination) or not map.cell(destination).is_passable(): return empty
@@ -34,7 +34,7 @@ static func find_route(map:TacticalMapState,explored:Dictionary,origin:Vector2i,
 		if current==destination: break
 		for neighbor in map.neighbors(current,true):
 			if not explored.has(neighbor) or settled.has(neighbor): continue
-			if visible.has(neighbor) and static_npc_at(map,roles,neighbor): continue
+			if visible.has(neighbor) and static_npc_at(map,roles,neighbor) and not (allow_destination_npc and neighbor==destination): continue
 			var next_cost:float=float(cost[current])+terrain_seconds(map.cell(neighbor).terrain_id)
 			if not cost.has(neighbor) or next_cost<float(cost[neighbor]):
 				cost[neighbor]=next_cost
