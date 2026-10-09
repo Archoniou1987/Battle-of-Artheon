@@ -22,6 +22,15 @@ jobs:
       - name: Import project and build script class cache
         run: timeout 120s godot --headless --editor --path . --quit
 
+      - name: Verify offset hex geometry and generated paths
+        run: timeout 120s godot --headless --path . --script res://tests/map/hex_offset_geometry_runner.gd
+
+      - name: Verify pathfinding on hex grid
+        run: timeout 120s godot --headless --path . --script res://tests/map/hex_pathfinding_runner.gd
+
+      - name: Verify tactical map movement
+        run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
+
       - name: Run Location Generator stress test
         run: timeout 120s godot --headless --path . --script res://tests/map/location_generator_runner.gd
 
