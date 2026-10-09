@@ -114,12 +114,18 @@ func _ready()->void:
 	mini_map=DebugMiniMap.new()
 	mini_map.custom_minimum_size=Vector2(155,155)
 	mini_map.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	$Root/MapPanel.add_child(mini_map)
 	mini_map.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	mini_map.anchor_left=1.0
+	mini_map.anchor_top=1.0
+	mini_map.anchor_right=1.0
+	mini_map.anchor_bottom=1.0
 	mini_map.offset_left=-167.0
 	mini_map.offset_top=-167.0
 	mini_map.offset_right=-12.0
 	mini_map.offset_bottom=-12.0
-	$Root/MapPanel.add_child(mini_map)
+	mini_map.size_flags_horizontal=Control.SIZE_SHRINK_END
+	mini_map.size_flags_vertical=Control.SIZE_SHRINK_END
 	var controls:=HBoxContainer.new()
 	$Root/Sidebar.add_child(controls)
 	$Root/Sidebar.move_child(controls,1)
