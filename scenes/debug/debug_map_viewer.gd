@@ -156,7 +156,10 @@ func _ready()->void:
 	reveal_map_toggle=CheckButton.new()
 	reveal_map_toggle.text="Открыть всю карту (тест)"
 	reveal_map_toggle.button_pressed=true
-	reveal_map_toggle.toggled.connect(func(enabled:bool)->void: canvas.set_debug_reveal_all(enabled))
+	reveal_map_toggle.toggled.connect(func(enabled:bool)->void:
+		canvas.set_debug_reveal_all(enabled)
+		mini_map.set_reveal_all(enabled)
+	)
 	$Root/Sidebar.add_child(reveal_map_toggle)
 	$Root/Sidebar.move_child(reveal_map_toggle,2)
 	canvas.set_debug_reveal_all(true)
@@ -210,6 +213,7 @@ func _regenerate()->void:
 	planned_path.clear()
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
+	mini_map.set_regions(generated.get("regions",[]),reveal_map_toggle.button_pressed if reveal_map_toggle!=null else true)
 	canvas.visible=false
 	call_deferred("_adapt_layout")
 	_camera_ready=false
