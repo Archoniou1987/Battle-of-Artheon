@@ -66,5 +66,29 @@ func _initialize()->void:
 	valid=valid and coordinator.try_start(map,bridge,"PLAYER",RandomNumberGenerator.new()).get("reason","")=="combat_active"
 	coordinator.finish_combat()
 	valid=valid and not coordinator.combat_active
+	var turns:=HexMapTurnService.new()
+	var empty_map:=TacticalMapState.new(9,9)
+	var empty_bridge:=MapNpcBridge.new()
+	valid=valid and empty_map.place_entity("PLAYER",Vector2i(1,1))
+	var distant:=NpcInstance.new("DISTANT",npc_repo.get_npc("NPC003"))
+	distant.detection_radius=4
+	distant.aggression=100.0
+	valid=valid and empty_bridge.register_npc(empty_map,distant,Vector2i(4,1))
+	var walk:=turns.move_player(empty_map,empty_bridge,"PLAYER",Vector2i(2,1),RandomNumberGenerator.new())
+	valid=valid and bool(walk.get("ok",false)) and not walk.has("encounter")
+	valid=valid and not turns.coordinator.combat_active
+	var patrol_npc:=NpcInstance.new("PATROL",npc_repo.get_npc("NPC003"))
+	patrol_npc.aggression=100.0
+	valid=valid and empty_bridge.register_npc(empty_map,patrol_npc,Vector2i(2,2))
+	var route:Array[Vector2i]=[Vector2i(2,2),Vector2i(2,1)]
+	var patrol:=HexPatrolState.new("PATROL",route)
+	var patrol_result:=turns.step_patrol(empty_map,empty_bridge,patrol,"PLAYER",RandomNumberGenerator.new())
+	valid=valid and bool(patrol_result.get("ok",false)) and patrol_result.has("encounter")
+	valid=valid and turns.coordinator.combat_active
+	valid=valid and empty_map.entity_positions["PATROL"]==Vector2i(2,2)
+	var blocked:=turns.move_player(empty_map,empty_bridge,"PLAYER",Vector2i(3,1),RandomNumberGenerator.new())
+	valid=valid and blocked.get("reason","")=="combat_active"
+	turns.finish_combat()
+	valid=valid and not turns.coordinator.combat_active
 	print("HEX_NPC_DETECTION_JOIN_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
