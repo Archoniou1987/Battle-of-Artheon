@@ -162,6 +162,9 @@ jobs:
       - name: Validate universal NPC detection and hex combat joining
         run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_detection_join_runner.gd
 
+      - name: Validate integrated NPC patrol chase group combat and resume
+        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_integration_runner.gd
+
       - name: Validate NPC map bounds and unreachable routes
         run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_boundary_runner.gd
 
