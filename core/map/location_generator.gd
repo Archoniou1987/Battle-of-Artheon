@@ -20,16 +20,17 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 	var guaranteed_path:Array[Vector2i]=[]
 	var cursor:=entrance
 	guaranteed_path.append(cursor)
-	while cursor.x<exit.x:
-		# Axial hex coordinates: (q+1,r+1) is NOT an adjacent hex.
-		# Keep each guaranteed-path step at hex distance exactly one.
-		var next:=Vector2i(cursor.x+1,cursor.y)
-		if cursor.y>exit.y and rng.randf()<0.55:
-			next.y-=1
-		cursor=next
-		guaranteed_path.append(cursor)
-	while cursor.y!=exit.y:
-		cursor=Vector2i(cursor.x,cursor.y+(1 if cursor.y<exit.y else -1))
+	# Walk the rectangular offset grid using real hex neighbors.
+	# First move horizontally, then finish with a shortest hex path.
+	while cursor != exit:
+		var candidates:Array[Vector2i]=[]
+		var best_distance:=HexGrid.distance(cursor,exit)
+		for neighbor in HexGrid.neighbors(cursor):
+			if map.in_bounds(neighbor) and HexGrid.distance(neighbor,exit)<best_distance:
+				candidates.append(neighbor)
+		if candidates.is_empty():
+			break
+		cursor=candidates[rng.randi_range(0,candidates.size()-1)]
 		guaranteed_path.append(cursor)
 	var protected:Dictionary={}
 	for pos in guaranteed_path:
