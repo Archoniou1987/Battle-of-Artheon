@@ -5,7 +5,7 @@ func _initialize()->void:
 	repo.load_definitions(TestFixtureLoader.load_json("res://data/npc/starting_region_npcs.json"))
 	var map:=TacticalMapState.new(10,10)
 	var bridge:=MapNpcBridge.new()
-	var valid:=map.place_entity("PLAYER",Vector2i(6,3))
+	var valid:=map.place_entity("PLAYER",Vector2i(5,3))
 	var npc:=NpcInstance.new("HUNTER",repo.get_npc("NPC003"))
 	npc.aggression=100.0
 	valid=valid and bridge.register_npc(map,npc,Vector2i(2,3))
@@ -15,7 +15,7 @@ func _initialize()->void:
 	var first:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and bool(first.get("ok",false)) and chase.mode=="chasing"
 	valid=valid and HexGrid.distance(map.entity_positions["HUNTER"],Vector2i(2,3))==1
-	valid=valid and map.move_entity("PLAYER",Vector2i(7,3)).get("ok",false)
+	valid=valid and map.move_entity("PLAYER",Vector2i(6,3)).get("ok",false)
 	var returning:=turns.step_chase(map,bridge,chase,"PLAYER",rng)
 	valid=valid and bool(returning.get("ok",false)) and chase.mode=="idle"
 	valid=valid and map.entity_positions["HUNTER"]==Vector2i(2,3)
