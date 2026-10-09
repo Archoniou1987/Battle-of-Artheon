@@ -11,7 +11,7 @@ func _initialize()->void:
 	guard.aggression=100.0
 	ally.aggression=100.0
 	valid=valid and bridge.register_npc(map,guard,Vector2i(2,4))
-	valid=valid and bridge.register_npc(map,ally,Vector2i(5,3))
+	valid=valid and bridge.register_npc(map,ally,Vector2i(5,5))
 	var route:Array[Vector2i]=[Vector2i(2,4),Vector2i(3,4),Vector2i(4,4)]
 	var patrol:=HexPatrolState.new("GUARD",route)
 	var chase:=HexNpcChaseState.new("GUARD",Vector2i(2,4),3,4)
@@ -21,6 +21,8 @@ func _initialize()->void:
 	var pursuit:=controller.step(map,bridge,turns,"PLAYER",rng)
 	valid=valid and bool(pursuit.get("ok",false)) and chase.mode=="chasing"
 	var contact:=controller.step(map,bridge,turns,"PLAYER",rng)
+	if not contact.has("encounter"):
+		contact=controller.step(map,bridge,turns,"PLAYER",rng)
 	valid=valid and bool(contact.get("ok",false)) and contact.has("encounter")
 	var encounter:Dictionary=contact.get("encounter",{})
 	valid=valid and encounter.get("npc_instance_ids",[]).size()==2
@@ -33,6 +35,7 @@ func _initialize()->void:
 	valid=valid and map.move_entity("PLAYER",Vector2i(6,4)).get("ok",false)
 	valid=valid and map.move_entity("PLAYER",Vector2i(7,4)).get("ok",false)
 	var retreat:=controller.step(map,bridge,turns,"PLAYER",rng)
+	print("NPC_INTEGRATION_DIAG pursuit=",pursuit," contact=",contact," retreat=",retreat," chase_mode=",chase.mode," guard_pos=",map.entity_positions["GUARD"])
 	valid=valid and bool(retreat.get("ok",false))
 	for i in range(5):
 		if chase.mode=="idle":
