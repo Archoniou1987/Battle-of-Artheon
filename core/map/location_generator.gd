@@ -169,7 +169,8 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		if available.is_empty():
 			continue
 		_shuffle_cells(available,rng)
-		var target_count:=maxi(3,roundi(float(available.size())*REGION_NPC_DENSITY))
+		var target_count:=maxi(3,roundi(float(available.size())*REGION_NPC_DENSITY*float(region["npc_density_multiplier"])))
+		var max_per_hex:int=int(region["max_npcs_per_hex"])
 		var placed:=0
 		var per_cell:Dictionary={}
 		var placement_attempts:=0
@@ -177,7 +178,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			placement_attempts+=1
 			var npc_pos:Vector2i=available[rng.randi_range(0,available.size()-1)]
 			var occupancy:int=int(per_cell.get(npc_pos,0))
-			if occupancy>=REGION_MAX_NPCS_PER_HEX:
+			if occupancy>=mini(REGION_MAX_NPCS_PER_HEX,max_per_hex):
 				continue
 			if occupancy>0 and rng.randf()>REGION_STACK_CHANCE:
 				continue
@@ -186,7 +187,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			var entity_id:="GEN_REGION_NPC_%s_%02d"%[str(region["region_id"]),placed]
 			if map.place_entity(entity_id,npc_pos):
 				per_cell[npc_pos]=occupancy+1
-				region_npcs.append({"entity_id":entity_id,"region_id":region["region_id"],"region_type":region["region_type"],"pos":npc_pos})
+				region_npcs.append({"entity_id":entity_id,"region_id":region["region_id"],"region_type":region["region_type"],"difficulty_tier":region["difficulty_tier"],"npc_power_multiplier":region["npc_power_multiplier"],"pos":npc_pos})
 				placed+=1
 	var region_objects:Array[Dictionary]=[]
 	var kinds:Dictionary={"bandit_camp":"tent","graveyard":"grave","beast_den":"bones","ruins":"relic"}
@@ -200,7 +201,7 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 			var object_id:="GEN_REGION_PROP_%s_%02d"%[str(region["region_id"]),j]
 			var prop_pos:Vector2i=choices[j]
 			if map.add_object(object_id,prop_pos):
-				region_objects.append({"object_id":object_id,"region_id":region["region_id"],"region_type":region["region_type"],"kind":kinds.get(region["region_type"],"relic"),"pos":prop_pos})
+				region_objects.append({"object_id":object_id,"region_id":region["region_id"],"region_type":region["region_type"],"kind":kinds.get(region["region_type"],"relic"),"difficulty_tier":region["difficulty_tier"],"loot_quality_multiplier":region["loot_quality_multiplier"],"pos":prop_pos})
 	var encounter_service:=HexEncounterService.new()
 	for i in range(encounter_cells.size()):
 		var encounter:=HexEncounter.new("GEN_ENCOUNTER_%02d"%i,HexEncounter.TRIGGER_ENTER,"damage",{"amount":1},true)
