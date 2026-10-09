@@ -349,18 +349,25 @@ func _center_on_player()->void:
 	canvas.queue_redraw()
 
 func _build_movement_panel()->void:
+	# The map panel is a PanelContainer. A direct child is stretched by its
+	# container layout, regardless of anchors; use a full-size transparent
+	# overlay and position only its small HUD as a floating child.
+	var overlay:=Control.new()
+	overlay.name="MovementOverlay"
+	overlay.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	$Root/MapPanel.add_child(overlay)
 	movement_panel=PanelContainer.new()
 	movement_panel.name="MovementPanel"
 	movement_panel.mouse_filter=Control.MOUSE_FILTER_STOP
-	$Root/MapPanel.add_child(movement_panel)
-	movement_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	overlay.add_child(movement_panel)
+	movement_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	movement_panel.anchor_left=0.0
-	movement_panel.anchor_right=1.0
+	movement_panel.anchor_right=0.0
 	movement_panel.anchor_top=1.0
 	movement_panel.anchor_bottom=1.0
 	movement_panel.offset_left=12.0
-	movement_panel.offset_right=-12.0
-	movement_panel.offset_top=-74.0
+	movement_panel.offset_right=260.0
+	movement_panel.offset_top=-66.0
 	movement_panel.offset_bottom=-8.0
 	var row:=HBoxContainer.new()
 	movement_panel.add_child(row)
@@ -375,11 +382,11 @@ func _build_movement_panel()->void:
 	movement_progress.min_value=0.0
 	movement_progress.max_value=100.0
 	movement_progress.show_percentage=false
-	movement_progress.custom_minimum_size.y=12.0
+	movement_progress.custom_minimum_size.y=10.0
 	info_column.add_child(movement_progress)
 	stop_button=Button.new()
-	stop_button.text="■ Стоп"
-	stop_button.custom_minimum_size=Vector2(105,48)
+	stop_button.text="Стоп"
+	stop_button.custom_minimum_size=Vector2(64,40)
 	stop_button.pressed.connect(_request_stop)
 	row.add_child(stop_button)
 	movement_panel.visible=false
