@@ -9,6 +9,7 @@ var movement_panel:PanelContainer
 var movement_info:Label
 var movement_progress:ProgressBar
 var stop_button:Button
+var game_nav:GridContainer
 var _camera_ready:=false
 var _moving:=false
 var _stop_requested:=false
@@ -137,6 +138,7 @@ func _ready()->void:
 	move_status.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	controls.add_child(move_status)
 	_build_movement_panel()
+	_build_game_navigation()
 	_loot_refresh_timer=Timer.new()
 	_loot_refresh_timer.wait_time=1.0
 	_loot_refresh_timer.timeout.connect(_on_loot_refresh)
@@ -211,6 +213,8 @@ func _adapt_layout()->void:
 	$Root/Sidebar/Hint.visible=not portrait
 	$Root/Sidebar/SummaryTitle.visible=not portrait
 	$Root/Sidebar/Summary.visible=not portrait
+	if game_nav!=null:
+		game_nav.columns=2 if portrait else 4
 	_position_minimap()
 	_center_on_player()
 	if not _camera_ready: call_deferred("_finish_initial_camera")
@@ -374,6 +378,25 @@ func _build_movement_panel()->void:
 	stop_button.pressed.connect(_request_stop)
 	row.add_child(stop_button)
 	movement_panel.visible=false
+
+func _build_game_navigation()->void:
+	# These are layout probes only; game screens are not connected yet.
+	game_nav=GridContainer.new()
+	game_nav.name="GameNavigation"
+	game_nav.columns=2
+	game_nav.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	game_nav.add_theme_constant_override("h_separation",8)
+	game_nav.add_theme_constant_override("v_separation",8)
+	$Root/Sidebar.add_child(game_nav)
+	$Root/Sidebar.move_child(game_nav,3)
+	for title in ["Персонаж","Инвентарь","Квесты","Карта"]:
+		var button:=Button.new()
+		button.name=title
+		button.text=title
+		button.custom_minimum_size.y=48.0
+		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		button.tooltip_text="Раздел будет подключён позже"
+		game_nav.add_child(button)
 
 func _request_stop()->void:
 	if not _moving: return
