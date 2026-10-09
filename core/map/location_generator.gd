@@ -117,6 +117,8 @@ static func generate(width:int, height:int, seed_value:int = 1)->Dictionary:
 		var after_reachable:Dictionary=_reachable_cells(map,entrance)
 		var valid_access:=after_reachable.has(guard_pos) and after_reachable.has(object_pos)
 		for previous_cell in before_reachable.keys():
+			if changed_neighbors.has(previous_cell):
+				continue
 			if not after_reachable.has(previous_cell):
 				valid_access=false
 				break
