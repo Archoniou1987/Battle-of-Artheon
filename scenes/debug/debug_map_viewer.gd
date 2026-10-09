@@ -5,7 +5,11 @@ var player_hex:=Vector2i(-1,-1)
 var target_hex:=Vector2i(-1,-1)
 var planned_path:Array[Vector2i]=[]
 var move_status:Label
-var move_button:Button
+var _moving:=false
+var _stop_requested:=false
+var _step_elapsed:=0.0
+var _step_duration:=0.0
+var _next_hex:=Vector2i(-1,-1)
 var zoom_level:float=3.0
 var _map_base_size:=Vector2.ZERO
 var map_scroll:Control
@@ -129,11 +133,6 @@ func _ready()->void:
 	var controls:=HBoxContainer.new()
 	$Root/Sidebar.add_child(controls)
 	$Root/Sidebar.move_child(controls,1)
-	move_button=Button.new()
-	move_button.text="Шаг →"
-	move_button.custom_minimum_size=Vector2(110,48)
-	move_button.pressed.connect(_move_one_step)
-	controls.add_child(move_button)
 	move_status=Label.new()
 	move_status.text="Коснитесь гексагона"
 	move_status.clip_text=true
@@ -155,11 +154,15 @@ func _regenerate()->void:
 	playable_map=generated.map
 	player_hex=generated.entrance
 	playable_map.place_entity("PLAYER",player_hex)
+	_moving=false
+	_stop_requested=false
+	_next_hex=Vector2i(-1,-1)
 	target_hex=Vector2i(-1,-1)
 	planned_path.clear()
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
 	call_deferred("_center_on_player")
+	get_tree().process_frame.connect(_center_on_player,CONNECT_ONE_SHOT)
 	if move_status!=null:
 		move_status.text="Выберите клетку"
 	refresh_loot_markers()
@@ -208,37 +211,83 @@ func _position_minimap()->void:
 	mini_map.position=rect.position-global_position+rect.size-Vector2(167,167)
 	mini_map.size=Vector2(155,155)
 
+func _visible_cells()->Dictionary:
+	var result:Dictionary={}
+	for pos in playable_map.cells.keys():
+		if canvas._is_visible_hex(pos): result[pos]=true
+	return result
+
+func _route_to(destination:Vector2i)->Array[Vector2i]:
+	return SafeMapNavigation.find_route(playable_map,canvas.explored_hexes,player_hex,destination,_visible_cells(),canvas._entity_roles)
+
 func _select_destination(pos:Vector2i)->void:
-	if playable_map==null:
+	if playable_map==null: return
+	if pos==player_hex:
+		if _moving:
+			_stop_requested=true
+			move_status.text="Остановка после перехода"
+		return
+	if not canvas.explored_hexes.has(pos): return
+	if _moving:
+		_stop_requested=true
+		move_status.text="Ожидание остановки"
+		return
+	if pos==target_hex and planned_path.size()>1:
+		_moving=true
+		_stop_requested=false
+		_prepare_step()
 		return
 	target_hex=pos
-	var result:=HexPathfinder.new().find_path(playable_map,player_hex,target_hex)
-	planned_path.clear()
-	if bool(result.get("ok",false)):
-		for step in result.get("path",[]):
-			planned_path.append(step)
-		move_status.text="Путь: %d шагов"%(planned_path.size()-1)
+	planned_path=_route_to(target_hex)
+	if planned_path.size()>1:
+		var seconds:=0.0
+		for i in range(1,planned_path.size()):
+			seconds+=SafeMapNavigation.terrain_seconds(playable_map.cell(planned_path[i]).terrain_id)
+		move_status.text="Путь: %d гексов, %.0f сек. Нажмите ещё раз"%[planned_path.size()-1,seconds]
 	else:
-		move_status.text="Недоступно: "+str(result.get("reason",""))
+		move_status.text="Безопасный путь недоступен"
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 
-func _move_one_step()->void:
-	if playable_map==null or planned_path.size()<2:
+func _prepare_step()->void:
+	if _stop_requested or planned_path.size()<2:
+		_moving=false
+		_stop_requested=false
+		_next_hex=Vector2i(-1,-1)
+		move_status.text="Остановлено" if planned_path.size()>1 else "Прибытие"
 		return
 	var next:Vector2i=planned_path[1]
-	if not playable_map.entities_at(next).is_empty():
-		move_status.text="Клетка занята NPC"
+	if not playable_map.cell(next).is_passable() or (canvas._is_visible_hex(next) and SafeMapNavigation.static_npc_at(playable_map,canvas._entity_roles,next)):
+		planned_path=_route_to(target_hex)
+		canvas.set_player_view(player_hex,target_hex,planned_path)
+		if planned_path.size()<2:
+			_moving=false
+			move_status.text="Препятствие: остановка"
+			return
+		next=planned_path[1]
+	_next_hex=next
+	_step_elapsed=0.0
+	_step_duration=SafeMapNavigation.terrain_seconds(playable_map.cell(next).terrain_id)
+	move_status.text="Движение: %.0f сек/гекс"%_step_duration
+
+func _process(delta:float)->void:
+	if not _moving or _next_hex.x<0: return
+	_step_elapsed+=delta
+	if _step_elapsed<_step_duration: return
+	if not playable_map.entities_at(_next_hex).is_empty():
+		_moving=false
+		move_status.text="Столкновение: движение остановлено"
 		return
-	var result:=playable_map.move_entity("PLAYER",next)
+	var result:Dictionary=playable_map.move_entity("PLAYER",_next_hex)
 	if not bool(result.get("ok",false)):
-		move_status.text="Движение: "+str(result.get("reason",""))
+		_moving=false
+		move_status.text="Движение: "+str(result.get("reason","ошибка"))
 		return
-	player_hex=next
+	player_hex=_next_hex
 	planned_path.remove_at(0)
-	move_status.text="Прибытие" if planned_path.size()==1 else "Осталось: %d"%(planned_path.size()-1)
 	canvas.set_player_view(player_hex,target_hex,planned_path)
 	mini_map.update_map(playable_map,player_hex)
-	call_deferred("_center_on_player")
+	_center_on_player()
+	_prepare_step()
 
 func _set_fixed_scale()->void:
 	if canvas==null:
