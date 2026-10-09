@@ -10,6 +10,7 @@ var movement_info:Label
 var movement_progress:ProgressBar
 var stop_button:Button
 var game_nav:GridContainer
+var reveal_map_toggle:CheckButton
 var _camera_ready:=false
 var _moving:=false
 var _stop_requested:=false
@@ -151,6 +152,13 @@ func _ready()->void:
 	move_status.clip_text=true
 	move_status.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	controls.add_child(move_status)
+	reveal_map_toggle=CheckButton.new()
+	reveal_map_toggle.text="Открыть всю карту (тест)"
+	reveal_map_toggle.button_pressed=true
+	reveal_map_toggle.toggled.connect(func(enabled:bool)->void: canvas.set_debug_reveal_all(enabled))
+	$Root/Sidebar.add_child(reveal_map_toggle)
+	$Root/Sidebar.move_child(reveal_map_toggle,2)
+	canvas.set_debug_reveal_all(true)
 	_build_movement_panel()
 	_build_game_navigation()
 	_loot_refresh_timer=Timer.new()
@@ -165,6 +173,7 @@ func _regenerate()->void:
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
+	canvas.set_debug_reveal_all(reveal_map_toggle.button_pressed if reveal_map_toggle!=null else true)
 	_set_fixed_scale()
 	playable_map=generated.map
 	player_hex=generated.entrance
