@@ -78,6 +78,8 @@ func _build_entity_roles()->void:
 	_entity_roles.clear()
 	for i in range(generated.get("npc_cells",[]).size()):
 		_entity_roles["GEN_NPC_%02d"%i]="NPC"
+	for region_npc in generated.get("region_npcs",[]):
+		_entity_roles[region_npc["entity_id"]]="NPC"
 	for route_guard in generated.get("route_guards",[]):
 		_entity_roles[route_guard.guard_id]="RG"
 	for patrol in generated.get("patrols",[]):
