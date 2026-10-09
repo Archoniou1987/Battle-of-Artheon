@@ -30,6 +30,7 @@ var panorama_offset := 0.0
 var dragging := false
 var drag_origin := Vector2.ZERO
 var drag_offset := 0.0
+var service_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -61,6 +62,7 @@ func _build_screen() -> void:
 	location_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	location_area.clip_contents = true
 	location_area.gui_input.connect(_on_panorama_input)
+	location_area.mouse_filter = Control.MOUSE_FILTER_STOP
 	location_area.resized.connect(_layout_panorama)
 	frame.add_child(location_area)
 
@@ -94,6 +96,8 @@ func _build_screen() -> void:
 		button.size = Vector2(160, 64)
 		button.add_theme_font_size_override("font_size", 16)
 		button.pressed.connect(_open_panel.bind(str(service["name"])))
+		button.gui_input.connect(_on_panorama_input)
+		service_buttons.append(button)
 		panorama.add_child(button)
 
 	var footer := HBoxContainer.new()
@@ -141,6 +145,7 @@ func _layout_panorama() -> void:
 	var mobile := _is_mobile_layout()
 	var scale_factor := maxf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y) if mobile else minf(available.x / DESIGN_SIZE.x, available.y / DESIGN_SIZE.y)
 	var scaled := DESIGN_SIZE * scale_factor
+	# Keep the entire illustration visible on desktop; crop only on compact screens.
 	panorama.size = scaled
 	backdrop.size = scaled
 	var max_offset := maxf(0.0, scaled.x - available.x)
@@ -166,14 +171,14 @@ func _on_panorama_input(event: InputEvent) -> void:
 		else:
 			dragging = false
 	elif event is InputEventScreenDrag and dragging:
-		_shift_panorama(drag_offset + event.position.x - drag_origin.x)
+		_shift_panorama(panorama_offset + event.relative.x)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		dragging = event.pressed
 		if dragging:
 			drag_origin = event.position
 			drag_offset = panorama_offset
 	elif event is InputEventMouseMotion and dragging:
-		_shift_panorama(drag_offset + event.position.x - drag_origin.x)
+		_shift_panorama(panorama_offset + event.relative.x)
 
 
 func _shift_panorama(value: float) -> void:
