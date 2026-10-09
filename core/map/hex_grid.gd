@@ -23,5 +23,5 @@ static func distance(a:Vector2i, b:Vector2i)->int:
 	var bb:=to_axial(b)
 	var dq:=aa.x - bb.x
 	var dr:=aa.y - bb.y
-	var ds:=(-a.x - a.y) - (-b.x - b.y)
+	var ds:=-(dq+dr)
 	return maxi(absi(dq), maxi(absi(dr), absi(ds)))
