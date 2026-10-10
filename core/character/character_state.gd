@@ -8,6 +8,7 @@ var level: int
 var progression: CharacterProgression
 var inventory: InventoryState
 var equipment: EquipmentState
+var in_combat := false
 
 func _init(id: String, name: String, character_level: int = 1) -> void:
 	character_id = id
@@ -21,10 +22,69 @@ func receive_item(instance_id: String, repository: ItemRepository) -> bool:
 	return inventory.add_instance(instance_id, repository)
 
 func equip(slot: String, instance_id: String, repository: ItemRepository) -> bool:
+	if in_combat or not repository.has_item(instance_id):
+		return false
+	var item := repository.get_item(instance_id)
+	if not meets_requirements(item, repository):
+		return false
 	return EquipmentService.equip_instance(slot, instance_id, inventory, equipment, repository)
 
-func unequip(slot: String) -> Variant:
-	return equipment.unequip(slot)
+func unequip(slot: String, repository: ItemRepository = null) -> Variant:
+	if in_combat:
+		return null
+	var removed: Variant = equipment.unequip(slot)
+	if removed != null and repository != null:
+		_revalidate_equipment(repository)
+	return removed
+
+func effective_stats(repository: ItemRepository, excluded_id: String = "") -> Dictionary:
+	var result := progression.base_stats.duplicate(true)
+	var seen := {}
+	for slot in EquipmentState.SLOTS:
+		var raw_id: Variant = equipment.get_equipped_instance_id(slot)
+		if raw_id == null:
+			continue
+		var id := String(raw_id)
+		if id == excluded_id or seen.has(id):
+			continue
+		seen[id] = true
+		var item := repository.get_item(id)
+		for field in ["guaranteed_stats", "bonuses"]:
+			var bonuses: Variant = item.get(field, {})
+			if not bonuses is Dictionary:
+				continue
+			for stat in progression.base_stats:
+				if bonuses.has(stat):
+					result[stat] = int(result[stat]) + int(bonuses[stat])
+	return result
+
+func meets_requirements(item: Dictionary, repository: ItemRepository) -> bool:
+	var requirements: Variant = item.get("requirements", {})
+	if not requirements is Dictionary:
+		return false
+	var stats := effective_stats(repository, String(item.get("instance_id", "")))
+	for stat in requirements:
+		if not stats.has(stat) or int(stats[stat]) < int(requirements[stat]):
+			return false
+	return true
+
+func _revalidate_equipment(repository: ItemRepository) -> void:
+	var changed := true
+	while changed:
+		changed = false
+		var seen := {}
+		for slot in EquipmentState.SLOTS:
+			var raw_id: Variant = equipment.get_equipped_instance_id(slot)
+			if raw_id == null:
+				continue
+			var id := String(raw_id)
+			if seen.has(id):
+				continue
+			seen[id] = true
+			if not meets_requirements(repository.get_item(id), repository):
+				equipment.unequip(slot)
+				changed = true
+				break
 
 func remove_item(instance_id: String) -> bool:
 	return inventory.remove_instance(instance_id, equipment)
