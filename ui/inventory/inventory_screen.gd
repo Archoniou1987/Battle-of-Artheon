@@ -70,6 +70,17 @@ func _ready() -> void:
 	equipment_content.position = Vector2.ZERO
 	equipment_content.custom_minimum_size = Vector2(480, 480)
 	square_host.add_child(equipment_content)
+	var health := HBoxContainer.new()
+	health.name = "Health"
+	equipment_content.add_child(health)
+	hp_label = Label.new()
+	hp_label.custom_minimum_size.x = 105
+	health.add_child(hp_label)
+	hp_bar = ProgressBar.new()
+	hp_bar.custom_minimum_size.y = 20
+	hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_bar.show_percentage = false
+	health.add_child(hp_bar)
 	var middle := HBoxContainer.new()
 	middle.name = "EquipmentMiddle"
 	middle.add_theme_constant_override("separation", 6)
