@@ -128,6 +128,7 @@ func _apply_layout() -> void:
 	layout_row.vertical = portrait
 	var equipment_panel := layout_row.get_node("EquipmentPanel") as Control
 	equipment_panel.custom_minimum_size = Vector2.ZERO if portrait else Vector2(380, 0)
+	bag_grid.columns = 4 if portrait else 6
 
 func _select_slot(slot: String) -> void:
 	if character == null:
