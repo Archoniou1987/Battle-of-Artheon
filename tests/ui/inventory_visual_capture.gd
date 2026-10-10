@@ -15,16 +15,19 @@ func _capture() -> void:
 	await process_frame
 
 	root.size = Vector2i(390, 844)
+	DisplayServer.window_set_size(Vector2i(390, 844))
 	game.call("_open_panel", "Инвентарь")
 	await _settle()
 	_save("inventory-portrait.png")
 
 	root.size = Vector2i(844, 390)
+	DisplayServer.window_set_size(Vector2i(844, 390))
 	await _settle()
 	_save("inventory-landscape.png")
 
 	game.call("_open_panel", "Персонаж")
 	root.size = Vector2i(390, 844)
+	DisplayServer.window_set_size(Vector2i(390, 844))
 	await _settle()
 	_save("character-portrait.png")
 	print("Visual preview capture: PASS")
@@ -36,6 +39,7 @@ func _settle() -> void:
 
 func _save(file_name: String) -> void:
 	var image := root.get_texture().get_image()
+	assert(image.get_width() == root.size.x and image.get_height() == root.size.y)
 	assert(image != null and not image.is_empty())
 	var error := image.save_png("res://visual-preview/" + file_name)
 	assert(error == OK)
