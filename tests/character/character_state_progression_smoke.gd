@@ -12,5 +12,20 @@ func _initialize() -> void:
 	assert(restored.restore_progression(saved))
 	assert(restored.level == 2)
 	assert(restored.progression.base_stats["END"] == 4)
-	print("Character state progression smoke: PASS")
+	var repository := ItemRepository.new()
+	var strength_ring := {"instance_id": "ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "guaranteed_stats": {"STR": 4}}
+	var dependent_sword := {"instance_id": "sword", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"STR": 7}, "guaranteed_stats": {}}
+	assert(repository.add_item(strength_ring))
+	assert(repository.add_item(dependent_sword))
+	assert(character.receive_item("ring", repository))
+	assert(character.receive_item("sword", repository))
+	assert(not character.equip("main_hand", "sword", repository))
+	assert(character.equip("ring1", "ring", repository))
+	assert(character.equip("main_hand", "sword", repository))
+	character.in_combat = true
+	assert(character.unequip("ring1", repository) == null)
+	character.in_combat = false
+	assert(character.unequip("ring1", repository) == "ring")
+	assert(not character.equipment.is_equipped("sword"))
+	print("Character state progression and equipment requirements smoke: PASS")
 	quit()
