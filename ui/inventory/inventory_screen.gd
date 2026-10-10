@@ -4,7 +4,7 @@ extends Control
 ## Responsive inventory shell. Uses live inventory/equipment instance IDs.
 const SLOT_NAMES := {
 	"head": "Голова", "shoulders": "Плечи", "neck": "Шея", "back": "Спина",
-	"chest": "Грудь", "wrists": "Руки", "waist": "Пояс", "legs": "Ноги",
+	"chest": "Грудь", "wrists": "Наручи", "hands": "Перчатки", "waist": "Пояс", "legs": "Ноги",
 	"main_hand": "Осн. рука", "off_hand": "Вторая рука",
 	"ring1": "Кольцо I", "ring2": "Кольцо II", "feet": "Ступни"
 }
@@ -55,40 +55,32 @@ func _ready() -> void:
 	layout_row = BoxContainer.new()
 	layout_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(layout_row)
-	var equipment_panel := PanelContainer.new()
-	equipment_panel.name = "EquipmentPanel"
-	equipment_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	layout_row.add_child(equipment_panel)
+	var square_host := Control.new()
+	square_host.name = "EquipmentPanel"
+	square_host.clip_contents = true
+	layout_row.add_child(square_host)
 	equipment_content = VBoxContainer.new()
-	equipment_panel.add_child(equipment_content)
-	var equipment_title := Label.new()
-	equipment_title.text = "Экипировка"
-	equipment_content.add_child(equipment_title)
-	equipment_grid = GridContainer.new()
-	equipment_grid.columns = 4
-	equipment_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_content.add_child(equipment_grid)
-	for slot in ["head", "neck", "shoulders", "back"]:
-		_add_equipment_slot(equipment_grid, slot)
-
+	equipment_content.name = "SquareContent"
+	equipment_content.add_theme_constant_override("separation", 4)
+	equipment_content.position = Vector2.ZERO
+	equipment_content.custom_minimum_size = Vector2(480, 480)
+	square_host.add_child(equipment_content)
 	var middle := HBoxContainer.new()
 	middle.name = "EquipmentMiddle"
-	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	middle.add_theme_constant_override("separation", 6)
 	equipment_content.add_child(middle)
 	var left_slots := VBoxContainer.new()
-	left_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_slots.name = "LeftSlots"
+	left_slots.add_theme_constant_override("separation", 4)
 	middle.add_child(left_slots)
-	for slot in ["main_hand", "chest", "waist"]:
+	for slot in ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]:
 		_add_equipment_slot(left_slots, slot)
-
 	character_portrait = PanelContainer.new()
 	character_portrait.name = "CharacterPortrait"
-	character_portrait.custom_minimum_size = Vector2(100, 225)
-	character_portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	character_portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	character_portrait.custom_minimum_size = Vector2(356, 416)
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
-	portrait_label.text = "✦\nГЕРОЙ\n✦"
+	portrait_label.text = "✦\\nГЕРОЙ\\nПО ПОЯС\\n✦"
 	portrait_label.add_theme_font_size_override("font_size", 19)
 	portrait_label.add_theme_color_override("font_color", Color("#d3b37b"))
 	portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -98,22 +90,23 @@ func _ready() -> void:
 	portrait_frame.bg_color = Color("#202b3b")
 	portrait_frame.border_color = Color("#94774e")
 	portrait_frame.set_border_width_all(2)
-	portrait_frame.set_corner_radius_all(5)
 	character_portrait.add_theme_stylebox_override("panel", portrait_frame)
-
 	var right_slots := VBoxContainer.new()
-	right_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_slots.name = "RightSlots"
+	right_slots.add_theme_constant_override("separation", 4)
 	middle.add_child(right_slots)
-	for slot in ["off_hand", "wrists", "legs"]:
+	for slot in ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]:
 		_add_equipment_slot(right_slots, slot)
-
-	var bottom := GridContainer.new()
-	bottom.name = "EquipmentBottom"
-	bottom.columns = 3
-	bottom.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	equipment_content.add_child(bottom)
-	for slot in ["ring1", "feet", "ring2"]:
-		_add_equipment_slot(bottom, slot)
+	var elixirs := HBoxContainer.new()
+	elixirs.name = "ElixirSlots"
+	elixirs.alignment = BoxContainer.ALIGNMENT_CENTER
+	elixirs.add_theme_constant_override("separation", 4)
+	equipment_content.add_child(elixirs)
+	for i in range(4):
+		var quick := ItemIcon.new()
+		quick.name = "Elixir%d" % (i + 1)
+		elixirs.add_child(quick)
+		quick.set_item({}, "Эликсир %d" % (i + 1))
 
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
@@ -154,9 +147,13 @@ func _apply_layout() -> void:
 	var portrait := size.y > size.x
 	_last_portrait = portrait
 	layout_row.vertical = portrait
-	var equipment_panel := layout_row.get_node("EquipmentPanel") as Control
-	equipment_panel.custom_minimum_size = Vector2.ZERO if portrait else Vector2(340, 0)
-	character_portrait.custom_minimum_size.y = 190 if portrait else 148
+	var square_host := layout_row.get_node("EquipmentPanel") as Control
+	var available := minf(size.x, size.y) if not portrait else size.x
+	var square_size := minf(480.0, available)
+	square_host.custom_minimum_size = Vector2(square_size, square_size)
+	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	square_host.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	equipment_content.scale = Vector2.ONE * (square_size / 480.0)
 	bag_grid.columns = 4 if portrait else 6
 
 func _select_slot(slot: String) -> void:
