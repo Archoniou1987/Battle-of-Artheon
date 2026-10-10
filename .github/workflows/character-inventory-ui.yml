@@ -12,6 +12,10 @@ on:
       - ".github/workflows/character-inventory-ui.yml"
   workflow_dispatch:
 
+concurrency:
+  group: character-inventory-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   character-progression:
     runs-on: ubuntu-latest
