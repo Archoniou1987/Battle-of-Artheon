@@ -9,6 +9,7 @@ const MAX_CONFIGURED_LEVEL := 20
 var level: int = FIRST_LEVEL
 var xp_into_level: int = 0
 var unspent_stat_points: int = 0
+## Temporary neutral starting distribution; archetype-specific allocation is not approved yet.
 var base_stats: Dictionary = {"STR": 3, "DEX": 3, "INTU": 3, "INT": 3, "WIS": 3, "END": 3}
 var _table: Dictionary = {}
 
@@ -37,6 +38,8 @@ func gain_xp(amount: int) -> int:
 	if amount <= 0:
 		return 0
 	var gained_levels := 0
+	if level >= MAX_CONFIGURED_LEVEL:
+		return 0 # Level 20 cap: do not accumulate unbounded, unusable XP.
 	xp_into_level += amount
 	while level < MAX_CONFIGURED_LEVEL:
 		var needed := required_xp()
@@ -46,6 +49,8 @@ func gain_xp(amount: int) -> int:
 		level += 1
 		unspent_stat_points += 1
 		gained_levels += 1
+	if level >= MAX_CONFIGURED_LEVEL:
+		xp_into_level = 0
 	return gained_levels
 
 func allocate_stat(stat: String) -> bool:
@@ -78,7 +83,10 @@ func restore(data: Dictionary) -> bool:
 	var restored_stats: Variant = data.get("base_stats", {})
 	if restored_level < 1 or restored_level > MAX_CONFIGURED_LEVEL or restored_xp < 0 or restored_points < 0 or not restored_stats is Dictionary:
 		return false
-	if restored_level < MAX_CONFIGURED_LEVEL and restored_xp >= int(_table.get("level_up_xp", [])[restored_level - 1]):
+	var thresholds: Array = _table.get("level_up_xp", [])
+	if restored_level < MAX_CONFIGURED_LEVEL and (restored_level > thresholds.size() or restored_xp >= int(thresholds[restored_level - 1])):
+		return false
+	if restored_level == MAX_CONFIGURED_LEVEL and restored_xp != 0:
 		return false
 	var keys := ["STR", "DEX", "INTU", "INT", "WIS", "END"]
 	var total := restored_points
