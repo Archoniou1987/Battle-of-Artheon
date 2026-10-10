@@ -72,35 +72,45 @@ func _ready() -> void:
 	equipment_grid.columns = 4
 	equipment_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	equipment_content.add_child(equipment_grid)
-	for row_index in range(SLOT_ROWS.size()):
-		var row: Array = SLOT_ROWS[row_index]
-		for column_index in range(4):
-			var slot := String(row[column_index])
-			if slot.is_empty():
-				if row_index == 1 and column_index == 1:
-					character_portrait = PanelContainer.new()
-					character_portrait.name = "CharacterPortrait"
-					character_portrait.custom_minimum_size = Vector2(80, 72)
-					var portrait_label := Label.new()
-					portrait_label.text = "Герой"
-					portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-					portrait_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-					character_portrait.add_child(portrait_label)
-					equipment_grid.add_child(character_portrait)
-				else:
-					var spacer := Control.new()
-					spacer.custom_minimum_size = Vector2(72, 64)
-					equipment_grid.add_child(spacer)
-				continue
-			var button := Button.new()
-			button.name = slot
-			button.text = SLOT_NAMES[slot]
-			button.custom_minimum_size = Vector2(72, 64)
-			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			button.pressed.connect(_select_slot.bind(slot))
-			_style_item_button(button, Color("#66543d"))
-			equipment_grid.add_child(button)
-			slot_buttons[slot] = button
+	for slot in ["head", "neck", "shoulders", "back"]:
+		_add_equipment_slot(equipment_grid, slot)
+
+	var middle := HBoxContainer.new()
+	middle.name = "EquipmentMiddle"
+	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_content.add_child(middle)
+	var left_slots := VBoxContainer.new()
+	left_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	middle.add_child(left_slots)
+	for slot in ["main_hand", "chest", "waist"]:
+		_add_equipment_slot(left_slots, slot)
+
+	character_portrait = PanelContainer.new()
+	character_portrait.name = "CharacterPortrait"
+	character_portrait.custom_minimum_size = Vector2(110, 210)
+	character_portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	character_portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	middle.add_child(character_portrait)
+	var portrait_label := Label.new()
+	portrait_label.text = "Герой"
+	portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	portrait_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	character_portrait.add_child(portrait_label)
+
+	var right_slots := VBoxContainer.new()
+	right_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	middle.add_child(right_slots)
+	for slot in ["off_hand", "wrists", "legs"]:
+		_add_equipment_slot(right_slots, slot)
+
+	var bottom := GridContainer.new()
+	bottom.name = "EquipmentBottom"
+	bottom.columns = 3
+	bottom.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	equipment_content.add_child(bottom)
+	for slot in ["ring1", "feet", "ring2"]:
+		_add_equipment_slot(bottom, slot)
+
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
 	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -124,6 +134,18 @@ func _ready() -> void:
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
+
+func _add_equipment_slot(parent: Control, slot: String) -> void:
+	var button := Button.new()
+	button.name = slot
+	button.text = SLOT_NAMES[slot]
+	button.custom_minimum_size = Vector2(72, 62)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(_select_slot.bind(slot))
+	_style_item_button(button, Color("#66543d"))
+	parent.add_child(button)
+	slot_buttons[slot] = button
+
 
 func _apply_layout() -> void:
 	if layout_row == null:
