@@ -138,22 +138,49 @@ func _ready() -> void:
 	var heading_stats := Label.new()
 	heading_stats.text = "БОЕВЫЕ ХАРАКТЕРИСТИКИ"
 	stats_panel.add_child(heading_stats)
+	var stats_scroll := ScrollContainer.new()
+	stats_scroll.name = "StatsScroll"
+	stats_scroll.custom_minimum_size.y = 118
+	stats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	stats_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	stats_panel.add_child(stats_scroll)
+	var table := GridContainer.new()
+	table.name = "CombatTable"
+	table.columns = 8
+	table.add_theme_constant_override("h_separation", 7)
+	table.add_theme_constant_override("v_separation", 3)
+	stats_scroll.add_child(table)
+	var groups := [
+		["Атака", ["Урон оружия", "Попадание", "Крит"]],
+		["Защита", ["Броня по зонам", "Уклонение", "Блок"]],
+		["Маг. атака", ["Мана", "Магический урон", "Усиление стихий"]],
+		["Маг. защита", ["Общее сопротивление", "Сопротивления стихиям"]]
+	]
+	for group in groups:
+		var title := Label.new()
+		title.text = group[0]
+		title.add_theme_color_override("font_color", Color("#d3b37b"))
+		table.add_child(title)
+		var value_title := Label.new()
+		value_title.text = "Знач."
+		value_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		table.add_child(value_title)
+	for row_index in range(3):
+		for group in groups:
+			var name := group[1][row_index] if row_index < group[1].size() else ""
+			var label := Label.new()
+			label.text = name
+			label.add_theme_font_size_override("font_size", 11)
+			table.add_child(label)
+			var value := Label.new()
+			value.text = "—" if not name.is_empty() else ""
+			value.custom_minimum_size.x = 40
+			value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			table.add_child(value)
+			if not name.is_empty():
+				stat_rows[name] = value
 	stats_content = VBoxContainer.new()
 	stats_content.name = "StatRows"
-	stats_panel.add_child(stats_content)
-	for name in ["Физический урон", "Магический урон", "Попадание", "Критический удар", "Уклонение", "Блокирование", "Броня", "Сопротивление магии", "Мана"]:
-		var row := HBoxContainer.new()
-		stats_content.add_child(row)
-		var label := Label.new()
-		label.text = name
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-		var value := Label.new()
-		value.text = "—"
-		value.custom_minimum_size.x = 65
-		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		row.add_child(value)
-		stat_rows[name] = value
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
 	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -224,7 +251,7 @@ func _refresh_combat_stats() -> void:
 	hp_bar.value = snapshot.hp
 	(stat_rows["Мана"] as Label).text = str(snapshot.max_mana)
 	if not snapshot.armour.is_empty():
-		(stat_rows["Броня"] as Label).text = str(snapshot.armour)
+		(stat_rows["Броня по зонам"] as Label).text = str(snapshot.armour)
 
 func _select_slot(slot: String) -> void:
 	if character == null:
