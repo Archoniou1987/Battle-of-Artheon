@@ -1,19 +1,10 @@
 name: Character Inventory Foundation
 
 on:
-  pull_request:
-    paths:
-      - "core/character/**"
-      - "data/progression/**"
-      - "tests/character/**"
-      - "tests/ui/character_screen_runner.gd"
-      - "ui/character/**"
-      - "scenes/main/main.gd"
-      - ".github/workflows/character-inventory-ui.yml"
   workflow_dispatch:
 
 concurrency:
-  group: character-inventory-${{ github.event.pull_request.number || github.ref }}
+  group: character-inventory-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
