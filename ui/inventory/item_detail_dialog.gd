@@ -65,7 +65,7 @@ func _render() -> void:
 		_add_text("Требования", Color("#f1ddbb"), 17)
 		for stat in requirements:
 			var needed := int(requirements[stat])
-			var actual := int(character.progression.base_stats.get(stat, 0))
+			var actual := int(character.effective_stats(repository, item_id).get(stat, 0))
 			var met := actual >= needed
 			if not met:
 				allowed = false
@@ -76,10 +76,11 @@ func _render() -> void:
 	var action := Button.new()
 	if not source_slot.is_empty():
 		action.text = "Снять"
+		action.disabled = character.in_combat
 		action.pressed.connect(_unequip)
 	else:
 		action.text = "Надеть"
-		action.disabled = not allowed or item.get("equip_slots", []).is_empty()
+		action.disabled = not allowed or not character.meets_requirements(item, repository) or item.get("equip_slots", []).is_empty() or character.in_combat
 		action.pressed.connect(_equip)
 	content.add_child(action)
 	var close := Button.new()
@@ -111,6 +112,6 @@ func _equip() -> void:
 			return
 
 func _unequip() -> void:
-	if character.unequip(source_slot) != null:
+	if character.unequip(source_slot, repository) != null:
 		changed.emit()
 		visible = false
