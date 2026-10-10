@@ -2,13 +2,6 @@ class_name InventoryScreen
 extends Control
 
 ## Responsive inventory shell. Uses live inventory/equipment instance IDs.
-const SLOT_ROWS := [
-	["head", "neck", "shoulders", "back"],
-	["main_hand", "", "", "off_hand"],
-	["chest", "", "", "wrists"],
-	["waist", "", "", "legs"],
-	["ring1", "feet", "ring2", ""]
-]
 const SLOT_NAMES := {
 	"head": "Голова", "shoulders": "Плечи", "neck": "Шея", "back": "Спина",
 	"chest": "Грудь", "wrists": "Руки", "waist": "Пояс", "legs": "Ноги",
@@ -26,6 +19,8 @@ var layout_row: BoxContainer
 var selected_instance_id := ""
 var slot_buttons: Dictionary = {}
 var _last_portrait := false
+var bag_scroll: ScrollContainer
+var bag_title: Label
 const RARITY_COLORS := {
 	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
 	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
@@ -92,10 +87,18 @@ func _ready() -> void:
 	character_portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
-	portrait_label.text = "Герой"
+	portrait_label.text = "✦\nГЕРОЙ\n✦"
+	portrait_label.add_theme_font_size_override("font_size", 19)
+	portrait_label.add_theme_color_override("font_color", Color("#d3b37b"))
 	portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	portrait_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	character_portrait.add_child(portrait_label)
+	var portrait_frame := StyleBoxFlat.new()
+	portrait_frame.bg_color = Color("#202b3b")
+	portrait_frame.border_color = Color("#94774e")
+	portrait_frame.set_border_width_all(2)
+	portrait_frame.set_corner_radius_all(5)
+	character_portrait.add_theme_stylebox_override("panel", portrait_frame)
 
 	var right_slots := VBoxContainer.new()
 	right_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -118,16 +121,16 @@ func _ready() -> void:
 	layout_row.add_child(bag_panel)
 	var bag_content := VBoxContainer.new()
 	bag_panel.add_child(bag_content)
-	var bag_title := Label.new()
+	bag_title = Label.new()
 	bag_title.text = "Сумка"
 	bag_content.add_child(bag_title)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bag_content.add_child(scroll)
+	bag_scroll = ScrollContainer.new()
+	bag_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bag_content.add_child(bag_scroll)
 	bag_grid = GridContainer.new()
 	bag_grid.columns = 4
 	bag_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(bag_grid)
+	bag_scroll.add_child(bag_grid)
 	detail_dialog = ItemDetailDialog.new(character, repository)
 	add_child(detail_dialog)
 	detail_dialog.changed.connect(refresh)
@@ -156,8 +159,8 @@ func _apply_layout() -> void:
 	_last_portrait = portrait
 	layout_row.vertical = portrait
 	var equipment_panel := layout_row.get_node("EquipmentPanel") as Control
-	equipment_panel.custom_minimum_size = Vector2.ZERO if portrait else Vector2(380, 0)
-	bag_grid.columns = 4 if portrait else 6
+	equipment_panel.custom_minimum_size = Vector2.ZERO if portrait else Vector2(340, 0)
+	bag_grid.columns = 3 if portrait and size.x < 380.0 else (4 if portrait else 6)
 
 func _select_slot(slot: String) -> void:
 	if character == null:
@@ -181,16 +184,21 @@ func refresh() -> void:
 		button.text = SLOT_NAMES[slot] if id == null else SLOT_NAMES[slot] + "\n" + str(item.get("name", id))
 		_style_item_button(button, _rarity_color(item) if id != null else Color("#66543d"))
 	for child in bag_grid.get_children():
+		bag_grid.remove_child(child)
 		child.queue_free()
 	if character == null or repository == null:
 		return
-	for instance_id in character.inventory.instance_ids():
+	var owned_ids := character.inventory.instance_ids()
+	bag_title.text = "Сумка (%d)" % owned_ids.size()
+	for instance_id in owned_ids:
 		var item := repository.get_item(String(instance_id))
 		var button := Button.new()
 		button.text = str(item.get("name", instance_id))
 		button.tooltip_text = str(item.get("description", ""))
+		if character.equipment.is_equipped(String(instance_id)):
+			button.text += "\n[Надето]"
 		_style_item_button(button, _rarity_color(item))
-		button.custom_minimum_size = Vector2(80, 66)
+		button.custom_minimum_size = Vector2(72, 66)
 		button.pressed.connect(_select_item.bind(String(instance_id)))
 		bag_grid.add_child(button)
 
@@ -216,3 +224,4 @@ func _style_item_button(button: Button, border_color: Color) -> void:
 	button.add_theme_color_override("font_color", Color("#eee4d2"))
 	button.add_theme_font_size_override("font_size", 12)
 	button.clip_text = true
+	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
