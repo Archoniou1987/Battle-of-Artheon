@@ -37,11 +37,14 @@ var footer: Control
 var portrait_nav: GridContainer
 var player_character: CharacterState
 var character_screen: CharacterScreen
+var inventory_screen: InventoryScreen
+var item_repository: ItemRepository
 var landscape_nav: HBoxContainer
 
 
 func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
+	item_repository = ItemRepository.new()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
@@ -220,7 +223,20 @@ func _open_character_screen() -> void:
 	character_screen.refresh()
 
 
+func _open_inventory_screen() -> void:
+	if inventory_screen == null:
+		inventory_screen = InventoryScreen.new(player_character, item_repository)
+		inventory_screen.name = "InventoryScreen"
+		add_child(inventory_screen)
+		inventory_screen.back_button.pressed.connect(func() -> void: inventory_screen.visible = false)
+	inventory_screen.visible = true
+	inventory_screen.refresh()
+
+
 func _open_panel(section: String) -> void:
+	if section == "Инвентарь":
+		_open_inventory_screen()
+		return
 	if section == "Персонаж":
 		_open_character_screen()
 		return
