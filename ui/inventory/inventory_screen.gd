@@ -25,8 +25,7 @@ var equipment_content: Control
 var hp_label: Label
 var hp_bar: ProgressBar
 var stats_content: VBoxContainer
-var stat_tabs: Array[Button] = []
-var active_stat_tab := 0
+var stat_rows: Dictionary = {}
 const RARITY_COLORS := {
 	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
 	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
@@ -136,22 +135,25 @@ func _ready() -> void:
 	stats_panel.position = Vector2.ZERO
 	stats_panel.custom_minimum_size = Vector2(340, 112)
 	stats_panel.add_theme_constant_override("separation", 1)
-	var tabs := HBoxContainer.new()
-	tabs.name = "StatTabs"
-	tabs.add_theme_constant_override("separation", 1)
-	stats_panel.add_child(tabs)
-	for i in range(4):
-		var tab := Button.new()
-		tab.text = ["Атака", "Маг. атака", "Защита", "Маг. защита"][i]
-		tab.add_theme_font_size_override("font_size", 10)
-		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tab.pressed.connect(_choose_stat_tab.bind(i))
-		tabs.add_child(tab)
-		stat_tabs.append(tab)
+	var heading_stats := Label.new()
+	heading_stats.text = "БОЕВЫЕ ХАРАКТЕРИСТИКИ"
+	stats_panel.add_child(heading_stats)
 	stats_content = VBoxContainer.new()
 	stats_content.name = "StatRows"
-	stats_content.add_theme_constant_override("separation", 0)
 	stats_panel.add_child(stats_content)
+	for name in ["Физический урон", "Магический урон", "Попадание", "Критический удар", "Уклонение", "Блокирование", "Броня", "Сопротивление магии", "Мана"]:
+		var row := HBoxContainer.new()
+		stats_content.add_child(row)
+		var label := Label.new()
+		label.text = name
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var value := Label.new()
+		value.text = "—"
+		value.custom_minimum_size.x = 65
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(value)
+		stat_rows[name] = value
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
 	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
