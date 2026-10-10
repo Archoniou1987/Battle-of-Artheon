@@ -13,6 +13,7 @@ var panel: PanelContainer
 var content: VBoxContainer
 var scroll: ScrollContainer
 var actions: HBoxContainer
+var status_label: Label
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -42,6 +43,10 @@ func _ready() -> void:
 	content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
+	status_label = Label.new()
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_color_override("font_color", Color("#e6a06f"))
+	body.add_child(status_label)
 	actions = HBoxContainer.new()
 	body.add_child(actions)
 	resized.connect(_update_dialog_size)
@@ -54,6 +59,7 @@ func show_item(instance_id: String, slot: String = "") -> void:
 	item_id = instance_id
 	source_slot = slot
 	visible = true
+	status_label.text = ""
 	_render()
 	_update_dialog_size()
 
@@ -89,7 +95,7 @@ func _render() -> void:
 		action.pressed.connect(_unequip)
 	else:
 		action.text = "Надеть"
-		action.disabled = not allowed or not character.meets_requirements(item, repository) or item.get("equip_slots", []).is_empty() or character.in_combat
+		action.disabled = not allowed or not character.meets_requirements(item, repository) or item.get("equip_slots", []).is_empty() or character.in_combat or not character.inventory.owns(item_id) or character.equipment.is_equipped(item_id) or not ItemDurabilityService.is_usable(item)
 		action.pressed.connect(_equip)
 	action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(action)
@@ -102,11 +108,11 @@ func _render() -> void:
 func _update_dialog_size() -> void:
 	if panel == null or scroll == null:
 		return
-	var available_width := maxf(220.0, size.x - 28.0)
-	var available_height := maxf(170.0, size.y - 36.0)
+	var available_width := maxf(160.0, size.x - 28.0)
+	var available_height := maxf(150.0, size.y - 36.0)
 	panel.custom_minimum_size.x = minf(420.0, available_width)
 	scroll.custom_minimum_size.x = 0.0
-	scroll.custom_minimum_size.y = minf(420.0, maxf(90.0, available_height - 110.0))
+	scroll.custom_minimum_size.y = minf(420.0, maxf(80.0, available_height - 140.0))
 	panel.reset_size()
 
 
@@ -126,14 +132,20 @@ func _add_text(value: String, tint: Color, font_size: int = 15) -> void:
 	content.add_child(label)
 
 func _equip() -> void:
+	if character.in_combat:
+		status_label.text = "Нельзя менять экипировку во время боя."
+		return
 	var item := repository.get_item(item_id)
 	for slot in item.get("equip_slots", []):
 		if character.equip(String(slot), item_id, repository):
 			changed.emit()
 			visible = false
 			return
+	status_label.text = "Не удалось надеть: проверьте свободные слоты и требования."
 
 func _unequip() -> void:
 	if character.unequip(source_slot, repository) != null:
 		changed.emit()
 		visible = false
+	else:
+		status_label.text = "Не удалось снять предмет."
