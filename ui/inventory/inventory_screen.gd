@@ -26,6 +26,12 @@ var layout_row: BoxContainer
 var selected_instance_id := ""
 var slot_buttons: Dictionary = {}
 var _last_portrait := false
+const RARITY_COLORS := {
+	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
+	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
+	"blue": "#488acb", "rare": "#488acb", "purple": "#9867c5",
+	"epic": "#d39a47", "orange": "#d39a47", "legendary": "#d95353", "red": "#d95353"
+}
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -92,6 +98,7 @@ func _ready() -> void:
 			button.custom_minimum_size = Vector2(72, 64)
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			button.pressed.connect(_select_slot.bind(slot))
+			_style_item_button(button, Color("#66543d"))
 			equipment_grid.add_child(button)
 			slot_buttons[slot] = button
 	var bag_panel := PanelContainer.new()
@@ -148,7 +155,9 @@ func refresh() -> void:
 	for slot in slot_buttons:
 		var button := slot_buttons[slot] as Button
 		var id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
-		button.text = SLOT_NAMES[slot] if id == null else SLOT_NAMES[slot] + "\n" + str(id)
+		var item := repository.get_item(String(id)) if id != null and repository != null else {}
+		button.text = SLOT_NAMES[slot] if id == null else SLOT_NAMES[slot] + "\n" + str(item.get("name", id))
+		_style_item_button(button, _rarity_color(item) if id != null else Color("#66543d"))
 	for child in bag_grid.get_children():
 		child.queue_free()
 	if character == null or repository == null:
@@ -157,6 +166,31 @@ func refresh() -> void:
 		var item := repository.get_item(String(instance_id))
 		var button := Button.new()
 		button.text = str(item.get("name", instance_id))
+		button.tooltip_text = str(item.get("description", ""))
+		_style_item_button(button, _rarity_color(item))
 		button.custom_minimum_size = Vector2(80, 66)
 		button.pressed.connect(_select_item.bind(String(instance_id)))
 		bag_grid.add_child(button)
+
+func _rarity_color(item: Dictionary) -> Color:
+	var rarity := str(item.get("rarity", "grey")).to_lower()
+	return Color(str(RARITY_COLORS.get(rarity, "#777f8a")))
+
+
+func _style_item_button(button: Button, border_color: Color) -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#263346")
+	style.border_color = border_color
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 5
+	style.content_margin_bottom = 5
+	button.add_theme_stylebox_override("normal", style)
+	var hover := style.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("#33445a")
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_color_override("font_color", Color("#eee4d2"))
+	button.add_theme_font_size_override("font_size", 12)
+	button.clip_text = true
