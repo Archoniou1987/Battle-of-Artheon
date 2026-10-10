@@ -2,7 +2,7 @@ class_name ItemIcon
 extends Button
 
 ## One square presentation for equipped items, bag items and future loot/shop cells.
-const CELL_SIZE := 56.0
+const CELL_SIZE := 40.0
 const RARITY_COLORS := {
 	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
 	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
