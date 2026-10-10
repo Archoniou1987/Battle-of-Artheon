@@ -15,6 +15,8 @@ func _initialize() -> void:
 	var repository := ItemRepository.new()
 	var strength_ring := {"instance_id": "ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "guaranteed_stats": {"STR": 4}}
 	var dependent_sword := {"instance_id": "sword", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"STR": 7}, "guaranteed_stats": {}}
+	ItemDurabilityService.initialize_item(strength_ring, 100)
+	ItemDurabilityService.initialize_item(dependent_sword, 100)
 	assert(repository.add_item(strength_ring))
 	assert(repository.add_item(dependent_sword))
 	assert(character.receive_item("ring", repository))
