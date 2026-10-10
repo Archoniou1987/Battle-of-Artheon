@@ -1,0 +1,33 @@
+name: Character Inventory Foundation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: character-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  character-progression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+      - name: Install Godot 4.5.1
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import project
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Progression smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/progression_smoke.gd
+      - name: CharacterState integration smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/character_state_progression_smoke.gd
+      - name: Character UI smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
