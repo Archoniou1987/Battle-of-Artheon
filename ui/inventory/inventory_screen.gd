@@ -140,14 +140,11 @@ func _ready() -> void:
 	refresh()
 
 func _add_equipment_slot(parent: Control, slot: String) -> void:
-	var button := Button.new()
+	var button := ItemIcon.new()
 	button.name = slot
-	button.text = SLOT_NAMES[slot]
-	button.custom_minimum_size = Vector2(64, 56)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_select_slot.bind(slot))
-	_style_item_button(button, Color("#66543d"))
 	parent.add_child(button)
+	button.set_item({}, SLOT_NAMES[slot])
 	slot_buttons[slot] = button
 
 
@@ -159,10 +156,8 @@ func _apply_layout() -> void:
 	layout_row.vertical = portrait
 	var equipment_panel := layout_row.get_node("EquipmentPanel") as Control
 	equipment_panel.custom_minimum_size = Vector2.ZERO if portrait else Vector2(340, 0)
-	for button in slot_buttons.values():
-		(button as Button).custom_minimum_size.y = 52 if portrait else 45
 	character_portrait.custom_minimum_size.y = 190 if portrait else 148
-	bag_grid.columns = 3 if portrait and size.x < 380.0 else (4 if portrait else 6)
+	bag_grid.columns = 4 if portrait else 6
 
 func _select_slot(slot: String) -> void:
 	if character == null:
@@ -183,8 +178,7 @@ func refresh() -> void:
 		var button := slot_buttons[slot] as Button
 		var id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
 		var item := repository.get_item(String(id)) if id != null and repository != null else {}
-		button.text = SLOT_NAMES[slot] if id == null else SLOT_NAMES[slot] + "\n" + str(item.get("name", id))
-		_style_item_button(button, _rarity_color(item) if id != null else Color("#66543d"))
+		(button as ItemIcon).set_item(item, SLOT_NAMES[slot], id != null)
 	for child in bag_grid.get_children():
 		bag_grid.remove_child(child)
 		child.queue_free()
@@ -194,15 +188,10 @@ func refresh() -> void:
 	bag_title.text = "Сумка (%d)" % owned_ids.size()
 	for instance_id in owned_ids:
 		var item := repository.get_item(String(instance_id))
-		var button := Button.new()
-		button.text = str(item.get("name", instance_id))
-		button.tooltip_text = str(item.get("description", ""))
-		if character.equipment.is_equipped(String(instance_id)):
-			button.text += "\n[Надето]"
-		_style_item_button(button, _rarity_color(item))
-		button.custom_minimum_size = Vector2(68, 64)
+		var button := ItemIcon.new()
 		button.pressed.connect(_select_item.bind(String(instance_id)))
 		bag_grid.add_child(button)
+		button.set_item(item, "", character.equipment.is_equipped(String(instance_id)))
 
 func _rarity_color(item: Dictionary) -> Color:
 	var rarity := str(item.get("rarity", "grey")).to_lower()
