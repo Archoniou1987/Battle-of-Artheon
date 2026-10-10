@@ -19,6 +19,7 @@ var repository: ItemRepository
 var back_button: Button
 var equipment_grid: GridContainer
 var bag_grid: GridContainer
+var detail_dialog: ItemDetailDialog
 var layout_row: BoxContainer
 var selected_instance_id := ""
 var slot_buttons: Dictionary = {}
@@ -103,6 +104,9 @@ func _ready() -> void:
 	bag_grid.columns = 4
 	bag_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(bag_grid)
+	detail_dialog = ItemDetailDialog.new(character, repository)
+	add_child(detail_dialog)
+	detail_dialog.changed.connect(refresh)
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
@@ -123,9 +127,12 @@ func _select_slot(slot: String) -> void:
 		return
 	var id: Variant = character.equipment.get_equipped_instance_id(slot)
 	selected_instance_id = String(id) if id != null else ""
+	if id != null:
+		detail_dialog.show_item(selected_instance_id, slot)
 
 func _select_item(instance_id: String) -> void:
 	selected_instance_id = instance_id
+	detail_dialog.show_item(instance_id)
 
 func refresh() -> void:
 	if bag_grid == null:
