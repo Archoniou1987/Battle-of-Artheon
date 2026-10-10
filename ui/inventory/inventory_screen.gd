@@ -80,7 +80,7 @@ func _ready() -> void:
 	character_portrait.custom_minimum_size = Vector2(356, 416)
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
-	portrait_label.text = "✦\\nГЕРОЙ\\nПО ПОЯС\\n✦"
+	portrait_label.text = "✦\nГЕРОЙ\nПО ПОЯС\n✦"
 	portrait_label.add_theme_font_size_override("font_size", 19)
 	portrait_label.add_theme_color_override("font_color", Color("#d3b37b"))
 	portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -148,8 +148,8 @@ func _apply_layout() -> void:
 	_last_portrait = portrait
 	layout_row.vertical = portrait
 	var square_host := layout_row.get_node("EquipmentPanel") as Control
-	var available := minf(size.x, size.y) if not portrait else size.x
-	var square_size := minf(480.0, available)
+	var available := minf(size.x, size.y - 48.0) if not portrait else size.x
+	var square_size := minf(480.0, maxf(180.0, available))
 	square_host.custom_minimum_size = Vector2(square_size, square_size)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_CENTER
