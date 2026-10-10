@@ -21,6 +21,7 @@ var slot_buttons: Dictionary = {}
 var _last_portrait := false
 var bag_scroll: ScrollContainer
 var bag_title: Label
+var equipment_content: VBoxContainer
 const RARITY_COLORS := {
 	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
 	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
@@ -58,7 +59,7 @@ func _ready() -> void:
 	equipment_panel.name = "EquipmentPanel"
 	equipment_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	layout_row.add_child(equipment_panel)
-	var equipment_content := VBoxContainer.new()
+	equipment_content = VBoxContainer.new()
 	equipment_panel.add_child(equipment_content)
 	var equipment_title := Label.new()
 	equipment_title.text = "Экипировка"
@@ -82,7 +83,7 @@ func _ready() -> void:
 
 	character_portrait = PanelContainer.new()
 	character_portrait.name = "CharacterPortrait"
-	character_portrait.custom_minimum_size = Vector2(110, 210)
+	character_portrait.custom_minimum_size = Vector2(100, 225)
 	character_portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	character_portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	middle.add_child(character_portrait)
@@ -142,7 +143,7 @@ func _add_equipment_slot(parent: Control, slot: String) -> void:
 	var button := Button.new()
 	button.name = slot
 	button.text = SLOT_NAMES[slot]
-	button.custom_minimum_size = Vector2(72, 62)
+	button.custom_minimum_size = Vector2(64, 56)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_select_slot.bind(slot))
 	_style_item_button(button, Color("#66543d"))
@@ -158,6 +159,9 @@ func _apply_layout() -> void:
 	layout_row.vertical = portrait
 	var equipment_panel := layout_row.get_node("EquipmentPanel") as Control
 	equipment_panel.custom_minimum_size = Vector2.ZERO if portrait else Vector2(340, 0)
+	for button in slot_buttons.values():
+		(button as Button).custom_minimum_size.y = 52 if portrait else 45
+	character_portrait.custom_minimum_size.y = 190 if portrait else 148
 	bag_grid.columns = 3 if portrait and size.x < 380.0 else (4 if portrait else 6)
 
 func _select_slot(slot: String) -> void:
@@ -196,7 +200,7 @@ func refresh() -> void:
 		if character.equipment.is_equipped(String(instance_id)):
 			button.text += "\n[Надето]"
 		_style_item_button(button, _rarity_color(item))
-		button.custom_minimum_size = Vector2(72, 66)
+		button.custom_minimum_size = Vector2(68, 64)
 		button.pressed.connect(_select_item.bind(String(instance_id)))
 		bag_grid.add_child(button)
 
