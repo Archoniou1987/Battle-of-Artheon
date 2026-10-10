@@ -159,7 +159,7 @@ func _ready() -> void:
 	layout_row.add_child(bag_panel)
 	var bag_content := VBoxContainer.new()
 	bag_panel.add_child(bag_content)
-	header.reparent(bag_content)
+	bag_content.add_child(header)
 	bag_content.move_child(header, 0)
 	bag_content.add_child(stats_panel)
 	bag_content.move_child(stats_panel, 1)
