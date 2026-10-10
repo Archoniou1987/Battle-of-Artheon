@@ -20,6 +20,11 @@ func _capture() -> void:
 	_seed_preview_items(game)
 	await _settle()
 	_save("inventory-portrait.png")
+	var inventory := game.get_node("InventoryScreen") as InventoryScreen
+	inventory.call("_select_item", "preview_0")
+	await _settle()
+	_save("inventory-item-details.png")
+	inventory.detail_dialog.visible = false
 
 	root.size = Vector2i(844, 390)
 	DisplayServer.window_set_size(Vector2i(844, 390))
@@ -31,6 +36,7 @@ func _capture() -> void:
 	DisplayServer.window_set_size(Vector2i(390, 844))
 	await _settle()
 	_save("character-portrait.png")
+	assert((game.get_node("CharacterScreen") as CharacterScreen).combat_section != null)
 	print("Visual preview capture: PASS")
 	quit(0)
 
@@ -63,7 +69,7 @@ func _settle() -> void:
 
 func _save(file_name: String) -> void:
 	var image := root.get_texture().get_image()
-	assert(image.get_width() == root.size.x and image.get_height() == root.size.y)
 	assert(image != null and not image.is_empty())
+	assert(image.get_width() == root.size.x and image.get_height() == root.size.y)
 	var error := image.save_png("res://visual-preview/" + file_name)
 	assert(error == OK)
