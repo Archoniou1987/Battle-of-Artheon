@@ -1,0 +1,21 @@
+extends SceneTree
+
+func _initialize() -> void:
+	var progression := CharacterProgression.new()
+	assert(progression.required_xp() == 900)
+	assert(progression.npc_xp(10, 10) == 200)
+	assert(progression.npc_xp(10, 9) == 148)
+	assert(progression.npc_xp(10, 5) == 0)
+	assert(progression.npc_xp(17, 20) == 540)
+	assert(progression.npc_xp(17, 20, true) == 810)
+	assert(progression.gain_xp(901) == 1)
+	assert(progression.level == 2 and progression.xp_into_level == 1)
+	assert(progression.unspent_stat_points == 1)
+	assert(progression.allocate_stat("STR"))
+	assert(progression.base_stats["STR"] == 4)
+	assert(not progression.allocate_stat("STR"))
+	var restored := CharacterProgression.new()
+	assert(restored.restore(progression.to_dict()))
+	assert(restored.to_dict() == progression.to_dict())
+	print("Character progression smoke: PASS")
+	quit()
