@@ -37,7 +37,7 @@ func _ready() -> void:
 	var body := VBoxContainer.new()
 	panel.add_child(body)
 	scroll = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(260, 120)
+	scroll.custom_minimum_size = Vector2(260, 80)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(scroll)
 	content = VBoxContainer.new()
@@ -61,12 +61,14 @@ func show_item(instance_id: String, slot: String = "") -> void:
 	visible = true
 	status_label.text = ""
 	_render()
-	_update_dialog_size()
+	call_deferred("_update_dialog_size")
 
 func _render() -> void:
 	for child in content.get_children():
+		content.remove_child(child)
 		child.queue_free()
 	for child in actions.get_children():
+		actions.remove_child(child)
 		child.queue_free()
 	var item := repository.get_item(item_id)
 	_add_text(str(item.get("name", item_id)), Color("#f1ddbb"), 21)
@@ -112,7 +114,9 @@ func _update_dialog_size() -> void:
 	var available_height := maxf(150.0, size.y - 36.0)
 	panel.custom_minimum_size.x = minf(420.0, available_width)
 	scroll.custom_minimum_size.x = 0.0
-	scroll.custom_minimum_size.y = minf(420.0, maxf(80.0, available_height - 140.0))
+	var content_height := content.get_combined_minimum_size().y
+	var scroll_height := minf(content_height + 12.0, maxf(80.0, available_height - 120.0))
+	scroll.custom_minimum_size.y = maxf(80.0, scroll_height)
 	panel.reset_size()
 
 
