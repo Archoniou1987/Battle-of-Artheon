@@ -192,6 +192,42 @@ func _apply_layout() -> void:
 	equipment_content.scale = Vector2.ONE * (square_size / 480.0)
 	bag_grid.columns = 4 if portrait else 6
 
+func _choose_stat_tab(index: int) -> void:
+	active_stat_tab = index
+	_refresh_combat_stats()
+
+func _refresh_combat_stats() -> void:
+	if stats_content == null:
+		return
+	for child in stats_content.get_children():
+		stats_content.remove_child(child)
+		child.queue_free()
+	for i in range(stat_tabs.size()):
+		stat_tabs[i].disabled = i == active_stat_tab
+	if character == null or repository == null:
+		hp_label.text = "HP —"
+		return
+	var base := {"stats": character.progression.base_stats.duplicate(true)}
+	var snapshot := CharacterCombatBuilder.build(character, repository, base)
+	hp_label.text = "HP %d/%d" % [snapshot.hp, snapshot.max_hp]
+	hp_bar.max_value = maxi(1, snapshot.max_hp)
+	hp_bar.value = snapshot.hp
+	var lines: Array[String] = []
+	match active_stat_tab:
+		0:
+			lines = ["Урон оружия: —", "Попадание: —", "Крит: —"]
+		1:
+			lines = ["Мана: %d" % snapshot.max_mana, "Магический урон: —", "Усиление стихий: —"]
+		2:
+			lines = ["Броня по зонам: %s" % str(snapshot.armour) if not snapshot.armour.is_empty() else "Броня по зонам: —", "Уклонение: —", "Блок: —"]
+		3:
+			lines = ["Общее сопротивление: —", "Сопротивления стихиям: —"]
+	for entry in lines:
+		var label := Label.new()
+		label.text = entry
+		label.add_theme_font_size_override("font_size", 11)
+		stats_content.add_child(label)
+
 func _select_slot(slot: String) -> void:
 	if character == null:
 		return
@@ -207,6 +243,7 @@ func _select_item(instance_id: String) -> void:
 func refresh() -> void:
 	if bag_grid == null:
 		return
+	_refresh_combat_stats()
 	for slot in slot_buttons:
 		var button := slot_buttons[slot] as Button
 		var id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
