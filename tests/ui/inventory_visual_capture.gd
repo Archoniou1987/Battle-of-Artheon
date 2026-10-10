@@ -17,6 +17,7 @@ func _capture() -> void:
 	root.size = Vector2i(390, 844)
 	DisplayServer.window_set_size(Vector2i(390, 844))
 	game.call("_open_panel", "Инвентарь")
+	_seed_preview_items(game)
 	await _settle()
 	_save("inventory-portrait.png")
 
@@ -32,6 +33,29 @@ func _capture() -> void:
 	_save("character-portrait.png")
 	print("Visual preview capture: PASS")
 	quit(0)
+
+func _seed_preview_items(game: Node) -> void:
+	var inventory := game.get_node_or_null("InventoryScreen") as InventoryScreen
+	assert(inventory != null)
+	var names := ["Клинок путника", "Кожаная броня", "Кольцо зоркости", "Посох ученика", "Сапоги", "Оберег", "Шлем", "Перчатки"]
+	var rarities := ["grey", "green", "blue", "purple", "grey", "green", "blue", "orange"]
+	for i in range(names.size()):
+		var item := {
+			"instance_id": "preview_%d" % i,
+			"name": names[i],
+			"rarity": rarities[i],
+			"type": "preview",
+			"item_level": 1,
+			"equip_slots": ["main_hand"] if i == 0 else [],
+			"guaranteed_stats": {"STR": 1} if i == 0 else {},
+			"requirements": {},
+			"description": "Тестовый предмет для проверки отображения интерфейса."
+		}
+		ItemDurabilityService.initialize_item(item, 100)
+		assert(inventory.repository.add_item(item))
+		assert(inventory.character.inventory.add_instance(item["instance_id"], inventory.repository))
+	inventory.refresh()
+
 
 func _settle() -> void:
 	for i in range(5):
