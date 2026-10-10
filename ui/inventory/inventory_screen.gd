@@ -96,12 +96,16 @@ func _ready() -> void:
 	portrait_frame.border_color = Color("#94774e")
 	portrait_frame.set_border_width_all(2)
 	character_portrait.add_theme_stylebox_override("panel", portrait_frame)
+	var portrait_overlay := Control.new()
+	portrait_overlay.name = "PortraitOverlay"
+	character_portrait.add_child(portrait_overlay)
+	portrait_overlay.mouse_filter = Control.MOUSE_FILTER_PASS
 	var health := HBoxContainer.new()
 	health.name = "Health"
-	health.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	health.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	health.position = Vector2(8, 8)
 	health.custom_minimum_size = Vector2(340, 22)
-	character_portrait.add_child(health)
+	portrait_overlay.add_child(health)
 	hp_label = Label.new()
 	hp_label.custom_minimum_size.x = 105
 	health.add_child(hp_label)
@@ -133,7 +137,7 @@ func _ready() -> void:
 	stats_panel.position = Vector2(8, 290)
 	stats_panel.custom_minimum_size = Vector2(340, 112)
 	stats_panel.add_theme_constant_override("separation", 1)
-	character_portrait.add_child(stats_panel)
+	portrait_overlay.add_child(stats_panel)
 	var tabs := HBoxContainer.new()
 	tabs.name = "StatTabs"
 	tabs.add_theme_constant_override("separation", 1)
