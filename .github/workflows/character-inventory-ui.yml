@@ -25,3 +25,5 @@ jobs:
         run: timeout 120s godot --headless --editor --path . --quit
       - name: Progression smoke test
         run: timeout 120s godot --headless --path . --script res://tests/character/progression_smoke.gd
+      - name: CharacterState integration smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/character_state_progression_smoke.gd
