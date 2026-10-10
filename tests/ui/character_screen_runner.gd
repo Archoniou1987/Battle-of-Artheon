@@ -25,5 +25,13 @@ func _run() -> void:
 	assert(screen.character.progression.unspent_stat_points == 0)
 	screen.back_button.pressed.emit()
 	assert(not screen.visible)
-	print("Character screen UI smoke: PASS")
+	instance.call("_open_panel", "Инвентарь")
+	await process_frame
+	var inventory := instance.get_node_or_null("InventoryScreen") as InventoryScreen
+	assert(inventory != null and inventory.visible)
+	assert(inventory.slot_buttons.size() == 13)
+	assert(inventory.bag_grid.get_child_count() == 0)
+	inventory.back_button.pressed.emit()
+	assert(not inventory.visible)
+	print("Character and inventory screen UI smoke: PASS")
 	quit(0)
