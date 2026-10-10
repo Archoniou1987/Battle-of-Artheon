@@ -19,6 +19,8 @@ var points_label: Label
 var stat_values: Dictionary = {}
 var stat_buttons: Dictionary = {}
 var back_button: Button
+var combat_section: VBoxContainer
+var resistance_section: VBoxContainer
 
 func _init(p_character: CharacterState = null) -> void:
 	character = p_character
@@ -81,11 +83,14 @@ func _ready() -> void:
 		plus.pressed.connect(_allocate.bind(stat))
 		row.add_child(plus)
 		stat_buttons[stat] = plus
-	var note_card := _panel()
-	body.add_child(note_card)
-	var note := _label("Боевые показатели и сопротивления будут подключены к расчёту экипировки на следующем этапе.", 15, MUTED)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note_card.add_child(note)
+	var combat_card := _panel()
+	body.add_child(combat_card)
+	combat_section = VBoxContainer.new()
+	combat_card.add_child(combat_section)
+	var resist_card := _panel()
+	body.add_child(resist_card)
+	resistance_section = VBoxContainer.new()
+	resist_card.add_child(resistance_section)
 	refresh()
 
 func _panel() -> PanelContainer:
@@ -127,3 +132,36 @@ func refresh() -> void:
 	for stat in STAT_ORDER:
 		(stat_values[stat] as Label).text = str(progression.base_stats.get(stat, 0))
 		(stat_buttons[stat] as Button).disabled = progression.unspent_stat_points <= 0
+	_refresh_derived_sections()
+
+func _refresh_derived_sections() -> void:
+	for child in combat_section.get_children():
+		combat_section.remove_child(child)
+		child.queue_free()
+	for child in resistance_section.get_children():
+		resistance_section.remove_child(child)
+		child.queue_free()
+	combat_section.add_child(_label("Боевые показатели", 18, GOLD))
+	resistance_section.add_child(_label("Защита и сопротивления", 18, GOLD))
+	if character == null:
+		return
+	# Only values already defined by CharacterCombatBuilder are displayed.
+	# Other combat formulas will be connected when their data contracts are finalized.
+	var stats := character.progression.base_stats
+	var hp := 100 + int(stats.get("END", 0)) * 10
+	var mana := int(stats.get("WIS", 0)) * 15
+	_add_derived_row(combat_section, "Здоровье (база)", str(hp))
+	_add_derived_row(combat_section, "Мана (база)", str(mana))
+	_add_derived_row(combat_section, "Макс. очки действий (база)", "5")
+	_add_derived_row(resistance_section, "Броня по зонам", "Данные экипировки")
+	_add_derived_row(resistance_section, "Сопротивления стихиям", "Ожидает расчёта")
+
+
+func _add_derived_row(parent: VBoxContainer, caption: String, value: String) -> void:
+	var row := HBoxContainer.new()
+	parent.add_child(row)
+	var left := _label(caption, 14, MUTED)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(left)
+	var right := _label(value, 14, GOLD)
+	row.add_child(right)
