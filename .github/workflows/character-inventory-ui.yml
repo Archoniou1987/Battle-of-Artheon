@@ -1,0 +1,27 @@
+name: Character Inventory Foundation
+
+on:
+  pull_request:
+    paths:
+      - "core/character/**"
+      - "data/progression/**"
+      - "tests/character/**"
+      - ".github/workflows/character-inventory-ui.yml"
+  workflow_dispatch:
+
+jobs:
+  character-progression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import scripts
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Progression smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/progression_smoke.gd
