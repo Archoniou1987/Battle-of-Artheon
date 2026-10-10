@@ -33,7 +33,7 @@ func _run() -> void:
 	await process_frame
 	var inventory := instance.get_node_or_null("InventoryScreen") as InventoryScreen
 	assert(inventory != null and inventory.visible)
-	assert(inventory.slot_buttons.size() == 13)
+	assert(inventory.slot_buttons.size() == 14)
 	for slot in inventory.slot_buttons:
 		var equipment_icon := inventory.slot_buttons[slot] as ItemIcon
 		assert(equipment_icon != null)
@@ -51,7 +51,7 @@ func _run() -> void:
 	inventory.call("_apply_layout")
 	assert(not inventory.layout_row.vertical)
 	assert(inventory.bag_grid.columns == 6)
-	assert(inventory.slot_buttons.size() == 13)
+	assert(inventory.slot_buttons.size() == 14)
 	assert(inventory.detail_dialog.actions != null)
 	assert(inventory.detail_dialog.scroll != null)
 	var sample := {"instance_id": "icon_smoke", "name": "Клинок", "rarity": "blue", "equip_slots": ["main_hand"]}
