@@ -154,8 +154,6 @@ func _apply_layout() -> void:
 	if layout_row == null:
 		return
 	var portrait := size.y > size.x
-	if portrait == _last_portrait and layout_row.get_child_count() == 2:
-		return
 	_last_portrait = portrait
 	layout_row.vertical = portrait
 	var equipment_panel := layout_row.get_node("EquipmentPanel") as Control
