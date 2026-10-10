@@ -22,6 +22,11 @@ var _last_portrait := false
 var bag_scroll: ScrollContainer
 var bag_title: Label
 var equipment_content: VBoxContainer
+var hp_label: Label
+var hp_bar: ProgressBar
+var stats_content: VBoxContainer
+var stat_tabs: Array[Button] = []
+var active_stat_tab := 0
 const RARITY_COLORS := {
 	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
 	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
@@ -61,7 +66,7 @@ func _ready() -> void:
 	layout_row.add_child(square_host)
 	equipment_content = VBoxContainer.new()
 	equipment_content.name = "SquareContent"
-	equipment_content.add_theme_constant_override("separation", 4)
+	equipment_content.add_theme_constant_override("separation", 3)
 	equipment_content.position = Vector2.ZERO
 	equipment_content.custom_minimum_size = Vector2(480, 480)
 	square_host.add_child(equipment_content)
@@ -77,7 +82,7 @@ func _ready() -> void:
 		_add_equipment_slot(left_slots, slot)
 	character_portrait = PanelContainer.new()
 	character_portrait.name = "CharacterPortrait"
-	character_portrait.custom_minimum_size = Vector2(356, 416)
+	character_portrait.custom_minimum_size = Vector2(388, 304)
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
 	portrait_label.text = "✦\nГЕРОЙ\nПО ПОЯС\n✦"
