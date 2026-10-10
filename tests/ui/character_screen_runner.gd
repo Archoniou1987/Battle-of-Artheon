@@ -42,7 +42,7 @@ func _run() -> void:
 	inventory.size = Vector2(360, 740)
 	inventory.call("_apply_layout")
 	assert(inventory.layout_row.vertical)
-	assert(inventory.bag_grid.columns == 3)
+	assert(inventory.bag_grid.columns == 4)
 	inventory.size = Vector2(900, 500)
 	inventory.call("_apply_layout")
 	assert(not inventory.layout_row.vertical)
