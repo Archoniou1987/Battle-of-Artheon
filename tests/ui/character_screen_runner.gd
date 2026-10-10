@@ -40,7 +40,7 @@ func _run() -> void:
 		assert(equipment_icon.custom_minimum_size == Vector2(ItemIcon.CELL_SIZE, ItemIcon.CELL_SIZE))
 	assert(inventory.bag_grid.get_child_count() == 0)
 	assert(inventory.slot_buttons.has("hands"))
-	assert(inventory.get_node("EquipmentPanel/SquareContent/ElixirSlots").get_child_count() == 4)
+	assert(inventory.layout_row.get_node("EquipmentPanel/SquareContent/ElixirSlots").get_child_count() == 4)
 	assert(inventory.character_portrait.custom_minimum_size == Vector2(356, 416))
 	assert(inventory.character_portrait != null)
 	assert(inventory.character_portrait.get_parent().name == "EquipmentMiddle")
