@@ -11,6 +11,8 @@ var source_slot := ""
 var backdrop: ColorRect
 var panel: PanelContainer
 var content: VBoxContainer
+var scroll: ScrollContainer
+var actions: HBoxContainer
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -33,13 +35,17 @@ func _ready() -> void:
 	center.add_child(panel)
 	var body := VBoxContainer.new()
 	panel.add_child(body)
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(280, 200)
+	scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(260, 120)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(scroll)
 	content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
+	actions = HBoxContainer.new()
+	body.add_child(actions)
+	resized.connect(_update_dialog_size)
+	call_deferred("_update_dialog_size")
 	visible = false
 
 func show_item(instance_id: String, slot: String = "") -> void:
@@ -49,9 +55,12 @@ func show_item(instance_id: String, slot: String = "") -> void:
 	source_slot = slot
 	visible = true
 	_render()
+	_update_dialog_size()
 
 func _render() -> void:
 	for child in content.get_children():
+		child.queue_free()
+	for child in actions.get_children():
 		child.queue_free()
 	var item := repository.get_item(item_id)
 	_add_text(str(item.get("name", item_id)), Color("#f1ddbb"), 21)
@@ -82,11 +91,24 @@ func _render() -> void:
 		action.text = "Надеть"
 		action.disabled = not allowed or not character.meets_requirements(item, repository) or item.get("equip_slots", []).is_empty() or character.in_combat
 		action.pressed.connect(_equip)
-	content.add_child(action)
+	action.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(action)
 	var close := Button.new()
 	close.text = "Закрыть"
 	close.pressed.connect(func() -> void: visible = false)
-	content.add_child(close)
+	close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(close)
+
+func _update_dialog_size() -> void:
+	if panel == null or scroll == null:
+		return
+	var available_width := maxf(220.0, size.x - 28.0)
+	var available_height := maxf(170.0, size.y - 36.0)
+	panel.custom_minimum_size.x = minf(420.0, available_width)
+	scroll.custom_minimum_size.x = 0.0
+	scroll.custom_minimum_size.y = minf(420.0, maxf(90.0, available_height - 110.0))
+	panel.reset_size()
+
 
 func _add_dictionary(title: String, values: Variant) -> void:
 	if not values is Dictionary or values.is_empty():
