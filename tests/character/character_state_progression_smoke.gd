@@ -17,6 +17,8 @@ func _initialize() -> void:
 	var dependent_sword := {"instance_id": "sword", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"STR": 7}, "guaranteed_stats": {}}
 	ItemDurabilityService.initialize_item(strength_ring, 100)
 	ItemDurabilityService.initialize_item(dependent_sword, 100)
+	ItemDurabilityService.initialize_item(strength_ring, 100)
+	ItemDurabilityService.initialize_item(dependent_sword, 100)
 	assert(repository.add_item(strength_ring))
 	assert(repository.add_item(dependent_sword))
 	assert(character.receive_item("ring", repository))
