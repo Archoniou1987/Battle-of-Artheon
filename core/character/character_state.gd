@@ -58,11 +58,12 @@ func effective_stats(repository: ItemRepository, excluded_id: String = "") -> Di
 					result[stat] = int(result[stat]) + int(bonuses[stat])
 	return result
 
-func meets_requirements(item: Dictionary, repository: ItemRepository) -> bool:
+func meets_requirements(item: Dictionary, repository: ItemRepository, include_own_bonuses: bool = false) -> bool:
 	var requirements: Variant = item.get("requirements", {})
 	if not requirements is Dictionary:
 		return false
-	var stats := effective_stats(repository, String(item.get("instance_id", "")))
+	var excluded_id := "" if include_own_bonuses else String(item.get("instance_id", ""))
+	var stats := effective_stats(repository, excluded_id)
 	for stat in requirements:
 		if not stats.has(stat) or int(stats[stat]) < int(requirements[stat]):
 			return false
@@ -81,7 +82,7 @@ func _revalidate_equipment(repository: ItemRepository) -> void:
 			if seen.has(id):
 				continue
 			seen[id] = true
-			if not meets_requirements(repository.get_item(id), repository):
+			if not meets_requirements(repository.get_item(id), repository, true):
 				equipment.unequip(slot)
 				changed = true
 				break
