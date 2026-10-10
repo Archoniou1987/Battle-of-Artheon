@@ -35,10 +35,13 @@ var drag_offset := 0.0
 var service_buttons: Array[Button] = []
 var footer: Control
 var portrait_nav: GridContainer
+var player_character: CharacterState
+var character_screen: CharacterScreen
 var landscape_nav: HBoxContainer
 
 
 func _ready() -> void:
+	player_character = CharacterState.new("player", "Герой")
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
@@ -206,7 +209,21 @@ func _shift_panorama(value: float) -> void:
 	panorama.position.x = (location_area.size.x - panorama.size.x) * 0.5 + panorama_offset
 
 
+
+func _open_character_screen() -> void:
+	if character_screen == null:
+		character_screen = CharacterScreen.new(player_character)
+		character_screen.name = "CharacterScreen"
+		add_child(character_screen)
+		character_screen.back_button.pressed.connect(func() -> void: character_screen.visible = false)
+	character_screen.visible = true
+	character_screen.refresh()
+
+
 func _open_panel(section: String) -> void:
+	if section == "Персонаж":
+		_open_character_screen()
+		return
 	popup_title.text = section
 	popup_description.text = "Раздел будет подключён на следующем этапе."
 	for child in popup_actions.get_children():
