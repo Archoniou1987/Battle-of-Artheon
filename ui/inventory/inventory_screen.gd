@@ -49,7 +49,6 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 	var header := HBoxContainer.new()
-	root.add_child(header)
 	back_button = Button.new()
 	back_button.text = "← Назад"
 	header.add_child(back_button)
@@ -84,7 +83,7 @@ func _ready() -> void:
 	character_portrait.position = Vector2(62, 0)
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
-	portrait_label.text = "✦\nГЕРОЙ\nПО ПОЯС\n✦"
+	portrait_label.text = "✦\nПОРТРЕТ ПЕРСОНАЖА\n✦"
 	portrait_label.add_theme_font_size_override("font_size", 19)
 	portrait_label.add_theme_color_override("font_color", Color("#d3b37b"))
 	portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -98,7 +97,7 @@ func _ready() -> void:
 	var portrait_overlay := Control.new()
 	portrait_overlay.name = "PortraitOverlay"
 	character_portrait.add_child(portrait_overlay)
-	portrait_overlay.mouse_filter = Control.MOUSE_FILTER_PASS
+	portrait_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var health := HBoxContainer.new()
 	health.name = "Health"
 	health.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -134,10 +133,9 @@ func _ready() -> void:
 
 	var stats_panel := VBoxContainer.new()
 	stats_panel.name = "StatsPanel"
-	stats_panel.position = Vector2(8, 290)
+	stats_panel.position = Vector2.ZERO
 	stats_panel.custom_minimum_size = Vector2(340, 112)
 	stats_panel.add_theme_constant_override("separation", 1)
-	portrait_overlay.add_child(stats_panel)
 	var tabs := HBoxContainer.new()
 	tabs.name = "StatTabs"
 	tabs.add_theme_constant_override("separation", 1)
@@ -163,6 +161,8 @@ func _ready() -> void:
 	bag_panel.add_child(bag_content)
 	header.reparent(bag_content)
 	bag_content.move_child(header, 0)
+	bag_content.add_child(stats_panel)
+	bag_content.move_child(stats_panel, 1)
 	bag_title = Label.new()
 	bag_title.text = "Сумка"
 	bag_content.add_child(bag_title)
@@ -202,7 +202,7 @@ func _apply_layout() -> void:
 	var square_size := maxf(1.0, available)
 	square_host.custom_minimum_size = Vector2(square_size, square_size)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	square_host.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	equipment_content.scale = Vector2.ONE * (square_size / 480.0)
 	bag_grid.columns = 4 if portrait else 6
 
