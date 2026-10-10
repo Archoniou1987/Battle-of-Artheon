@@ -21,7 +21,7 @@ var slot_buttons: Dictionary = {}
 var _last_portrait := false
 var bag_scroll: ScrollContainer
 var bag_title: Label
-var equipment_content: VBoxContainer
+var equipment_content: Control
 var hp_label: Label
 var hp_bar: ProgressBar
 var stats_content: VBoxContainer
@@ -64,25 +64,24 @@ func _ready() -> void:
 	square_host.name = "EquipmentPanel"
 	square_host.clip_contents = true
 	layout_row.add_child(square_host)
-	equipment_content = VBoxContainer.new()
+	equipment_content = Control.new()
 	equipment_content.name = "SquareContent"
-	equipment_content.add_theme_constant_override("separation", 3)
 	equipment_content.position = Vector2.ZERO
 	equipment_content.custom_minimum_size = Vector2(480, 480)
 	square_host.add_child(equipment_content)
-	var middle := HBoxContainer.new()
+	var middle := Control.new()
 	middle.name = "EquipmentMiddle"
-	middle.add_theme_constant_override("separation", 6)
 	equipment_content.add_child(middle)
-	var left_slots := VBoxContainer.new()
+	var left_slots := Control.new()
 	left_slots.name = "LeftSlots"
-	left_slots.add_theme_constant_override("separation", 4)
 	middle.add_child(left_slots)
+	left_slots.position = Vector2(0, 0)
 	for slot in ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]:
 		_add_equipment_slot(left_slots, slot)
 	character_portrait = PanelContainer.new()
 	character_portrait.name = "CharacterPortrait"
 	character_portrait.custom_minimum_size = Vector2(356, 416)
+	character_portrait.position = Vector2(62, 0)
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
 	portrait_label.text = "✦\nГЕРОЙ\nПО ПОЯС\n✦"
@@ -115,13 +114,14 @@ func _ready() -> void:
 	hp_bar.show_percentage = false
 	health.add_child(hp_bar)
 
-	var right_slots := VBoxContainer.new()
+	var right_slots := Control.new()
 	right_slots.name = "RightSlots"
-	right_slots.add_theme_constant_override("separation", 4)
 	middle.add_child(right_slots)
+	right_slots.position = Vector2(424, 0)
 	for slot in ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]:
 		_add_equipment_slot(right_slots, slot)
 	var elixirs := HBoxContainer.new()
+	elixirs.position = Vector2(122, 420)
 	elixirs.name = "ElixirSlots"
 	elixirs.alignment = BoxContainer.ALIGNMENT_CENTER
 	elixirs.add_theme_constant_override("separation", 4)
@@ -161,6 +161,8 @@ func _ready() -> void:
 	layout_row.add_child(bag_panel)
 	var bag_content := VBoxContainer.new()
 	bag_panel.add_child(bag_content)
+	header.reparent(bag_content)
+	bag_content.move_child(header, 0)
 	bag_title = Label.new()
 	bag_title.text = "Сумка"
 	bag_content.add_child(bag_title)
@@ -184,6 +186,8 @@ func _add_equipment_slot(parent: Control, slot: String) -> void:
 	button.pressed.connect(_select_slot.bind(slot))
 	parent.add_child(button)
 	button.set_item({}, SLOT_NAMES[slot])
+	var row_index := parent.get_child_count() - 1
+	button.position = Vector2(0, row_index * 60)
 	slot_buttons[slot] = button
 
 
@@ -194,8 +198,8 @@ func _apply_layout() -> void:
 	_last_portrait = portrait
 	layout_row.vertical = portrait
 	var square_host := layout_row.get_node("EquipmentPanel") as Control
-	var available := minf(size.x, size.y - 48.0) if not portrait else size.x
-	var square_size := minf(480.0, maxf(180.0, available))
+	var available := minf(size.x, size.y)
+	var square_size := maxf(1.0, available)
 	square_host.custom_minimum_size = Vector2(square_size, square_size)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_CENTER
