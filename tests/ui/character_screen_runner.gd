@@ -34,6 +34,10 @@ func _run() -> void:
 	var inventory := instance.get_node_or_null("InventoryScreen") as InventoryScreen
 	assert(inventory != null and inventory.visible)
 	assert(inventory.slot_buttons.size() == 13)
+	for slot in inventory.slot_buttons:
+		var equipment_icon := inventory.slot_buttons[slot] as ItemIcon
+		assert(equipment_icon != null)
+		assert(equipment_icon.custom_minimum_size == Vector2(ItemIcon.CELL_SIZE, ItemIcon.CELL_SIZE))
 	assert(inventory.bag_grid.get_child_count() == 0)
 	assert(inventory.character_portrait != null)
 	assert(inventory.character_portrait.get_parent().name == "EquipmentMiddle")
@@ -50,6 +54,16 @@ func _run() -> void:
 	assert(inventory.slot_buttons.size() == 13)
 	assert(inventory.detail_dialog.actions != null)
 	assert(inventory.detail_dialog.scroll != null)
+	var sample := {"instance_id": "icon_smoke", "name": "Клинок", "rarity": "blue", "equip_slots": ["main_hand"]}
+	ItemDurabilityService.initialize_item(sample, 100)
+	assert(inventory.repository.add_item(sample))
+	assert(inventory.character.inventory.add_instance("icon_smoke", inventory.repository))
+	inventory.refresh()
+	assert(inventory.bag_grid.get_child_count() == 1)
+	var bag_icon := inventory.bag_grid.get_child(0) as ItemIcon
+	assert(bag_icon != null)
+	assert(bag_icon.custom_minimum_size == (inventory.slot_buttons["main_hand"] as ItemIcon).custom_minimum_size)
+	assert(bag_icon.instance_id == "icon_smoke")
 	inventory.back_button.pressed.emit()
 	assert(not inventory.visible)
 	print("Character and inventory screen UI smoke: PASS")
