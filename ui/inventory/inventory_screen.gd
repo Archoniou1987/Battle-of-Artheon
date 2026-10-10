@@ -70,17 +70,6 @@ func _ready() -> void:
 	equipment_content.position = Vector2.ZERO
 	equipment_content.custom_minimum_size = Vector2(480, 480)
 	square_host.add_child(equipment_content)
-	var health := HBoxContainer.new()
-	health.name = "Health"
-	equipment_content.add_child(health)
-	hp_label = Label.new()
-	hp_label.custom_minimum_size.x = 105
-	health.add_child(hp_label)
-	hp_bar = ProgressBar.new()
-	hp_bar.custom_minimum_size.y = 20
-	hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hp_bar.show_percentage = false
-	health.add_child(hp_bar)
 	var middle := HBoxContainer.new()
 	middle.name = "EquipmentMiddle"
 	middle.add_theme_constant_override("separation", 6)
@@ -93,7 +82,7 @@ func _ready() -> void:
 		_add_equipment_slot(left_slots, slot)
 	character_portrait = PanelContainer.new()
 	character_portrait.name = "CharacterPortrait"
-	character_portrait.custom_minimum_size = Vector2(388, 304)
+	character_portrait.custom_minimum_size = Vector2(356, 416)
 	middle.add_child(character_portrait)
 	var portrait_label := Label.new()
 	portrait_label.text = "✦\nГЕРОЙ\nПО ПОЯС\n✦"
@@ -107,6 +96,21 @@ func _ready() -> void:
 	portrait_frame.border_color = Color("#94774e")
 	portrait_frame.set_border_width_all(2)
 	character_portrait.add_theme_stylebox_override("panel", portrait_frame)
+	var health := HBoxContainer.new()
+	health.name = "Health"
+	health.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	health.position = Vector2(8, 8)
+	health.custom_minimum_size = Vector2(340, 22)
+	character_portrait.add_child(health)
+	hp_label = Label.new()
+	hp_label.custom_minimum_size.x = 105
+	health.add_child(hp_label)
+	hp_bar = ProgressBar.new()
+	hp_bar.custom_minimum_size.y = 20
+	hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_bar.show_percentage = false
+	health.add_child(hp_bar)
+
 	var right_slots := VBoxContainer.new()
 	right_slots.name = "RightSlots"
 	right_slots.add_theme_constant_override("separation", 4)
@@ -126,8 +130,10 @@ func _ready() -> void:
 
 	var stats_panel := VBoxContainer.new()
 	stats_panel.name = "StatsPanel"
+	stats_panel.position = Vector2(8, 290)
+	stats_panel.custom_minimum_size = Vector2(340, 112)
 	stats_panel.add_theme_constant_override("separation", 1)
-	equipment_content.add_child(stats_panel)
+	character_portrait.add_child(stats_panel)
 	var tabs := HBoxContainer.new()
 	tabs.name = "StatTabs"
 	tabs.add_theme_constant_override("separation", 1)
