@@ -14,6 +14,10 @@ func _run() -> void:
 	var screen := instance.get_node_or_null("CharacterScreen") as CharacterScreen
 	assert(screen != null and screen.visible)
 	assert(screen.character != null)
+	assert(screen.combat_section != null)
+	assert(screen.resistance_section != null)
+	assert(screen.combat_section.get_child_count() >= 4)
+	assert(screen.resistance_section.get_child_count() >= 3)
 	assert(screen.character.progression.level == 1)
 	assert(screen.xp_label.text.contains("900"))
 	assert(screen.character.award_xp(900) == 1)
