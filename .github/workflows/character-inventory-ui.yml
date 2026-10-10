@@ -6,6 +6,9 @@ on:
       - "core/character/**"
       - "data/progression/**"
       - "tests/character/**"
+      - "tests/ui/character_screen_runner.gd"
+      - "ui/character/**"
+      - "scenes/main/main.gd"
       - ".github/workflows/character-inventory-ui.yml"
   workflow_dispatch:
 
@@ -27,3 +30,5 @@ jobs:
         run: timeout 120s godot --headless --path . --script res://tests/character/progression_smoke.gd
       - name: CharacterState integration smoke test
         run: timeout 120s godot --headless --path . --script res://tests/character/character_state_progression_smoke.gd
+      - name: Character UI smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
