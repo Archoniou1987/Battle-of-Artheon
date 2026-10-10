@@ -124,6 +124,26 @@ func _ready() -> void:
 		elixirs.add_child(quick)
 		quick.set_item({}, "Эликсир %d" % (i + 1))
 
+	var stats_panel := VBoxContainer.new()
+	stats_panel.name = "StatsPanel"
+	stats_panel.add_theme_constant_override("separation", 1)
+	equipment_content.add_child(stats_panel)
+	var tabs := HBoxContainer.new()
+	tabs.name = "StatTabs"
+	tabs.add_theme_constant_override("separation", 1)
+	stats_panel.add_child(tabs)
+	for i in range(4):
+		var tab := Button.new()
+		tab.text = ["Атака", "Маг. атака", "Защита", "Маг. защита"][i]
+		tab.add_theme_font_size_override("font_size", 10)
+		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab.pressed.connect(_choose_stat_tab.bind(i))
+		tabs.add_child(tab)
+		stat_tabs.append(tab)
+	stats_content = VBoxContainer.new()
+	stats_content.name = "StatRows"
+	stats_content.add_theme_constant_override("separation", 0)
+	stats_panel.add_child(stats_content)
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
 	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
