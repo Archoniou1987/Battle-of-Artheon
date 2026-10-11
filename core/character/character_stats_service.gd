@@ -29,23 +29,23 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 		if not String(key).ends_with("_direct_pct"):
 			result[key] = float(result.get(key, 0.0)) + float(direct_effects[key])
 	var weapon_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
-	if weapon_id == null:
+	var weapon: Dictionary = {}
+	if weapon_id != null and repository != null and active.has(String(weapon_id)):
+		weapon = repository.get_item(String(weapon_id))
+	var damage: Dictionary = weapon.get("damage", {}) if weapon.get("damage", {}) is Dictionary else {}
+	var bonus := float(result.get("physical_damage_flat", 0.0))
+	if not damage.is_empty():
+		result["main_hand_min_damage"] = float(damage.get("min", 0.0)) + bonus
+		result["main_hand_max_damage"] = float(damage.get("max", 0.0)) + bonus
+		result["main_hand_damage_type"] = String(damage.get("type", "slashing"))
+	else:
+		# Empty or inactive main-hand equipment grants no weapon damage.
 		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(UNARMED_PATH)) if FileAccess.file_exists(UNARMED_PATH) else {}
 		if raw is Dictionary:
 			var unarmed: Dictionary = raw.get("unarmed", {})
-			var bonus := float(result.get("physical_damage_flat", 0.0))
-			var low := float(unarmed.get("min_damage", 2)) + bonus
-			var high := float(unarmed.get("max_damage", 4)) + bonus
-			result["main_hand_min_damage"] = low
-			result["main_hand_max_damage"] = high
+			result["main_hand_min_damage"] = float(unarmed.get("min_damage", 2)) + bonus
+			result["main_hand_max_damage"] = float(unarmed.get("max_damage", 4)) + bonus
 			result["main_hand_damage_type"] = String(unarmed.get("damage_type", "blunt"))
-	elif repository != null and active.has(String(weapon_id)):
-		var weapon: Dictionary = repository.get_item(String(weapon_id))
-		if weapon.has("min_damage") and weapon.has("max_damage"):
-			var bonus := float(result.get("physical_damage_flat", 0.0))
-			result["main_hand_min_damage"] = float(weapon["min_damage"]) + bonus
-			result["main_hand_max_damage"] = float(weapon["max_damage"]) + bonus
-			result["main_hand_damage_type"] = String(weapon.get("damage_type", ""))
 	if result.has("main_hand_min_damage") and result.has("main_hand_max_damage"):
 		result["main_hand_damage"] = [result["main_hand_min_damage"], result["main_hand_max_damage"]]
 	for key in config.get("rating_stats", []):
