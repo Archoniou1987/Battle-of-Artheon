@@ -14,6 +14,12 @@ static func active_effects(combatant: CombatantState, round_number: int) -> Arra
 		result.append(record)
 	return result
 
+## TRA is an optional runtime dictionary of direct modifiers on combat_stats.
+## Persistent talent ownership and unlock rules are handled separately.
+static func trait_modifiers(combatant: CombatantState) -> Dictionary:
+	var raw: Variant = combatant.combat_stats.get("trait_modifiers", {})
+	return raw if raw is Dictionary else {}
+
 static func flat_bonus(combatant: CombatantState, key: String, round_number: int) -> float:
 	var total := 0.0
 	for record in active_effects(combatant, round_number):
@@ -21,7 +27,12 @@ static func flat_bonus(combatant: CombatantState, key: String, round_number: int
 		total += float(definition.get(key, 0.0))
 	return total
 
+static func modifier(combatant: CombatantState, key: String, round_number: int) -> float:
+	return float(trait_modifiers(combatant).get(key, 0.0)) + flat_bonus(combatant, key, round_number)
+
 static func flag(combatant: CombatantState, key: String, round_number: int) -> bool:
+	if bool(trait_modifiers(combatant).get(key, false)):
+		return true
 	for record in active_effects(combatant, round_number):
 		var definition: Dictionary = record.get("definition", {})
 		if bool(definition.get(key, false)):
@@ -29,12 +40,13 @@ static func flag(combatant: CombatantState, key: String, round_number: int) -> b
 	return false
 
 static func effective_stat(combatant: CombatantState, key: String, round_number: int) -> float:
-	return float(combatant.combat_stats.get(key, 0.0)) + flat_bonus(combatant, key, round_number)
+	return float(combatant.combat_stats.get(key, 0.0)) + modifier(combatant, key, round_number)
 
-## Direct percentage-point overlays stay separate from level-scaled ratings.
+## Rating conversion is owned by the canonical character stats service.
+## Direct percentage-point overlays are never level-scaled.
 static func effective_percent(combatant: CombatantState, key: String, round_number: int) -> float:
 	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
-	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + float(combatant.combat_stats.get(direct_key, 0.0)) + flat_bonus(combatant, direct_key, round_number)
+	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + float(combatant.combat_stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
 
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result: Dictionary = combatant.combat_stats.duplicate(true)
