@@ -1,6 +1,8 @@
 extends Control
 
 const LOCATION_NAME := "Стартовая деревня"
+# Temporary browser preview fixture; disable before public gameplay release.
+const ENABLE_INVENTORY_PREVIEW_ITEMS := true
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const PORTRAIT_NAV_COLUMNS := 3
@@ -45,6 +47,8 @@ var landscape_nav: HBoxContainer
 func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
 	item_repository = ItemRepository.new()
+	if ENABLE_INVENTORY_PREVIEW_ITEMS:
+		_seed_inventory_preview()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
@@ -266,3 +270,46 @@ func _label(value: String, font_size: int, tint: Color) -> Label:
 	result.add_theme_font_size_override("font_size", font_size)
 	result.add_theme_color_override("font_color", tint)
 	return result
+
+# Deliberately isolated test data: no drops, prices, or balance rules.
+func _seed_inventory_preview() -> void:
+	var samples := [
+		["Тренировочный меч", "grey", "weapon", ["main_hand"]],
+		["Железный меч", "green", "weapon", ["main_hand"]],
+		["Охотничий кинжал", "blue", "weapon", ["main_hand", "off_hand"]],
+		["Тяжёлый топор", "purple", "weapon", ["main_hand"]],
+		["Деревянный щит", "grey", "shield", ["off_hand"]],
+		["Стальной щит", "green", "shield", ["off_hand"]],
+		["Кожаный шлем", "green", "armour", ["head"]],
+		["Капюшон следопыта", "blue", "armour", ["head"]],
+		["Кожаная куртка", "grey", "armour", ["chest"]],
+		["Кольчуга", "blue", "armour", ["chest"]],
+		["Перчатки охотника", "green", "armour", ["hands"]],
+		["Сапоги путника", "grey", "armour", ["feet"]],
+		["Кольцо меди", "green", "ring", ["ring1", "ring2"]],
+		["Кольцо луны", "purple", "ring", ["ring1", "ring2"]],
+		["Пояс странника", "green", "armour", ["waist"]],
+		["Наручи стража", "blue", "armour", ["wrists"]],
+		["Эликсир здоровья", "green", "consumable", []],
+		["Старая руда", "grey", "material", []],
+		["Редкий самоцвет", "orange", "material", []],
+		["Потрёпанная карта", "grey", "quest", []]
+	]
+	for index in range(samples.size()):
+		var sample: Array = samples[index]
+		var instance_id := "preview_%02d" % (index + 1)
+		var item := {
+			"instance_id": instance_id,
+			"name": String(sample[0]),
+			"rarity": String(sample[1]),
+			"type": String(sample[2]),
+			"item_level": 1,
+			"equip_slots": sample[3],
+			"requirements": {},
+			"guaranteed_stats": {},
+			"bonuses": {},
+			"description": "Тестовый предмет для проверки интерфейса. Не является частью игрового баланса."
+		}
+		ItemDurabilityService.initialize_item(item, 100)
+		if item_repository.add_item(item):
+			player_character.inventory.add_instance(instance_id, item_repository)
