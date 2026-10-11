@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "notes": "Temporary balancing coefficients. Percentage coefficients represent percentage points per stat; not final balance.",
+  "effects": {
+    "STR": {
+      "physical_damage_flat": 1
+    },
+    "DEX": {
+      "dodge_pct": 0.25,
+      "anti_dodge_pct": 0.25,
+      "counterattack_pct": 0.25
+    },
+    "INTU": {
+      "crit_chance_pct": 0.25,
+      "anti_crit_pct": 0.25,
+      "crit_damage_pct": 1
+    },
+    "INT": {
+      "magic_damage_pct": 1
+    },
+    "WIS": {
+      "max_mana_flat": 10
+    },
+    "END": {
+      "max_hp_flat": 20
+    }
+  },
+  "categories": {
+    "Атака": {
+      "Физический урон": [
+        "physical_damage_flat",
+        "slash_damage",
+        "pierce_damage",
+        "chop_damage",
+        "blunt_damage",
+        "main_hand_min_damage",
+        "main_hand_max_damage",
+        "off_hand_min_damage",
+        "off_hand_max_damage"
+      ],
+      "Точность и крит": [
+        "hit_chance_pct",
+        "anti_dodge_pct",
+        "crit_chance_pct",
+        "crit_damage_pct",
+        "armour_penetration_flat",
+        "armour_penetration_pct",
+        "block_penetration_flat",
+        "block_penetration_pct"
+      ],
+      "Темп и реакции": [
+        "tempo",
+        "attack_speed_pct",
+        "counterattack_pct",
+        "counterattack_damage_pct"
+      ]
+    },
+    "Защита": {
+      "Защитные шансы": [
+        "dodge_pct",
+        "anti_crit_pct",
+        "manual_block_pct",
+        "shield_auto_block_pct",
+        "block_strength",
+        "control_resistance_pct"
+      ],
+      "Броня по зонам": [
+        "armour_head",
+        "armour_arms",
+        "armour_chest",
+        "armour_waist",
+        "armour_legs"
+      ],
+      "Снижение урона": [
+        "physical_damage_reduction_pct",
+        "slash_resistance_pct",
+        "pierce_resistance_pct",
+        "chop_resistance_pct",
+        "blunt_resistance_pct"
+      ]
+    },
+    "Магия": {
+      "Магическая атака": [
+        "magic_damage_pct",
+        "magic_damage_flat",
+        "magic_hit_pct",
+        "magic_crit_pct",
+        "magic_penetration_flat",
+        "magic_penetration_pct"
+      ],
+      "Урон по стихиям": [
+        "fire_damage",
+        "water_damage",
+        "air_damage",
+        "earth_damage",
+        "dark_damage",
+        "light_damage"
+      ],
+      "Сопротивления": [
+        "magic_resistance",
+        "fire_resistance",
+        "water_resistance",
+        "air_resistance",
+        "earth_resistance",
+        "dark_resistance",
+        "light_resistance"
+      ]
+    },
+    "Прочее": {
+      "Ресурсы": [
+        "max_hp_flat",
+        "max_mana_flat",
+        "max_energy",
+        "max_rage",
+        "hp_regen",
+        "mana_regen",
+        "energy_regen"
+      ],
+      "Исследование": [
+        "vision_range",
+        "movement_speed_pct",
+        "gathering_speed_pct"
+      ],
+      "Прогресс": [
+        "experience_bonus_pct",
+        "loot_bonus_pct",
+        "carry_capacity"
+      ]
+    }
+  }
+}
