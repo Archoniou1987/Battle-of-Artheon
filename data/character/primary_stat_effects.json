@@ -35,10 +35,8 @@
         "pierce_damage_rating",
         "chop_damage_rating",
         "blunt_damage_rating",
-        "main_hand_min_damage",
-        "main_hand_max_damage",
-        "off_hand_min_damage",
-        "off_hand_max_damage"
+        "main_hand_damage",
+        "off_hand_damage"
       ],
       "Точность и крит": [
         "hit_chance_rating",
