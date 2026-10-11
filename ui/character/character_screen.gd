@@ -38,8 +38,10 @@ const DETAIL_LABELS := {
 	"pierce_damage": "Модификатор колющего урона",
 	"chop_damage": "Модификатор рубящего урона",
 	"blunt_damage": "Модификатор дробящего урона",
+	"main_hand_damage": "Урон основной рукой",
 	"main_hand_min_damage": "Осн. рука: мин. урон",
 	"main_hand_max_damage": "Осн. рука: макс. урон",
+	"off_hand_damage": "Урон второй рукой",
 	"off_hand_min_damage": "Вторая рука: мин. урон",
 	"off_hand_max_damage": "Вторая рука: макс. урон",
 	"hit_chance_rating": "Шанс попадания",
@@ -272,7 +274,12 @@ func _refresh_detail_values() -> void:
 	for key in detail_values:
 		var stat_key := String(key)
 		var value: Label = detail_values[key]
-		if unarmed_damage.has(stat_key):
+		if stat_key == "main_hand_damage" and unarmed_damage.has("main_hand_min_damage"):
+			value.text = "%s–%s" % [
+				_format_stat_number(float(unarmed_damage["main_hand_min_damage"])),
+				_format_stat_number(float(unarmed_damage["main_hand_max_damage"]))
+			]
+		elif unarmed_damage.has(stat_key):
 			value.text = _format_stat_number(float(unarmed_damage[stat_key]))
 		elif rating_stats.has(stat_key):
 			var rating := float(bonuses.get(stat_key, 0.0))
