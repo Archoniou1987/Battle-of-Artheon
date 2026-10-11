@@ -20,6 +20,8 @@ var bag_grid: GridContainer
 var detail_dialog: ItemDetailDialog
 var layout_row: BoxContainer
 var selected_instance_id := ""
+var _last_tap_id := ""
+var _last_tap_ms := 0
 var slot_buttons: Dictionary = {}
 var _last_portrait := false
 var bag_scroll: ScrollContainer
@@ -292,11 +294,32 @@ func _select_slot(slot: String) -> void:
 	var id: Variant = character.equipment.get_equipped_instance_id(slot)
 	selected_instance_id = String(id) if id != null else ""
 	if id != null:
-		detail_dialog.show_item(selected_instance_id, slot)
+		_tap_item(selected_instance_id, slot, slot_buttons[slot] as Control)
 
 func _select_item(instance_id: String) -> void:
 	selected_instance_id = instance_id
-	detail_dialog.show_item(instance_id)
+	for icon in bag_grid.get_children():
+		if (icon as ItemIcon).instance_id == instance_id:
+			_tap_item(instance_id, "", icon as Control)
+			return
+
+func _tap_item(instance_id: String, slot: String, target: Control) -> void:
+	var now_ms := Time.get_ticks_msec()
+	if _last_tap_id == instance_id and now_ms - _last_tap_ms <= 360:
+		_last_tap_id = ""
+		detail_dialog.item_id = instance_id
+		detail_dialog.source_slot = slot
+		if slot.is_empty():
+			detail_dialog._equip()
+		else:
+			detail_dialog._unequip()
+		return
+	_last_tap_id = instance_id
+	_last_tap_ms = now_ms
+	if detail_dialog.visible and detail_dialog.item_id == instance_id:
+		detail_dialog.visible = false
+	else:
+		detail_dialog.show_item(instance_id, slot, target)
 
 func refresh() -> void:
 	if bag_grid == null:
