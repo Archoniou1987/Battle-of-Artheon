@@ -33,7 +33,8 @@ static func effective_stat(combatant: CombatantState, key: String, round_number:
 
 ## Direct percentage-point overlays stay separate from level-scaled ratings.
 static func effective_percent(combatant: CombatantState, key: String, round_number: int) -> float:
-	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + float(combatant.combat_stats.get(key + "_direct_pct", 0.0)) + flat_bonus(combatant, key + "_direct_pct", round_number)
+	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
+	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + float(combatant.combat_stats.get(direct_key, 0.0)) + flat_bonus(combatant, direct_key, round_number)
 
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result: Dictionary = combatant.combat_stats.duplicate(true)
