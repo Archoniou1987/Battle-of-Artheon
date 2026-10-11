@@ -36,7 +36,12 @@ func _capture() -> void:
 	DisplayServer.window_set_size(Vector2i(390, 844))
 	await _settle()
 	_save("character-portrait.png")
-	assert((game.get_node("CharacterScreen") as CharacterScreen).combat_section != null)
+	var character_screen := game.get_node("CharacterScreen") as CharacterScreen
+	assert(character_screen != null)
+	assert(character_screen.details_panel != null)
+	assert(character_screen.detail_tabs != null)
+	assert(character_screen.detail_tabs.get_tab_count() == 4)
+	assert(character_screen.detail_values.size() >= 50)
 	print("Visual preview capture: PASS")
 	quit(0)
 
