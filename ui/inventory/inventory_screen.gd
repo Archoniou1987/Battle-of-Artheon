@@ -258,6 +258,7 @@ func _ready() -> void:
 	discard_confirm.confirmed.connect(_confirm_discard)
 	add_child(discard_confirm)
 	detail_dialog.changed.connect(refresh)
+	detail_dialog.elixir_requested.connect(_assign_elixir)
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
