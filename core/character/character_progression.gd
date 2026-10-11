@@ -125,11 +125,11 @@ func restore(data: Dictionary) -> bool:
 	var keys := ["STR", "DEX", "INTU", "INT", "WIS", "END"]
 	var total := restored_points
 	for key in keys:
-		if not restored_stats.has(key) or not (restored_stats[key] is int) or int(restored_stats[key]) < 1:
+		if not restored_stats.has(key) or not _is_whole_number(restored_stats[key]) or int(restored_stats[key]) < 1:
 			return false
 		total += int(restored_stats[key])
 	for key in restored_pending:
-		if not keys.has(key) or not (restored_pending[key] is int) or int(restored_pending[key]) <= 0:
+		if not keys.has(key) or not _is_whole_number(restored_pending[key]) or int(restored_pending[key]) <= 0:
 			return false
 		total += int(restored_pending[key])
 	if total != 6 + total_earned_stat_points(restored_level):
@@ -137,6 +137,18 @@ func restore(data: Dictionary) -> bool:
 	level = restored_level
 	xp_into_level = restored_xp
 	unspent_stat_points = restored_points
-	base_stats = restored_stats.duplicate(true)
-	pending_stats = restored_pending.duplicate(true)
+	base_stats = {}
+	for key in keys:
+		base_stats[key] = int(restored_stats[key])
+	pending_stats = {}
+	for key in restored_pending:
+		pending_stats[key] = int(restored_pending[key])
 	return true
+
+
+static func _is_whole_number(value: Variant) -> bool:
+	if value is int:
+		return true
+	if value is float:
+		return is_finite(value) and value == floor(value)
+	return false
