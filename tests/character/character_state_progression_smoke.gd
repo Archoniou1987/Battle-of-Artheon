@@ -39,7 +39,7 @@ func _initialize() -> void:
 	assert(character.unequip("ring1", repository) == "ring")
 	assert(character.equipment.is_equipped("sword"))
 	assert(CharacterCombatBuilder.equipped_items(character, repository).is_empty())
-	var replacement := {"instance_id": "replacement", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"STR": 10}, "guaranteed_stats": {}}
+	var replacement := {"instance_id": "replacement", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"STR": 7}, "guaranteed_stats": {}}
 	ItemDurabilityService.initialize_item(replacement, 100)
 	assert(repository.add_item(replacement))
 	assert(character.receive_item("replacement", repository))
