@@ -21,16 +21,62 @@ func _init(id: String, name: String, character_level: int = 1) -> void:
 func receive_item(instance_id: String, repository: ItemRepository) -> bool:
 	return inventory.add_instance(instance_id, repository)
 
+## Atomic replacement: restore the original slots on any failed validation.
+## bag_capacity < 0 means capacity is not configured yet.
+var bag_capacity: int = -1
+
+func bag_item_count() -> int:
+	var count := 0
+	for id in inventory.instance_ids():
+		if not equipment.is_equipped(String(id)):
+			count += 1
+	return count
+
 func equip(slot: String, instance_id: String, repository: ItemRepository) -> bool:
-	if in_combat or not repository.has_item(instance_id):
+	if in_combat or not inventory.owns(instance_id) or not repository.has_item(instance_id):
+		return false
+	if equipment.is_equipped(instance_id):
 		return false
 	var item := repository.get_item(instance_id)
-	if not meets_requirements(item, repository):
+	if item.is_empty() or not ItemDurabilityService.is_usable(item):
 		return false
-	return EquipmentService.equip_instance(slot, instance_id, inventory, equipment, repository)
+	if not item.get("equip_slots", []).has(slot):
+		return false
+	var usage: Array = item.get("slot_usage", [slot])
+	if usage.is_empty():
+		usage = [slot]
+	if not usage.has(slot):
+		usage = usage.duplicate()
+		usage.append(slot)
+	var displaced := {}
+	for target in usage:
+		if not equipment.slots.has(target):
+			return false
+		var old_id: Variant = equipment.get_equipped_instance_id(String(target))
+		if old_id != null:
+			displaced[String(old_id)] = true
+	# The incoming item leaves the bag; every displaced item enters it.
+	if bag_capacity >= 0 and bag_item_count() - 1 + displaced.size() > bag_capacity:
+		return false
+	var original := equipment.slots.duplicate(true)
+	for target in usage:
+		if equipment.get_equipped_instance_id(String(target)) != null:
+			equipment.unequip(String(target))
+	# Requirements are evaluated after displacement, before candidate bonuses.
+	if not meets_requirements(item, repository):
+		equipment.slots = original
+		return false
+	if not EquipmentService.equip_instance(slot, instance_id, inventory, equipment, repository):
+		equipment.slots = original
+		return false
+	return true
 
 func unequip(slot: String, repository: ItemRepository = null) -> Variant:
 	if in_combat:
+		return null
+	if equipment.get_equipped_instance_id(slot) == null:
+		return null
+	if bag_capacity >= 0 and bag_item_count() >= bag_capacity:
 		return null
 	var removed: Variant = equipment.unequip(slot)
 	if removed != null and repository != null:
