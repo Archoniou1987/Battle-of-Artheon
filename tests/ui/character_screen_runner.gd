@@ -25,10 +25,13 @@ func _run() -> void:
 	var test_bonuses := PrimaryStatEffects.calculate({"STR": 10, "DEX": 20, "INTU": 20, "INT": 10, "WIS": 10, "END": 10})
 	assert(is_equal_approx(float(test_bonuses["physical_damage_flat"]), 10.0))
 	assert(is_equal_approx(float(test_bonuses["dodge_rating"]), 100.0))
-	assert(is_equal_approx(float(test_bonuses["crit_damage_pct"]), 20.0))
+	assert(is_equal_approx(float(test_bonuses["crit_damage_rating"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["max_hp_flat"]), 200.0))
 	assert(is_equal_approx(float(test_bonuses["crit_chance_rating"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["magic_hit_rating"]), 50.0))
+	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
+	assert((screen.detail_values["crit_damage_rating"] as Label).text.contains("%)"))
+	assert((screen.detail_values["slash_damage_rating"] as Label).text == "0 (0%)")
 	var anchors: Array = primary_config["rating_curve"]["anchors"]
 	for anchor in anchors:
 		assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, int(anchor["level"]), primary_config), float(anchor["percent"])))
