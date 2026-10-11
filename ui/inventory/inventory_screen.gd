@@ -179,8 +179,7 @@ func _ready() -> void:
 			table.add_child(value)
 			if not name.is_empty():
 				stat_rows[name] = value
-	stats_content = VBoxContainer.new()
-	stats_content.name = "StatRows"
+	stats_content = stats_panel
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
 	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
