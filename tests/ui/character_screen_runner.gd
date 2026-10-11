@@ -44,7 +44,7 @@ func _run() -> void:
 	assert(inventory.character_portrait.custom_minimum_size == Vector2(356, 416))
 	assert(inventory.hp_bar != null)
 	assert(inventory.stat_rows.size() == 11)
-	assert(inventory.avatar_id == "wanderer_01")
+	assert(inventory.avatar_id == "hero_realistic_01")
 	assert(inventory.avatar_texture != null)
 	assert(inventory.avatar_texture.texture != null)
 	assert(inventory.stats_content.get_node("StatsScroll/CombatTable").get_child_count() == 4)
