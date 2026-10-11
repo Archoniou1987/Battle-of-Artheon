@@ -90,6 +90,8 @@ func _render() -> void:
 			if not met:
 				allowed = false
 			_add_text("%s: %d / %d" % [str(stat), actual, needed], Color("#e2e5eb") if met else Color("#e05d5d"))
+	if not source_slot.is_empty() and not character.is_equipment_active(item_id, repository):
+		_add_text("НЕАКТИВНО — требования не выполнены", Color("#ed5961"), 17)
 	var description := str(item.get("description", ""))
 	if not description.is_empty():
 		_add_text(description, Color("#bac6d4"))
@@ -159,11 +161,11 @@ func _equip() -> void:
 			changed.emit()
 			visible = false
 			return
-	status_label.text = "Не удалось надеть: проверьте свободные слоты и требования."
+	status_label.text = "Не удалось надеть: проверьте требования, слоты и вместимость сумки."
 
 func _unequip() -> void:
 	if character.unequip(source_slot, repository) != null:
 		changed.emit()
 		visible = false
 	else:
-		status_label.text = "Не удалось снять предмет."
+		status_label.text = "Не удалось снять: бой или недостаточно места в сумке."
