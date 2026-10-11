@@ -3,6 +3,8 @@ extends Button
 
 ## One square presentation for equipped items, bag items and future loot/shop cells.
 const CELL_SIZE := 56.0
+const ATLAS_REGISTRY := "res://data/graphics/atlas_registry.json"
+const ICON_REGISTRY := "res://data/graphics/icon_registry.json"
 const ATLAS_PATH := "res://assets/items/items_atlas_01.png"
 const ATLAS_COLUMNS := 8
 const ATLAS_ROWS := 8
@@ -78,17 +80,10 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	var texture: Texture2D = null
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		texture = load(icon_path) as Texture2D
+	elif item.has("icon_id"):
+		texture = _texture_from_icon_id(String(item["icon_id"]))
 	elif item.has("atlas_index") and ResourceLoader.exists(ATLAS_PATH):
-		var index := int(item.get("atlas_index", -1))
-		if index >= 0 and index < ATLAS_COLUMNS * ATLAS_ROWS:
-			var atlas := load(ATLAS_PATH) as Texture2D
-			if atlas != null:
-				var cell := Vector2i(atlas.get_width() / ATLAS_COLUMNS, atlas.get_height() / ATLAS_ROWS)
-				if cell.x > 0 and cell.y > 0:
-					var cropped := AtlasTexture.new()
-					cropped.atlas = atlas
-					cropped.region = Rect2(Vector2i(index % ATLAS_COLUMNS, index / ATLAS_COLUMNS) * cell, cell)
-					texture = cropped
+		texture = _atlas_cell(load(ATLAS_PATH) as Texture2D, int(item["atlas_index"]), ATLAS_COLUMNS, ATLAS_ROWS)
 	if _icon_texture == null:
 		return
 	_icon_texture.texture = texture
@@ -101,3 +96,45 @@ func _short_label(value: String) -> String:
 	if value.is_empty():
 		return "·"
 	return value.substr(0, mini(4, value.length()))
+
+
+# Registries are authoritative; atlas_index remains only as a temporary legacy fallback.
+static func _texture_from_icon_id(icon_id: String) -> Texture2D:
+	var icons := _read_registry(ICON_REGISTRY, "icons")
+	var atlases := _read_registry(ATLAS_REGISTRY, "atlases")
+	for icon in icons:
+		if not icon is Dictionary or String(icon.get("icon_id", "")) != icon_id:
+			continue
+		for atlas in atlases:
+			if not atlas is Dictionary:
+				continue
+			if String(atlas.get("atlas_id", "")) != String(icon.get("atlas_id", "")) or int(atlas.get("version", -1)) != int(icon.get("atlas_version", -1)):
+				continue
+			var path := String(atlas.get("path", ""))
+			if not ResourceLoader.exists(path):
+				return null
+			return _atlas_cell(load(path) as Texture2D, int(icon.get("cell_index", -1)), int(atlas.get("columns", 0)), int(atlas.get("rows", 0)))
+	return null
+
+
+static func _read_registry(path: String, collection: String) -> Array:
+	if not FileAccess.file_exists(path):
+		return []
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if parsed is Dictionary:
+		var values: Variant = parsed.get(collection, [])
+		if values is Array:
+			return values
+	return []
+
+
+static func _atlas_cell(atlas: Texture2D, index: int, columns: int, rows: int) -> Texture2D:
+	if atlas == null or columns <= 0 or rows <= 0 or index < 0 or index >= columns * rows:
+		return null
+	var cell := Vector2i(atlas.get_width() / columns, atlas.get_height() / rows)
+	if cell.x <= 0 or cell.y <= 0:
+		return null
+	var cropped := AtlasTexture.new()
+	cropped.atlas = atlas
+	cropped.region = Rect2(Vector2i(index % columns, index / columns) * cell, cell)
+	return cropped
