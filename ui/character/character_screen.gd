@@ -24,6 +24,8 @@ var reset_button: Button
 var back_button: Button
 var combat_section: VBoxContainer
 var resistance_section: VBoxContainer
+var square_host: Control
+var square_content: Control
 
 func _init(p_character: CharacterState = null) -> void:
 	character = p_character
@@ -49,7 +51,20 @@ func _ready() -> void:
 	header.add_child(title_label)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(scroll)
+	square_host = Control.new()
+	square_host.name = "CharacterPanel"
+	square_host.clip_contents = true
+	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	root.add_child(square_host)
+	square_content = Control.new()
+	square_content.name = "SquareContent"
+	square_content.custom_minimum_size = Vector2(480, 480)
+	square_host.add_child(square_content)
+	scroll.position = Vector2.ZERO
+	scroll.size = Vector2(480, 480)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	square_content.add_child(scroll)
 	var body := VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 14)
@@ -111,6 +126,15 @@ func _ready() -> void:
 	resistance_section = VBoxContainer.new()
 	resist_card.add_child(resistance_section)
 	refresh()
+	resized.connect(_apply_layout)
+	call_deferred("_apply_layout")
+
+func _apply_layout() -> void:
+	if square_host == null or square_content == null:
+		return
+	var square_size := maxf(1.0, minf(size.x, size.y))
+	square_host.custom_minimum_size = Vector2(square_size, square_size)
+	square_content.scale = Vector2.ONE * (square_size / 480.0)
 
 func _panel() -> PanelContainer:
 	var panel := PanelContainer.new()
