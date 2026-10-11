@@ -7,7 +7,7 @@ var engine:CombatEngine
 var orchestrator:RoundOrchestrator
 var api:CombatApi
 var commands:CombatCommandApi
-var hero_id:="hero"
+var hero_id:="player"
 const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 
@@ -37,13 +37,7 @@ func _build_debug_combat()->void:
 	var player: CharacterState = debug_character["character"]
 	var repository: ItemRepository = debug_character["repository"]
 	var calculated := CharacterStatsService.combat_stats(player, repository)
-	var hero_hp := 100 + int(calculated.get("max_hp_flat", 0))
-	var hero_mana := 30 + int(calculated.get("max_mana_flat", 0))
-	var hero:=CombatantState.new(hero_id,player.display_name,player.progression.level,hero_hp,hero_mana)
-	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
-	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
-	for key in calculated:
-		hero.combat_stats[key] = calculated[key]
+	var hero := CharacterCombatBuilder.build(player, repository)
 	enemy.combat_stats["main_hand_damage"]=7.0
 	enemy.combat_stats["main_hand_damage_type"]="blunt"
 	state.add_combatant(hero); state.add_combatant(enemy); state.add_combatant(enemy_two)
