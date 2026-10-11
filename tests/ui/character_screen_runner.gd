@@ -19,6 +19,17 @@ func _run() -> void:
 	assert(screen.details_panel != null)
 	assert(screen.detail_tabs != null)
 	assert(screen.detail_tabs.get_tab_count() == 4)
+	var primary_config := PrimaryStatEffects.load_config()
+	assert(primary_config.has("effects"))
+	assert(primary_config.has("categories"))
+	var test_bonuses := PrimaryStatEffects.calculate({"STR": 10, "DEX": 20, "INTU": 20, "INT": 10, "WIS": 10, "END": 10})
+	assert(is_equal_approx(float(test_bonuses["physical_damage_flat"]), 10.0))
+	assert(is_equal_approx(float(test_bonuses["dodge_pct"]), 5.0))
+	assert(is_equal_approx(float(test_bonuses["crit_damage_pct"]), 20.0))
+	assert(is_equal_approx(float(test_bonuses["max_hp_flat"]), 200.0))
+	assert(screen.detail_values.size() >= 50)
+	assert((screen.detail_values["physical_damage_flat"] as Label).text != "—")
+	assert((screen.detail_values["slash_damage"] as Label).text == "—")
 	for tab_index in range(4):
 		screen.detail_tabs.current_tab = tab_index
 		assert(screen.detail_tabs.current_tab == tab_index)
