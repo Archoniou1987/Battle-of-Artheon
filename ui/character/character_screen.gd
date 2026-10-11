@@ -28,6 +28,8 @@ var combat_section: VBoxContainer
 var resistance_section: VBoxContainer
 var square_host: Control
 var square_content: Control
+var layout_row: BoxContainer
+var details_panel: PanelContainer
 
 func _init(p_character: CharacterState = null) -> void:
 	character = p_character
@@ -51,6 +53,9 @@ func _ready() -> void:
 	title_label = _label("Персонаж", 23, GOLD)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title_label)
+	layout_row = BoxContainer.new()
+	layout_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(layout_row)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	square_host = Control.new()
@@ -58,7 +63,7 @@ func _ready() -> void:
 	square_host.clip_contents = true
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	root.add_child(square_host)
+	layout_row.add_child(square_host)
 	square_content = Control.new()
 	square_content.name = "SquareContent"
 	square_content.custom_minimum_size = Vector2(480, 480)
@@ -119,14 +124,12 @@ func _ready() -> void:
 	save_button.text = "Сохранить"
 	save_button.pressed.connect(_save_pending)
 	actions.add_child(save_button)
-	var combat_card := _panel()
-	body.add_child(combat_card)
-	combat_section = VBoxContainer.new()
-	combat_card.add_child(combat_section)
-	var resist_card := _panel()
-	body.add_child(resist_card)
-	resistance_section = VBoxContainer.new()
-	resist_card.add_child(resistance_section)
+	# Reserved adaptive panel: detailed character statistics will be designed later.
+	details_panel = _panel()
+	details_panel.name = "CharacterDetailsPanel"
+	details_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout_row.add_child(details_panel)
 	refresh()
 	resized.connect(_apply_layout)
 	call_deferred("_apply_layout")
@@ -134,9 +137,16 @@ func _ready() -> void:
 func _apply_layout() -> void:
 	if square_host == null or square_content == null:
 		return
+	var portrait := size.y > size.x
+	layout_row.vertical = portrait
+	layout_row.add_theme_constant_override("separation", 10)
 	var square_size := maxf(1.0, minf(size.x, size.y))
 	square_host.custom_minimum_size = Vector2(square_size, square_size)
+	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	square_content.scale = Vector2.ONE * (square_size / 480.0)
+	# In portrait the flexible panel follows below; in landscape it fills the right side.
+	details_panel.custom_minimum_size = Vector2.ZERO
 
 func _panel() -> PanelContainer:
 	var panel := PanelContainer.new()
@@ -194,7 +204,7 @@ func refresh() -> void:
 		(stat_minus_buttons[stat] as Button).disabled = int(progression.pending_stats.get(stat, 0)) <= 0
 	save_button.disabled = progression.pending_stats.is_empty()
 	reset_button.disabled = progression.pending_stats.is_empty()
-	_refresh_derived_sections()
+	# Detailed combat and resistance readouts belong to the future adaptive panel.
 
 func _refresh_derived_sections() -> void:
 	for child in combat_section.get_children():
