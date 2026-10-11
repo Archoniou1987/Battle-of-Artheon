@@ -166,7 +166,7 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 		if _is_magic_damage_type(damage_type):
 			var caster := state.get_combatant(parent.source_id)
 			if caster != null:
-				var flat_bonus := float(caster.combat_stats.get("magic_damage_flat", 0.0)) + _active_effect_value(caster, "magic_damage_flat")
+				var flat_bonus := CombatModifierService.effective_stat(caster, "magic_damage_flat", state.round_number)
 				var bonus_percent := CombatModifierService.effective_percent(caster, "magic_damage_rating", state.round_number)
 				# Magic damage rating and direct percentage bonuses use one overlay.
 				amount = maxf(0.0, amount + flat_bonus) * maxf(0.0, 1.0 + bonus_percent / 100.0)
@@ -392,7 +392,7 @@ func _effect_flag(target: CombatantState, field: String) -> bool:
 	return CombatModifierService.flag(target, field, state.round_number)
 
 func _active_effect_value(target: CombatantState, field: String) -> float:
-	return CombatModifierService.flat_bonus(target, field, state.round_number)
+	return CombatModifierService.modifier(target, field, state.round_number)
 
 func _effect_definition(effect_id: String) -> Dictionary:
 	return physical_balance.get("effects", {}).get(effect_id, {})
