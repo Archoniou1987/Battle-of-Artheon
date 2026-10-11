@@ -223,6 +223,7 @@ func _shift_panorama(value: float) -> void:
 func _open_character_screen() -> void:
 	if character_screen == null:
 		character_screen = CharacterScreen.new(player_character)
+		character_screen.item_repository = item_repository
 		character_screen.name = "CharacterScreen"
 		add_child(character_screen)
 		character_screen.stats_committed.connect(_save_progression)
