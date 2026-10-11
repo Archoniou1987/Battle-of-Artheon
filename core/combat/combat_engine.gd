@@ -167,10 +167,9 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 			var caster := state.get_combatant(parent.source_id)
 			if caster != null:
 				var flat_bonus := float(caster.combat_stats.get("magic_damage_flat", 0.0)) + _active_effect_value(caster, "magic_damage_flat")
-				var rating_percent := float(caster.combat_stats.get("magic_damage_rating_percent", 0.0))
-				var direct_percent := float(caster.combat_stats.get("magic_damage_direct_pct", 0.0))
-				var effect_percent := _active_effect_value(caster, "magic_damage_direct_pct")
-				amount = maxf(0.0, amount + flat_bonus) * maxf(0.0, 1.0 + (rating_percent + direct_percent + effect_percent) / 100.0)
+				var bonus_percent := CombatModifierService.effective_percent(caster, "magic_damage_rating", state.round_number)
+				# Magic damage rating and direct percentage bonuses use one overlay.
+				amount = maxf(0.0, amount + flat_bonus) * maxf(0.0, 1.0 + bonus_percent / 100.0)
 		amount *= scale
 		if delivery_type in ["MELEE", "PROJECTILE"]:
 			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, {
