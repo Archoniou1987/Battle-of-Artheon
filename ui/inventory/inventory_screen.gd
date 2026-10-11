@@ -24,6 +24,7 @@ var slot_buttons: Dictionary = {}
 var _last_portrait := false
 var bag_scroll: ScrollContainer
 var bag_title: Label
+var bag_panel: PanelContainer
 var equipment_content: Control
 var hp_label: Label
 var hp_bar: ProgressBar
@@ -195,8 +196,17 @@ func _ready() -> void:
 			row.add_child(value)
 			stat_rows[name] = value
 	stats_content = stats_panel
-	var bag_panel := PanelContainer.new()
+	bag_panel = PanelContainer.new()
 	bag_panel.name = "BagPanel"
+	var bag_frame := StyleBoxFlat.new()
+	bag_frame.bg_color = Color("#171c25")
+	bag_frame.border_color = Color("#756448")
+	bag_frame.set_border_width_all(1)
+	bag_frame.content_margin_left = 10
+	bag_frame.content_margin_right = 10
+	bag_frame.content_margin_top = 6
+	bag_frame.content_margin_bottom = 6
+	bag_panel.add_theme_stylebox_override("panel", bag_frame)
 	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bag_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout_row.add_child(bag_panel)
@@ -247,7 +257,16 @@ func _apply_layout() -> void:
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	equipment_content.scale = Vector2.ONE * (square_size / 480.0)
-	bag_grid.columns = 4 if portrait else 6
+	layout_row.add_theme_constant_override("separation", 10)
+	var cell_size := ItemIcon.CELL_SIZE * (square_size / 480.0)
+	var gap := 8.0 * (square_size / 480.0)
+	bag_grid.add_theme_constant_override("h_separation", roundi(gap))
+	bag_grid.add_theme_constant_override("v_separation", roundi(gap))
+	var bag_width := size.x if portrait else size.x - square_size - 10.0
+	bag_width = maxf(1.0, bag_width - 22.0)
+	bag_grid.columns = maxi(1, int(floor((bag_width + gap) / (cell_size + gap))))
+	for icon in bag_grid.get_children():
+		(icon as ItemIcon).custom_minimum_size = Vector2.ONE * cell_size
 
 func _refresh_combat_stats() -> void:
 	if stats_content == null:
@@ -300,6 +319,7 @@ func refresh() -> void:
 		var button := ItemIcon.new()
 		button.pressed.connect(_select_item.bind(String(instance_id)))
 		bag_grid.add_child(button)
+		button.custom_minimum_size = Vector2.ONE * (ItemIcon.CELL_SIZE * (maxf(1.0, minf(size.x, size.y)) / 480.0))
 		button.set_item(item, "", character.equipment.is_equipped(String(instance_id)))
 
 func _rarity_color(item: Dictionary) -> Color:
