@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "atlases": [
+    {
+      "atlas_id": "ATLAS_0001",
+      "version": 1,
+      "status": "active",
+      "path": "res://assets/items/items_atlas_01.png",
+      "columns": 8,
+      "rows": 8,
+      "cell_count": 64,
+      "git_blob_sha1": "7888b4b9ee82e44dabf164a8f1cf5c86202730e5",
+      "note": "Immutable v1; changes require a new atlas ID or version and new PNG path."
+    }
+  ]
+}
