@@ -63,7 +63,10 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#263346")
 	style.border_color = border
-	style.set_border_width_all(2)
+	style.set_border_width_all(3)
+	if not item.is_empty():
+		style.shadow_color = Color(border.r, border.g, border.b, 0.78)
+		style.shadow_size = 5
 	style.set_corner_radius_all(4)
 	style.set_content_margin_all(0)
 	add_theme_stylebox_override("normal", style)
