@@ -1,22 +1,24 @@
 {
-  "version": 1,
-  "notes": "Temporary balancing coefficients. Percentage coefficients represent percentage points per stat; not final balance.",
+  "version": 2,
+  "notes": "Configurable rating-based chance stats. Direct ABI/EFF percentage points bypass level scaling; damage percentages remain direct modifiers.",
   "effects": {
     "STR": {
       "physical_damage_flat": 1
     },
     "DEX": {
-      "dodge_pct": 0.25,
-      "anti_dodge_pct": 0.25,
-      "counterattack_pct": 0.25
+      "dodge_rating": 5,
+      "anti_dodge_rating": 5,
+      "counterattack_rating": 5
     },
     "INTU": {
-      "crit_chance_pct": 0.25,
-      "anti_crit_pct": 0.25,
+      "crit_chance_rating": 5,
+      "anti_crit_rating": 5,
       "crit_damage_pct": 1
     },
     "INT": {
-      "magic_damage_pct": 1
+      "magic_damage_pct": 1,
+      "magic_hit_rating": 5,
+      "magic_crit_rating": 5
     },
     "WIS": {
       "max_mana_flat": 10
@@ -39,30 +41,30 @@
         "off_hand_max_damage"
       ],
       "Точность и крит": [
-        "hit_chance_pct",
-        "anti_dodge_pct",
-        "crit_chance_pct",
+        "hit_chance_rating",
+        "anti_dodge_rating",
+        "crit_chance_rating",
         "crit_damage_pct",
         "armour_penetration_flat",
-        "armour_penetration_pct",
+        "armour_penetration_rating",
         "block_penetration_flat",
-        "block_penetration_pct"
+        "block_penetration_rating"
       ],
       "Темп и реакции": [
         "tempo",
         "attack_speed_pct",
-        "counterattack_pct",
+        "counterattack_rating",
         "counterattack_damage_pct"
       ]
     },
     "Защита": {
       "Защитные шансы": [
-        "dodge_pct",
-        "anti_crit_pct",
-        "manual_block_pct",
-        "shield_auto_block_pct",
+        "dodge_rating",
+        "anti_crit_rating",
+        "manual_block_rating",
+        "shield_auto_block_rating",
         "block_strength",
-        "control_resistance_pct"
+        "control_resistance_rating"
       ],
       "Броня по зонам": [
         "armour_head",
@@ -83,10 +85,10 @@
       "Магическая атака": [
         "magic_damage_pct",
         "magic_damage_flat",
-        "magic_hit_pct",
-        "magic_crit_pct",
+        "magic_hit_rating",
+        "magic_crit_rating",
         "magic_penetration_flat",
-        "magic_penetration_pct"
+        "magic_penetration_rating"
       ],
       "Урон по стихиям": [
         "fire_damage",
@@ -127,5 +129,67 @@
         "carry_capacity"
       ]
     }
-  }
+  },
+  "rating_curve": {
+    "reference_rating": 300,
+    "anchors": [
+      {
+        "level": 1,
+        "percent": 60
+      },
+      {
+        "level": 20,
+        "percent": 50
+      },
+      {
+        "level": 40,
+        "percent": 40
+      },
+      {
+        "level": 60,
+        "percent": 30
+      },
+      {
+        "level": 80,
+        "percent": 20
+      },
+      {
+        "level": 100,
+        "percent": 10
+      }
+    ],
+    "interpolation": "linear",
+    "notes": "Anchor points are test balance. Ratings sum before conversion; direct ABI/EFF chance percentage points are added after conversion."
+  },
+  "rating_stats": [
+    "hit_chance_rating",
+    "anti_dodge_rating",
+    "crit_chance_rating",
+    "armour_penetration_rating",
+    "block_penetration_rating",
+    "counterattack_rating",
+    "dodge_rating",
+    "anti_crit_rating",
+    "manual_block_rating",
+    "shield_auto_block_rating",
+    "control_resistance_rating",
+    "magic_hit_rating",
+    "magic_crit_rating",
+    "magic_penetration_rating"
+  ],
+  "direct_percent_stats": [
+    "crit_damage_pct",
+    "magic_damage_pct",
+    "attack_speed_pct",
+    "counterattack_damage_pct",
+    "physical_damage_reduction_pct",
+    "slash_resistance_pct",
+    "pierce_resistance_pct",
+    "chop_resistance_pct",
+    "blunt_resistance_pct",
+    "movement_speed_pct",
+    "gathering_speed_pct",
+    "experience_bonus_pct",
+    "loot_bonus_pct"
+  ]
 }
