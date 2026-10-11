@@ -47,7 +47,7 @@ var landscape_nav: HBoxContainer
 func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
 	item_repository = ItemRepository.new()
-	if ENABLE_INVENTORY_PREVIEW_ITEMS:
+	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
 		_seed_inventory_preview()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
