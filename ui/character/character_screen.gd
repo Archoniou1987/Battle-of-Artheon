@@ -30,6 +30,8 @@ var square_host: Control
 var square_content: Control
 var layout_row: BoxContainer
 var details_panel: PanelContainer
+var detail_tabs: TabContainer
+const DETAIL_TAB_NAMES := ["Атака", "Защита", "Магия", "Прочее"]
 
 func _init(p_character: CharacterState = null) -> void:
 	character = p_character
@@ -130,9 +132,33 @@ func _ready() -> void:
 	details_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	details_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout_row.add_child(details_panel)
+	_build_detail_tabs()
 	refresh()
 	resized.connect(_apply_layout)
 	call_deferred("_apply_layout")
+
+func _build_detail_tabs() -> void:
+	# The detail panel owns its own tabs and scrolling; the square remains independent.
+	detail_tabs = TabContainer.new()
+	detail_tabs.name = "DetailTabs"
+	detail_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	details_panel.add_child(detail_tabs)
+	for tab_name in DETAIL_TAB_NAMES:
+		var page := ScrollContainer.new()
+		page.name = tab_name
+		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		detail_tabs.add_child(page)
+		var content := VBoxContainer.new()
+		content.name = "DetailsContent"
+		content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		page.add_child(content)
+		var placeholder := _label("Подробные показатели будут добавлены позже.", 14, MUTED)
+		placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		content.add_child(placeholder)
+
 
 func _apply_layout() -> void:
 	if square_host == null or square_content == null:
