@@ -37,7 +37,9 @@ func _build_debug_combat()->void:
 	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
 	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
 	var debug_character := _load_player_character()
-	var calculated := CharacterStatsService.combat_stats(debug_character.character, debug_character.repository)
+	var player: CharacterState = debug_character["character"]
+	var repository: ItemRepository = debug_character["repository"]
+	var calculated := CharacterStatsService.combat_stats(player, repository)
 	for key in calculated:
 		hero.combat_stats[key] = calculated[key]
 	enemy.combat_stats["main_hand_damage"]=7.0
