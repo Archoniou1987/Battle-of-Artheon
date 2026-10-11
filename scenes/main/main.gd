@@ -306,8 +306,8 @@ func _seed_inventory_preview() -> void:
 			"rarity": String(sample[1]),
 			"type": String(sample[2]),
 			"item_level": 1,
-			# Preview atlas order is row-major (0..63); can be remapped per item later.
-			"atlas_index": [0, 1, 14, 2, 16, 17, 18, 19, 24, 27, 40, 48, 50, 51, 29, 41, 56, 61, 63, 60, 52, 3][index],
+			# Temporary preview icon mapping; production templates will own stable icon_id.
+			"icon_id": "ICON_%04d" % ([0, 1, 14, 2, 16, 17, 18, 19, 24, 27, 40, 48, 50, 51, 29, 41, 56, 61, 63, 60, 52, 3][index] + 1),
 			"equip_slots": sample[3],
 			"requirements": {"STR": 10} if index == 21 else {},
 			"guaranteed_stats": {},
