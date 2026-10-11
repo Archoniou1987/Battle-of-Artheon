@@ -38,8 +38,9 @@ func _run() -> void:
 	assert(int(unarmed_config["unarmed"]["max_damage"]) == 4)
 	assert(screen.character.equipment.get_equipped_instance_id("main_hand") == null)
 	var fist_bonus := int(screen.character.progression.base_stats["STR"])
-	assert((screen.detail_values["main_hand_min_damage"] as Label).text == str(2 + fist_bonus))
-	assert((screen.detail_values["main_hand_max_damage"] as Label).text == str(4 + fist_bonus))
+	assert((screen.detail_values["main_hand_damage"] as Label).text == "%d–%d" % [2 + fist_bonus, 4 + fist_bonus])
+	assert(not screen.detail_values.has("main_hand_min_damage"))
+	assert(not screen.detail_values.has("main_hand_max_damage"))
 
 	var anchors: Array = primary_config["rating_curve"]["anchors"]
 	for anchor in anchors:
