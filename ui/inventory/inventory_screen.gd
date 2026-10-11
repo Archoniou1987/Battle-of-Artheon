@@ -133,7 +133,7 @@ func _ready() -> void:
 	var stats_panel := VBoxContainer.new()
 	stats_panel.name = "StatsPanel"
 	stats_panel.position = Vector2.ZERO
-	stats_panel.custom_minimum_size = Vector2(340, 112)
+	stats_panel.custom_minimum_size = Vector2(0, 112)
 	stats_panel.add_theme_constant_override("separation", 1)
 	var heading_stats := Label.new()
 	heading_stats.text = "БОЕВЫЕ ХАРАКТЕРИСТИКИ"
@@ -150,7 +150,7 @@ func _ready() -> void:
 	table.add_theme_constant_override("h_separation", 7)
 	table.add_theme_constant_override("v_separation", 3)
 	stats_scroll.add_child(table)
-	var groups := [
+	var groups: Array = [
 		["Атака", ["Урон оружия", "Попадание", "Крит"]],
 		["Защита", ["Броня по зонам", "Уклонение", "Блок"]],
 		["Маг. атака", ["Мана", "Магический урон", "Усиление стихий"]],
@@ -167,7 +167,7 @@ func _ready() -> void:
 		table.add_child(value_title)
 	for row_index in range(3):
 		for group in groups:
-			var name := group[1][row_index] if row_index < group[1].size() else ""
+			var name: String = String(group[1][row_index]) if row_index < group[1].size() else ""
 			var label := Label.new()
 			label.text = name
 			label.add_theme_font_size_override("font_size", 11)
