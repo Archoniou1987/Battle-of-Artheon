@@ -18,6 +18,9 @@ var xp_bar: ProgressBar
 var points_label: Label
 var stat_values: Dictionary = {}
 var stat_buttons: Dictionary = {}
+var stat_minus_buttons: Dictionary = {}
+var save_button: Button
+var reset_button: Button
 var back_button: Button
 var combat_section: VBoxContainer
 var resistance_section: VBoxContainer
@@ -77,12 +80,28 @@ func _ready() -> void:
 		value.custom_minimum_size.x = 45
 		row.add_child(value)
 		stat_values[stat] = value
+		var minus := Button.new()
+		minus.text = "−"
+		minus.custom_minimum_size = Vector2(46, 44)
+		minus.pressed.connect(_remove_pending.bind(stat))
+		row.add_child(minus)
+		stat_minus_buttons[stat] = minus
 		var plus := Button.new()
 		plus.text = "+"
 		plus.custom_minimum_size = Vector2(46, 44)
 		plus.pressed.connect(_allocate.bind(stat))
 		row.add_child(plus)
 		stat_buttons[stat] = plus
+	var actions := HBoxContainer.new()
+	stats_content.add_child(actions)
+	reset_button = Button.new()
+	reset_button.text = "Сбросить"
+	reset_button.pressed.connect(_reset_pending)
+	actions.add_child(reset_button)
+	save_button = Button.new()
+	save_button.text = "Сохранить"
+	save_button.pressed.connect(_save_pending)
+	actions.add_child(save_button)
 	var combat_card := _panel()
 	body.add_child(combat_card)
 	combat_section = VBoxContainer.new()
@@ -116,6 +135,19 @@ func _allocate(stat: String) -> void:
 		return
 	refresh()
 
+func _remove_pending(stat: String) -> void:
+	if character != null and character.progression.remove_pending_stat(stat):
+		refresh()
+
+func _reset_pending() -> void:
+	if character != null:
+		character.progression.reset_pending_stats()
+		refresh()
+
+func _save_pending() -> void:
+	if character != null and character.progression.save_pending_stats():
+		refresh()
+
 func refresh() -> void:
 	if title_label == null:
 		return
@@ -130,8 +162,11 @@ func refresh() -> void:
 	xp_bar.value = progression.xp_into_level
 	points_label.text = "Характеристики  •  Свободные очки: %d" % progression.unspent_stat_points
 	for stat in STAT_ORDER:
-		(stat_values[stat] as Label).text = str(progression.base_stats.get(stat, 0))
+		(stat_values[stat] as Label).text = str(progression.displayed_stat(stat))
 		(stat_buttons[stat] as Button).disabled = progression.unspent_stat_points <= 0
+		(stat_minus_buttons[stat] as Button).disabled = int(progression.pending_stats.get(stat, 0)) <= 0
+	save_button.disabled = progression.pending_stats.is_empty()
+	reset_button.disabled = progression.pending_stats.is_empty()
 	_refresh_derived_sections()
 
 func _refresh_derived_sections() -> void:
