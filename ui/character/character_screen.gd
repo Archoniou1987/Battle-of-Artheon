@@ -274,7 +274,10 @@ func _refresh_detail_values() -> void:
 func _format_stat_number(amount: float) -> String:
 	if is_equal_approx(amount, roundf(amount)):
 		return str(int(roundf(amount)))
-	return ("%.2f" % amount).rstrip("0").rstrip(".")
+	var formatted := "%.2f" % amount
+	while formatted.ends_with("0"):
+		formatted = formatted.trim_suffix("0")
+	return formatted.trim_suffix(".")
 
 
 func _apply_layout() -> void:
