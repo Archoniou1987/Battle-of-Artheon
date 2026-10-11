@@ -9,6 +9,7 @@ var repository: ItemRepository
 var item_id := ""
 var source_slot := ""
 var backdrop: ColorRect
+var anchor_rect: Rect2 = Rect2()
 var panel: PanelContainer
 var content: VBoxContainer
 var scroll: ScrollContainer
@@ -21,19 +22,18 @@ func _init(p_character: CharacterState = null, p_repository: ItemRepository = nu
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	backdrop = ColorRect.new()
-	backdrop.color = Color(0, 0, 0, 0.8)
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(backdrop)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel = PanelContainer.new()
+	panel.name = "ItemTooltip"
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.custom_minimum_size.x = 280
-	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	center.add_child(panel)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#202b3b")
+	style.border_color = Color("#94774e")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(4)
+	panel.add_theme_stylebox_override("panel", style)
+	add_child(panel)
 	var body := VBoxContainer.new()
 	panel.add_child(body)
 	scroll = ScrollContainer.new()
@@ -53,11 +53,13 @@ func _ready() -> void:
 	call_deferred("_update_dialog_size")
 	visible = false
 
-func show_item(instance_id: String, slot: String = "") -> void:
+func show_item(instance_id: String, slot: String = "", target: Control = null) -> void:
 	if character == null or repository == null or not repository.has_item(instance_id):
 		return
 	item_id = instance_id
 	source_slot = slot
+	if target != null:
+		anchor_rect = Rect2(target.get_global_rect().position - get_global_rect().position, target.size)
 	visible = true
 	status_label.text = ""
 	_render()
@@ -118,6 +120,13 @@ func _update_dialog_size() -> void:
 	var scroll_height := minf(content_height + 12.0, maxf(80.0, available_height - 120.0))
 	scroll.custom_minimum_size.y = maxf(80.0, scroll_height)
 	panel.reset_size()
+	var panel_size := panel.get_combined_minimum_size()
+	var px := anchor_rect.end.x + 8.0
+	if px + panel_size.x > size.x - 8.0:
+		px = anchor_rect.position.x - panel_size.x - 8.0
+	px = clampf(px, 8.0, maxf(8.0, size.x - panel_size.x - 8.0))
+	var py := clampf(anchor_rect.position.y, 8.0, maxf(8.0, size.y - panel_size.y - 8.0))
+	panel.position = Vector2(px, py)
 
 
 func _add_dictionary(title: String, values: Variant) -> void:
