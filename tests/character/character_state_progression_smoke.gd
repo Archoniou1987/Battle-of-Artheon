@@ -5,15 +5,18 @@ func _initialize() -> void:
 	assert(character.level == 1)
 	assert(character.award_xp(900) == 1)
 	assert(character.level == 2)
-	assert(character.progression.unspent_stat_points == 1)
+	assert(character.progression.unspent_stat_points == 13)
 	assert(character.allocate_stat("END"))
 	var saved := character.progression_snapshot()
 	var restored := CharacterState.new("restored-hero", "Hero")
 	assert(restored.restore_progression(saved))
 	assert(restored.level == 2)
-	assert(restored.progression.base_stats["END"] == 4)
+	assert(restored.progression.base_stats["END"] == 1)
+	assert(restored.progression.pending_stats["END"] == 1)
+	assert(character.progression.save_pending_stats())
+	assert(character.progression.base_stats["END"] == 2)
 	var repository := ItemRepository.new()
-	var strength_ring := {"instance_id": "ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "guaranteed_stats": {"STR": 4}}
+	var strength_ring := {"instance_id": "ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "guaranteed_stats": {"STR": 6}}
 	var dependent_sword := {"instance_id": "sword", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"STR": 7}, "guaranteed_stats": {}}
 	ItemDurabilityService.initialize_item(strength_ring, 100)
 	ItemDurabilityService.initialize_item(dependent_sword, 100)
