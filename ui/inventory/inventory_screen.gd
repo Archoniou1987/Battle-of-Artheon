@@ -372,6 +372,7 @@ func refresh() -> void:
 		var id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
 		var item := repository.get_item(String(id)) if id != null and repository != null else {}
 		(button as ItemIcon).set_item(item, SLOT_NAMES[slot], id != null)
+		button.modulate = Color("#ed5961") if id != null and not character.is_equipment_active(String(id), repository) else Color.WHITE
 	for child in bag_grid.get_children():
 		bag_grid.remove_child(child)
 		child.queue_free()
@@ -480,6 +481,6 @@ func _confirm_discard() -> void:
 	for id in discard_ids.keys():
 		var item_id := String(id)
 		if character.inventory.owns(item_id) and not character.equipment.is_equipped(item_id) and not elixir_assignments.has(item_id):
-			character.inventory.call("remove_instance", item_id)
+			character.remove_item(item_id)
 	_cancel_discard()
 	refresh()
