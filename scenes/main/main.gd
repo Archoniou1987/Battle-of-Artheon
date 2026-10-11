@@ -2,6 +2,7 @@ extends Control
 
 const LOCATION_NAME := "Стартовая деревня"
 const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
+const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 # Temporary browser preview fixture; disable before public gameplay release.
 const ENABLE_INVENTORY_PREVIEW_ITEMS := true
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
@@ -49,7 +50,7 @@ func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
 	_load_saved_progression()
 	item_repository = ItemRepository.new()
-	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
+	if not _load_saved_inventory() and ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
 		_seed_inventory_preview()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
@@ -235,6 +236,8 @@ func _open_inventory_screen() -> void:
 		inventory_screen = InventoryScreen.new(player_character, item_repository)
 		inventory_screen.name = "InventoryScreen"
 		add_child(inventory_screen)
+		inventory_screen.inventory_changed.connect(_save_inventory)
+		_load_saved_elixirs()
 		inventory_screen.back_button.pressed.connect(func() -> void: inventory_screen.visible = false)
 	inventory_screen.visible = true
 	inventory_screen.refresh()
@@ -346,3 +349,84 @@ func _load_saved_progression() -> void:
 	var data: Variant = raw.get("progression", {})
 	if data is Dictionary:
 		player_character.restore_progression(data)
+
+
+func _save_inventory() -> void:
+	if player_character == null or item_repository == null:
+		return
+	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("Inventory save failed")
+		return
+	var quickslots: Array = inventory_screen.elixir_assignments.duplicate() if inventory_screen != null else ["", "", "", ""]
+	var payload := {"schema_version": 1, "repository": item_repository.to_dict(), "inventory": player_character.inventory.to_dict(), "equipment": player_character.equipment.slots.duplicate(true), "elixirs": quickslots}
+	file.store_string(JSON.stringify(payload))
+	file.close()
+
+func _load_saved_inventory() -> bool:
+	if not FileAccess.file_exists(INVENTORY_SAVE_PATH):
+		return false
+	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return false
+	var raw: Variant = JSON.parse_string(file.get_as_text())
+	if not raw is Dictionary or int(raw.get("schema_version", 0)) != 1:
+		return false
+	var repository_data: Variant = raw.get("repository", {})
+	var inventory_data: Variant = raw.get("inventory", {})
+	var slots_data: Variant = raw.get("equipment", {})
+	if not repository_data is Dictionary or not inventory_data is Dictionary or not slots_data is Dictionary:
+		return false
+	if String(inventory_data.get("owner_id", "")) != player_character.character_id:
+		return false
+	var loaded_repository := ItemRepository.from_dict(repository_data)
+	var loaded_inventory := InventoryState.from_dict(inventory_data, loaded_repository)
+	var ids: Variant = inventory_data.get("instance_ids", [])
+	if not ids is Array or loaded_inventory.size() != ids.size():
+		return false
+	var loaded_equipment := EquipmentState.new()
+	for slot in loaded_equipment.slots:
+		var id: Variant = slots_data.get(slot, null)
+		if id != null and (not id is String or not loaded_inventory.owns(String(id))):
+			return false
+		loaded_equipment.slots[slot] = id
+	for key in slots_data:
+		if not loaded_equipment.slots.has(key):
+			return false
+	for id in loaded_inventory.instance_ids():
+		var occupied: Array = []
+		for slot in loaded_equipment.slots:
+			if loaded_equipment.slots[slot] == id:
+				occupied.append(slot)
+		if occupied.is_empty():
+			continue
+		var item := loaded_repository.get_item(String(id))
+		var allowed: Array = item.get("equip_slots", [])
+		var usage: Array = item.get("slot_usage", [occupied[0]])
+		if not allowed.has(occupied[0]) or usage.size() != occupied.size():
+			return false
+		for slot in usage:
+			if not occupied.has(slot):
+				return false
+	item_repository = loaded_repository
+	player_character.inventory = loaded_inventory
+	player_character.equipment = loaded_equipment
+	return true
+
+
+func _load_saved_elixirs() -> void:
+	if inventory_screen == null or not FileAccess.file_exists(INVENTORY_SAVE_PATH):
+		return
+	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var raw: Variant = JSON.parse_string(file.get_as_text())
+	if not raw is Dictionary:
+		return
+	var elixirs: Variant = raw.get("elixirs", [])
+	if not elixirs is Array or elixirs.size() != 4:
+		return
+	for i in range(4):
+		var id: Variant = elixirs[i]
+		if id is String and (id.is_empty() or player_character.inventory.owns(id)):
+			inventory_screen.elixir_assignments[i] = id
