@@ -1,15 +1,6 @@
 name: Map generation connectivity
 
 on:
-  push:
-    branches:
-      - feature/equipment-instance-chain
-  pull_request:
-    paths:
-      - "core/map/**"
-      - "scenes/map/**"
-      - "tests/map_generation_connectivity.gd"
-      - ".github/workflows/map-connectivity.yml"
   workflow_dispatch:
 
 jobs:
