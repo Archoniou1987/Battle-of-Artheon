@@ -26,7 +26,8 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 					if not primary.has(key):
 						result[key] = float(result.get(key, 0.0)) + float(values[key])
 	for key in direct_effects:
-		result[key] = float(result.get(key, 0.0)) + float(direct_effects[key])
+		if not String(key).ends_with("_direct_pct"):
+			result[key] = float(result.get(key, 0.0)) + float(direct_effects[key])
 	var weapon_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
 	if weapon_id == null:
 		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(UNARMED_PATH)) if FileAccess.file_exists(UNARMED_PATH) else {}
@@ -48,7 +49,8 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 	if result.has("main_hand_min_damage") and result.has("main_hand_max_damage"):
 		result["main_hand_damage"] = [result["main_hand_min_damage"], result["main_hand_max_damage"]]
 	for key in config.get("rating_stats", []):
-		result[String(key) + "_percent"] = PrimaryStatEffects.rating_to_percent(float(result.get(key, 0.0)), character.progression.level, config)
+		var direct_key := String(key) + "_direct_pct"
+		result[String(key) + "_percent"] = PrimaryStatEffects.effective_chance(float(result.get(key, 0.0)), character.progression.level, float(direct_effects.get(direct_key, 0.0)), config)
 	return result
 
 static func rating_effect(snapshot_data: Dictionary, key: String) -> float:
