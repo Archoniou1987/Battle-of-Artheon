@@ -12,8 +12,8 @@ var character: CharacterState
 var repository: ItemRepository
 var back_button: Button
 var equipment_grid: GridContainer
-const AVATARS := {"wanderer_01": "res://assets/avatars/wanderer_01.svg"}
-var avatar_id: String = "wanderer_01"
+const AVATARS := {"wanderer_01": "res://assets/avatars/wanderer_01.svg", "hero_realistic_01": "res://assets/avatars/hero_realistic_01.png"}
+var avatar_id: String = "hero_realistic_01"
 var avatar_texture: TextureRect
 var character_portrait: PanelContainer
 var bag_grid: GridContainer
