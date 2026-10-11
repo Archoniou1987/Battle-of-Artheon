@@ -32,6 +32,15 @@ func _run() -> void:
 	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
 	assert((screen.detail_values["crit_damage_rating"] as Label).text.contains("%)"))
 	assert((screen.detail_values["slash_damage_rating"] as Label).text == "0 (0%)")
+	var unarmed_config: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
+	assert(unarmed_config is Dictionary)
+	assert(int(unarmed_config["unarmed"]["min_damage"]) == 2)
+	assert(int(unarmed_config["unarmed"]["max_damage"]) == 4)
+	assert(screen.character.equipment.get_equipped_instance_id("main_hand") == null)
+	var fist_bonus := int(screen.character.progression.base_stats["STR"])
+	assert((screen.detail_values["main_hand_min_damage"] as Label).text == str(2 + fist_bonus))
+	assert((screen.detail_values["main_hand_max_damage"] as Label).text == str(4 + fist_bonus))
+
 	var anchors: Array = primary_config["rating_curve"]["anchors"]
 	for anchor in anchors:
 		assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, int(anchor["level"]), primary_config), float(anchor["percent"])))
