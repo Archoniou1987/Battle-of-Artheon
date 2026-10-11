@@ -55,3 +55,17 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 
 static func rating_effect(snapshot_data: Dictionary, key: String) -> float:
 	return float(snapshot_data.get(key + "_percent", 0.0))
+
+## Explicit adapter: the combat runtime receives a detached snapshot, never UI labels.
+## Existing combat code can keep its own target-specific hit and mitigation rolls.
+static func combat_stats(character: CharacterState, repository: ItemRepository = null, direct_effects: Dictionary = {}) -> Dictionary:
+	var totals := snapshot(character, repository, direct_effects)
+	if totals.is_empty():
+		return {}
+	var combat := totals.duplicate(true)
+	if totals.has("main_hand_damage"):
+		var damage_range: Array = totals["main_hand_damage"]
+		combat["main_hand_damage_min"] = float(damage_range[0])
+		combat["main_hand_damage_max"] = float(damage_range[1])
+		combat["main_hand_damage"] = (float(damage_range[0]) + float(damage_range[1])) / 2.0
+	return combat
