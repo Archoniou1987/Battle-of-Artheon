@@ -1,6 +1,7 @@
 extends Control
 
 const LOCATION_NAME := "Стартовая деревня"
+const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 # Temporary browser preview fixture; disable before public gameplay release.
 const ENABLE_INVENTORY_PREVIEW_ITEMS := true
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
@@ -46,6 +47,7 @@ var landscape_nav: HBoxContainer
 
 func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
+	_load_saved_progression()
 	item_repository = ItemRepository.new()
 	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
 		_seed_inventory_preview()
@@ -222,6 +224,7 @@ func _open_character_screen() -> void:
 		character_screen = CharacterScreen.new(player_character)
 		character_screen.name = "CharacterScreen"
 		add_child(character_screen)
+		character_screen.stats_committed.connect(_save_progression)
 		character_screen.back_button.pressed.connect(func() -> void: character_screen.visible = false)
 	character_screen.visible = true
 	character_screen.refresh()
@@ -317,3 +320,29 @@ func _seed_inventory_preview() -> void:
 		ItemDurabilityService.initialize_item(item, 100)
 		if item_repository.add_item(item):
 			player_character.inventory.add_instance(instance_id, item_repository)
+
+
+func _save_progression() -> void:
+	if player_character == null:
+		return
+	var file := FileAccess.open(PROGRESSION_SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("Character progression save failed")
+		return
+	file.store_string(JSON.stringify({"schema_version": 1, "progression": player_character.progression_snapshot()}))
+	file.close()
+
+func _load_saved_progression() -> void:
+	if not FileAccess.file_exists(PROGRESSION_SAVE_PATH):
+		return
+	var file := FileAccess.open(PROGRESSION_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var raw: Variant = JSON.parse_string(file.get_as_text())
+	if not raw is Dictionary:
+		return
+	if int(raw.get("schema_version", 0)) != 1:
+		return
+	var data: Variant = raw.get("progression", {})
+	if data is Dictionary:
+		player_character.restore_progression(data)
