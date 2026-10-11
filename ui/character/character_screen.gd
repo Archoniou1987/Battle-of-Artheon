@@ -265,13 +265,16 @@ func _refresh_detail_values() -> void:
 		return
 	var config := PrimaryStatEffects.load_config()
 	var bonuses := PrimaryStatEffects.calculate(character.progression.base_stats, config)
+	var unarmed_damage := _unarmed_main_hand_damage(bonuses)
 	var rating_stats: Array = config.get("rating_stats", [])
 	var percent_stats: Array = config.get("direct_percent_stats", [])
 	var level := character.progression.level
 	for key in detail_values:
 		var stat_key := String(key)
 		var value: Label = detail_values[key]
-		if rating_stats.has(stat_key):
+		if unarmed_damage.has(stat_key):
+			value.text = _format_stat_number(float(unarmed_damage[stat_key]))
+		elif rating_stats.has(stat_key):
 			var rating := float(bonuses.get(stat_key, 0.0))
 			var percent := PrimaryStatEffects.rating_to_percent(rating, level, config)
 			value.text = "%s (%s%%)" % [_format_stat_number(rating), _format_stat_number(percent)]
@@ -282,6 +285,23 @@ func _refresh_detail_values() -> void:
 			value.text = sign + _format_stat_number(amount) + suffix
 		elif percent_stats.has(stat_key) or stat_key.ends_with("_pct") or stat_key in ["slash_damage", "pierce_damage", "chop_damage", "blunt_damage", "fire_damage", "water_damage", "air_damage", "earth_damage", "dark_damage", "light_damage"]:
 			value.text = "+0%"
+
+func _unarmed_main_hand_damage(bonuses: Dictionary) -> Dictionary:
+	# An off-hand shield does not replace the main-hand unarmed attack.
+	if character == null or character.equipment.get_equipped_instance_id("main_hand") != null:
+		return {}
+	var path := "res://data/combat/unarmed_attack.json"
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not parsed is Dictionary:
+		return {}
+	var unarmed: Dictionary = parsed.get("unarmed", {})
+	var strength_bonus := float(bonuses.get("physical_damage_flat", 0.0))
+	return {
+		"main_hand_min_damage": float(unarmed.get("min_damage", 2)) + strength_bonus,
+		"main_hand_max_damage": float(unarmed.get("max_damage", 4)) + strength_bonus
+	}
 
 func _format_stat_number(amount: float) -> String:
 	if is_equal_approx(amount, roundf(amount)):
