@@ -40,6 +40,12 @@ func _run() -> void:
 	var canonical := CharacterStatsService.snapshot(screen.character, instance.item_repository)
 	assert(canonical.has("main_hand_damage"))
 	var combat_totals := CharacterStatsService.combat_stats(screen.character, instance.item_repository)
+	var built_fighter := CharacterCombatBuilder.build(screen.character, instance.item_repository)
+	assert(built_fighter.level == screen.character.progression.level)
+	assert(is_equal_approx(float(built_fighter.combat_stats["crit_chance_rating_percent"]), float(canonical["crit_chance_rating_percent"])))
+	assert(built_fighter.combat_stats["abilities"] == EquipmentAbilityLoadout.active_abilities(screen.character, instance.item_repository))
+	assert(is_equal_approx(float(built_fighter.combat_stats["main_hand_damage"]), float(combat_totals["main_hand_damage"])))
+
 	assert(is_equal_approx(float(combat_totals["main_hand_damage_min"]), float(canonical["main_hand_min_damage"])))
 	assert(is_equal_approx(float(combat_totals["main_hand_damage_max"]), float(canonical["main_hand_max_damage"])))
 	assert(is_equal_approx(float(combat_totals["main_hand_damage"]), (float(canonical["main_hand_min_damage"]) + float(canonical["main_hand_max_damage"])) / 2.0))
