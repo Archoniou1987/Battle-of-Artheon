@@ -13,8 +13,8 @@ func _run() -> void:
 	var first := scene.instantiate()
 	root.add_child(first)
 	await process_frame
-	var character := first.player_character as CharacterState
-	var repository := first.item_repository as ItemRepository
+	var character := first.get("player_character") as CharacterState
+	var repository := first.get("item_repository") as ItemRepository
 	var item := {"instance_id": "persist_test_ring", "name": "Persistence ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "guaranteed_stats": {}}
 	ItemDurabilityService.initialize_item(item, 100)
 	assert(repository.add_item(item))
@@ -31,10 +31,10 @@ func _run() -> void:
 	var second := scene.instantiate()
 	root.add_child(second)
 	await process_frame
-	assert(second.player_character.inventory.owns("persist_test_ring"))
-	assert(second.player_character.equipment.get_equipped_instance_id("ring1") == "persist_test_ring")
-	assert(second.item_repository.has_item("persist_test_ring"))
-	assert(second.player_character.progression.base_stats["STR"] == 2)
+	assert((second.get("player_character") as CharacterState).inventory.owns("persist_test_ring"))
+	assert((second.get("player_character") as CharacterState).equipment.get_equipped_instance_id("ring1") == "persist_test_ring")
+	assert((second.get("item_repository") as ItemRepository).has_item("persist_test_ring"))
+	assert((second.get("player_character") as CharacterState).progression.base_stats["STR"] == 2)
 	second.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
