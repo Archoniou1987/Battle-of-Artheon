@@ -33,13 +33,15 @@ func _ready()->void:
 
 func _build_debug_combat()->void:
 	state=CombatState.new()
-	var hero:=CombatantState.new(hero_id,"Hero",1,100,30)
-	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
-	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
 	var debug_character := _load_player_character()
 	var player: CharacterState = debug_character["character"]
 	var repository: ItemRepository = debug_character["repository"]
 	var calculated := CharacterStatsService.combat_stats(player, repository)
+	var hero_hp := 100 + int(calculated.get("max_hp_flat", 0))
+	var hero_mana := 30 + int(calculated.get("max_mana_flat", 0))
+	var hero:=CombatantState.new(hero_id,player.display_name,player.progression.level,hero_hp,hero_mana)
+	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
+	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
 	for key in calculated:
 		hero.combat_stats[key] = calculated[key]
 	enemy.combat_stats["main_hand_damage"]=7.0
