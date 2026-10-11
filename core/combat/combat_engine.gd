@@ -390,19 +390,10 @@ func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEven
 	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
 
 func _effect_flag(target: CombatantState, field: String) -> bool:
-	for active in target.active_effects:
-		if state.round_number < int(active.get("start_round", 999999)) or int(active.get("remaining_rounds", 0)) <= 0:
-			continue
-		if bool(active.get("definition", {}).get(field, false)):
-			return true
-	return false
+	return CombatModifierService.flag(target, field, state.round_number)
 
 func _active_effect_value(target: CombatantState, field: String) -> float:
-	var total := 0.0
-	for active in target.active_effects:
-		if state.round_number >= int(active.get("start_round", 999999)) and int(active.get("remaining_rounds", 0)) > 0:
-			total += float(active.get("definition", {}).get(field, 0.0))
-	return total
+	return CombatModifierService.flat_bonus(target, field, state.round_number)
 
 func _effect_definition(effect_id: String) -> Dictionary:
 	return physical_balance.get("effects", {}).get(effect_id, {})
