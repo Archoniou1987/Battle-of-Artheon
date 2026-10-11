@@ -22,6 +22,11 @@ var layout_row: BoxContainer
 var selected_instance_id := ""
 var _last_tap_id := ""
 var _last_tap_ms := 0
+var discard_mode := false
+var discard_ids: Dictionary = {}
+var discard_button: Button
+var discard_cancel: Button
+var discard_confirm: ConfirmationDialog
 var slot_buttons: Dictionary = {}
 var _last_portrait := false
 var bag_scroll: ScrollContainer
@@ -218,9 +223,21 @@ func _ready() -> void:
 	bag_content.move_child(header, 0)
 	bag_content.add_child(stats_panel)
 	bag_content.move_child(stats_panel, 1)
+	var bag_heading := HBoxContainer.new()
+	bag_content.add_child(bag_heading)
 	bag_title = Label.new()
 	bag_title.text = "Сумка"
-	bag_content.add_child(bag_title)
+	bag_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bag_heading.add_child(bag_title)
+	discard_button = Button.new()
+	discard_button.text = "Выкинуть"
+	discard_button.pressed.connect(_discard_button_pressed)
+	bag_heading.add_child(discard_button)
+	discard_cancel = Button.new()
+	discard_cancel.text = "Отмена"
+	discard_cancel.visible = false
+	discard_cancel.pressed.connect(_cancel_discard)
+	bag_heading.add_child(discard_cancel)
 	bag_scroll = ScrollContainer.new()
 	bag_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bag_content.add_child(bag_scroll)
@@ -230,6 +247,12 @@ func _ready() -> void:
 	bag_scroll.add_child(bag_grid)
 	detail_dialog = ItemDetailDialog.new(character, repository)
 	add_child(detail_dialog)
+	discard_confirm = ConfirmationDialog.new()
+	discard_confirm.title = "Подтверждение"
+	discard_confirm.ok_button_text = "Да"
+	discard_confirm.cancel_button_text = "Отмена"
+	discard_confirm.confirmed.connect(_confirm_discard)
+	add_child(discard_confirm)
 	detail_dialog.changed.connect(refresh)
 	resized.connect(_apply_layout)
 	_apply_layout()
@@ -289,6 +312,8 @@ func _refresh_combat_stats() -> void:
 		(stat_rows["Броня по зонам"] as Label).text = str(snapshot.armour)
 
 func _select_slot(slot: String) -> void:
+	if discard_mode:
+		return
 	if character == null:
 		return
 	var id: Variant = character.equipment.get_equipped_instance_id(slot)
@@ -297,6 +322,13 @@ func _select_slot(slot: String) -> void:
 		_tap_item(selected_instance_id, slot, slot_buttons[slot] as Control)
 
 func _select_item(instance_id: String) -> void:
+	if discard_mode:
+		if discard_ids.has(instance_id):
+			discard_ids.erase(instance_id)
+		else:
+			discard_ids[instance_id] = true
+		_update_discard_controls()
+		return
 	selected_instance_id = instance_id
 	for icon in bag_grid.get_children():
 		if (icon as ItemIcon).instance_id == instance_id:
@@ -380,3 +412,38 @@ func _apply_avatar() -> void:
 		return
 	var resource_path: String = String(AVATARS.get(avatar_id, AVATARS["wanderer_01"]))
 	avatar_texture.texture = load(resource_path) as Texture2D
+
+func _discard_button_pressed() -> void:
+	if not discard_mode:
+		discard_mode = true
+		discard_ids.clear()
+		detail_dialog.visible = false
+		_update_discard_controls()
+		return
+	if discard_ids.is_empty():
+		return
+	discard_confirm.dialog_text = "Вы уверены, что хотите выкинуть эти предметы? (%d)" % discard_ids.size()
+	discard_confirm.popup_centered()
+
+func _cancel_discard() -> void:
+	discard_mode = false
+	discard_ids.clear()
+	_update_discard_controls()
+
+func _update_discard_controls() -> void:
+	discard_cancel.visible = discard_mode
+	discard_button.text = "Выкинуть (%d)" % discard_ids.size() if discard_mode else "Выкинуть"
+	discard_button.disabled = discard_mode and discard_ids.is_empty()
+	for icon in bag_grid.get_children():
+		var item_icon := icon as ItemIcon
+		item_icon.modulate = Color("#e5b35c") if discard_ids.has(item_icon.instance_id) else Color.WHITE
+
+func _confirm_discard() -> void:
+	if character == null or repository == null or not character.inventory.has_method("remove_instance"):
+		return
+	for id in discard_ids.keys():
+		var item_id := String(id)
+		if character.inventory.owns(item_id) and not character.equipment.is_equipped(item_id):
+			character.inventory.call("remove_instance", item_id)
+	_cancel_discard()
+	refresh()
