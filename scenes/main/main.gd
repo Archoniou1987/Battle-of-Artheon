@@ -293,7 +293,9 @@ func _seed_inventory_preview() -> void:
 		["Эликсир здоровья", "green", "consumable", []],
 		["Старая руда", "grey", "material", []],
 		["Редкий самоцвет", "orange", "material", []],
-		["Потрёпанная карта", "grey", "quest", []]
+		["Потрёпанная карта", "grey", "quest", []],
+		["Кольцо титана (+25 STR)", "purple", "ring", ["ring1", "ring2"]],
+		["Молот испытания (STR 10)", "blue", "weapon", ["main_hand"]]
 	]
 	for index in range(samples.size()):
 		var sample: Array = samples[index]
@@ -305,9 +307,9 @@ func _seed_inventory_preview() -> void:
 			"type": String(sample[2]),
 			"item_level": 1,
 			"equip_slots": sample[3],
-			"requirements": {},
+			"requirements": {"STR": 10} if index == 21 else {},
 			"guaranteed_stats": {},
-			"bonuses": {},
+			"bonuses": {"STR": 25} if index == 20 else {},
 			"description": "Тестовый предмет для проверки интерфейса. Не является частью игрового баланса."
 		}
 		ItemDurabilityService.initialize_item(item, 100)
