@@ -1,9 +1,50 @@
 {
   "schema_version": 1,
   "effects": [
-    {"id":"EFF001","name":"Bleeding","kind":"dot","damage":2,"duration_rounds":3,"stacking":"stack","max_stacks":3},
-    {"id":"EFF002","name":"Heal","kind":"heal","amount":50},
-    {"id":"EFF003","name":"Madness","kind":"crit_buff","crit_bonus":25.0,"duration_rounds":1,"stacking":"unique","max_stacks":1},
-    {"id":"EFF004","name":"Shield Wall","kind":"damage_reduction","reduction":0.75,"duration_rounds":1,"stacking":"unique","max_stacks":1}
+    {
+      "id": "EFF001",
+      "name": "Bleeding",
+      "kind": "dot",
+      "damage": 2,
+      "duration_rounds": 3,
+      "stacking": "stack",
+      "max_stacks": 3
+    },
+    {
+      "id": "EFF002",
+      "name": "Heal",
+      "kind": "heal",
+      "amount": 50
+    },
+    {
+      "id": "EFF003",
+      "name": "Madness",
+      "kind": "crit_buff",
+      "crit_bonus": 25,
+      "duration_rounds": 1,
+      "stacking": "unique",
+      "max_stacks": 1
+    },
+    {
+      "id": "EFF004",
+      "name": "Shield Wall",
+      "kind": "damage_reduction",
+      "reduction": 0.75,
+      "duration_rounds": 1,
+      "stacking": "unique",
+      "max_stacks": 1,
+      "damage_reduction": 0.75
+    },
+    {
+      "id": "EFF_FREEZE",
+      "name": "Freeze",
+      "kind": "freeze",
+      "movement_locked": true,
+      "tempo_modifier": -100,
+      "dodge_direct_pct": -100,
+      "duration_rounds": 2,
+      "stacking": "unique",
+      "max_stacks": 1
+    }
   ]
 }
