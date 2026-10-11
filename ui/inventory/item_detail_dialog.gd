@@ -3,6 +3,7 @@ extends Control
 
 ## Shared item details for bag and equipped slots. Requirements are red if unmet.
 signal changed
+signal elixir_requested(instance_id: String)
 
 var character: CharacterState
 var repository: ItemRepository
@@ -93,7 +94,11 @@ func _render() -> void:
 	if not description.is_empty():
 		_add_text(description, Color("#bac6d4"))
 	var action := Button.new()
-	if not source_slot.is_empty():
+	if String(item.get("type", "")) == "consumable":
+		action.text = "В слот эликсира"
+		action.disabled = not character.inventory.owns(item_id)
+		action.pressed.connect(func() -> void: elixir_requested.emit(item_id))
+	elif not source_slot.is_empty():
 		action.text = "Снять"
 		action.disabled = character.in_combat
 		action.pressed.connect(_unequip)
