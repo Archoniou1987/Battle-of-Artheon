@@ -237,7 +237,7 @@ func _build_detail_tabs() -> void:
 				var key := String(raw_key)
 				var row := HBoxContainer.new()
 				content.add_child(row)
-				var caption := _label(String(DETAIL_LABELS.get(key, key)), 14, MUTED)
+				var caption := _label(_detail_caption(key), 14, MUTED)
 				caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				row.add_child(caption)
@@ -245,6 +245,18 @@ func _build_detail_tabs() -> void:
 				row.add_child(value)
 				detail_values[key] = value
 
+
+func _detail_caption(key: String) -> String:
+	if DETAIL_LABELS.has(key):
+		return String(DETAIL_LABELS[key])
+	if key.ends_with("_rating"):
+		var base := key.trim_suffix("_rating")
+		var legacy := base + "_pct"
+		if DETAIL_LABELS.has(legacy):
+			return String(DETAIL_LABELS[legacy]).replace(", %", "")
+		if DETAIL_LABELS.has(base):
+			return String(DETAIL_LABELS[base])
+	return key
 
 func _refresh_detail_values() -> void:
 	for value in detail_values.values():
