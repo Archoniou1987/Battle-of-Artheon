@@ -32,6 +32,78 @@ var layout_row: BoxContainer
 var details_panel: PanelContainer
 var detail_tabs: TabContainer
 const DETAIL_TAB_NAMES := ["Атака", "Защита", "Магия", "Прочее"]
+const DETAIL_LABELS := {
+	"physical_damage_flat": "Физический урон (бонус)",
+	"slash_damage": "Режущий урон",
+	"pierce_damage": "Колющий урон",
+	"chop_damage": "Рубящий урон",
+	"blunt_damage": "Дробящий урон",
+	"main_hand_min_damage": "Осн. рука: мин. урон",
+	"main_hand_max_damage": "Осн. рука: макс. урон",
+	"off_hand_min_damage": "Вторая рука: мин. урон",
+	"off_hand_max_damage": "Вторая рука: макс. урон",
+	"hit_chance_pct": "Шанс попадания",
+	"anti_dodge_pct": "Антиуклонение",
+	"crit_chance_pct": "Шанс критического удара",
+	"crit_damage_pct": "Критический урон (бонус)",
+	"armour_penetration_flat": "Пробивание брони",
+	"armour_penetration_pct": "Пробивание брони, %",
+	"block_penetration_flat": "Пробивание блока",
+	"block_penetration_pct": "Пробивание блока, %",
+	"tempo": "Темп",
+	"attack_speed_pct": "Скорость атаки",
+	"counterattack_pct": "Шанс контрудара",
+	"counterattack_damage_pct": "Урон контрудара",
+	"dodge_pct": "Уклонение",
+	"anti_crit_pct": "Антикрит",
+	"manual_block_pct": "Ручной блок",
+	"shield_auto_block_pct": "Автоблок щитом",
+	"block_strength": "Сила блока",
+	"control_resistance_pct": "Сопротивление контролю",
+	"armour_head": "Броня головы",
+	"armour_arms": "Броня рук",
+	"armour_chest": "Броня груди",
+	"armour_waist": "Броня пояса",
+	"armour_legs": "Броня ног",
+	"physical_damage_reduction_pct": "Снижение физ. урона",
+	"slash_resistance_pct": "Сопр. режущему",
+	"pierce_resistance_pct": "Сопр. колющему",
+	"chop_resistance_pct": "Сопр. рубящему",
+	"blunt_resistance_pct": "Сопр. дробящему",
+	"magic_damage_pct": "Магический урон (бонус)",
+	"magic_damage_flat": "Магический урон",
+	"magic_hit_pct": "Магическая точность",
+	"magic_crit_pct": "Магический крит",
+	"magic_penetration_flat": "Магическое пробивание",
+	"magic_penetration_pct": "Магическое пробивание, %",
+	"fire_damage": "Урон огнём",
+	"water_damage": "Урон водой",
+	"air_damage": "Урон воздухом",
+	"earth_damage": "Урон землёй",
+	"dark_damage": "Урон тьмой",
+	"light_damage": "Урон светом",
+	"magic_resistance": "Магическое сопротивление",
+	"fire_resistance": "Сопр. огню",
+	"water_resistance": "Сопр. воде",
+	"air_resistance": "Сопр. воздуху",
+	"earth_resistance": "Сопр. земле",
+	"dark_resistance": "Сопр. тьме",
+	"light_resistance": "Сопр. свету",
+	"max_hp_flat": "Макс. HP (бонус)",
+	"max_mana_flat": "Макс. мана (бонус)",
+	"max_energy": "Макс. энергия",
+	"max_rage": "Макс. ярость",
+	"hp_regen": "Восстановление HP",
+	"mana_regen": "Восстановление маны",
+	"energy_regen": "Восстановление энергии",
+	"vision_range": "Дальность обзора",
+	"movement_speed_pct": "Скорость передвижения",
+	"gathering_speed_pct": "Скорость добычи",
+	"experience_bonus_pct": "Бонус опыта",
+	"loot_bonus_pct": "Бонус добычи",
+	"carry_capacity": "Грузоподъёмность"
+}
+var detail_values: Dictionary = {}
 
 func _init(p_character: CharacterState = null) -> void:
 	character = p_character
@@ -138,12 +210,14 @@ func _ready() -> void:
 	call_deferred("_apply_layout")
 
 func _build_detail_tabs() -> void:
-	# The detail panel owns its own tabs and scrolling; the square remains independent.
+	# All rows are driven by the editable catalog; unsupported values stay unknown.
 	detail_tabs = TabContainer.new()
 	detail_tabs.name = "DetailTabs"
 	detail_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	details_panel.add_child(detail_tabs)
+	var config := PrimaryStatEffects.load_config()
+	var categories: Dictionary = config.get("categories", {})
 	for tab_name in DETAIL_TAB_NAMES:
 		var page := ScrollContainer.new()
 		page.name = tab_name
@@ -155,9 +229,35 @@ func _build_detail_tabs() -> void:
 		content.name = "DetailsContent"
 		content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		page.add_child(content)
-		var placeholder := _label("Подробные показатели будут добавлены позже.", 14, MUTED)
-		placeholder.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		content.add_child(placeholder)
+		var groups: Dictionary = categories.get(tab_name, {})
+		for group_name in groups:
+			var heading := _label(String(group_name), 17, GOLD)
+			content.add_child(heading)
+			for raw_key in groups[group_name]:
+				var key := String(raw_key)
+				var row := HBoxContainer.new()
+				content.add_child(row)
+				var caption := _label(String(DETAIL_LABELS.get(key, key)), 14, MUTED)
+				caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				row.add_child(caption)
+				var value := _label("—", 14, GOLD)
+				row.add_child(value)
+				detail_values[key] = value
+
+
+func _refresh_detail_values() -> void:
+	for value in detail_values.values():
+		(value as Label).text = "—"
+	if character == null:
+		return
+	var bonuses := PrimaryStatEffects.calculate(character.progression.base_stats)
+	for key in bonuses:
+		if detail_values.has(key):
+			var amount := float(bonuses[key])
+			var formatted := ("%.2f" % amount).trim_suffix("0").trim_suffix(".")
+			var suffix := "%" if String(key).ends_with("_pct") else ""
+			(detail_values[key] as Label).text = "+" + formatted + suffix
 
 
 func _apply_layout() -> void:
@@ -230,7 +330,7 @@ func refresh() -> void:
 		(stat_minus_buttons[stat] as Button).disabled = int(progression.pending_stats.get(stat, 0)) <= 0
 	save_button.disabled = progression.pending_stats.is_empty()
 	reset_button.disabled = progression.pending_stats.is_empty()
-	# Detailed combat and resistance readouts belong to the future adaptive panel.
+	_refresh_detail_values()
 
 func _refresh_derived_sections() -> void:
 	for child in combat_section.get_children():
