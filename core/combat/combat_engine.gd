@@ -230,7 +230,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var hit_roll:=int(event.payload.get("magic_hit_roll",rolls.get("magic_hit",1))) if uses_magic_hit else int(rolls.get("hit",100))
 	if not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
-	var active_defence_available := not uses_magic_hit and _active_defence_available(defender.tempo, int(rolls.get("reaction", 100)))
+	var active_defence_available := not uses_magic_hit and not _effect_flag(defender, "active_defence_locked") and _active_defence_available(defender.tempo + _active_effect_value(defender, "tempo_modifier"), int(rolls.get("reaction", 100)))
 	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(float(defender.combat_stats.get("dodge", 0.0)), float(attacker.combat_stats.get("anti_dodge", 0.0)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
@@ -388,6 +388,14 @@ func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEven
 	var stack_id := "%s:%d" % [effect_id, _next_effect_stack_id]
 	_next_effect_stack_id += 1
 	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
+
+func _effect_flag(target: CombatantState, field: String) -> bool:
+	for active in target.active_effects:
+		if state.round_number < int(active.get("start_round", 999999)) or int(active.get("remaining_rounds", 0)) <= 0:
+			continue
+		if bool(active.get("definition", {}).get(field, false)):
+			return true
+	return false
 
 func _active_effect_value(target: CombatantState, field: String) -> float:
 	var total := 0.0
