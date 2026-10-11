@@ -34,10 +34,13 @@ jobs:
       - name: Import Godot project
         run: timeout 180s godot --headless --editor --path . --quit
 
+      - name: Inventory UI smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
+
       - name: Export browser build
         run: |
           mkdir -p build/web
-          godot --headless --path . --export-release "Web" build/web/index.html
+          timeout 180s godot --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html
           test -s build/web/index.wasm
           test -s build/web/index.pck
