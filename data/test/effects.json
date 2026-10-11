@@ -41,10 +41,10 @@
       "kind": "freeze",
       "movement_locked": true,
       "tempo_modifier": -100,
-      "dodge_direct_pct": -100,
       "duration_rounds": 2,
       "stacking": "unique",
-      "max_stacks": 1
+      "max_stacks": 1,
+      "active_defence_locked": true
     }
   ]
 }
