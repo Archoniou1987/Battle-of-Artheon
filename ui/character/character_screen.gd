@@ -1,6 +1,8 @@
 class_name CharacterScreen
 extends Control
 
+signal stats_committed
+
 ## Self-contained responsive character view. No combat simulation mutations.
 const STAT_LABELS := {
 	"STR": "Сила", "DEX": "Ловкость", "INTU": "Интуиция",
@@ -170,6 +172,7 @@ func _reset_pending() -> void:
 
 func _save_pending() -> void:
 	if character != null and character.progression.save_pending_stats():
+		stats_committed.emit()
 		refresh()
 
 func refresh() -> void:
