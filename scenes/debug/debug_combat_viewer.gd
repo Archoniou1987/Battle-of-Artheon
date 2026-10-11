@@ -34,8 +34,12 @@ func _build_debug_combat()->void:
 	var hero:=CombatantState.new(hero_id,"Hero",1,100,30)
 	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
 	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
-	hero.combat_stats["main_hand_damage"]=12.0
-	hero.combat_stats["main_hand_damage_type"]="slashing"
+	# The debug hero uses the same stat calculation as the character screen.
+	# This is a standalone level-1 fixture, not the saved player character.
+	var debug_character := CharacterState.new(hero_id, "Hero", 1)
+	var calculated := CharacterStatsService.combat_stats(debug_character)
+	for key in calculated:
+		hero.combat_stats[key] = calculated[key]
 	enemy.combat_stats["main_hand_damage"]=7.0
 	enemy.combat_stats["main_hand_damage_type"]="blunt"
 	state.add_combatant(hero); state.add_combatant(enemy); state.add_combatant(enemy_two)
