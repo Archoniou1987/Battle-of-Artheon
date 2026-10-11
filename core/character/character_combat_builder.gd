@@ -24,7 +24,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	combatant.mana = combatant.max_mana
 	combatant.combat_stats["abilities"] = EquipmentAbilityLoadout.active_abilities(character, repository)
 	var main_hand_id:Variant=character.equipment.get_equipped_instance_id("main_hand")
-	var main_hand:=repository.get_item(String(main_hand_id)) if main_hand_id!=null else {}
+	var main_hand:=repository.get_item(String(main_hand_id)) if main_hand_id!=null and character.is_equipment_active(String(main_hand_id), repository) else {}
 	var weapon_class:=String(main_hand.get("weapon_class",main_hand.get("subtype",""))).to_lower()
 	var is_bow:=weapon_class.contains("bow")
 	combatant.combat_stats["can_manual_block"]=not is_bow
@@ -42,11 +42,12 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 static func equipped_items(character:CharacterState, repository:ItemRepository) -> Array[Dictionary]:
 	var result:Array[Dictionary] = []
 	var seen:Dictionary = {}
+	var active:Dictionary = character.active_equipment_ids(repository)
 	for slot in EquipmentState.SLOTS:
 		var value:Variant = character.equipment.get_equipped_instance_id(slot)
 		if value == null: continue
 		var instance_id := String(value)
-		if instance_id.is_empty() or seen.has(instance_id): continue
+		if instance_id.is_empty() or seen.has(instance_id) or not active.has(instance_id): continue
 		var item := repository.get_item(instance_id)
 		if item.is_empty() or not ItemDurabilityService.is_usable(item): continue
 		seen[instance_id] = true
