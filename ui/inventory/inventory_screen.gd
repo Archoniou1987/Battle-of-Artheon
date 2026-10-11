@@ -28,6 +28,8 @@ var discard_button: Button
 var discard_cancel: Button
 var discard_confirm: ConfirmationDialog
 var slot_buttons: Dictionary = {}
+var elixir_buttons: Array[ItemIcon] = []
+var elixir_assignments: Array[String] = ["", "", "", ""]
 var _last_portrait := false
 var bag_scroll: ScrollContainer
 var bag_title: Label
@@ -140,6 +142,8 @@ func _ready() -> void:
 		quick.name = "Elixir%d" % (i + 1)
 		elixirs.add_child(quick)
 		quick.set_item({}, "Эликсир %d" % (i + 1))
+		quick.pressed.connect(_clear_elixir_slot.bind(i))
+		elixir_buttons.append(quick)
 
 	var stats_panel := VBoxContainer.new()
 	stats_panel.name = "StatsPanel"
@@ -342,7 +346,11 @@ func _tap_item(instance_id: String, slot: String, target: Control) -> void:
 		detail_dialog.item_id = instance_id
 		detail_dialog.source_slot = slot
 		if slot.is_empty():
-			detail_dialog._equip()
+			var item := repository.get_item(instance_id)
+			if String(item.get("type", "")) == "consumable":
+				_assign_elixir(instance_id)
+			else:
+				detail_dialog._equip()
 		else:
 			detail_dialog._unequip()
 		return
@@ -357,6 +365,7 @@ func refresh() -> void:
 	if bag_grid == null:
 		return
 	_refresh_combat_stats()
+	_refresh_elixir_slots()
 	for slot in slot_buttons:
 		var button := slot_buttons[slot] as Button
 		var id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
@@ -367,7 +376,10 @@ func refresh() -> void:
 		child.queue_free()
 	if character == null or repository == null:
 		return
-	var owned_ids := character.inventory.instance_ids()
+	var owned_ids: Array = []
+	for instance_id in character.inventory.instance_ids():
+		if not character.equipment.is_equipped(String(instance_id)) and not elixir_assignments.has(String(instance_id)):
+			owned_ids.append(instance_id)
 	bag_title.text = "Сумка (%d)" % owned_ids.size()
 	for instance_id in owned_ids:
 		var item := repository.get_item(String(instance_id))
@@ -375,7 +387,30 @@ func refresh() -> void:
 		button.pressed.connect(_select_item.bind(String(instance_id)))
 		bag_grid.add_child(button)
 		button.custom_minimum_size = Vector2.ONE * (ItemIcon.CELL_SIZE * (maxf(1.0, minf(size.x, size.y)) / 480.0))
-		button.set_item(item, "", character.equipment.is_equipped(String(instance_id)))
+		button.set_item(item, "", false)
+
+func _assign_elixir(instance_id: String) -> void:
+	if character == null or not character.inventory.owns(instance_id):
+		return
+	for index in range(elixir_assignments.size()):
+		if elixir_assignments[index].is_empty():
+			elixir_assignments[index] = instance_id
+			detail_dialog.visible = false
+			refresh()
+			return
+	detail_dialog.status_label.text = "Все четыре слота эликсиров заняты."
+
+func _clear_elixir_slot(index: int) -> void:
+	if index < 0 or index >= elixir_assignments.size():
+		return
+	elixir_assignments[index] = ""
+	refresh()
+
+func _refresh_elixir_slots() -> void:
+	for index in range(elixir_buttons.size()):
+		var instance_id := elixir_assignments[index]
+		var item := repository.get_item(instance_id) if not instance_id.is_empty() and repository != null else {}
+		elixir_buttons[index].set_item(item, "Эликсир %d" % (index + 1), not instance_id.is_empty())
 
 func _rarity_color(item: Dictionary) -> Color:
 	var rarity := str(item.get("rarity", "grey")).to_lower()
@@ -443,7 +478,7 @@ func _confirm_discard() -> void:
 		return
 	for id in discard_ids.keys():
 		var item_id := String(id)
-		if character.inventory.owns(item_id) and not character.equipment.is_equipped(item_id):
+		if character.inventory.owns(item_id) and not character.equipment.is_equipped(item_id) and not elixir_assignments.has(item_id):
 			character.inventory.call("remove_instance", item_id)
 	_cancel_discard()
 	refresh()
