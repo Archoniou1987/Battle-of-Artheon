@@ -123,6 +123,12 @@ func _ready() -> void:
 	hp_bar.custom_minimum_size.y = 20
 	hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hp_bar.show_percentage = false
+	var hp_background := StyleBoxFlat.new()
+	hp_background.bg_color = Color("#35383e")
+	hp_background.border_color = Color("#b39a69")
+	hp_background.set_border_width_all(2)
+	hp_background.set_corner_radius_all(3)
+	hp_bar.add_theme_stylebox_override("background", hp_background)
 	health.add_child(hp_bar)
 
 	var right_slots := Control.new()
@@ -306,15 +312,26 @@ func _refresh_combat_stats() -> void:
 	if character == null or repository == null:
 		hp_label.text = "HP —"
 		hp_bar.value = 0
+		_set_hp_colour(0.0)
 		return
 	var base := {"stats": character.progression.base_stats.duplicate(true)}
 	var snapshot := CharacterCombatBuilder.build(character, repository, base)
 	hp_label.text = "HP %d/%d" % [snapshot.hp, snapshot.max_hp]
 	hp_bar.max_value = maxi(1, snapshot.max_hp)
 	hp_bar.value = snapshot.hp
+	_set_hp_colour(float(snapshot.hp) / float(maxi(1, snapshot.max_hp)))
 	(stat_rows["Мана"] as Label).text = str(snapshot.max_mana)
 	if not snapshot.armour.is_empty():
 		(stat_rows["Броня по зонам"] as Label).text = str(snapshot.armour)
+
+func _set_hp_colour(remaining_fraction: float) -> void:
+	if hp_bar == null:
+		return
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("#e34b4b") if remaining_fraction <= 0.20 else (Color("#e3bf42") if remaining_fraction <= 0.50 else Color("#35bd61"))
+	fill.set_corner_radius_all(2)
+	hp_bar.add_theme_stylebox_override("fill", fill)
+
 
 func _select_slot(slot: String) -> void:
 	if discard_mode:
