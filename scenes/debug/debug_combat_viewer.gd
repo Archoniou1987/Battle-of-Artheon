@@ -7,6 +7,7 @@ var engine:CombatEngine
 var orchestrator:RoundOrchestrator
 var api:CombatApi
 var commands:CombatCommandApi
+var ability_scheduler:AbilityScheduler
 var hero_id:="player"
 const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
@@ -48,10 +49,20 @@ func _build_debug_combat()->void:
 	zones=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone(hero_id,CombatZoneState.ZONE_2); zones.set_zone("enemy",CombatZoneState.ZONE_2); zones.set_zone("enemy_two",CombatZoneState.ZONE_3)
-	engine=CombatEngine.new(state)
+	var ability_definitions := AbilityCatalog.load_json("res://data/test/abilities.json")
+	var assigned: Array = hero.combat_stats.get("abilities", [])
+	ability_scheduler = AbilityScheduler.new(ability_definitions, {hero_id: assigned.duplicate()})
+	var balance := AbilityCatalog.load_json("res://data/balance/physical_combat.json")
+	var effect_fixture := AbilityCatalog.load_json("res://data/test/effects.json")
+	var effects: Dictionary = {}
+	for entry in effect_fixture.get("effects", []):
+		if entry is Dictionary:
+			effects[String(entry.get("id", ""))] = entry
+	balance["effects"] = effects
+	engine=CombatEngine.new(state, balance)
 	orchestrator=RoundOrchestrator.new(state,engine,groups,zones)
 	api=CombatApi.new(state,groups,zones)
-	commands=CombatCommandApi.new(state,groups,zones,orchestrator)
+	commands=CombatCommandApi.new(state,groups,zones,orchestrator,ability_scheduler)
 	orchestrator.begin_round()
 
 func _refresh()->void:
@@ -93,10 +104,22 @@ func _rebuild_targets()->void:
 
 func _rebuild_actions()->void:
 	for child in actions.get_children(): child.queue_free()
-	var available:=commands.available_actions(hero_id)
+	var equipped_abilities: Dictionary = {}
+	for ability_id in ability_scheduler.loadouts.get(hero_id, []):
+		var definition := AbilityCatalog.definition(ability_scheduler.definitions, String(ability_id))
+		if not definition.is_empty():
+			equipped_abilities[String(ability_id)] = definition
+	var available:=commands.available_actions(hero_id, equipped_abilities)
 	var attack:=Button.new(); attack.text="Base Attack"; attack.disabled=not bool(available.get("basic_attack",false)); attack.pressed.connect(_attack); actions.add_child(attack)
 	for zone_id in available.get("navigation",[]):
 		var move:=Button.new(); move.text="Move → Z%d" % int(zone_id); move.pressed.connect(_move.bind(int(zone_id))); actions.add_child(move)
+	for ability_id in equipped_abilities:
+		var ability_state: Dictionary = available.get("abilities", {}).get(ability_id, {})
+		var ability_button := Button.new()
+		ability_button.text = String(equipped_abilities[ability_id].get("name", ability_id))
+		ability_button.disabled = not bool(ability_state.get("available", false))
+		ability_button.pressed.connect(_cast_ability.bind(String(ability_id)))
+		actions.add_child(ability_button)
 	var end_round:=Button.new(); end_round.text="End Round"; end_round.pressed.connect(_end_round); actions.add_child(end_round)
 
 func _on_target_selected(index:int)->void:
@@ -158,3 +181,10 @@ func _load_player_character() -> Dictionary:
 						for slot in player.equipment.slots:
 							player.equipment.slots[slot] = equipment_data.get(slot, null)
 	return {"character": player, "repository": repository}
+
+func _cast_ability(ability_id: String) -> void:
+	var target_id := groups.active_opponent(hero_id)
+	var result := commands.cast_ability(hero_id, target_id, ability_id)
+	if bool(result.get("ok", false)):
+		engine.resolve_pending_events()
+	_refresh()
