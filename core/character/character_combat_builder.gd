@@ -3,25 +3,32 @@ extends RefCounted
 
 ## Converts persistent CharacterState into the exact runtime snapshot used by combat and UI stats.
 static func build(character:CharacterState, repository:ItemRepository, base:Dictionary = {}) -> CombatantState:
-	var base_stats:Dictionary = base.get("stats", {}).duplicate(true)
-	var end_value := float(base_stats.get("END", 0.0))
-	var wis_value := float(base_stats.get("WIS", 0.0))
-	var health := int(base.get("health", 100 + int(end_value) * 10))
-	var mana_pool := int(base.get("mana", int(wis_value) * 15))
-	var combatant := CombatantState.new(character.character_id, character.display_name, character.level, health, mana_pool)
-	combatant.stats = base_stats
+	# The canonical service owns primary and derived totals. EquipmentBuilder
+	# contributes runtime-only weapon profiles, armour, and on-hit triggers.
+	var primary := character.effective_stats(repository)
+	var canonical := CharacterStatsService.combat_stats(character, repository)
+	var health := int(base.get("health", 100 + int(canonical.get("max_hp_flat", 0))))
+	var mana_pool := int(base.get("mana", 30 + int(canonical.get("max_mana_flat", 0))))
+	var combatant := CombatantState.new(character.character_id, character.display_name, character.progression.level, health, mana_pool)
+	combatant.stats = primary.duplicate(true)
 	combatant.combat_stats = base.get("combat_stats", {}).duplicate(true)
 	combatant.armour = base.get("armour", {}).duplicate(true)
 	combatant.tempo = float(base.get("tempo", 0.0))
 	combatant.max_action_points = int(base.get("max_action_points", 5))
-	for item in equipped_items(character, repository): EquipmentBuilder.equip(combatant, item)
-	# Primary-stat resource bonuses from equipment are resolved after all items are equipped.
-	var equipped_end := float(combatant.stats.get("END", 0.0)) - end_value
-	var equipped_wis := float(combatant.stats.get("WIS", 0.0)) - wis_value
-	combatant.max_hp += int(equipped_end) * 10
-	combatant.hp = combatant.max_hp
-	combatant.max_mana += int(equipped_wis) * 15
-	combatant.mana = combatant.max_mana
+	for item in equipped_items(character, repository):
+		EquipmentBuilder.equip(combatant, item)
+	# Do not add equipment primary bonuses twice.
+	combatant.stats = primary.duplicate(true)
+	# Preserve combat-only equipment metadata; canonical values override
+	# legacy duplicate calculations for derived character statistics.
+	for key in canonical:
+		if key == "main_hand_damage" or key == "main_hand_damage_min" or key == "main_hand_damage_max" or key == "main_hand_damage_type":
+			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
+		combatant.combat_stats[key] = canonical[key]
+	if combatant.combat_stats.get("weapon_profiles", []).is_empty():
+		for key in ["main_hand_damage", "main_hand_damage_min", "main_hand_damage_max", "main_hand_damage_type"]:
+			if canonical.has(key):
+				combatant.combat_stats[key] = canonical[key]
 	combatant.combat_stats["abilities"] = EquipmentAbilityLoadout.active_abilities(character, repository)
 	var main_hand_id:Variant=character.equipment.get_equipped_instance_id("main_hand")
 	var main_hand:=repository.get_item(String(main_hand_id)) if main_hand_id!=null and character.is_equipment_active(String(main_hand_id), repository) else {}
