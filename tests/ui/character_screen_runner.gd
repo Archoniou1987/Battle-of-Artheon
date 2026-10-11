@@ -17,7 +17,12 @@ func _run() -> void:
 	assert(screen.layout_row != null)
 	assert(screen.square_host != null)
 	assert(screen.details_panel != null)
-	assert(screen.details_panel.get_child_count() == 0)
+	assert(screen.detail_tabs != null)
+	assert(screen.detail_tabs.get_tab_count() == 4)
+	for tab_index in range(4):
+		screen.detail_tabs.current_tab = tab_index
+		assert(screen.detail_tabs.current_tab == tab_index)
+		assert(screen.detail_tabs.get_child(tab_index).name == screen.DETAIL_TAB_NAMES[tab_index])
 	screen.size = Vector2(360, 740)
 	screen.call("_apply_layout")
 	assert(screen.layout_row.vertical)
