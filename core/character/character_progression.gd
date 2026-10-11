@@ -11,15 +11,21 @@ var xp_into_level: int = 0
 var unspent_stat_points: int = 0
 var pending_stats: Dictionary = {}
 const STARTING_POINTS := 12
-## Temporary neutral starting distribution; archetype-specific allocation is not approved yet.
+const BONUS_LEVEL := 100
+const BONUS_POINTS_AT_LEVEL_100 := 5
+
+static func total_earned_stat_points(at_level: int) -> int:
+	var safe_level := maxi(FIRST_LEVEL, at_level)
+	return STARTING_POINTS + safe_level - FIRST_LEVEL + (BONUS_POINTS_AT_LEVEL_100 if safe_level >= BONUS_LEVEL else 0)
+## All six primary stats start at one; allocated points are committed separately.
 var base_stats: Dictionary = {"STR": 1, "DEX": 1, "INTU": 1, "INT": 1, "WIS": 1, "END": 1}
 var _table: Dictionary = {}
 
 func _init(start_level: int = 1, table: Dictionary = {}) -> void:
 	level = clampi(start_level, FIRST_LEVEL, MAX_CONFIGURED_LEVEL)
 	_table = table.duplicate(true) if not table.is_empty() else load_table()
-	# Level-one total is 18. Levels 2–20 gain one distributable point each.
-	unspent_stat_points = STARTING_POINTS + level - 1
+	# Twelve starting points plus one per level; level 100 grants five additional bonus points.
+	unspent_stat_points = total_earned_stat_points(level)
 
 static func load_table() -> Dictionary:
 	if not FileAccess.file_exists(XP_TABLE_PATH):
@@ -49,7 +55,7 @@ func gain_xp(amount: int) -> int:
 			break
 		xp_into_level -= needed
 		level += 1
-		unspent_stat_points += 1
+		unspent_stat_points += total_earned_stat_points(level) - total_earned_stat_points(level - 1)
 		gained_levels += 1
 	if level >= MAX_CONFIGURED_LEVEL:
 		xp_into_level = 0
@@ -126,7 +132,7 @@ func restore(data: Dictionary) -> bool:
 		if not keys.has(key) or not (restored_pending[key] is int) or int(restored_pending[key]) <= 0:
 			return false
 		total += int(restored_pending[key])
-	if total != 18 + restored_level - 1:
+	if total != 6 + total_earned_stat_points(restored_level):
 		return false
 	level = restored_level
 	xp_into_level = restored_xp
