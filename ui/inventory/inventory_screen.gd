@@ -12,6 +12,9 @@ var character: CharacterState
 var repository: ItemRepository
 var back_button: Button
 var equipment_grid: GridContainer
+const AVATARS := {"wanderer_01": "res://assets/avatars/wanderer_01.svg"}
+var avatar_id: String = "wanderer_01"
+var avatar_texture: TextureRect
 var character_portrait: PanelContainer
 var bag_grid: GridContainer
 var detail_dialog: ItemDetailDialog
@@ -81,13 +84,13 @@ func _ready() -> void:
 	character_portrait.custom_minimum_size = Vector2(356, 416)
 	character_portrait.position = Vector2(62, 0)
 	middle.add_child(character_portrait)
-	var portrait_label := Label.new()
-	portrait_label.text = "✦\nПОРТРЕТ ПЕРСОНАЖА\n✦"
-	portrait_label.add_theme_font_size_override("font_size", 19)
-	portrait_label.add_theme_color_override("font_color", Color("#d3b37b"))
-	portrait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	portrait_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	character_portrait.add_child(portrait_label)
+	avatar_texture = TextureRect.new()
+	avatar_texture.name = "AvatarImage"
+	avatar_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	avatar_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	avatar_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	character_portrait.add_child(avatar_texture)
+	_apply_avatar()
 	var portrait_frame := StyleBoxFlat.new()
 	portrait_frame.bg_color = Color("#202b3b")
 	portrait_frame.border_color = Color("#94774e")
@@ -144,11 +147,9 @@ func _ready() -> void:
 	stats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	stats_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	stats_panel.add_child(stats_scroll)
-	var table := GridContainer.new()
+	var table := HBoxContainer.new()
 	table.name = "CombatTable"
-	table.columns = 8
-	table.add_theme_constant_override("h_separation", 7)
-	table.add_theme_constant_override("v_separation", 3)
+	table.add_theme_constant_override("separation", 6)
 	stats_scroll.add_child(table)
 	var groups: Array = [
 		["Атака", ["Урон оружия", "Попадание", "Крит"]],
@@ -157,28 +158,42 @@ func _ready() -> void:
 		["Маг. защита", ["Общее сопротивление", "Сопротивления стихиям"]]
 	]
 	for group in groups:
+		var frame := PanelContainer.new()
+		frame.name = "Group" + str(table.get_child_count() + 1)
+		var frame_style := StyleBoxFlat.new()
+		frame_style.bg_color = Color("#202b3b")
+		frame_style.border_color = Color("#756448")
+		frame_style.set_border_width_all(1)
+		frame_style.set_corner_radius_all(3)
+		frame_style.content_margin_left = 7
+		frame_style.content_margin_right = 7
+		frame_style.content_margin_top = 4
+		frame_style.content_margin_bottom = 4
+		frame.add_theme_stylebox_override("panel", frame_style)
+		table.add_child(frame)
+		var column := VBoxContainer.new()
+		column.add_theme_constant_override("separation", 3)
+		frame.add_child(column)
 		var title := Label.new()
-		title.text = group[0]
+		title.text = String(group[0])
 		title.add_theme_color_override("font_color", Color("#d3b37b"))
-		table.add_child(title)
-		var value_title := Label.new()
-		value_title.text = "Знач."
-		value_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		table.add_child(value_title)
-	for row_index in range(3):
-		for group in groups:
-			var name: String = String(group[1][row_index]) if row_index < group[1].size() else ""
+		column.add_child(title)
+		for raw_name in group[1]:
+			var name: String = String(raw_name)
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 9)
+			column.add_child(row)
 			var label := Label.new()
 			label.text = name
 			label.add_theme_font_size_override("font_size", 11)
-			table.add_child(label)
+			row.add_child(label)
 			var value := Label.new()
-			value.text = "—" if not name.is_empty() else ""
-			value.custom_minimum_size.x = 40
+			value.text = "—"
+			value.custom_minimum_size.x = 36
 			value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			table.add_child(value)
-			if not name.is_empty():
-				stat_rows[name] = value
+			value.add_theme_font_size_override("font_size", 11)
+			row.add_child(value)
+			stat_rows[name] = value
 	stats_content = stats_panel
 	var bag_panel := PanelContainer.new()
 	bag_panel.name = "BagPanel"
@@ -310,3 +325,15 @@ func _style_item_button(button: Button, border_color: Color) -> void:
 	button.add_theme_font_size_override("font_size", 12)
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+
+func set_avatar_id(new_id: String) -> void:
+	if not AVATARS.has(new_id):
+		return
+	avatar_id = new_id
+	_apply_avatar()
+
+func _apply_avatar() -> void:
+	if avatar_texture == null:
+		return
+	var resource_path: String = String(AVATARS.get(avatar_id, AVATARS["wanderer_01"]))
+	avatar_texture.texture = load(resource_path) as Texture2D
