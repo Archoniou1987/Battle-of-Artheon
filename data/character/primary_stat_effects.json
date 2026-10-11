@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "notes": "Configurable rating-based chance stats. Direct ABI/EFF percentage points bypass level scaling; damage percentages remain direct modifiers.",
+  "version": 3,
+  "notes": "All percentage-derived attributes on Attack/Defense/Magic tabs use level-scaled ratings. Other tab retains direct percentages. ABI/EFF direct percentage points are separate overlays, never stored as ratings.",
   "effects": {
     "STR": {
       "physical_damage_flat": 1
@@ -13,12 +13,12 @@
     "INTU": {
       "crit_chance_rating": 5,
       "anti_crit_rating": 5,
-      "crit_damage_pct": 1
+      "crit_damage_rating": 5
     },
     "INT": {
-      "magic_damage_pct": 1,
       "magic_hit_rating": 5,
-      "magic_crit_rating": 5
+      "magic_crit_rating": 5,
+      "magic_damage_rating": 5
     },
     "WIS": {
       "max_mana_flat": 10
@@ -31,10 +31,10 @@
     "Атака": {
       "Физический урон": [
         "physical_damage_flat",
-        "slash_damage",
-        "pierce_damage",
-        "chop_damage",
-        "blunt_damage",
+        "slash_damage_rating",
+        "pierce_damage_rating",
+        "chop_damage_rating",
+        "blunt_damage_rating",
         "main_hand_min_damage",
         "main_hand_max_damage",
         "off_hand_min_damage",
@@ -44,7 +44,7 @@
         "hit_chance_rating",
         "anti_dodge_rating",
         "crit_chance_rating",
-        "crit_damage_pct",
+        "crit_damage_rating",
         "armour_penetration_flat",
         "armour_penetration_rating",
         "block_penetration_flat",
@@ -52,9 +52,9 @@
       ],
       "Темп и реакции": [
         "tempo",
-        "attack_speed_pct",
+        "attack_speed_rating",
         "counterattack_rating",
-        "counterattack_damage_pct"
+        "counterattack_damage_rating"
       ]
     },
     "Защита": {
@@ -74,16 +74,16 @@
         "armour_legs"
       ],
       "Снижение урона": [
-        "physical_damage_reduction_pct",
-        "slash_resistance_pct",
-        "pierce_resistance_pct",
-        "chop_resistance_pct",
-        "blunt_resistance_pct"
+        "physical_damage_reduction_rating",
+        "slash_resistance_rating",
+        "pierce_resistance_rating",
+        "chop_resistance_rating",
+        "blunt_resistance_rating"
       ]
     },
     "Магия": {
       "Магическая атака": [
-        "magic_damage_pct",
+        "magic_damage_rating",
         "magic_damage_flat",
         "magic_hit_rating",
         "magic_crit_rating",
@@ -91,21 +91,21 @@
         "magic_penetration_rating"
       ],
       "Урон по стихиям": [
-        "fire_damage",
-        "water_damage",
-        "air_damage",
-        "earth_damage",
-        "dark_damage",
-        "light_damage"
+        "fire_damage_rating",
+        "water_damage_rating",
+        "air_damage_rating",
+        "earth_damage_rating",
+        "dark_damage_rating",
+        "light_damage_rating"
       ],
       "Сопротивления": [
-        "magic_resistance",
-        "fire_resistance",
-        "water_resistance",
-        "air_resistance",
-        "earth_resistance",
-        "dark_resistance",
-        "light_resistance"
+        "magic_resistance_rating",
+        "fire_resistance_rating",
+        "water_resistance_rating",
+        "air_resistance_rating",
+        "earth_resistance_rating",
+        "dark_resistance_rating",
+        "light_resistance_rating"
       ]
     },
     "Прочее": {
@@ -159,7 +159,7 @@
       }
     ],
     "interpolation": "linear",
-    "notes": "Anchor points are test balance. Ratings sum before conversion; direct ABI/EFF chance percentage points are added after conversion."
+    "notes": "Test anchors; interpolate between levels. All ratings from attributes and gear add before conversion. ABI/EFF direct percentage points add afterwards, without level scaling."
   },
   "rating_stats": [
     "hit_chance_rating",
@@ -175,18 +175,35 @@
     "control_resistance_rating",
     "magic_hit_rating",
     "magic_crit_rating",
-    "magic_penetration_rating"
+    "magic_penetration_rating",
+    "slash_damage_rating",
+    "pierce_damage_rating",
+    "chop_damage_rating",
+    "blunt_damage_rating",
+    "crit_damage_rating",
+    "attack_speed_rating",
+    "counterattack_damage_rating",
+    "physical_damage_reduction_rating",
+    "slash_resistance_rating",
+    "pierce_resistance_rating",
+    "chop_resistance_rating",
+    "blunt_resistance_rating",
+    "magic_damage_rating",
+    "fire_damage_rating",
+    "water_damage_rating",
+    "air_damage_rating",
+    "earth_damage_rating",
+    "dark_damage_rating",
+    "light_damage_rating",
+    "magic_resistance_rating",
+    "fire_resistance_rating",
+    "water_resistance_rating",
+    "air_resistance_rating",
+    "earth_resistance_rating",
+    "dark_resistance_rating",
+    "light_resistance_rating"
   ],
   "direct_percent_stats": [
-    "crit_damage_pct",
-    "magic_damage_pct",
-    "attack_speed_pct",
-    "counterattack_damage_pct",
-    "physical_damage_reduction_pct",
-    "slash_resistance_pct",
-    "pierce_resistance_pct",
-    "chop_resistance_pct",
-    "blunt_resistance_pct",
     "movement_speed_pct",
     "gathering_speed_pct",
     "experience_bonus_pct",
