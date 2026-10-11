@@ -3,6 +3,9 @@ extends Button
 
 ## One square presentation for equipped items, bag items and future loot/shop cells.
 const CELL_SIZE := 56.0
+const ATLAS_PATH := "res://assets/items/items_atlas_01.png"
+const ATLAS_COLUMNS := 8
+const ATLAS_ROWS := 8
 const RARITY_COLORS := {
 	"grey": "#777f8a", "gray": "#777f8a", "common": "#aab0b8",
 	"white": "#c5cbd2", "green": "#479c65", "uncommon": "#479c65",
@@ -72,6 +75,17 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	var texture: Texture2D = null
 	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
 		texture = load(icon_path) as Texture2D
+	elif item.has("atlas_index") and ResourceLoader.exists(ATLAS_PATH):
+		var index := int(item.get("atlas_index", -1))
+		if index >= 0 and index < ATLAS_COLUMNS * ATLAS_ROWS:
+			var atlas := load(ATLAS_PATH) as Texture2D
+			if atlas != null:
+				var cell := Vector2i(atlas.get_width() / ATLAS_COLUMNS, atlas.get_height() / ATLAS_ROWS)
+				if cell.x > 0 and cell.y > 0:
+					var cropped := AtlasTexture.new()
+					cropped.atlas = atlas
+					cropped.region = Rect2(Vector2i(index % ATLAS_COLUMNS, index / ATLAS_COLUMNS) * cell, cell)
+					texture = cropped
 	if _icon_texture == null:
 		return
 	_icon_texture.texture = texture
