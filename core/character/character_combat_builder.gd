@@ -29,6 +29,9 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		for key in ["main_hand_damage", "main_hand_damage_min", "main_hand_damage_max", "main_hand_damage_type"]:
 			if canonical.has(key):
 				combatant.combat_stats[key] = canonical[key]
+	# TRA definitions are injected through base for now, independent of test content.
+	var trait_definitions: Dictionary = base.get("trait_definitions", {})
+	combatant.combat_stats["trait_modifiers"] = collect_trait_modifiers(character, trait_definitions)
 	combatant.combat_stats["abilities"] = EquipmentAbilityLoadout.active_abilities(character, repository)
 	var main_hand_id:Variant=character.equipment.get_equipped_instance_id("main_hand")
 	var main_hand:=repository.get_item(String(main_hand_id)) if main_hand_id!=null and character.is_equipment_active(String(main_hand_id), repository) else {}
@@ -69,3 +72,24 @@ static func stats_snapshot(combatant:CombatantState) -> Dictionary:
 		"stats":combatant.stats.duplicate(true),"combat_stats":combatant.combat_stats.duplicate(true),"armour":combatant.armour.duplicate(true),
 		"abilities":combatant.combat_stats.get("abilities", []).duplicate(true)
 	}
+
+## Converts learned TRA IDs into a single runtime overlay.
+## A TRA definition can provide {"modifiers": {"magic_damage_flat": 5}}.
+static func collect_trait_modifiers(character: CharacterState, definitions: Dictionary) -> Dictionary:
+	var totals: Dictionary = {}
+	for trait_id in character.learned_trait_ids:
+		var raw: Variant = definitions.get(trait_id, {})
+		if not raw is Dictionary:
+			continue
+		var definition: Dictionary = raw
+		if character.progression.level < int(definition.get("required_level", 1)):
+			continue
+		var modifiers: Variant = definition.get("modifiers", {})
+		if not modifiers is Dictionary:
+			continue
+		for key in modifiers:
+			if modifiers[key] is bool:
+				totals[key] = bool(totals.get(key, false)) or bool(modifiers[key])
+			elif modifiers[key] is int or modifiers[key] is float:
+				totals[key] = float(totals.get(key, 0.0)) + float(modifiers[key])
+	return totals
