@@ -8,6 +8,8 @@ var orchestrator:RoundOrchestrator
 var api:CombatApi
 var commands:CombatCommandApi
 var hero_id:="hero"
+const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
+const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 
 @onready var round_label:Label=$Margin/VBox/Header/Round
 @onready var outcome_label:Label=$Margin/VBox/Header/Outcome
@@ -34,10 +36,8 @@ func _build_debug_combat()->void:
 	var hero:=CombatantState.new(hero_id,"Hero",1,100,30)
 	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
 	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
-	# The debug hero uses the same stat calculation as the character screen.
-	# This is a standalone level-1 fixture, not the saved player character.
-	var debug_character := CharacterState.new(hero_id, "Hero", 1)
-	var calculated := CharacterStatsService.combat_stats(debug_character)
+	var debug_character := _load_player_character()
+	var calculated := CharacterStatsService.combat_stats(debug_character.character, debug_character.repository)
 	for key in calculated:
 		hero.combat_stats[key] = calculated[key]
 	enemy.combat_stats["main_hand_damage"]=7.0
@@ -127,3 +127,35 @@ func _end_round()->void:
 	orchestrator.end_round()
 	if orchestrator.battle_outcome()=="ongoing": orchestrator.begin_round()
 	_refresh()
+
+## The debug encounter consumes the saved player state without mutating it.
+## If there is no save, use a fresh level-1 character with bare fists.
+func _load_player_character() -> Dictionary:
+	var player := CharacterState.new("player", "Герой")
+	var repository := ItemRepository.new()
+	if FileAccess.file_exists(PROGRESSION_SAVE_PATH):
+		var progression_data: Variant = JSON.parse_string(FileAccess.get_file_as_string(PROGRESSION_SAVE_PATH))
+		if progression_data is Dictionary:
+			player.restore_progression(progression_data)
+	if FileAccess.file_exists(INVENTORY_SAVE_PATH):
+		var saved: Variant = JSON.parse_string(FileAccess.get_file_as_string(INVENTORY_SAVE_PATH))
+		if saved is Dictionary and int(saved.get("schema_version", 0)) == 1:
+			var repository_data: Variant = saved.get("repository", {})
+			var inventory_data: Variant = saved.get("inventory", {})
+			var equipment_data: Variant = saved.get("equipment", {})
+			if repository_data is Dictionary and inventory_data is Dictionary and equipment_data is Dictionary:
+				if String(inventory_data.get("owner_id", "")) == player.character_id:
+					var loaded_repository := ItemRepository.from_dict(repository_data)
+					var loaded_inventory := InventoryState.from_dict(inventory_data, loaded_repository)
+					var valid := true
+					for slot in player.equipment.slots:
+						var instance_id: Variant = equipment_data.get(slot, null)
+						if instance_id != null and (not instance_id is String or not loaded_inventory.owns(String(instance_id))):
+							valid = false
+							break
+					if valid:
+						repository = loaded_repository
+						player.inventory = loaded_inventory
+						for slot in player.equipment.slots:
+							player.equipment.slots[slot] = equipment_data.get(slot, null)
+	return {"character": player, "repository": repository}
