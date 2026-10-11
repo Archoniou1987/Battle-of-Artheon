@@ -50,6 +50,10 @@ static func effective_percent(combatant: CombatantState, key: String, round_numb
 
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result: Dictionary = combatant.combat_stats.duplicate(true)
+	for field in trait_modifiers(combatant):
+		if not (String(field).ends_with("_flat") or String(field).ends_with("_direct_pct") or String(field).ends_with("_modifier") or String(field) == "damage_reduction"):
+			continue
+		result[field] = float(result.get(field, 0.0)) + float(trait_modifiers(combatant)[field])
 	for record in active_effects(combatant, round_number):
 		var definition: Dictionary = record.get("definition", {})
 		for key in definition:
