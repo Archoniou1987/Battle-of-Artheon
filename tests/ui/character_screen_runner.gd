@@ -40,7 +40,7 @@ func _run() -> void:
 
 	assert(screen.detail_values.size() >= 50)
 	assert((screen.detail_values["physical_damage_flat"] as Label).text != "—")
-	assert((screen.detail_values["slash_damage"] as Label).text == "—")
+	assert((screen.detail_values["slash_damage"] as Label).text == "+0%")
 	for tab_index in range(4):
 		screen.detail_tabs.current_tab = tab_index
 		assert(screen.detail_tabs.current_tab == tab_index)
