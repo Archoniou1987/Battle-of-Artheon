@@ -10,6 +10,37 @@ var inventory: InventoryState
 var equipment: EquipmentState
 var in_combat := false
 
+## TRA definitions are supplied by the caller; no example talents are hardcoded.
+## Only learned trait IDs are persistent. Runtime modifiers are rebuilt for combat.
+var learned_trait_ids: Array[String] = []
+
+func learn_trait(trait_id: String, definitions: Dictionary) -> bool:
+	if in_combat or trait_id.is_empty() or learned_trait_ids.has(trait_id) or not definitions.has(trait_id):
+		return false
+	var definition: Variant = definitions[trait_id]
+	if not definition is Dictionary:
+		return false
+	if progression.level < int(definition.get("required_level", 1)):
+		return false
+	learned_trait_ids.append(trait_id)
+	return true
+
+func trait_snapshot() -> Array[String]:
+	return learned_trait_ids.duplicate()
+
+func restore_traits(ids: Array, definitions: Dictionary) -> bool:
+	var restored: Array[String] = []
+	for value in ids:
+		if not value is String or String(value).is_empty() or restored.has(String(value)) or not definitions.has(String(value)):
+			return false
+		var definition: Variant = definitions[String(value)]
+		if not definition is Dictionary or progression.level < int(definition.get("required_level", 1)):
+			return false
+		restored.append(String(value))
+	learned_trait_ids = restored
+	return true
+
+
 func _init(id: String, name: String, character_level: int = 1) -> void:
 	character_id = id
 	display_name = name
