@@ -161,6 +161,14 @@ func _ready() -> void:
 	xp_bar = ProgressBar.new()
 	xp_bar.custom_minimum_size.y = 18
 	xp_bar.show_percentage = false
+	var xp_fill := StyleBoxFlat.new()
+	xp_fill.bg_color = Color("#f0c43c")
+	xp_fill.set_corner_radius_all(4)
+	xp_bar.add_theme_stylebox_override("fill", xp_fill)
+	var xp_empty := StyleBoxFlat.new()
+	xp_empty.bg_color = Color("#303238")
+	xp_empty.set_corner_radius_all(4)
+	xp_bar.add_theme_stylebox_override("background", xp_empty)
 	level_content.add_child(xp_bar)
 	var stats_card := _panel()
 	body.add_child(stats_card)
