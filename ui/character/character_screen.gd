@@ -34,32 +34,32 @@ var detail_tabs: TabContainer
 const DETAIL_TAB_NAMES := ["Атака", "Защита", "Магия", "Прочее"]
 const DETAIL_LABELS := {
 	"physical_damage_flat": "Физический урон (бонус)",
-	"slash_damage": "Режущий урон",
-	"pierce_damage": "Колющий урон",
-	"chop_damage": "Рубящий урон",
-	"blunt_damage": "Дробящий урон",
+	"slash_damage": "Модификатор режущего урона",
+	"pierce_damage": "Модификатор колющего урона",
+	"chop_damage": "Модификатор рубящего урона",
+	"blunt_damage": "Модификатор дробящего урона",
 	"main_hand_min_damage": "Осн. рука: мин. урон",
 	"main_hand_max_damage": "Осн. рука: макс. урон",
 	"off_hand_min_damage": "Вторая рука: мин. урон",
 	"off_hand_max_damage": "Вторая рука: макс. урон",
-	"hit_chance_pct": "Шанс попадания",
-	"anti_dodge_pct": "Антиуклонение",
-	"crit_chance_pct": "Шанс критического удара",
+	"hit_chance_rating": "Шанс попадания",
+	"anti_dodge_rating": "Рейтинг антиуворота",
+	"crit_chance_rating": "Рейтинг критического удара",
 	"crit_damage_pct": "Критический урон (бонус)",
 	"armour_penetration_flat": "Пробивание брони",
-	"armour_penetration_pct": "Пробивание брони, %",
+	"armour_penetration_rating": "Пробивание брони, %",
 	"block_penetration_flat": "Пробивание блока",
-	"block_penetration_pct": "Пробивание блока, %",
+	"block_penetration_rating": "Пробивание блока, %",
 	"tempo": "Темп",
 	"attack_speed_pct": "Скорость атаки",
-	"counterattack_pct": "Шанс контрудара",
+	"counterattack_rating": "Рейтинг контрудара",
 	"counterattack_damage_pct": "Урон контрудара",
-	"dodge_pct": "Уклонение",
-	"anti_crit_pct": "Антикрит",
-	"manual_block_pct": "Ручной блок",
-	"shield_auto_block_pct": "Автоблок щитом",
+	"dodge_rating": "Рейтинг уворота",
+	"anti_crit_rating": "Рейтинг антикрита",
+	"manual_block_rating": "Ручной блок",
+	"shield_auto_block_rating": "Автоблок щитом",
 	"block_strength": "Сила блока",
-	"control_resistance_pct": "Сопротивление контролю",
+	"control_resistance_rating": "Сопротивление контролю",
 	"armour_head": "Броня головы",
 	"armour_arms": "Броня рук",
 	"armour_chest": "Броня груди",
@@ -72,10 +72,10 @@ const DETAIL_LABELS := {
 	"blunt_resistance_pct": "Сопр. дробящему",
 	"magic_damage_pct": "Магический урон (бонус)",
 	"magic_damage_flat": "Магический урон",
-	"magic_hit_pct": "Магическая точность",
-	"magic_crit_pct": "Магический крит",
+	"magic_hit_rating": "Рейтинг магической точности",
+	"magic_crit_rating": "Рейтинг магического крита",
 	"magic_penetration_flat": "Магическое пробивание",
-	"magic_penetration_pct": "Магическое пробивание, %",
+	"magic_penetration_rating": "Магическое пробивание, %",
 	"fire_damage": "Урон огнём",
 	"water_damage": "Урон водой",
 	"air_damage": "Урон воздухом",
@@ -251,13 +251,30 @@ func _refresh_detail_values() -> void:
 		(value as Label).text = "—"
 	if character == null:
 		return
-	var bonuses := PrimaryStatEffects.calculate(character.progression.base_stats)
-	for key in bonuses:
-		if detail_values.has(key):
-			var amount := float(bonuses[key])
-			var formatted := ("%.2f" % amount).trim_suffix("0").trim_suffix(".")
-			var suffix := "%" if String(key).ends_with("_pct") else ""
-			(detail_values[key] as Label).text = "+" + formatted + suffix
+	var config := PrimaryStatEffects.load_config()
+	var bonuses := PrimaryStatEffects.calculate(character.progression.base_stats, config)
+	var rating_stats: Array = config.get("rating_stats", [])
+	var percent_stats: Array = config.get("direct_percent_stats", [])
+	var level := character.progression.level
+	for key in detail_values:
+		var stat_key := String(key)
+		var value: Label = detail_values[key]
+		if rating_stats.has(stat_key):
+			var rating := float(bonuses.get(stat_key, 0.0))
+			var percent := PrimaryStatEffects.rating_to_percent(rating, level, config)
+			value.text = "%s (%s%%)" % [_format_stat_number(rating), _format_stat_number(percent)]
+		elif bonuses.has(stat_key):
+			var amount := float(bonuses[stat_key])
+			var suffix := "%" if percent_stats.has(stat_key) or stat_key.ends_with("_pct") else ""
+			var sign := "+" if amount >= 0.0 else ""
+			value.text = sign + _format_stat_number(amount) + suffix
+		elif percent_stats.has(stat_key) or stat_key.ends_with("_pct") or stat_key in ["slash_damage", "pierce_damage", "chop_damage", "blunt_damage", "fire_damage", "water_damage", "air_damage", "earth_damage", "dark_damage", "light_damage"]:
+			value.text = "+0%"
+
+func _format_stat_number(amount: float) -> String:
+	if is_equal_approx(amount, roundf(amount)):
+		return str(int(roundf(amount)))
+	return ("%.2f" % amount).rstrip("0").rstrip(".")
 
 
 func _apply_layout() -> void:
