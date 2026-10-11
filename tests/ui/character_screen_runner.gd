@@ -24,9 +24,20 @@ func _run() -> void:
 	assert(primary_config.has("categories"))
 	var test_bonuses := PrimaryStatEffects.calculate({"STR": 10, "DEX": 20, "INTU": 20, "INT": 10, "WIS": 10, "END": 10})
 	assert(is_equal_approx(float(test_bonuses["physical_damage_flat"]), 10.0))
-	assert(is_equal_approx(float(test_bonuses["dodge_pct"]), 5.0))
+	assert(is_equal_approx(float(test_bonuses["dodge_rating"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["crit_damage_pct"]), 20.0))
 	assert(is_equal_approx(float(test_bonuses["max_hp_flat"]), 200.0))
+	assert(is_equal_approx(float(test_bonuses["crit_chance_rating"]), 100.0))
+	assert(is_equal_approx(float(test_bonuses["magic_hit_rating"]), 50.0))
+	var anchors: Array = primary_config["rating_curve"]["anchors"]
+	for anchor in anchors:
+		assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, int(anchor["level"]), primary_config), float(anchor["percent"])))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(150.0, 40, primary_config), 20.0))
+	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0, primary_config), 15.0))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30, primary_config), 45.0))
+	assert((screen.detail_values["dodge_rating"] as Label).text.contains("("))
+	assert((screen.detail_values["crit_chance_rating"] as Label).text.contains("%)"))
+
 	assert(screen.detail_values.size() >= 50)
 	assert((screen.detail_values["physical_damage_flat"] as Label).text != "—")
 	assert((screen.detail_values["slash_damage"] as Label).text == "—")
