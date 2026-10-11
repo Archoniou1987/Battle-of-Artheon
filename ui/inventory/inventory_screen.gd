@@ -1,6 +1,8 @@
 class_name InventoryScreen
 extends Control
 
+signal inventory_changed
+
 ## Responsive inventory shell. Uses live inventory/equipment instance IDs.
 const SLOT_NAMES := {
 	"head": "Голова", "shoulders": "Плечи", "neck": "Шея", "back": "Спина",
@@ -407,6 +409,7 @@ func refresh() -> void:
 		bag_grid.add_child(button)
 		button.custom_minimum_size = Vector2.ONE * (ItemIcon.CELL_SIZE * (maxf(1.0, minf(size.x, size.y)) / 480.0))
 		button.set_item(item, "", false)
+	inventory_changed.emit()
 
 func _assign_elixir(instance_id: String) -> void:
 	if character == null or not character.inventory.owns(instance_id):
