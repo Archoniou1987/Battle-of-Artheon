@@ -39,6 +39,13 @@ var fighter_popup_text: RichTextLabel
 var disclosed_enemy_stats: Dictionary = {}
 var disclosed_enemy_ratings: Dictionary = {}
 var disclosed_enemy_equipment: Dictionary = {}
+var player_elixir_slots: Array[Button] = []
+var enemy_elixir_slots: Array[Button] = []
+var player_elixirs: Array[Dictionary] = []
+var enemy_elixirs: Array[Dictionary] = []
+var player_belt_capacity := 0
+var enemy_belt_capacity := 0
+var elixir_global_cooldown := 0
 const RATING_KEYS := ["crit_chance_rating", "anti_crit_rating", "dodge_rating", "anti_dodge_rating", "hit_chance_rating", "manual_block_rating", "shield_auto_block_rating", "block_penetration_rating", "armour_penetration_rating", "counterattack_rating"]
 const RATING_NAMES := {"crit_chance_rating":"Крит", "anti_crit_rating":"Антикрит", "dodge_rating":"Уворот", "anti_dodge_rating":"Антиуворот", "hit_chance_rating":"Точность", "manual_block_rating":"Ручной блок", "shield_auto_block_rating":"Автоблок", "block_penetration_rating":"Пробивание блока", "armour_penetration_rating":"Пробивание брони", "counterattack_rating":"Контрудар"}
 const PRIMARY_NAMES := {"STR":"Сила", "DEX":"Ловкость", "INTU":"Интуиция", "WIS":"Мудрость", "INT":"Интеллект", "END":"Выносливость"}
@@ -225,11 +232,27 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if is_player:
 		hp_label = health
 	var subtitle := Label.new()
-	subtitle.text = "ЗАЩИТА — зона блока" if is_player else "АТАКА — зона удара"
-	subtitle.position = Vector2(35, 204)
+	subtitle.text = "ЭЛИКСИРЫ"
+	subtitle.position = Vector2(74, 193)
+	subtitle.add_theme_font_size_override("font_size", 11)
 	inner.add_child(subtitle)
+	var elixir_row := HBoxContainer.new()
+	elixir_row.position = Vector2(18, 211)
+	elixir_row.add_theme_constant_override("separation", 3)
+	inner.add_child(elixir_row)
+	for elixir_index in range(4):
+		var elixir_button := Button.new()
+		elixir_button.custom_minimum_size = Vector2(47, 38)
+		elixir_button.add_theme_font_size_override("font_size", 12)
+		elixir_button.disabled = true # UI only; no consumption or round action yet.
+		elixir_row.add_child(elixir_button)
+		if is_player:
+			player_elixir_slots.append(elixir_button)
+		else:
+			enemy_elixir_slots.append(elixir_button)
+	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(3, 228)
+	zone_row.position = Vector2(3, 251)
 	zone_row.add_theme_constant_override("separation", 1)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
@@ -249,7 +272,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			attack_buttons.append(button)
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(5, 272 if row_type == "Баффы" else 298)
+		row.position = Vector2(5, 291 if row_type == "Баффы" else 314)
 		row.add_theme_constant_override("separation", 2)
 		inner.add_child(row)
 		var label := Label.new()
@@ -273,6 +296,47 @@ func set_disclosed_enemy(primary_stats: Dictionary, ratings: Dictionary, equipme
 	for slot in enemy_slots:
 		var item: Dictionary = disclosed_enemy_equipment.get(slot, {})
 		(enemy_slots[slot] as ItemIcon).set_item(item, String(SLOT_SYMBOLS.get(slot, "◇")) if not item.is_empty() else "?")
+
+## UI-only belt capacity and charge snapshots. The caller owns gameplay state.
+## Each entry may contain icon, charges and max_charges; no charges are spent here.
+func set_elixir_display(is_player: bool, belt_slots: int, elixirs: Array[Dictionary]) -> void:
+	if is_player:
+		player_belt_capacity = clampi(belt_slots, 0, 4)
+		player_elixirs = elixirs.duplicate(true)
+	else:
+		enemy_belt_capacity = clampi(belt_slots, 0, 4)
+		enemy_elixirs = elixirs.duplicate(true)
+	_update_elixir_slots()
+
+func set_elixir_cooldown(rounds_remaining: int) -> void:
+	elixir_global_cooldown = maxi(0, rounds_remaining)
+	_update_elixir_slots()
+
+func _update_elixir_slots() -> void:
+	for is_player in [true, false]:
+		var buttons: Array[Button] = player_elixir_slots if is_player else enemy_elixir_slots
+		var capacity: int = player_belt_capacity if is_player else enemy_belt_capacity
+		var entries: Array[Dictionary] = player_elixirs if is_player else enemy_elixirs
+		for index in range(buttons.size()):
+			var button := buttons[index]
+			button.disabled = true
+			if index >= capacity:
+				button.text = "×"
+				button.tooltip_text = "Слот эликсира недоступен"
+				continue
+			if index >= entries.size() or entries[index].is_empty():
+				button.text = "◇"
+				button.tooltip_text = "Пустой слот эликсира"
+				continue
+			var item: Dictionary = entries[index]
+			var charges := maxi(0, int(item.get("charges", 0)))
+			var maximum := maxi(1, int(item.get("max_charges", 1)))
+			var symbol := String(item.get("icon", "♧"))
+			button.text = "%s\n%d/%d" % [symbol, charges, maximum]
+			button.tooltip_text = "%s — %d/%d зарядов" % [String(item.get("name", "Эликсир")), charges, maximum]
+			if elixir_global_cooldown > 0:
+				button.text = "%s\nКД %d" % [symbol, elixir_global_cooldown]
+				button.tooltip_text += " | Общее КД: %d раунд(ов)" % elixir_global_cooldown
 
 func _show_fighter_details(is_player: bool) -> void:
 	var primary: Dictionary = {}
