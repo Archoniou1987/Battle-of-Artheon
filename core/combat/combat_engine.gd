@@ -136,7 +136,7 @@ func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
 	var source:=state.get_combatant(event.source_id)
 	if source==null:
 		return false
-	var chance:=float(source.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
+	var chance:=CombatModifierService.combat_chance(source, "magic_hit_rating", "magic_hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
 	return CombatMath.roll_success(clampf(chance,0.0,100.0),int(event.payload.get("magic_hit_roll",1)))
 
 func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
@@ -222,7 +222,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var distance_hit_modifier:=_distance_modifier(event,event.target_id) if uses_magic_hit else _physical_ranged_distance_hit_modifier(event)
 	var is_weapon_attack:=bool(event.payload.get("is_weapon_attack",event.payload.has("weapon_index") and String(event.payload.get("source_kind",""))!="ability"))
 	var weapon_skill_penalty:=0.0 if uses_magic_hit or not is_weapon_attack else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index",0)))
-	var hit_chance:=float(attacker.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - weapon_skill_penalty + distance_hit_modifier
+	var hit_chance:=CombatModifierService.combat_chance(attacker, "magic_hit_rating", "magic_hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - weapon_skill_penalty + distance_hit_modifier
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
 	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
@@ -231,7 +231,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
 	var active_defence_available := not uses_magic_hit and not _effect_flag(defender, "active_defence_locked") and _active_defence_available(defender.tempo + _active_effect_value(defender, "tempo_modifier"), int(rolls.get("reaction", 100)))
 	if active_defence_available:
-		var dodge := CombatMath.effective_dodge(float(defender.combat_stats.get("dodge", 0.0)), float(attacker.combat_stats.get("anti_dodge", 0.0)))
+		var dodge := CombatMath.effective_dodge(CombatModifierService.combat_chance(defender, "dodge_rating", "dodge", state.round_number), CombatModifierService.combat_chance(attacker, "anti_dodge_rating", "anti_dodge", state.round_number))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
 			event.set_result("outcome", "dodge"); _queue_counterattack(event, defender, attacker, rolls); _gain_basic_attack_ap(attacker, event); return
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
@@ -263,7 +263,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 		return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
-	var crit := CombatMath.effective_crit(float(attacker.combat_stats.get("crit", 0.0)) + active_crit_bonus, float(defender.combat_stats.get("anti_crit", 0.0)))
+	var crit := CombatMath.effective_crit(CombatModifierService.combat_chance(attacker, "crit_chance_rating", "crit", state.round_number) + active_crit_bonus, CombatModifierService.combat_chance(defender, "anti_crit_rating", "anti_crit", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
 	if is_crit: raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5))
@@ -399,7 +399,7 @@ func _effect_definition(effect_id: String) -> Dictionary:
 
 func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacker: CombatantState, rolls: Dictionary) -> void:
 	if bool(parent.payload.get("is_counterattack", false)): return
-	var chance := float(defender.combat_stats.get("counterattack", 0.0))
+	var chance := CombatModifierService.combat_chance(defender, "counterattack_rating", "counterattack", state.round_number)
 	if not CombatMath.roll_success(chance, int(rolls.get("counterattack", 100))): return
 	var weapon:=_counterattack_weapon_profile(defender)
 	if weapon.is_empty(): return
