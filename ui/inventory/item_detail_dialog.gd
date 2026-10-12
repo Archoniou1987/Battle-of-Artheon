@@ -156,7 +156,14 @@ func _equip() -> void:
 		status_label.text = "Нельзя менять экипировку во время боя."
 		return
 	var item := repository.get_item(item_id)
-	for slot in item.get("equip_slots", []):
+	var candidates: Array = item.get("equip_slots", []).duplicate()
+	if candidates.has("ring1") and not candidates.has("ring2"):
+		candidates.append("ring2")
+	elif candidates.has("ring2") and not candidates.has("ring1"):
+		candidates.append("ring1")
+	candidates.sort_custom(func(a: Variant, b: Variant) -> bool:
+		return character.equipment.get_equipped_instance_id(String(a)) == null and character.equipment.get_equipped_instance_id(String(b)) != null)
+	for slot in candidates:
 		if character.equip(String(slot), item_id, repository):
 			changed.emit()
 			visible = false
