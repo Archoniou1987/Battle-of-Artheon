@@ -6,7 +6,17 @@ static func run()->bool:
 	var hero:=CombatantState.new("hero","Hero",10,100)
 	var enemy:=CombatantState.new("enemy","Enemy",9,80)
 	hero.hp=-5
+	hero.tempo=10.0
+	hero.combat_stats["tempo"]=5.0
+	hero.combat_stats["damage_reduction"]=0.25
+	hero.active_effects.append({
+		"effect_id":"EFF_API",
+		"definition":{"tempo":15.0,"damage_reduction":0.25},
+		"start_round":1,
+		"remaining_rounds":1
+	})
 	state.add_combatant(hero); state.add_combatant(enemy)
+	state.begin_round()
 	var group:=GroupCombatState.new(state)
 	group.add_member("A","hero"); group.add_member("B","enemy")
 	group.set_active_opponent("hero","enemy")
@@ -18,6 +28,10 @@ static func run()->bool:
 	var api:=CombatApi.new(state,group,zones)
 	var hero_view:=api.combatant("hero")
 	if int(hero_view.get("hp",-1))!=0 or int(hero_view.get("hp_internal",0))!=-5: return false
+	if not is_equal_approx(float(hero_view.get("tempo",0.0)),30.0): return false
+	var combat_stats:Dictionary=hero_view.get("combat_stats",{})
+	if not is_equal_approx(float(combat_stats.get("effective_tempo",0.0)),30.0): return false
+	if not is_equal_approx(float(combat_stats.get("damage_reduction",0.0)),0.5): return false
 	if String(hero_view.get("active_opponent_id",""))!="enemy": return false
 	if int(hero_view.get("zone_id",-1))!=CombatZoneState.ZONE_1: return false
 	var targets:=api.target_options("hero")
