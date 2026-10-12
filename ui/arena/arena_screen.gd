@@ -8,6 +8,8 @@ const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs",
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
 const ZONES := ["head", "chest", "arms", "waist", "legs"]
 const ZONE_NAMES := ["Голова", "Корпус", "Руки", "Пояс", "Ноги"]
+const ZONE_ICONS := ["◎", "▣", "✋", "◇", "♧"]
+const SLOT_SYMBOLS := {"head":"♙", "shoulders":"♜", "neck":"◉", "back":"▤", "chest":"▣", "wrists":"▥", "hands":"✋", "waist":"▰", "legs":"♧", "feet":"♧", "main_hand":"⚔", "off_hand":"⬟", "ring1":"◯", "ring2":"◯"}
 const AVATAR_PATH := "res://assets/avatars/hero_realistic_01.png"
 
 var character: CharacterState
@@ -18,11 +20,20 @@ var square_content: Control
 var log_view: RichTextLabel
 var round_button: Button
 var defense_zone := "chest"
-var attack_zone := "chest"
+var defense_capacity := 1
+var defense_start := 1
+var attack_zones: Array[String] = []
+var attack_count := 2
+var defense_buttons: Array[Button] = []
+var attack_buttons: Array[Button] = []
+var hp_bars: Dictionary = {}
+var hp_overlays: Dictionary = {}
+var effects_rows: Dictionary = {}
 var selected_ability := ""
 var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
 var hp_label: Label
+var tabs: TabContainer
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -58,15 +69,19 @@ func _ready() -> void:
 	back.text = "← Назад"
 	back.pressed.connect(func() -> void: back_requested.emit())
 	header.add_child(back)
-	var heading := Label.new()
-	heading.text = "ЖУРНАЛ БОЯ"
-	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(heading)
-	log_view = RichTextLabel.new()
-	log_view.bbcode_enabled = true
-	log_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	log_view.text = "Арена готова. Выберите защиту, атаку и способность.\nПодключение боевого раунда — следующий этап."
-	log_column.add_child(log_view)
+	tabs = TabContainer.new()
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	log_column.add_child(tabs)
+	for title in ["Журнал", "Баффы", "Дебаффы"]:
+		var page := RichTextLabel.new()
+		page.name = title
+		page.bbcode_enabled = true
+		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		page.text = "Арена готова. Боевые события появятся после подключения CombatEngine." if title == "Журнал" else "Нет доступных данных об эффектах."
+		tabs.add_child(page)
+		if title == "Журнал":
+			log_view = page
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
@@ -115,8 +130,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	name_label.position = Vector2(65, 3)
 	inner.add_child(name_label)
 	var portrait := TextureRect.new()
-	portrait.position = Vector2(36, 27)
-	portrait.custom_minimum_size = Vector2(160, 174)
+	portrait.position = Vector2(36, 40)
+	portrait.custom_minimum_size = Vector2(160, 156)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if is_player and ResourceLoader.exists(AVATAR_PATH):
@@ -125,7 +140,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if not is_player:
 		var hidden := Label.new()
 		hidden.text = "?"
-		hidden.position = Vector2(106, 90)
+		hidden.position = Vector2(106, 100)
 		hidden.add_theme_font_size_override("font_size", 34)
 		inner.add_child(hidden)
 	for side in range(2):
@@ -134,7 +149,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			var slot: String = slots[index]
 			var icon := ItemIcon.new()
 			icon.name = slot
-			icon.position = Vector2(2 if side == 0 else 199, 27 + index * 25)
+			icon.position = Vector2(2 if side == 0 else 199, 42 + index * 22)
 			icon.custom_minimum_size = Vector2(30, 30)
 			icon.scale = Vector2.ONE * 0.52
 			inner.add_child(icon)
@@ -142,53 +157,143 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 				player_slots[slot] = icon
 			else:
 				enemy_slots[slot] = icon
-			icon.set_item({}, InventoryScreen.SLOT_NAMES.get(slot, slot))
+			icon.set_item({}, String(SLOT_SYMBOLS.get(slot, "◇")))
 			icon.disabled = true
+	var health_bar := ProgressBar.new()
+	health_bar.position = Vector2(38, 23)
+	health_bar.custom_minimum_size = Vector2(156, 15)
+	health_bar.show_percentage = false
+	health_bar.max_value = 100
+	health_bar.value = 100 if is_player else 0
+	var bar_bg := StyleBoxFlat.new()
+	bar_bg.bg_color = Color("#35383e")
+	bar_bg.border_color = Color("#b39a69")
+	bar_bg.set_border_width_all(1)
+	health_bar.add_theme_stylebox_override("background", bar_bg)
+	inner.add_child(health_bar)
 	var health := Label.new()
-	health.position = Vector2(55, 206)
+	health.position = Vector2(38, 22)
+	health.custom_minimum_size = Vector2(156, 17)
+	health.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	health.add_theme_font_size_override("font_size", 12)
+	health.add_theme_color_override("font_color", Color.WHITE)
 	health.text = "HP —" if is_player else "HP ? / ?"
 	inner.add_child(health)
+	hp_bars["player" if is_player else "enemy"] = health_bar
+	hp_overlays["player" if is_player else "enemy"] = health
 	if is_player:
 		hp_label = health
 	var subtitle := Label.new()
 	subtitle.text = "ЗАЩИТА — зона блока" if is_player else "АТАКА — зона удара"
-	subtitle.position = Vector2(35, 236)
+	subtitle.position = Vector2(35, 204)
 	inner.add_child(subtitle)
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(3, 264)
+	zone_row.position = Vector2(3, 228)
 	zone_row.add_theme_constant_override("separation", 1)
 	inner.add_child(zone_row)
-	var group := ButtonGroup.new()
 	for index in range(ZONES.size()):
 		var zone: String = ZONES[index]
 		var button := Button.new()
-		button.text = ZONE_NAMES[index].substr(0, 3)
+		button.text = ZONE_ICONS[index] + "\n" + ZONE_NAMES[index].substr(0, 2)
 		button.tooltip_text = ZONE_NAMES[index]
 		button.custom_minimum_size = Vector2(44, 38)
 		button.toggle_mode = true
-		button.button_group = group
-		button.button_pressed = zone == "chest"
+		button.button_pressed = is_player and zone == "chest"
 		button.pressed.connect(_select_zone.bind(is_player, zone))
 		zone_row.add_child(button)
+		if is_player:
+			defense_buttons.append(button)
+		else:
+			attack_buttons.append(button)
+	for row_type in ["Баффы", "Дебаффы"]:
+		var row := HBoxContainer.new()
+		row.position = Vector2(5, 272 if row_type == "Баффы" else 298)
+		row.add_theme_constant_override("separation", 2)
+		inner.add_child(row)
+		var label := Label.new()
+		label.text = "↑" if row_type == "Баффы" else "↓"
+		label.custom_minimum_size.x = 17
+		row.add_child(label)
+		for i in range(9):
+			var icon := PanelContainer.new()
+			icon.custom_minimum_size = Vector2(20, 20)
+			icon.tooltip_text = "Нет эффекта"
+			row.add_child(icon)
+		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
+	_update_zone_buttons()
 
 func _select_zone(is_player: bool, zone: String) -> void:
+	var index := ZONES.find(zone)
 	if is_player:
-		defense_zone = zone
+		defense_start = mini(index, ZONES.size() - defense_capacity)
+		defense_zone = ZONES[defense_start]
 	else:
-		attack_zone = zone
+		if attack_zones.has(zone):
+			attack_zones.erase(zone)
+		elif attack_zones.size() < attack_count:
+			attack_zones.append(zone)
+		else:
+			# Replacing the second target is quicker than clearing both selections.
+			attack_zones[attack_zones.size() - 1] = zone
+	_update_zone_buttons()
+
+func set_defense_capacity(capacity: int) -> void:
+	defense_capacity = clampi(capacity, 1, 3)
+	defense_start = mini(defense_start, ZONES.size() - defense_capacity)
+	_update_zone_buttons()
+
+func set_attack_count(count: int) -> void:
+	attack_count = maxi(1, count)
+	while attack_zones.size() > attack_count:
+		attack_zones.pop_back()
+	_update_zone_buttons()
+
+func selected_attack_targets() -> Array[String]:
+	var result: Array[String] = []
+	if attack_zones.is_empty():
+		return result
+	if attack_zones.size() == 1:
+		for i in range(attack_count):
+			result.append(attack_zones[0])
+	else:
+		for i in range(attack_count):
+			result.append(attack_zones[mini(i, attack_zones.size() - 1)])
+	return result
+
+func selected_block_zones() -> Array[String]:
+	var result: Array[String] = []
+	for i in range(defense_start, defense_start + defense_capacity):
+		result.append(ZONES[i])
+	return result
+
+func _update_zone_buttons() -> void:
+	for i in range(defense_buttons.size()):
+		defense_buttons[i].set_pressed_no_signal(i >= defense_start and i < defense_start + defense_capacity)
+	for i in range(attack_buttons.size()):
+		attack_buttons[i].set_pressed_no_signal(attack_zones.has(ZONES[i]))
+
+func _update_hp(bar: ProgressBar, overlay: Label, current: int, maximum: int) -> void:
+	bar.max_value = maxi(1, maximum)
+	bar.value = clampi(current, 0, maxi(1, maximum))
+	overlay.text = "HP %d / %d" % [current, maximum]
+	var fraction := float(current) / float(maxi(1, maximum))
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("#e34b4b") if fraction <= 0.20 else (Color("#e3bf42") if fraction <= 0.50 else Color("#35bd61"))
+	fill.set_corner_radius_all(2)
+	bar.add_theme_stylebox_override("fill", fill)
 
 func refresh() -> void:
 	for slot in player_slots:
 		var icon := player_slots[slot] as ItemIcon
 		var instance_id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
 		var item: Dictionary = repository.get_item(String(instance_id)) if instance_id != null and repository != null else {}
-		icon.set_item(item, InventoryScreen.SLOT_NAMES.get(slot, slot), instance_id != null)
+		icon.set_item(item, String(SLOT_SYMBOLS.get(slot, "◇")), instance_id != null)
 	for slot in enemy_slots:
 		var icon := enemy_slots[slot] as ItemIcon
 		icon.set_item({}, "?")
 	if character != null and repository != null and hp_label != null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
-		hp_label.text = "HP %d / %d" % [snapshot.hp, snapshot.max_hp]
+		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
 
 func _apply_layout() -> void:
 	if layout == null:
