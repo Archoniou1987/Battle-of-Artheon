@@ -180,6 +180,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if not is_player:
 		var hidden := Label.new()
 		hidden.text = "?"
+		hidden.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hidden.position = Vector2(106, 100)
 		hidden.add_theme_font_size_override("font_size", 34)
 		inner.add_child(hidden)
