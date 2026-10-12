@@ -114,7 +114,6 @@ func clear_manual_block(source_id:String)->Dictionary:
 	if combatant==null:
 		return {"ok":false,"reason":"invalid_combatant"}
 	combatant.combat_stats.erase("manual_block_zones")
-	combatant.combat_stats.erase("manual_block_zone")
 	return {"ok":true,"reason":"ok"}
 
 func available_actions(source_id:String,ability_definitions:Dictionary={})->Dictionary:

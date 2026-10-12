@@ -76,7 +76,7 @@ static func damage_reduction(combatant: CombatantState, round_number: int) -> fl
 	return clampf(value(combatant, "damage_reduction", round_number), 0.0, 1.0)
 
 static func manual_block_zone_capacity(combatant: CombatantState) -> int:
-	return clampi(int(combatant.combat_stats.get("manual_block_zone_count", combatant.combat_stats.get("manual_block_zone_capacity", 1))), 1, 3)
+	return clampi(int(combatant.combat_stats.get("manual_block_zone_capacity", 1)), 1, 3)
 
 static func manual_block_zones(combatant: CombatantState) -> Array:
 	return Array(combatant.combat_stats.get("manual_block_zones", [])).duplicate(true)

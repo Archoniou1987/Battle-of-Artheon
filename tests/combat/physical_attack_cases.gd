@@ -15,6 +15,7 @@ static func run(balance: Dictionary) -> bool:
 		and _case_magic_weapon_completes_weapon_pipeline(balance)
 		and _case_independent_on_hit_sources(balance)
 		and _case_connected_zero_damage(balance)
+		and _case_manual_block_requires_canonical_zones(balance)
 	)
 
 
@@ -54,7 +55,7 @@ static func _case_dodge(balance: Dictionary) -> bool:
 
 static func _case_block(balance: Dictionary) -> bool:
 	var state := _base_state()
-	state.get_combatant("enemy").combat_stats["manual_block_zone"] = "chest"
+	state.get_combatant("enemy").combat_stats["manual_block_zones"] = ["chest"]
 	var event := _attack(state, {"hit": 1, "block_crush": 100})
 	CombatEngine.new(state, balance).resolve_event(event)
 	return event.result.get("outcome") == "manual_block" and state.get_combatant("enemy").hp == 100
@@ -209,3 +210,12 @@ static func _case_connected_zero_damage(balance: Dictionary) -> bool:
 		and damage_event.result.get("connected") == true
 		and state.get_combatant("enemy").hp == 100
 	)
+
+
+static func _case_manual_block_requires_canonical_zones(balance: Dictionary) -> bool:
+	var state := _base_state()
+	var defender := state.get_combatant("enemy")
+	defender.combat_stats["manual_block_zone"] = "chest"
+	var event := _attack(state, {"hit": 1, "dodge": 100, "auto_block": 100, "block_crush": 100, "crit": 100}, 10.0)
+	CombatEngine.new(state, balance).resolve_event(event)
+	return event.result.get("outcome") == "connected" and defender.hp == 90

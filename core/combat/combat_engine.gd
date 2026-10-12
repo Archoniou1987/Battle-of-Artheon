@@ -163,7 +163,7 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 		var amount := float(component.get("amount", 0.0))
 		# ABI magic damage uses the attacker's canonical rating percentage plus
 		# active EFF overlays. Physical ABI and periodic EFF are unchanged.
-		if _is_magic_damage_type(damage_type):
+		if CombatDamagePayload.is_magic_damage_type(damage_type):
 			var caster := state.get_combatant(parent.source_id)
 			if caster != null:
 				var flat_bonus := CombatModifierService.effective_stat(caster, "magic_damage_flat", state.round_number)
@@ -172,32 +172,10 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 				amount = maxf(0.0, amount + flat_bonus) * maxf(0.0, 1.0 + bonus_percent / 100.0)
 		amount *= scale
 		if delivery_type in ["MELEE", "PROJECTILE"]:
-			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, {
-				"raw_damage": amount,
-				"damage_type": damage_type,
-				"zone": String(component.get("zone", parent.payload.get("zone", "chest"))),
-				"rolls": parent.payload.get("rolls", {}),
-				"source": "ability",
-				"source_kind": "ability",
-				"ability_id": String(parent.payload.get("ability_id", "")),
-				"delivery_type": delivery_type,
-				"min_zone_distance": int(parent.payload.get("min_zone_distance", 0)),
-				"max_zone_distance": int(parent.payload.get("max_zone_distance", 2)),
-				"two_zone_hit_modifier": float(parent.payload.get("two_zone_hit_modifier", -50.0)),
-				"uses_physical_block": damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
-				"bypass_physical_mitigation": not damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
-				"generates_ap": false,
-				"aoe_scale": scale
-			}, parent.event_id)
-		return state.create_event(CombatEvent.Kind.DAMAGE, parent.source_id, target_id, {
-			"amount": amount,
-			"raw_damage": amount,
-			"damage_type": damage_type,
-			"source": "ability",
-			"ability_id": String(parent.payload.get("ability_id", "")),
-			"delivery_type": delivery_type,
-			"aoe_scale": scale
-		}, parent.event_id)
+			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, CombatDamagePayload.ability_attack_payload(parent, component, amount, scale), parent.event_id)
+		var direct_payload := CombatDamagePayload.direct_damage_payload(parent, damage_type, amount, "ability")
+		direct_payload["aoe_scale"] = scale
+		return state.create_event(CombatEvent.Kind.DAMAGE, parent.source_id, target_id, direct_payload, parent.event_id)
 	if kind == "effect":
 		return state.create_event(CombatEvent.Kind.EFFECT, parent.source_id, target_id, {
 			"effect_id": String(component.get("effect_id", "")),
@@ -228,32 +206,41 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
 	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
 	var hit_roll:=int(event.payload.get("magic_hit_roll",rolls.get("magic_hit",1))) if uses_magic_hit else int(rolls.get("hit",100))
+	event.set_result("hit_chance",clampf(hit_chance,0.0,100.0))
+	event.set_result("hit_roll",hit_roll)
 	if not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
 	var active_defence_available := not uses_magic_hit and not _effect_flag(defender, "active_defence_locked") and _active_defence_available(CombatModifierService.effective_tempo(defender, state.round_number), int(rolls.get("reaction", 100)))
+	event.set_result("active_defence_available",active_defence_available)
 	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(CombatModifierService.combat_chance(defender, "dodge_rating", "dodge", state.round_number), CombatModifierService.combat_chance(attacker, "anti_dodge_rating", "anti_dodge", state.round_number))
+		event.set_result("dodge_chance",dodge)
+		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
 			event.set_result("outcome", "dodge"); _queue_counterattack(event, defender, attacker, rolls); _gain_basic_attack_ap(attacker, event); return
+		event.set_result("uses_physical_block",_event_uses_physical_block(event))
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
-			if not _block_crushed(attacker, rolls):
+			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
+			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
+			var manual_block_crushed:=_block_crushed(attacker, rolls)
+			event.set_result("manual_block_crushed",manual_block_crushed)
+			if not manual_block_crushed:
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
 				_gain_basic_attack_ap(attacker, event); return
 		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
+		event.set_result("auto_block_chance",auto_block)
+		event.set_result("auto_block_roll",int(rolls.get("auto_block", 100)))
 		if _event_uses_physical_block(event) and defender.can_auto_block() and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
-			if not _block_crushed(attacker, rolls):
+			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
+			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
+			var auto_block_crushed:=_block_crushed(attacker, rolls)
+			event.set_result("auto_block_crushed",auto_block_crushed)
+			if not auto_block_crushed:
 				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
 
-	if bool(event.payload.get("bypass_physical_mitigation", false)):
-		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
-			"amount": float(event.payload.get("raw_damage", 0.0)),
-			"raw_damage": float(event.payload.get("raw_damage", 0.0)),
-			"damage_type": String(event.payload.get("damage_type", "physical")),
-			"source": "ability",
-			"ability_id": String(event.payload.get("ability_id", "")),
-			"delivery_type": String(event.payload.get("delivery_type", "PROJECTILE"))
-		}, event.event_id)
+	if _event_bypasses_physical_mitigation(event):
+		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, CombatDamagePayload.direct_damage_payload(event, String(event.payload.get("damage_type", "physical")), float(event.payload.get("raw_damage", 0.0)), "ability"), event.event_id)
 		state.queue_event(ability_damage)
 		event.set_result("outcome", "connected")
 		event.set_result("damage_event_id", ability_damage.event_id)
@@ -269,12 +256,15 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
 	if is_crit: raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5))
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
-	var effective_armour := CombatMath.effective_armour(_armour_for(defender, zone, damage_type), CombatModifierService.armour_penetration_flat(attacker, state.round_number), CombatModifierService.armour_reduction_percent(attacker, state.round_number))
+	var base_armour:=_armour_for(defender, zone, damage_type)
+	var armour_penetration_flat:=CombatModifierService.armour_penetration_flat(attacker, state.round_number)
+	var armour_penetration_percent:=CombatModifierService.armour_reduction_percent(attacker, state.round_number)
+	var effective_armour := CombatMath.effective_armour(base_armour, armour_penetration_flat, armour_penetration_percent)
 	var reduction := BalanceCurve.sample(physical_balance.get("armour_reduction_curve", []), effective_armour)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
-	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("raw_damage", raw_damage); event.set_result("damage_event_id", damage_event.event_id)
+	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 	_gain_basic_attack_ap(attacker, event)
@@ -285,7 +275,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	var amount := float(event.payload.get("amount", 0.0))
 	var damage_type := String(event.payload.get("damage_type", ""))
 	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number)
-	if _is_magic_damage_type(damage_type):
+	if CombatDamagePayload.is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
 	var total_reduction := CombatModifierService.damage_reduction(target, state.round_number)
@@ -472,27 +462,26 @@ func _active_defence_available(tempo: float, roll: int) -> bool:
 	return CombatMath.roll_success(100.0 + tempo, roll)
 func _event_uses_physical_block(event: CombatEvent) -> bool:
 	if not event.payload.has("uses_physical_block"):
-		return true
+		return bool(CombatDamagePayload.defence_flags(String(event.payload.get("damage_type","physical"))).get("uses_physical_block",true))
 	return bool(event.payload.get("uses_physical_block", false))
+
+func _event_bypasses_physical_mitigation(event: CombatEvent) -> bool:
+	if not event.payload.has("bypass_physical_mitigation"):
+		return bool(CombatDamagePayload.defence_flags(String(event.payload.get("damage_type","physical"))).get("bypass_physical_mitigation",false))
+	return bool(event.payload.get("bypass_physical_mitigation", false))
 
 func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
 	if not defender.can_manual_block():
 		return false
 	var attack_zone:=String(event.payload.get("zone",""))
 	var chosen_zones:Array=CombatModifierService.manual_block_zones(defender)
-	if chosen_zones.is_empty():
-		var legacy_zone:=String(defender.combat_stats.get("manual_block_zone",""))
-		if not legacy_zone.is_empty():
-			chosen_zones=[legacy_zone]
 	return chosen_zones.has(attack_zone)
 func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
-	return CombatMath.roll_success(CombatModifierService.block_crush_chance(attacker, state.round_number), int(rolls.get("block_crush", 100)))
+	var chance:=CombatModifierService.block_crush_chance(attacker, state.round_number)
+	return CombatMath.roll_success(chance, int(rolls.get("block_crush", 100)))
 func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
 	var zone_armour: Dictionary = defender.armour.get(zone, {}); return float(zone_armour.get(damage_type, 0.0))
 
-
-func _is_magic_damage_type(damage_type:String) -> bool:
-	return ["fire","water","frost","air","earth","dark","light","lightning"].has(damage_type.to_lower())
 
 func _magic_resist(target:CombatantState, resist_type:String) -> float:
 	return CombatModifierService.magic_resist(target, resist_type, state.round_number)

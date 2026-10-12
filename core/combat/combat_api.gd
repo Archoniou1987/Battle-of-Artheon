@@ -66,17 +66,19 @@ func recent_events(after_event_id:int=0)->Array[Dictionary]:
 	for event in state.event_log:
 		if event.event_id<=after_event_id:
 			continue
-		result.append({
-			"id":event.event_id,
-			"round":int(event.payload.get("round",0)),
-			"kind":int(event.kind),
-			"source_id":event.source_id,
-			"target_id":event.target_id,
-			"parent_event_id":event.parent_event_id,
-			"outcome":String(event.result.get("outcome","")),
-			"result":event.result.duplicate(true)
-		})
+		result.append(CombatDiagnostics.event_trace(event))
 	return result
+
+func diagnostics(after_event_id:int=0)->Dictionary:
+	var combatants:Dictionary={}
+	for raw_id in state.combatants.keys():
+		var id:=String(raw_id)
+		combatants[id]=CombatDiagnostics.combatant_trace(state.get_combatant(id), state.round_number)
+	return {
+		"round":state.round_number,
+		"combatants":combatants,
+		"events":recent_events(after_event_id)
+	}
 
 func _teams()->Dictionary:
 	if group==null:

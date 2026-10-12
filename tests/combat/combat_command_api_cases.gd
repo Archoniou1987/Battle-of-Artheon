@@ -76,7 +76,7 @@ static func run()->bool:
 	if bool(Dictionary(ability_views.get("MELEE",{})).get("available",true)): return false
 	if bool(Dictionary(ability_views.get("EXPENSIVE",{})).get("resource_ready",true)): return false
 	if bool(Dictionary(ability_views.get("COOLDOWN",{})).get("cooldown_ready",true)): return false
-	hero.combat_stats["manual_block_zone_count"]=2
+	hero.combat_stats["manual_block_zone_capacity"]=2
 	if bool(api.set_manual_block("hero",["head","arms"]).get("ok",true)): return false
 	if not bool(api.set_manual_block("hero",["chest","arms"]).get("ok",false)): return false
 	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
@@ -259,7 +259,7 @@ static func run()->bool:
 	if state.pending_events.size()!=pending_before: return false
 	if not Array(rejected_sequence.get("queued_event_ids",[])).is_empty(): return false
 	# Shield sectors block only their explicit contiguous zones; open zones continue through defence.
-	enemy.combat_stats["manual_block_zone_count"]=2
+	enemy.combat_stats["manual_block_zone_capacity"]=2
 	enemy.combat_stats["manual_block_zones"]=["chest","arms"]
 	enemy.combat_stats["auto_block"]=0.0
 	var shield_sequence:=api.queue_weapon_attack_sequence("hero",[

@@ -59,7 +59,7 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 	var armour:=float(item.get("armour_all_zones_all_physical",0.0))
 	if armour>0.0:_add_universal_physical_armour(combatant,armour)
 static func set_manual_block_zones(combatant:CombatantState,zones:Array)->void:
-	var capacity:=clampi(int(combatant.combat_stats.get("manual_block_zone_count",combatant.combat_stats.get("manual_block_zone_capacity",1))),1,3)
+	var capacity:=clampi(int(combatant.combat_stats.get("manual_block_zone_capacity",1)),1,3)
 	var selected:Array[String]=[]
 	for zone in zones:
 		var normalized:=String(zone).to_lower()

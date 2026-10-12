@@ -45,4 +45,11 @@ static func run()->bool:
 	var event:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"raw_damage":1.0})
 	event.set_result("outcome","miss"); state.record_event(event)
 	var events:=api.recent_events()
-	return events.size()==1 and String(events[0].get("outcome",""))=="miss"
+	if events.size()!=1 or String(events[0].get("outcome",""))!="miss": return false
+	var diagnostic:=api.diagnostics()
+	var diagnostic_events:Array=diagnostic.get("events",[])
+	var diagnostic_combatants:Dictionary=diagnostic.get("combatants",{})
+	if diagnostic_events.size()!=1: return false
+	if not Dictionary(diagnostic_events[0]).has("payload") or not Dictionary(diagnostic_events[0]).has("result"): return false
+	var hero_trace:Dictionary=diagnostic_combatants.get("hero",{})
+	return int(hero_trace.get("hp_internal",0))==-5 and Array(Dictionary(hero_trace.get("combat_stats",{})).get("manual_block_zones",[]))==["head","chest"]

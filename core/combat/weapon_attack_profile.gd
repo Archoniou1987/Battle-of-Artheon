@@ -5,8 +5,6 @@ extends RefCounted
 ## Spatial target validation belongs to CombatCommandApi; consumers without a
 ## spatial context (for example duel smoke simulation) can still use the same
 ## weapon semantics.
-const PHYSICAL_DAMAGE_TYPES := ["physical","slashing","piercing","chopping","blunt"]
-
 static func all(combatant:CombatantState)->Array[Dictionary]:
 	var result:Array[Dictionary]=[]
 	var weapons:Array=combatant.combat_stats.get("weapon_profiles",[])
@@ -70,7 +68,7 @@ static func attack_payload(profile:Dictionary,rolls:Dictionary,zone:String="ches
 		"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
 		"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
 		"uses_physical_block":not uses_magic_hit,
-		"bypass_physical_mitigation":not PHYSICAL_DAMAGE_TYPES.has(damage_type.to_lower())
+		"bypass_physical_mitigation":not CombatDamagePayload.is_physical_damage_type(damage_type)
 	}
 	for key in overrides:
 		if key=="damage_multiplier":

@@ -74,7 +74,7 @@ static func _case_damage_reduction_uses_runtime_overlay() -> bool:
 
 static func _case_manual_block_accessors_normalize_capacity() -> bool:
 	var combatant := _combatant()
-	combatant.combat_stats["manual_block_zone_count"] = 4
+	combatant.combat_stats["manual_block_zone_capacity"] = 4
 	combatant.combat_stats["manual_block_zones"] = ["head", "chest"]
 	return CombatModifierService.manual_block_zone_capacity(combatant) == 3 and CombatModifierService.manual_block_zones(combatant) == ["head", "chest"]
 

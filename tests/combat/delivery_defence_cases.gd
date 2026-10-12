@@ -43,33 +43,39 @@ static func _case_projectile_can_dodge(balance:Dictionary) -> bool:
 
 static func _case_projectile_magic_ignores_physical_block(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").combat_stats["manual_block_zone"] = "chest"
+	state.get_combatant("target").combat_stats["manual_block_zones"] = ["chest"]
 	state.get_combatant("target").combat_stats["auto_block"] = 100.0
 	var event := _action(state, "PROJECTILE", "fire", {"hit":1,"dodge":100,"auto_block":1,"crit":100})
 	_resolve(state, balance, event)
-	return state.get_combatant("target").hp == 90 and _child_outcome(state, event.event_id) == "connected"
+	var child:=_child_attack(state,event.event_id)
+	return state.get_combatant("target").hp == 90 and child!=null and child.result.get("outcome") == "connected" and not bool(child.payload.get("uses_physical_block",true)) and bool(child.payload.get("bypass_physical_mitigation",false))
 
 static func _case_melee_physical_can_block(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").combat_stats["manual_block_zone"] = "chest"
+	state.get_combatant("target").combat_stats["manual_block_zones"] = ["chest"]
 	var event := _action(state, "MELEE", "physical", {"hit":1,"dodge":100,"block_crush":100})
 	_resolve(state, balance, event)
-	return state.get_combatant("target").hp == 100 and _child_outcome(state, event.event_id) == "manual_block"
+	var child:=_child_attack(state,event.event_id)
+	return state.get_combatant("target").hp == 100 and child!=null and child.result.get("outcome") == "manual_block" and bool(child.payload.get("uses_physical_block",false)) and not bool(child.payload.get("bypass_physical_mitigation",true))
 
 static func _case_direct_bypasses_active_defence(balance:Dictionary) -> bool:
 	var state := _state()
 	state.get_combatant("target").combat_stats["dodge"] = 100.0
-	state.get_combatant("target").combat_stats["manual_block_zone"] = "chest"
+	state.get_combatant("target").combat_stats["manual_block_zones"] = ["chest"]
 	state.get_combatant("target").combat_stats["auto_block"] = 100.0
 	var event := _action(state, "DIRECT", "lightning", {"hit":100,"dodge":1,"auto_block":1})
 	_resolve(state, balance, event)
 	return state.get_combatant("target").hp == 90 and _has_direct_damage_child(state, event.event_id)
 
 static func _child_outcome(state:CombatState, parent_id:int) -> String:
+	var child:=_child_attack(state,parent_id)
+	return String(child.result.get("outcome", "")) if child!=null else ""
+
+static func _child_attack(state:CombatState, parent_id:int) -> CombatEvent:
 	for logged in state.event_log:
 		if logged.parent_event_id == parent_id and logged.kind == CombatEvent.Kind.ATTACK:
-			return String(logged.result.get("outcome", ""))
-	return ""
+			return logged
+	return null
 
 static func _has_direct_damage_child(state:CombatState, parent_id:int) -> bool:
 	for logged in state.event_log:
@@ -81,7 +87,7 @@ static func _has_direct_damage_child(state:CombatState, parent_id:int) -> bool:
 static func _case_manual_block_uses_explicit_shield_sector(balance:Dictionary)->bool:
 	var state:=_state()
 	var target:=state.get_combatant("target")
-	target.combat_stats["manual_block_zone_count"]=2
+	target.combat_stats["manual_block_zone_capacity"]=2
 	target.combat_stats["manual_block_zones"]=["head","chest"]
 	var blocked:=_action(state,"MELEE","physical",{"hit":1,"dodge":100,"block_crush":100})
 	blocked.payload["components"][0]["zone"]="head"
@@ -113,7 +119,7 @@ static func _case_ability_attack_ignores_weapon_semantics(balance:Dictionary)->b
 static func _case_bow_loadout_has_no_block(balance:Dictionary)->bool:
 	var state:=_state()
 	var target:=state.get_combatant("target")
-	target.combat_stats["manual_block_zone"]="chest"
+	target.combat_stats["manual_block_zones"]=["chest"]
 	target.combat_stats["auto_block"]=100.0
 	target.combat_stats["can_manual_block"]=false
 	target.combat_stats["can_auto_block"]=false
