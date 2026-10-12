@@ -222,7 +222,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var distance_hit_modifier:=_distance_modifier(event,event.target_id) if uses_magic_hit else _physical_ranged_distance_hit_modifier(event)
 	var is_weapon_attack:=bool(event.payload.get("is_weapon_attack",event.payload.has("weapon_index") and String(event.payload.get("source_kind",""))!="ability"))
 	var weapon_skill_penalty:=0.0 if uses_magic_hit or not is_weapon_attack else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index",0)))
-	var hit_chance:=CombatModifierService.combat_chance(attacker, "magic_hit_rating", "magic_hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - weapon_skill_penalty + distance_hit_modifier
+	var physical_hit:=_hit_chance(attacker.level - defender.level) + CombatModifierService.combat_chance(attacker, "hit_chance_rating", "hit_modifier", state.round_number, 0.0)
+	var hit_chance:=CombatModifierService.combat_chance(attacker, "magic_hit_rating", "magic_hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else physical_hit - weapon_skill_penalty + distance_hit_modifier
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
 	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
@@ -239,7 +240,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
 				_gain_basic_attack_ap(attacker, event); return
-		var auto_block := float(defender.combat_stats.get("auto_block", 0.0))
+		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
 		if _event_uses_physical_block(event) and defender.can_auto_block() and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
 			if not _block_crushed(attacker, rolls):
 				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
@@ -268,7 +269,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
 	if is_crit: raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5))
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
-	var effective_armour := CombatMath.effective_armour(_armour_for(defender, zone, damage_type), float(attacker.combat_stats.get("flat_armour_pen", 0.0)), float(attacker.combat_stats.get("percent_armour_reduction", 0.0)))
+	var effective_armour := CombatMath.effective_armour(_armour_for(defender, zone, damage_type), CombatModifierService.armour_penetration_flat(attacker, state.round_number), CombatModifierService.armour_reduction_percent(attacker, state.round_number))
 	var reduction := BalanceCurve.sample(physical_balance.get("armour_reduction_curve", []), effective_armour)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
@@ -283,7 +284,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	if target == null: event.set_result("error", "target_not_found"); return
 	var amount := float(event.payload.get("amount", 0.0))
 	var damage_type := String(event.payload.get("damage_type", ""))
-	var magic_resist := _magic_resist(target, damage_type)
+	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number)
 	if _is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
@@ -326,7 +327,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 		return
 	var base_chance := clampf(float(event.payload.get("base_chance", 100.0)), 0.0, 100.0)
 	var resist_type := String(event.payload.get("resist_type", ""))
-	var resist := _magic_resist(target, resist_type)
+	var resist := CombatModifierService.magic_resist(target, resist_type, state.round_number)
 	var effective_chance := base_chance * (1.0 - resist)
 	event.set_result("base_chance", base_chance)
 	event.set_result("resist", resist)
@@ -505,7 +506,7 @@ func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool
 			chosen_zones=[legacy_zone]
 	return chosen_zones.has(attack_zone)
 func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
-	return CombatMath.roll_success(float(attacker.combat_stats.get("block_crush", 0.0)), int(rolls.get("block_crush", 100)))
+	return CombatMath.roll_success(CombatModifierService.block_crush_chance(attacker, state.round_number), int(rolls.get("block_crush", 100)))
 func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
 	var zone_armour: Dictionary = defender.armour.get(zone, {}); return float(zone_armour.get(damage_type, 0.0))
 
@@ -514,12 +515,7 @@ func _is_magic_damage_type(damage_type:String) -> bool:
 	return ["fire","water","frost","air","earth","dark","light","lightning"].has(damage_type.to_lower())
 
 func _magic_resist(target:CombatantState, resist_type:String) -> float:
-	if resist_type.is_empty():
-		return 0.0
-	var raw := float(target.magic_resists.get(resist_type.to_lower(), 0.0))
-	if raw > 1.0:
-		raw /= 100.0
-	return clampf(raw, 0.0, 1.0)
+	return CombatModifierService.magic_resist(target, resist_type, state.round_number)
 
 
 func _physical_ranged_distance_hit_modifier(event:CombatEvent)->float:
