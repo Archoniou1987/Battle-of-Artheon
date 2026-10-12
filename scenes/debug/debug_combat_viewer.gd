@@ -79,7 +79,7 @@ func _refresh()->void:
 			cards.append("%s%s\nHP %d/%d" % [unit.name,marker,unit.hp,unit.max_hp])
 		zone_labels[i].text="ZONE %d\n\n%s" % [i+1,"\n\n".join(cards) if not cards.is_empty() else "—"]
 	var hero:=api.combatant(hero_id); var enemy:=api.combatant("enemy")
-	var block_zones:Array=state.get_combatant(hero_id).combat_stats.get("manual_block_zones",[])
+	var block_zones:Array=hero.get("manual_block_zones",[])
 	hero_label.text="HERO  HP %d/%d   Mana %d/%d   Tempo %.1f   Zone %d   Block: %s" % [hero.hp,hero.max_hp,hero.mana,hero.max_mana,float(hero.get("tempo",0.0)),hero.zone_id,", ".join(block_zones) if not block_zones.is_empty() else "—"]
 	enemy_label.text="ACTIVE TARGET  %s  HP %d/%d   Tempo %.1f   Zone %d" % [enemy.name,enemy.hp,enemy.max_hp,float(enemy.get("tempo",0.0)),enemy.zone_id]
 	_rebuild_targets()
