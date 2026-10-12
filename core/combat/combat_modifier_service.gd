@@ -57,6 +57,38 @@ static func combat_chance(combatant: CombatantState, rating_key: String, legacy_
 		return effective_percent(combatant, rating_key, round_number)
 	return float(stats.get(legacy_key, legacy_default)) + float(stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
 
+static func block_chance(combatant: CombatantState, round_number: int) -> float:
+	return combat_chance(combatant, "shield_auto_block_rating", "auto_block", round_number)
+
+static func block_crush_chance(combatant: CombatantState, round_number: int) -> float:
+	return combat_chance(combatant, "block_crush_rating", "block_crush", round_number)
+
+static func armour_penetration_flat(combatant: CombatantState, round_number: int) -> float:
+	return value(combatant, "armour_penetration_flat", round_number, float(combatant.combat_stats.get("flat_armour_pen", 0.0)))
+
+static func armour_reduction_percent(combatant: CombatantState, round_number: int) -> float:
+	var value_percent := value(combatant, "armour_penetration_percent", round_number, float(combatant.combat_stats.get("percent_armour_reduction", 0.0)))
+	if value_percent > 1.0:
+		value_percent /= 100.0
+	return clampf(value_percent, 0.0, 1.0)
+
+static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int) -> float:
+	var key := resist_type.to_lower()
+	if key.is_empty():
+		return 0.0
+	var canonical_key := key + "_resistance"
+	var legacy_pct_key := key + "_resistance_pct"
+	var raw := 0.0
+	if combatant.combat_stats.has(canonical_key):
+		raw = value(combatant, canonical_key, round_number)
+	elif combatant.combat_stats.has(legacy_pct_key):
+		raw = value(combatant, legacy_pct_key, round_number)
+	else:
+		raw = float(combatant.magic_resists.get(key, 0.0))
+	if raw > 1.0:
+		raw /= 100.0
+	return clampf(raw, 0.0, 1.0)
+
 ## The shared combat/UI read contract. A caller can request any derived stat
 ## without reimplementing the overlay. Raw ratings remain available separately.
 static func value(combatant: CombatantState, key: String, round_number: int, default_value: float = 0.0) -> float:
@@ -75,9 +107,11 @@ static func effective_tempo(combatant: CombatantState, round_number: int) -> flo
 static func combat_readout(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result := snapshot(combatant, round_number)
 	result["effective_tempo"] = effective_tempo(combatant, round_number)
-	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating"]:
+	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
+	result["armour_penetration_flat"] = armour_penetration_flat(combatant, round_number)
+	result["armour_penetration_percent"] = armour_reduction_percent(combatant, round_number) * 100.0
 	return result
 
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
