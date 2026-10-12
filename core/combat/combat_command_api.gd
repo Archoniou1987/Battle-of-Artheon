@@ -301,7 +301,7 @@ func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary=
 			if selected.is_empty():
 				continue
 		var requirement:=String(selected.get("requires_off_hand_type",""))
-		if not requirement.is_empty() and not Array(combatant.combat_stats.get("equipped_item_types",[])).has(requirement):
+		if not requirement.is_empty() and not CombatModifierService.equipped_item_types(combatant).has(requirement):
 			continue
 		if not action_policy.valid_targets(source_id,selected).has(target_id):
 			continue
