@@ -29,8 +29,6 @@ var attack_buttons: Array[Button] = []
 var hp_bars: Dictionary = {}
 var hp_overlays: Dictionary = {}
 var effects_rows: Dictionary = {}
-var effects_icons: Dictionary = {}
-var effects_overflow: Dictionary = {}
 var selected_ability := ""
 var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
@@ -73,7 +71,7 @@ func _ready() -> void:
 	square_host.clip_contents = true
 	layout.add_child(square_host)
 	square_content = Control.new()
-	square_content.custom_minimum_size = Vector2(480, 590)
+	square_content.custom_minimum_size = Vector2(480, 480)
 	square_host.add_child(square_content)
 	_build_square()
 	var log_panel := PanelContainer.new()
@@ -147,10 +145,10 @@ func _build_square() -> void:
 	_build_fighter(Vector2(244, 34), false)
 	var ability_title := Label.new()
 	ability_title.text = "СПОСОБНОСТИ"
-	ability_title.position = Vector2(106, 477)
+	ability_title.position = Vector2(106, 366)
 	square_content.add_child(ability_title)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(10, 500)
+	abilities.position = Vector2(10, 389)
 	abilities.add_theme_constant_override("separation", 5)
 	square_content.add_child(abilities)
 	for index in range(8):
@@ -163,7 +161,7 @@ func _build_square() -> void:
 		abilities.add_child(button)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(30, 545)
+	round_button.position = Vector2(30, 433)
 	round_button.custom_minimum_size = Vector2(420, 39)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
@@ -172,10 +170,10 @@ func _build_square() -> void:
 func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var panel := PanelContainer.new()
 	panel.position = origin
-	panel.custom_minimum_size = Vector2(232, 432)
+	panel.custom_minimum_size = Vector2(232, 328)
 	square_content.add_child(panel)
 	var inner := Control.new()
-	inner.custom_minimum_size = Vector2(232, 432)
+	inner.custom_minimum_size = Vector2(232, 328)
 	panel.add_child(inner)
 	var name_label := Label.new()
 	name_label.text = "ИГРОК" if is_player else "ПРОТИВНИК"
@@ -183,7 +181,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	inner.add_child(name_label)
 	var portrait := TextureRect.new()
 	portrait.position = Vector2(48, 48)
-	portrait.custom_minimum_size = Vector2(136, 232)
+	portrait.custom_minimum_size = Vector2(136, 140)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if is_player and ResourceLoader.exists(AVATAR_PATH):
@@ -192,7 +190,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var inspect := Button.new()
 	inspect.flat = true
 	inspect.position = Vector2(40, 44)
-	inspect.custom_minimum_size = Vector2(152, 235)
+	inspect.custom_minimum_size = Vector2(152, 145)
 	inspect.tooltip_text = "Посмотреть характеристики"
 	inspect.pressed.connect(_show_fighter_details.bind(is_player))
 	inner.add_child(inspect)
@@ -200,7 +198,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		var hidden := Label.new()
 		hidden.text = "?"
 		hidden.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hidden.position = Vector2(106, 145)
+		hidden.position = Vector2(106, 100)
 		hidden.add_theme_font_size_override("font_size", 34)
 		inner.add_child(hidden)
 	for side in range(2):
@@ -244,7 +242,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if is_player:
 		hp_label = health
 	var elixir_row := HBoxContainer.new()
-	elixir_row.position = Vector2(30, 330)
+	elixir_row.position = Vector2(30, 208)
 	elixir_row.add_theme_constant_override("separation", 5)
 	inner.add_child(elixir_row)
 	for elixir_index in range(4):
@@ -259,7 +257,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(3, 371)
+	zone_row.position = Vector2(3, 251)
 	zone_row.add_theme_constant_override("separation", 1)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
@@ -277,49 +275,22 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			defense_buttons.append(button)
 		else:
 			attack_buttons.append(button)
-	# Portrait x=48..184; two effect rows are fully contained within it.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(50, 238 if row_type == "Баффы" else 260)
+		row.position = Vector2(5, 291 if row_type == "Баффы" else 314)
 		row.add_theme_constant_override("separation", 2)
 		inner.add_child(row)
-		var key: String = ("player_" if is_player else "enemy_") + String(row_type)
-		var icons: Array[PanelContainer] = []
-		for i in range(5):
+		var label := Label.new()
+		label.text = "↑" if row_type == "Баффы" else "↓"
+		label.custom_minimum_size.x = 17
+		row.add_child(label)
+		for i in range(9):
 			var icon := PanelContainer.new()
-			icon.custom_minimum_size = Vector2(19, 19)
+			icon.custom_minimum_size = Vector2(20, 20)
 			icon.tooltip_text = "Нет эффекта"
-			icon.visible = false
 			row.add_child(icon)
-			icons.append(icon)
-		var overflow := Label.new()
-		overflow.custom_minimum_size = Vector2(25, 19)
-		overflow.add_theme_font_size_override("font_size", 11)
-		overflow.visible = false
-		row.add_child(overflow)
-		effects_rows[key] = row
-		effects_icons[key] = icons
-		effects_overflow[key] = overflow
+		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
 	_update_zone_buttons()
-
-## UI-only effect display. The combat system supplies already-disclosed effects.
-## Five visible icons + a compact overflow counter fit within the portrait.
-func set_effects_display(is_player: bool, is_buff: bool, effects: Array[Dictionary]) -> void:
-	var key := ("player_" if is_player else "enemy_") + ("Баффы" if is_buff else "Дебаффы")
-	if not effects_icons.has(key):
-		return
-	var icons: Array = effects_icons[key]
-	var visible_count := mini(effects.size(), icons.size())
-	for index in range(icons.size()):
-		var icon: PanelContainer = icons[index]
-		icon.visible = index < visible_count
-		if icon.visible:
-			icon.tooltip_text = String(effects[index].get("name", "Эффект"))
-	var overflow: Label = effects_overflow[key]
-	var remaining := effects.size() - visible_count
-	overflow.visible = remaining > 0
-	overflow.text = "+%d" % remaining if remaining > 0 else ""
-	overflow.tooltip_text = "%d дополнительных эффектов" % remaining
 
 ## UI-only disclosure contract. Callers must provide ratings computed from visible
 ## primary stats and disclosed equipment; never pass combatant totals here.
@@ -506,7 +477,7 @@ func _apply_layout() -> void:
 	var portrait := size.y > size.x
 	layout.vertical = portrait
 	var edge := maxf(1.0, minf(size.x, size.y))
-	square_host.custom_minimum_size = Vector2(edge, edge * 590.0 / 480.0)
+	square_host.custom_minimum_size = Vector2(edge, edge)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	square_content.scale = Vector2.ONE * (edge / 480.0)
