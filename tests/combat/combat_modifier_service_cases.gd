@@ -9,6 +9,7 @@ static func run() -> bool:
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
 		and _case_manual_block_accessors_normalize_capacity()
+		and _case_equipped_item_types_accessor_copies_values()
 	)
 
 static func _combatant() -> CombatantState:
@@ -74,3 +75,10 @@ static func _case_manual_block_accessors_normalize_capacity() -> bool:
 	combatant.combat_stats["manual_block_zone_count"] = 4
 	combatant.combat_stats["manual_block_zones"] = ["head", "chest"]
 	return CombatModifierService.manual_block_zone_capacity(combatant) == 3 and CombatModifierService.manual_block_zones(combatant) == ["head", "chest"]
+
+static func _case_equipped_item_types_accessor_copies_values() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["equipped_item_types"] = ["dagger", "shield"]
+	var equipped := CombatModifierService.equipped_item_types(combatant)
+	equipped.append("mutated")
+	return CombatModifierService.equipped_item_types(combatant) == ["dagger", "shield"]
