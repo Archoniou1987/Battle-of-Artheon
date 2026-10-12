@@ -42,11 +42,11 @@ static func flag(combatant: CombatantState, key: String, round_number: int) -> b
 static func effective_stat(combatant: CombatantState, key: String, round_number: int) -> float:
 	return float(combatant.combat_stats.get(key, 0.0)) + modifier(combatant, key, round_number)
 
-## Rating conversion is owned by the canonical character stats service.
-## Direct percentage-point overlays are never level-scaled.
+## Rating conversion is owned by CharacterStatsService. Canonical *_percent
+## already includes permanent *_direct_pct, so this layer adds runtime overlays only.
 static func effective_percent(combatant: CombatantState, key: String, round_number: int) -> float:
 	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
-	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + float(combatant.combat_stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
+	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + modifier(combatant, direct_key, round_number)
 
 ## Canonical rating percentages take priority; legacy direct chances remain valid
 ## for NPCs and older combat fixtures without a canonical character snapshot.
