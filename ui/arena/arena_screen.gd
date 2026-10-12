@@ -231,19 +231,14 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	hp_overlays["player" if is_player else "enemy"] = health
 	if is_player:
 		hp_label = health
-	var subtitle := Label.new()
-	subtitle.text = "ЭЛИКСИРЫ"
-	subtitle.position = Vector2(74, 193)
-	subtitle.add_theme_font_size_override("font_size", 11)
-	inner.add_child(subtitle)
 	var elixir_row := HBoxContainer.new()
-	elixir_row.position = Vector2(18, 211)
-	elixir_row.add_theme_constant_override("separation", 3)
+	elixir_row.position = Vector2(30, 208)
+	elixir_row.add_theme_constant_override("separation", 5)
 	inner.add_child(elixir_row)
 	for elixir_index in range(4):
 		var elixir_button := Button.new()
-		elixir_button.custom_minimum_size = Vector2(47, 38)
-		elixir_button.add_theme_font_size_override("font_size", 12)
+		elixir_button.custom_minimum_size = Vector2(39, 34)
+		elixir_button.add_theme_font_size_override("font_size", 10)
 		elixir_button.disabled = true # UI only; no consumption or round action yet.
 		elixir_row.add_child(elixir_button)
 		if is_player:
@@ -321,11 +316,11 @@ func _update_elixir_slots() -> void:
 			var button := buttons[index]
 			button.disabled = true
 			if index >= capacity:
-				button.text = "×"
-				button.tooltip_text = "Слот эликсира недоступен"
+				button.text = "🔒"
+				button.tooltip_text = "Слот эликсира недоступен — нужен пояс"
 				continue
 			if index >= entries.size() or entries[index].is_empty():
-				button.text = "◇"
+				button.text = "♧"
 				button.tooltip_text = "Пустой слот эликсира"
 				continue
 			var item: Dictionary = entries[index]
