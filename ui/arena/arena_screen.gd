@@ -136,8 +136,8 @@ func _ready() -> void:
 	refresh()
 
 func _build_square() -> void:
-	_build_fighter(Vector2(4, 34), true)
-	_build_fighter(Vector2(244, 34), false)
+	_build_fighter(Vector2(4, 8), true)
+	_build_fighter(Vector2(244, 8), false)
 	var ability_title := Label.new()
 	ability_title.text = "СПОСОБНОСТИ"
 	ability_title.position = Vector2(106, 366)
@@ -165,7 +165,7 @@ func _build_square() -> void:
 func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var panel := PanelContainer.new()
 	panel.position = origin
-	panel.custom_minimum_size = Vector2(232, 328)
+	panel.custom_minimum_size = Vector2(232, 352)
 	square_content.add_child(panel)
 	var inner := Control.new()
 	inner.custom_minimum_size = Vector2(232, 328)
@@ -237,12 +237,12 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if is_player:
 		hp_label = health
 	var elixir_row := HBoxContainer.new()
-	elixir_row.position = Vector2(30, 208)
-	elixir_row.add_theme_constant_override("separation", 5)
+	elixir_row.position = Vector2(48, 285)
+	elixir_row.add_theme_constant_override("separation", 4)
 	inner.add_child(elixir_row)
 	for elixir_index in range(4):
 		var elixir_button := Button.new()
-		elixir_button.custom_minimum_size = Vector2(39, 34)
+		elixir_button.custom_minimum_size = Vector2(31, 32)
 		elixir_button.add_theme_font_size_override("font_size", 10)
 		elixir_button.disabled = true # UI only; no consumption or round action yet.
 		elixir_row.add_child(elixir_button)
@@ -252,7 +252,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(3, 251)
+	zone_row.position = Vector2(3, 316)
 	zone_row.add_theme_constant_override("separation", 1)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
@@ -261,7 +261,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		button.text = ZONE_ICONS[index]
 		button.add_theme_font_size_override("font_size", 21)
 		button.tooltip_text = ZONE_NAMES[index]
-		button.custom_minimum_size = Vector2(44, 38)
+		button.custom_minimum_size = Vector2(44, 34)
 		button.toggle_mode = true
 		button.button_pressed = is_player and zone == "chest"
 		button.pressed.connect(_select_zone.bind(is_player, zone))
@@ -272,16 +272,16 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			attack_buttons.append(button)
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(5, 291 if row_type == "Баффы" else 314)
-		row.add_theme_constant_override("separation", 2)
+		row.position = Vector2(49, 146 if row_type == "Баффы" else 168)
+		row.add_theme_constant_override("separation", 1)
 		inner.add_child(row)
 		var label := Label.new()
 		label.text = "↑" if row_type == "Баффы" else "↓"
-		label.custom_minimum_size.x = 17
+		label.custom_minimum_size.x = 13
 		row.add_child(label)
-		for i in range(9):
+		for i in range(5):
 			var icon := PanelContainer.new()
-			icon.custom_minimum_size = Vector2(20, 20)
+			icon.custom_minimum_size = Vector2(19, 19)
 			icon.tooltip_text = "Нет эффекта"
 			row.add_child(icon)
 		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
