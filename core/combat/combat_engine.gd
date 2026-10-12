@@ -495,7 +495,7 @@ func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool
 	if not defender.can_manual_block():
 		return false
 	var attack_zone:=String(event.payload.get("zone",""))
-	var chosen_zones:Array=defender.combat_stats.get("manual_block_zones",[])
+	var chosen_zones:Array=CombatModifierService.manual_block_zones(defender)
 	if chosen_zones.is_empty():
 		var legacy_zone:=String(defender.combat_stats.get("manual_block_zone",""))
 		if not legacy_zone.is_empty():
