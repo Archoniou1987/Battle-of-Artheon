@@ -283,7 +283,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		row.position = Vector2(50, 238 if row_type == "Баффы" else 260)
 		row.add_theme_constant_override("separation", 2)
 		inner.add_child(row)
-		var key := ("player_" if is_player else "enemy_") + row_type
+		var key: String = ("player_" if is_player else "enemy_") + String(row_type)
 		var icons: Array[PanelContainer] = []
 		for i in range(5):
 			var icon := PanelContainer.new()
