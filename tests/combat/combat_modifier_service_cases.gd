@@ -7,6 +7,7 @@ static func run() -> bool:
 		and _case_runtime_direct_pct_overlay_applies_once()
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_mana_regen_uses_runtime_overlay()
+		and _case_damage_reduction_uses_runtime_overlay()
 	)
 
 static func _combatant() -> CombatantState:
@@ -55,3 +56,14 @@ static func _case_mana_regen_uses_runtime_overlay() -> bool:
 		"remaining_rounds": 1
 	})
 	return is_equal_approx(CombatModifierService.value(combatant, "mana_regen", 1), 10.0)
+
+static func _case_damage_reduction_uses_runtime_overlay() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["damage_reduction"] = 0.35
+	combatant.active_effects.append({
+		"effect_id": "EFF_TEST_REDUCTION",
+		"definition": {"damage_reduction": 0.80},
+		"start_round": 1,
+		"remaining_rounds": 1
+	})
+	return is_equal_approx(CombatModifierService.damage_reduction(combatant, 1), 1.0)
