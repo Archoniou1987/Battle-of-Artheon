@@ -29,6 +29,8 @@ var attack_buttons: Array[Button] = []
 var hp_bars: Dictionary = {}
 var hp_overlays: Dictionary = {}
 var effects_rows: Dictionary = {}
+var effects_icons: Dictionary = {}
+var effects_overflow: Dictionary = {}
 var selected_ability := ""
 var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
@@ -275,22 +277,49 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			defense_buttons.append(button)
 		else:
 			attack_buttons.append(button)
+	# Portrait x=48..184; two effect rows are fully contained within it.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(49, 235 if row_type == "Баффы" else 258)
+		row.position = Vector2(50, 238 if row_type == "Баффы" else 260)
 		row.add_theme_constant_override("separation", 2)
 		inner.add_child(row)
-		var label := Label.new()
-		label.text = "↑" if row_type == "Баффы" else "↓"
-		label.custom_minimum_size.x = 17
-		row.add_child(label)
-		for i in range(9):
+		var key := ("player_" if is_player else "enemy_") + row_type
+		var icons: Array[PanelContainer] = []
+		for i in range(5):
 			var icon := PanelContainer.new()
-			icon.custom_minimum_size = Vector2(20, 20)
+			icon.custom_minimum_size = Vector2(19, 19)
 			icon.tooltip_text = "Нет эффекта"
+			icon.visible = false
 			row.add_child(icon)
-		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
+			icons.append(icon)
+		var overflow := Label.new()
+		overflow.custom_minimum_size = Vector2(25, 19)
+		overflow.add_theme_font_size_override("font_size", 11)
+		overflow.visible = false
+		row.add_child(overflow)
+		effects_rows[key] = row
+		effects_icons[key] = icons
+		effects_overflow[key] = overflow
 	_update_zone_buttons()
+
+## UI-only effect display. The combat system supplies already-disclosed effects.
+## Five visible icons + a compact overflow counter fit within the portrait.
+func set_effects_display(is_player: bool, is_buff: bool, effects: Array[Dictionary]) -> void:
+	var key := ("player_" if is_player else "enemy_") + ("Баффы" if is_buff else "Дебаффы")
+	if not effects_icons.has(key):
+		return
+	var icons: Array = effects_icons[key]
+	var visible_count := mini(effects.size(), icons.size())
+	for index in range(icons.size()):
+		var icon: PanelContainer = icons[index]
+		icon.visible = index < visible_count
+		if icon.visible:
+			icon.tooltip_text = String(effects[index].get("name", "Эффект"))
+	var overflow: Label = effects_overflow[key]
+	var remaining := effects.size() - visible_count
+	overflow.visible = remaining > 0
+	overflow.text = "+%d" % remaining if remaining > 0 else ""
+	overflow.tooltip_text = "%d дополнительных эффектов" % remaining
 
 ## UI-only disclosure contract. Callers must provide ratings computed from visible
 ## primary stats and disclosed equipment; never pass combatant totals here.
