@@ -412,7 +412,13 @@ func refresh() -> void:
 	inventory_changed.emit()
 
 func _assign_elixir(instance_id: String) -> void:
-	if character == null or not character.inventory.owns(instance_id):
+	if character == null or not character.inventory.owns(instance_id) or repository == null:
+		return
+	if elixir_assignments.has(instance_id):
+		detail_dialog.status_label.text = "Этот эликсир уже размещён в слоте."
+		return
+	var item := repository.get_item(instance_id)
+	if String(item.get("type", "")) != "consumable":
 		return
 	for index in range(elixir_assignments.size()):
 		if elixir_assignments[index].is_empty():
