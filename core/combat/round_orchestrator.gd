@@ -285,7 +285,7 @@ func _capture_start_snapshot() -> Dictionary:
 		snapshot[String(combatant_id)]={
 			"hp":combatant.hp,
 			"death_finalized":combatant.is_death_finalized(),
-			"tempo":combatant.tempo,
+			"tempo":CombatModifierService.effective_tempo(combatant, state.round_number),
 			"movement_locked":movement_locked,
 			"zone":zone_state.zone_of(String(combatant_id)) if zone_state!=null else -1
 		}
