@@ -72,6 +72,9 @@ static func armour_reduction_percent(combatant: CombatantState, round_number: in
 		value_percent /= 100.0
 	return clampf(value_percent, 0.0, 1.0)
 
+static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
+	return clampf(value(combatant, "damage_reduction", round_number), 0.0, 1.0)
+
 static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int) -> float:
 	var key := resist_type.to_lower()
 	if key.is_empty():
@@ -107,6 +110,7 @@ static func effective_tempo(combatant: CombatantState, round_number: int) -> flo
 static func combat_readout(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result := snapshot(combatant, round_number)
 	result["effective_tempo"] = effective_tempo(combatant, round_number)
+	result["damage_reduction"] = damage_reduction(combatant, round_number)
 	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
