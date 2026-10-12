@@ -30,6 +30,7 @@ func combatant(combatant_id:String)->Dictionary:
 	var c:=state.get_combatant(combatant_id)
 	if c==null:
 		return {}
+	var combat_readout:=CombatModifierService.combat_readout(c, state.round_number)
 	return {
 		"id":c.combatant_id,
 		"name":c.display_name,
@@ -39,7 +40,8 @@ func combatant(combatant_id:String)->Dictionary:
 		"max_hp":c.max_hp,
 		"mana":c.mana,
 		"max_mana":c.max_mana,
-		"tempo":c.tempo,
+		"tempo":float(combat_readout.get("effective_tempo",c.tempo)),
+		"combat_stats":combat_readout,
 		"alive":not c.is_death_finalized(),
 		"death_finalized":c.is_death_finalized(),
 		"team_id":group.team_of(combatant_id) if group!=null else "",
