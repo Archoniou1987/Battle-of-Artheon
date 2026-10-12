@@ -226,4 +226,3 @@ static func _case_manual_block_requires_canonical_zones(balance: Dictionary) -> 
 	state.queue_event(event)
 	CombatEngine.new(state, balance).resolve_pending_events()
 	return event.result.get("outcome") == "connected" and defender.hp == 90
-
