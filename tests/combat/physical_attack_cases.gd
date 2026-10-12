@@ -11,6 +11,7 @@ static func run(balance: Dictionary) -> bool:
 		and _case_counterattack_uses_weapon_profile(balance)
 		and _case_magic_counterattack_keeps_profile_semantics(balance)
 		and _case_counterattack_uses_canonical_weapon_index(balance)
+		and _case_weapon_skill_penalty_uses_canonical_profile(balance)
 		and _case_magic_weapon_completes_weapon_pipeline(balance)
 		and _case_independent_on_hit_sources(balance)
 		and _case_connected_zero_damage(balance)
@@ -137,6 +138,21 @@ static func _case_counterattack_uses_canonical_weapon_index(balance:Dictionary)-
 		if logged.kind==CombatEvent.Kind.ATTACK and bool(logged.payload.get("is_counterattack",false)):
 			return int(logged.payload.get("weapon_index",-1))==1 and String(logged.payload.get("attack_profile_id",""))=="offhand_counter"
 	return false
+
+static func _case_weapon_skill_penalty_uses_canonical_profile(balance:Dictionary)->bool:
+	var state:=_base_state()
+	var attacker:=state.get_combatant("hero")
+	attacker.combat_stats["weapon_profiles"]=[{
+		"weapon_class":"sword","item_level":90,"damage_min":10.0,"damage_max":10.0,"damage_type":"slashing",
+		"attack_profiles":[{"id":"heavy_sword","delivery_type":"MELEE"}]
+	}]
+	attacker.set_weapon_progress("sword",10)
+	var event:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":10.0,"zone":"chest","damage_type":"slashing","weapon_index":0,"is_weapon_attack":true,
+		"rolls":{"hit":50,"dodge":100,"crit":100}
+	})
+	CombatEngine.new(state,balance).resolve_event(event)
+	return String(event.result.get("outcome",""))=="miss" and is_equal_approx(float(event.result.get("weapon_skill_hit_penalty",0.0)),80.0)
 
 static func _case_magic_weapon_completes_weapon_pipeline(balance:Dictionary)->bool:
 	var state:=_base_state()
