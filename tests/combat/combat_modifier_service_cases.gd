@@ -10,6 +10,7 @@ static func run() -> bool:
 		and _case_damage_reduction_uses_runtime_overlay()
 		and _case_manual_block_accessors_normalize_capacity()
 		and _case_equipped_item_types_accessor_copies_values()
+		and _case_effect_trigger_accessors_copy_values()
 	)
 
 static func _combatant() -> CombatantState:
@@ -82,3 +83,13 @@ static func _case_equipped_item_types_accessor_copies_values() -> bool:
 	var equipped := CombatModifierService.equipped_item_types(combatant)
 	equipped.append("mutated")
 	return CombatModifierService.equipped_item_types(combatant) == ["dagger", "shield"]
+
+static func _case_effect_trigger_accessors_copy_values() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["weapon_on_hit_effects"] = [{"effect_id": "EFF001"}]
+	combatant.combat_stats["on_manual_block_effects"] = [{"effect_id": "EFF002"}]
+	var on_hit := CombatModifierService.weapon_on_hit_effects(combatant)
+	var on_block := CombatModifierService.manual_block_effects(combatant)
+	on_hit.clear()
+	on_block.clear()
+	return CombatModifierService.weapon_on_hit_effects(combatant).size() == 1 and CombatModifierService.manual_block_effects(combatant).size() == 1
