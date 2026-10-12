@@ -4,19 +4,25 @@ extends RefCounted
 ## Deterministic smoke cases for the physical attack pipeline.
 
 static func run(balance: Dictionary) -> bool:
-	return (
-		_case_miss(balance)
-		and _case_dodge(balance)
-		and _case_block(balance)
-		and _case_counterattack_uses_weapon_profile(balance)
-		and _case_magic_counterattack_keeps_profile_semantics(balance)
-		and _case_counterattack_uses_canonical_weapon_index(balance)
-		and _case_weapon_skill_penalty_uses_canonical_profile(balance)
-		and _case_magic_weapon_completes_weapon_pipeline(balance)
-		and _case_independent_on_hit_sources(balance)
-		and _case_connected_zero_damage(balance)
-		and _case_manual_block_requires_canonical_zones(balance)
-	)
+	var cases := [
+		["miss", _case_miss(balance)],
+		["dodge", _case_dodge(balance)],
+		["manual_block", _case_block(balance)],
+		["counterattack_uses_weapon_profile", _case_counterattack_uses_weapon_profile(balance)],
+		["magic_counterattack_keeps_profile_semantics", _case_magic_counterattack_keeps_profile_semantics(balance)],
+		["counterattack_uses_canonical_weapon_index", _case_counterattack_uses_canonical_weapon_index(balance)],
+		["weapon_skill_penalty_uses_canonical_profile", _case_weapon_skill_penalty_uses_canonical_profile(balance)],
+		["magic_weapon_completes_weapon_pipeline", _case_magic_weapon_completes_weapon_pipeline(balance)],
+		["independent_on_hit_sources", _case_independent_on_hit_sources(balance)],
+		["connected_zero_damage", _case_connected_zero_damage(balance)],
+		["manual_block_requires_canonical_zones", _case_manual_block_requires_canonical_zones(balance)]
+	]
+	var ok := true
+	for case_result in cases:
+		if not bool(case_result[1]):
+			print("PHYSICAL_ATTACK_CASE_FAIL=", String(case_result[0]))
+			ok = false
+	return ok
 
 
 static func _base_state() -> CombatState:
@@ -217,5 +223,7 @@ static func _case_manual_block_requires_canonical_zones(balance: Dictionary) -> 
 	var defender := state.get_combatant("enemy")
 	defender.combat_stats["manual_block_zone"] = "chest"
 	var event := _attack(state, {"hit": 1, "dodge": 100, "auto_block": 100, "block_crush": 100, "crit": 100}, 10.0)
-	CombatEngine.new(state, balance).resolve_event(event)
+	state.queue_event(event)
+	CombatEngine.new(state, balance).resolve_pending_events()
 	return event.result.get("outcome") == "connected" and defender.hp == 90
+
