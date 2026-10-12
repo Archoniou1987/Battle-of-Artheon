@@ -71,9 +71,13 @@ func equip(slot: String, instance_id: String, repository: ItemRepository) -> boo
 	var item := repository.get_item(instance_id)
 	if item.is_empty() or not ItemDurabilityService.is_usable(item):
 		return false
-	if not item.get("equip_slots", []).has(slot):
+	var allowed_slots: Array = item.get("equip_slots", [])
+	var alternate_ring := (slot == "ring2" and allowed_slots.has("ring1")) or (slot == "ring1" and allowed_slots.has("ring2"))
+	if not allowed_slots.has(slot) and not alternate_ring:
 		return false
 	var usage: Array = item.get("slot_usage", [slot])
+	if alternate_ring and not allowed_slots.has(slot) and usage.size() == 1 and (usage[0] == "ring1" or usage[0] == "ring2"):
+		usage = [slot]
 	if usage.is_empty():
 		usage = [slot]
 	if not usage.has(slot):
