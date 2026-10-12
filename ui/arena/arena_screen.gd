@@ -138,10 +138,6 @@ func _ready() -> void:
 func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
-	var ability_title := Label.new()
-	ability_title.text = "СПОСОБНОСТИ"
-	ability_title.position = Vector2(106, 366)
-	square_content.add_child(ability_title)
 	var abilities := HBoxContainer.new()
 	abilities.position = Vector2(10, 389)
 	abilities.add_theme_constant_override("separation", 5)
@@ -252,7 +248,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(3, 316)
+	zone_row.position = Vector2(3, 330)
 	zone_row.add_theme_constant_override("separation", 1)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
