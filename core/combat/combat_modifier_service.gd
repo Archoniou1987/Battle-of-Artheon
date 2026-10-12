@@ -57,6 +57,29 @@ static func combat_chance(combatant: CombatantState, rating_key: String, legacy_
 		return effective_percent(combatant, rating_key, round_number)
 	return float(stats.get(legacy_key, legacy_default)) + float(stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
 
+## The shared combat/UI read contract. A caller can request any derived stat
+## without reimplementing the overlay. Raw ratings remain available separately.
+static func value(combatant: CombatantState, key: String, round_number: int, default_value: float = 0.0) -> float:
+	if key.ends_with("_percent"):
+		var rating_key := key.trim_suffix("_percent")
+		if combatant.combat_stats.has(key):
+			return effective_percent(combatant, rating_key, round_number)
+		return default_value + modifier(combatant, rating_key.trim_suffix("_rating") + "_direct_pct", round_number)
+	return float(combatant.combat_stats.get(key, default_value)) + modifier(combatant, key, round_number)
+
+static func effective_tempo(combatant: CombatantState, round_number: int) -> float:
+	return combatant.tempo + value(combatant, "tempo", round_number) + modifier(combatant, "tempo_modifier", round_number)
+
+## One traceable read model for a future duel card and combat diagnostics.
+## Contextual rolls (opponent, hit zone, distance) belong to CombatEngine.
+static func combat_readout(combatant: CombatantState, round_number: int) -> Dictionary:
+	var result := snapshot(combatant, round_number)
+	result["effective_tempo"] = effective_tempo(combatant, round_number)
+	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating"]:
+		if combatant.combat_stats.has(rating_key + "_percent"):
+			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
+	return result
+
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result: Dictionary = combatant.combat_stats.duplicate(true)
 	for field in trait_modifiers(combatant):
