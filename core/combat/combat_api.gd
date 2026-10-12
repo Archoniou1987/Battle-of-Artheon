@@ -49,8 +49,8 @@ func combatant(combatant_id:String)->Dictionary:
 		"active_opponent_id":group.active_opponent(combatant_id) if group!=null else "",
 		"can_manual_block":c.can_manual_block(),
 		"can_auto_block":c.can_auto_block(),
-		"manual_block_zones":Array(c.combat_stats.get("manual_block_zones",[])).duplicate(true),
-		"manual_block_zone_capacity":int(c.combat_stats.get("manual_block_zone_count",c.combat_stats.get("manual_block_zone_capacity",1)))
+		"manual_block_zones":combat_readout.get("manual_block_zones",[]),
+		"manual_block_zone_capacity":int(combat_readout.get("manual_block_zone_capacity",1))
 	}
 
 func target_options(combatant_id:String)->Dictionary:
