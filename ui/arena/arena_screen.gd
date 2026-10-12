@@ -35,6 +35,8 @@ var enemy_slots: Dictionary = {}
 var hp_label: Label
 var tabs: TabContainer
 var fighter_popup: AcceptDialog
+var item_popup: AcceptDialog
+var item_popup_text: RichTextLabel
 var fighter_popup_text: RichTextLabel
 var disclosed_enemy_stats: Dictionary = {}
 var disclosed_enemy_ratings: Dictionary = {}
@@ -113,6 +115,14 @@ func _ready() -> void:
 				details.text = "Нет активных эффектов" if fighter_name == "Игрок" else "Нет известных эффектов"
 				details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				column.add_child(details)
+	item_popup = AcceptDialog.new()
+	item_popup.title = "Предмет"
+	item_popup.min_size = Vector2i(320, 260)
+	add_child(item_popup)
+	item_popup_text = RichTextLabel.new()
+	item_popup_text.bbcode_enabled = true
+	item_popup_text.custom_minimum_size = Vector2(290, 220)
+	item_popup.add_child(item_popup_text)
 	fighter_popup = AcceptDialog.new()
 	fighter_popup.title = "Характеристики"
 	fighter_popup.min_size = Vector2i(340, 370)
@@ -206,7 +216,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			else:
 				enemy_slots[slot] = icon
 			icon.set_item({}, String(SLOT_SYMBOLS.get(slot, "◇")))
-			icon.disabled = true
+			icon.pressed.connect(_show_equipment_details.bind(is_player, slot))
 	var health_bar := ProgressBar.new()
 	health_bar.position = Vector2(38, 23)
 	health_bar.custom_minimum_size = Vector2(156, 15)
@@ -332,6 +342,35 @@ func _update_elixir_slots() -> void:
 			if elixir_global_cooldown > 0:
 				button.text = "%s\nКД %d" % [symbol, elixir_global_cooldown]
 				button.tooltip_text += " | Общее КД: %d раунд(ов)" % elixir_global_cooldown
+
+func _show_equipment_details(is_player: bool, slot: String) -> void:
+	var item: Dictionary = {}
+	if is_player:
+		if character != null and repository != null:
+			var instance_id: Variant = character.equipment.get_equipped_instance_id(slot)
+			if instance_id != null:
+				item = repository.get_item(String(instance_id))
+	else:
+		item = disclosed_enemy_equipment.get(slot, {})
+	if item.is_empty():
+		item_popup.title = "Слот экипировки"
+		item_popup_text.text = "Нет доступной информации о предмете."
+	else:
+		item_popup.title = String(item.get("name", "Предмет"))
+		var lines: PackedStringArray = []
+		lines.append("[b]%s[/b]" % String(item.get("name", "Предмет")))
+		for field in ["type", "rarity", "item_level", "description"]:
+			if item.has(field):
+				lines.append("%s: %s" % [field, str(item[field])])
+		for field in ["guaranteed_stats", "bonuses", "requirements"]:
+			var values: Variant = item.get(field, {})
+			if values is Dictionary and not values.is_empty():
+				lines.append("")
+				lines.append("[b]%s[/b]" % field)
+				for key in values:
+					lines.append("%s: %s" % [str(key), str(values[key])])
+		item_popup_text.text = "\n".join(lines)
+	item_popup.popup_centered()
 
 func _show_fighter_details(is_player: bool) -> void:
 	var primary: Dictionary = {}
