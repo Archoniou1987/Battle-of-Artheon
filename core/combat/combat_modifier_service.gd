@@ -75,6 +75,12 @@ static func armour_reduction_percent(combatant: CombatantState, round_number: in
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
 	return clampf(value(combatant, "damage_reduction", round_number), 0.0, 1.0)
 
+static func manual_block_zone_capacity(combatant: CombatantState) -> int:
+	return clampi(int(combatant.combat_stats.get("manual_block_zone_count", combatant.combat_stats.get("manual_block_zone_capacity", 1))), 1, 3)
+
+static func manual_block_zones(combatant: CombatantState) -> Array:
+	return Array(combatant.combat_stats.get("manual_block_zones", [])).duplicate(true)
+
 static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int) -> float:
 	var key := resist_type.to_lower()
 	if key.is_empty():
@@ -111,6 +117,8 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	var result := snapshot(combatant, round_number)
 	result["effective_tempo"] = effective_tempo(combatant, round_number)
 	result["damage_reduction"] = damage_reduction(combatant, round_number)
+	result["manual_block_zone_capacity"] = manual_block_zone_capacity(combatant)
+	result["manual_block_zones"] = manual_block_zones(combatant)
 	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
