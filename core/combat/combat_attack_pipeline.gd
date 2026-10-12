@@ -22,9 +22,8 @@ func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Combat
 	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(CombatModifierService.effective_tempo(attacker, state.round_number)): return
 	var weapon_indices:Array=[]
 	var canonical_profiles:=WeaponAttackProfile.all(attacker)
-	# Legacy damage fields describe one main-hand attack. Canonical multi-weapon
-	# profiles may expose additional weapon indices, but the compatibility
-	# fallback must never invent a second/off-hand attack.
+	# Canonical multi-weapon profiles may expose several weapon indices, but
+	# each base attack action still groups all weapon constituents together.
 	for profile in canonical_profiles:
 		var weapon_index:=int(profile.get("weapon_index",-1))
 		if not weapon_indices.has(weapon_index):

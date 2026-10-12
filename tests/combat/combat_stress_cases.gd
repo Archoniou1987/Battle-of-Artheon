@@ -21,7 +21,8 @@ static func _run_case(seed:int)->bool:
 		for index in range(3):
 			var id:="%s%d" % [team_id,index]
 			var combatant:=CombatantState.new(id,id,10,100,20)
-			combatant.combat_stats["main_hand_damage"]=float(rng.randi_range(5,15))
+			var damage:=float(rng.randi_range(5,15))
+			combatant.combat_stats["weapon_profiles"]=[{"damage_min":damage,"damage_max":damage,"damage_type":"slashing"}]
 			state.add_combatant(combatant)
 			group.add_member(team_id,id)
 			zones.set_zone(id,CombatZoneState.ZONE_1 if team_id=="A" else CombatZoneState.ZONE_3)
@@ -48,7 +49,8 @@ static func _run_case(seed:int)->bool:
 				group.set_active_opponent(source_id,target_id)
 				var distance:=zones.distance(source_id,target_id)
 				if distance==0:
-					var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{"raw_damage":source.combat_stats.get("main_hand_damage",5.0),"zone":"chest","damage_type":"slashing","rolls":{"hit":rng.randi_range(1,100),"dodge":rng.randi_range(1,100),"crit":rng.randi_range(1,100)}})
+					var profile:Dictionary=WeaponAttackProfile.all(source)[0]
+					var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{"raw_damage":profile.get("damage_min",5.0),"zone":"chest","damage_type":profile.get("damage_type","slashing"),"rolls":{"hit":rng.randi_range(1,100),"dodge":rng.randi_range(1,100),"crit":rng.randi_range(1,100)}})
 					state.queue_event(event)
 				elif distance>0:
 					var source_zone:=zones.zone_of(source_id)

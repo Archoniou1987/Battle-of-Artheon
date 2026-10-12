@@ -37,4 +37,5 @@ func _init() -> void:
 
 func _ready(fighter:CombatantState, snapshot:Dictionary)->bool:
 	var effects:Array = fighter.combat_stats.get("weapon_on_hit_effects", [])
-	return fighter.max_hp > 0 and fighter.combat_stats.has("main_hand_damage_min") and not effects.is_empty() and snapshot.has("stats") and snapshot.has("combat_stats") and snapshot.has("armour") and snapshot.has("abilities")
+	var profiles:Array = fighter.combat_stats.get("weapon_profiles", [])
+	return fighter.max_hp > 0 and not profiles.is_empty() and not effects.is_empty() and snapshot.has("stats") and snapshot.has("combat_stats") and snapshot.has("armour") and snapshot.has("abilities")

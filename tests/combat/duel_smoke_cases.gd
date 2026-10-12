@@ -221,8 +221,8 @@ static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) 
 	var state := CombatState.new()
 	var a := CombatantState.new("a", "A", 1, hp_a)
 	var b := CombatantState.new("b", "B", 1, hp_b)
-	a.combat_stats["main_hand_damage"] = damage_a
-	b.combat_stats["main_hand_damage"] = damage_b
+	a.combat_stats["weapon_profiles"] = [{"damage_min":damage_a,"damage_max":damage_a,"damage_type":"slashing"}]
+	b.combat_stats["weapon_profiles"] = [{"damage_min":damage_b,"damage_max":damage_b,"damage_type":"slashing"}]
 	state.add_combatant(a)
 	state.add_combatant(b)
 	return state

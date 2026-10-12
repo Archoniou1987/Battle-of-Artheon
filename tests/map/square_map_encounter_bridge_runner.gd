@@ -20,7 +20,7 @@ func _initialize()->void:
 	valid=valid and encounter.get("npcs",[]).size()==2
 
 	var player:=CombatantState.new("PLAYER","Artheon Hero",5,150,0)
-	player.combat_stats={"main_hand_damage_min":25.0,"main_hand_damage_max":25.0,"main_hand_damage_type":"slashing"}
+	player.combat_stats={"weapon_profiles":[{"damage_min":25.0,"damage_max":25.0,"damage_type":"slashing"}]}
 	var session:=MapEncounterCombatService.begin(encounter,repo,player)
 	valid=valid and bool(session.get("ok",false))
 	valid=valid and session.get("npc")==first

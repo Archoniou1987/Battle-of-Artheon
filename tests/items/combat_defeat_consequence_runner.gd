@@ -13,8 +13,8 @@ func _initialize() -> void:
 		hero.receive_item(String(item.instance_id), repository)
 		hero.equip(String((template.equip_slots as Array)[0]), String(item.instance_id), repository)
 	var enemy := CombatantState.new("NPC_WINNER", "Winner", 20, 100, 0)
-	enemy.combat_stats = {"main_hand_damage_min":100.0,"main_hand_damage_max":100.0,"main_hand_damage_type":"slashing"}
-	var hero_fighter := CharacterCombatBuilder.build(hero, repository, {"health":10,"mana":0,"stats":{},"combat_stats":{"main_hand_damage_min":1.0,"main_hand_damage_max":1.0}})
+	enemy.combat_stats = {"weapon_profiles":[{"damage_min":100.0,"damage_max":100.0,"damage_type":"slashing"}]}
+	var hero_fighter := CharacterCombatBuilder.build(hero, repository, {"health":10,"mana":0,"stats":{},"combat_stats":{"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}})
 	var state := CombatState.new()
 	state.add_combatant(hero_fighter)
 	state.add_combatant(enemy)

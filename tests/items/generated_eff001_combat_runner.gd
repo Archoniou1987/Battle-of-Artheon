@@ -16,7 +16,7 @@ func _init() -> void:
 	var fighter := CombatantState.new("EFF_HERO", "EFF Hero", 50, 100, 0)
 	var enemy := CombatantState.new("EFF_ENEMY", "EFF Enemy", 50, 200, 0)
 	EquipmentBuilder.equip(fighter, resolved)
-	enemy.combat_stats = {"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	enemy.combat_stats = {"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}
 	state.add_combatant(fighter)
 	state.add_combatant(enemy)
 

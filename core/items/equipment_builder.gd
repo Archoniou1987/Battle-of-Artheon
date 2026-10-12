@@ -41,9 +41,6 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 			weapon_effect["weapon_index"]=weapon_profiles.size()-1
 			weapon_effects.append(weapon_effect)
 		combatant.combat_stats["weapon_on_hit_effects"]=weapon_effects
-		# Legacy aliases remain during Combat v2 migration. New attack code uses weapon_profiles.
-		if weapon_profiles.size()==1:
-			combatant.combat_stats["main_hand_damage_min"]=weapon_profile["damage_min"]; combatant.combat_stats["main_hand_damage_max"]=weapon_profile["damage_max"]; combatant.combat_stats["main_hand_damage"]=(weapon_profile["damage_min"]+weapon_profile["damage_max"])/2.0; combatant.combat_stats["main_hand_damage_type"]=weapon_profile["damage_type"]
 	else:
 		var added:=int(item.get("manual_block_zones_added",0)); combatant.combat_stats["manual_block_zone_capacity"]=int(combatant.combat_stats.get("manual_block_zone_capacity",0))+added
 		if item.has("on_hit_effect"):

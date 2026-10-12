@@ -3,14 +3,14 @@ extends SceneTree
 func _initialize()->void:
 	var state:=CombatState.new()
 	var player:=CombatantState.new("PLAYER","Player",5,100)
-	player.combat_stats={"main_hand_damage_min":60.0,"main_hand_damage_max":60.0,"hit_modifier":100.0,"crit":0.0}
+	player.combat_stats={"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 	state.add_combatant(player)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players","PLAYER")
 	for i in range(3):
 		var id:="E%d"%i
 		var enemy:=CombatantState.new(id,id,1,50)
-		enemy.combat_stats={"main_hand_damage_min":5.0,"main_hand_damage_max":5.0,"hit_modifier":100.0,"crit":0.0}
+		enemy.combat_stats={"weapon_profiles":[{"damage_min":5.0,"damage_max":5.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 		state.add_combatant(enemy)
 		group.add_member("enemies",id)
 	var simulator:=GroupCombatSimulator.new(state,group)

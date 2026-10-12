@@ -19,16 +19,16 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		EquipmentBuilder.equip(combatant, item)
 	# Do not add equipment primary bonuses twice.
 	combatant.stats = primary.duplicate(true)
-	# Preserve combat-only equipment metadata; canonical values override
-	# legacy duplicate calculations for derived character statistics.
+	# Preserve combat-only equipment metadata; canonical values override derived
+	# character statistics while weapon profiles keep their own explicit owner.
 	for key in canonical:
-		if key == "main_hand_damage" or key == "main_hand_damage_min" or key == "main_hand_damage_max" or key == "main_hand_damage_type":
+		if key == "weapon_profiles":
 			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
 		combatant.combat_stats[key] = canonical[key]
-	if combatant.combat_stats.get("weapon_profiles", []).is_empty():
-		for key in ["main_hand_damage", "main_hand_damage_min", "main_hand_damage_max", "main_hand_damage_type"]:
-			if canonical.has(key):
-				combatant.combat_stats[key] = canonical[key]
+	var canonical_profiles:Array = canonical.get("weapon_profiles", [])
+	if combatant.combat_stats.get("weapon_profiles", []).is_empty() and not canonical_profiles.is_empty():
+		combatant.combat_stats["weapon_profiles"] = canonical_profiles.duplicate(true)
+		combatant.combat_stats["weapon_attack_count"] = 1
 	# TRA definitions are injected through base for now, independent of test content.
 	var trait_definitions: Dictionary = base.get("trait_definitions", {})
 	combatant.combat_stats["trait_modifiers"] = collect_trait_modifiers(character, trait_definitions)

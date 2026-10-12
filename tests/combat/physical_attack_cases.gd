@@ -69,8 +69,6 @@ static func _case_counterattack_uses_weapon_profile(balance:Dictionary)->bool:
 		"weapon_class":"sword","item_level":1,"damage_min":7.0,"damage_max":7.0,"damage_type":"chopping",
 		"attack_profiles":[{"id":"counter_profile","delivery_type":"MELEE"}]
 	}]
-	attacker.combat_stats["main_hand_damage"]=99.0
-	attacker.combat_stats["main_hand_damage_type"]="piercing"
 	attacker.combat_stats["weapon_on_hit_effects"]=[{"chance":100.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"counter_weapon"}]
 	attacker.set_weapon_progress("sword",1)
 	attacker.combat_stats["dodge"]=100.0

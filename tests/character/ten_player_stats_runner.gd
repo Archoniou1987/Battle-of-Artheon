@@ -34,7 +34,7 @@ func _init() -> void:
 	var valid := all_items.size()==60 and snapshots.size()==10
 	for snapshot in snapshots:
 		var cs:Dictionary=snapshot.combat_stats; var eq:Dictionary=snapshot.equipment
-		valid = valid and eq.size()==6 and int(snapshot.max_hp)>100 and cs.has("main_hand_damage_min") and float(cs.get("dodge",0))>0 and float(cs.get("auto_block",0))>0 and not (snapshot.armour as Dictionary).is_empty()
+		valid = valid and eq.size()==6 and int(snapshot.max_hp)>100 and not (cs.get("weapon_profiles", []) as Array).is_empty() and float(cs.get("dodge",0))>0 and float(cs.get("auto_block",0))>0 and not (snapshot.armour as Dictionary).is_empty()
 	print("TEN_PLAYER_STATS items=", all_items.size(), " players=", snapshots.size(), " entities_alive=", valid)
 	print("TEN_PLAYER_STATS_TEST=", "PASS" if valid else "FAIL")
 	quit(0 if valid else 1)

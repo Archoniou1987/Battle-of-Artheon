@@ -18,15 +18,6 @@ static func all(combatant:CombatantState)->Array[Dictionary]:
 			if not raw_profile is Dictionary:
 				continue
 			result.append(normalize(weapon,Dictionary(raw_profile),weapon_index))
-	if result.is_empty():
-		result.append({
-			"id":"basic","weapon_index":0,"delivery_type":"MELEE",
-			"min_zone_distance":0,"max_zone_distance":0,"two_zone_hit_modifier":-50.0,
-			"damage_min":float(combatant.combat_stats.get("main_hand_damage_min",combatant.combat_stats.get("main_hand_damage",0.0))),
-			"damage_max":float(combatant.combat_stats.get("main_hand_damage_max",combatant.combat_stats.get("main_hand_damage",0.0))),
-			"damage_type":String(combatant.combat_stats.get("main_hand_damage_type","slashing")),
-			"uses_magic_hit":false,"magic_hit_modifier":0.0,"hit_count":1
-		})
 	return result
 
 static func normalize(weapon:Dictionary,raw_profile:Dictionary,weapon_index:int)->Dictionary:

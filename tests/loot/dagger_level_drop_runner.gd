@@ -7,9 +7,9 @@ func _initialize()->void:
 	var groups:Dictionary={"BANDIT_DAGGER_TEST":{"id":"BANDIT_DAGGER_TEST","entries":[{"mode":"scaled","category":"equipment","item_type":"dagger"}]}}
 	var repository:=ItemRepository.new()
 	var player:=CharacterState.new("PLAYER_DAGGER_TEST","Artheon Hero",70)
-	var fighter:=CharacterCombatBuilder.build(player,repository,{"health":200,"mana":0,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"main_hand_damage_min":40.0,"main_hand_damage_max":40.0,"main_hand_damage_type":"slashing"}})
+	var fighter:=CharacterCombatBuilder.build(player,repository,{"health":200,"mana":0,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"weapon_profiles":[{"damage_min":40.0,"damage_max":40.0,"damage_type":"slashing"}]}})
 	var bandit:=CombatantState.new("NPC_DAGGER_BANDIT","Unarmed Bandit",70,30,0)
-	bandit.combat_stats={"main_hand_damage_min":0.0,"main_hand_damage_max":0.0,"main_hand_damage_type":"blunt"}
+	bandit.combat_stats={"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"blunt"}]}
 	var state:=CombatState.new()
 	state.add_combatant(fighter)
 	state.add_combatant(bandit)

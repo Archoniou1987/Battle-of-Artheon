@@ -11,9 +11,9 @@ func _initialize() -> void:
 
 	var repository := ItemRepository.new()
 	var player := CharacterState.new("PLAYER_01", "Artheon Hero", 20)
-	var player_fighter := CharacterCombatBuilder.build(player, repository, {"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"main_hand_damage_min":35.0,"main_hand_damage_max":35.0,"main_hand_damage_type":"slashing"}})
+	var player_fighter := CharacterCombatBuilder.build(player, repository, {"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"weapon_profiles":[{"damage_min":35.0,"damage_max":35.0,"damage_type":"slashing"}]}})
 	var bandit := CombatantState.new("NPC_TEST_BANDIT_001", "Test Bandit", 10, 25, 0)
-	bandit.combat_stats = {"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	bandit.combat_stats = {"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}
 
 	var state := CombatState.new()
 	state.add_combatant(player_fighter)

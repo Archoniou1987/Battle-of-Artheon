@@ -9,9 +9,9 @@ func _initialize() -> void:
 	var table:Dictionary=(ld.get("loot_tables",[]) as Array)[0] as Dictionary
 	var repository:=ItemRepository.new()
 	var player:=CharacterState.new("PLAYER_CHAIN","Chain Hero",20)
-	var base:={"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"main_hand_damage_min":35.0,"main_hand_damage_max":35.0,"main_hand_damage_type":"slashing"}}
+	var base:={"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"weapon_profiles":[{"damage_min":35.0,"damage_max":35.0,"damage_type":"slashing"}]}}
 	var npc:=CombatantState.new("NPC_WORN_BANDIT_001","Worn Bandit",10,25,0)
-	npc.combat_stats={"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	npc.combat_stats={"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}
 	var state:=CombatState.new()
 	state.add_combatant(CharacterCombatBuilder.build(player,repository,base))
 	state.add_combatant(npc)

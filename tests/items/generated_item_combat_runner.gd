@@ -38,7 +38,8 @@ func _init() -> void:
 	simulator.max_rounds = 100
 	var result: Dictionary = simulator.run_duel(hero.combatant_id, enemy.combatant_id)
 
-	var equipped_ok: bool = int(hero.combat_stats.get("main_hand_damage_min", 0)) == int(item.get("damage_min", 0)) and int(hero.combat_stats.get("main_hand_damage_max", 0)) == int(item.get("damage_max", 0))
+	var hero_profiles:Array = hero.combat_stats.get("weapon_profiles", [])
+	var equipped_ok: bool = hero_profiles.size() == 1 and int(hero_profiles[0].get("damage_min", 0)) == int(item.get("damage_min", 0)) and int(hero_profiles[0].get("damage_max", 0)) == int(item.get("damage_max", 0))
 	var stats_ok: bool = _numeric_dictionary_equal(hero.stats, item.get("final_stats", {}))
 	var damage_events: int = 0
 	var rounds_ok: bool = true
@@ -48,7 +49,12 @@ func _init() -> void:
 	print("=== GENERATED ITEM ===")
 	print(JSON.stringify(item))
 	print("=== EQUIPPED CHARACTER ===")
-	print("MainHand damage: ", hero.combat_stats.get("main_hand_damage_min"), "-", hero.combat_stats.get("main_hand_damage_max"))
+	var profile_min:Variant = "?"
+	var profile_max:Variant = "?"
+	if not hero_profiles.is_empty():
+		profile_min = hero_profiles[0].get("damage_min", "?")
+		profile_max = hero_profiles[0].get("damage_max", "?")
+	print("Weapon profile damage: ", profile_min, "-", profile_max)
 	print("Stats: ", JSON.stringify(hero.stats))
 	print("=== COMBAT LOG ===")
 	for event in state.event_log:

@@ -65,7 +65,13 @@ static func combat_stats(character: CharacterState, repository: ItemRepository =
 	var combat := totals.duplicate(true)
 	if totals.has("main_hand_damage"):
 		var damage_range: Array = totals["main_hand_damage"]
-		combat["main_hand_damage_min"] = float(damage_range[0])
-		combat["main_hand_damage_max"] = float(damage_range[1])
-		combat["main_hand_damage"] = (float(damage_range[0]) + float(damage_range[1])) / 2.0
+		combat["weapon_profiles"] = [{
+			"damage_min":float(damage_range[0]),
+			"damage_max":float(damage_range[1]),
+			"damage_type":String(totals.get("main_hand_damage_type", "blunt"))
+		}]
+	combat.erase("main_hand_damage")
+	combat.erase("main_hand_min_damage")
+	combat.erase("main_hand_max_damage")
+	combat.erase("main_hand_damage_type")
 	return combat

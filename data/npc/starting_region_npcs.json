@@ -21,9 +21,13 @@
           "END": 4
         },
         "combat_stats": {
-          "main_hand_damage_min": 4,
-          "main_hand_damage_max": 7,
-          "main_hand_damage_type": "slashing",
+          "weapon_profiles": [
+            {
+              "damage_min": 4,
+              "damage_max": 7,
+              "damage_type": "slashing"
+            }
+          ],
           "dodge": 3
         }
       },
@@ -56,9 +60,13 @@
           "END": 7
         },
         "combat_stats": {
-          "main_hand_damage_min": 5,
-          "main_hand_damage_max": 8,
-          "main_hand_damage_type": "piercing"
+          "weapon_profiles": [
+            {
+              "damage_min": 5,
+              "damage_max": 8,
+              "damage_type": "piercing"
+            }
+          ]
         }
       },
       "abilities": [],
@@ -90,9 +98,13 @@
           "END": 5
         },
         "combat_stats": {
-          "main_hand_damage_min": 6,
-          "main_hand_damage_max": 9,
-          "main_hand_damage_type": "slashing"
+          "weapon_profiles": [
+            {
+              "damage_min": 6,
+              "damage_max": 9,
+              "damage_type": "slashing"
+            }
+          ]
         }
       },
       "abilities": [],
@@ -124,9 +136,13 @@
           "END": 4
         },
         "combat_stats": {
-          "main_hand_damage_min": 7,
-          "main_hand_damage_max": 10,
-          "main_hand_damage_type": "piercing",
+          "weapon_profiles": [
+            {
+              "damage_min": 7,
+              "damage_max": 10,
+              "damage_type": "piercing"
+            }
+          ],
           "anti_dodge": 2
         }
       },
@@ -159,9 +175,13 @@
           "END": 9
         },
         "combat_stats": {
-          "main_hand_damage_min": 10,
-          "main_hand_damage_max": 15,
-          "main_hand_damage_type": "slashing",
+          "weapon_profiles": [
+            {
+              "damage_min": 10,
+              "damage_max": 15,
+              "damage_type": "slashing"
+            }
+          ],
           "crit": 3
         }
       },
