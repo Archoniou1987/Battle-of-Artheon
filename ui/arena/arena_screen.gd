@@ -277,7 +277,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			attack_buttons.append(button)
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(5, 412 if row_type == "Баффы" else 436)
+		row.position = Vector2(5, 284 if row_type == "Баффы" else 307)
 		row.add_theme_constant_override("separation", 2)
 		inner.add_child(row)
 		var label := Label.new()
