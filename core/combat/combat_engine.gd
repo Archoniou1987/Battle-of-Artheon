@@ -403,7 +403,7 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 	var counter_rolls:Dictionary=Dictionary(parent.payload.get("counterattack_rolls",{})).duplicate(true)
 	var damage_roll:=float(counter_rolls.get("damage",randf()))
 	counter_rolls["damage"]=damage_roll
-	var damage_min:=float(weapon.get("damage_min",defender.combat_stats.get("main_hand_damage",0.0)))
+	var damage_min:=float(weapon.get("damage_min",0.0))
 	var damage_max:=float(weapon.get("damage_max",damage_min))
 	var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)*float(physical_balance.get("counterattack_damage_coefficient",0.8))
 	var child := state.create_event(CombatEvent.Kind.ATTACK, defender.combatant_id, attacker.combatant_id, {
@@ -412,7 +412,7 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 		"damage_max":damage_max,
 		"damage_roll":damage_roll,
 		"zone":String(parent.payload.get("counterattack_zone","chest")),
-		"damage_type":String(weapon.get("damage_type",defender.combat_stats.get("main_hand_damage_type","slashing"))),
+		"damage_type":String(weapon.get("damage_type","slashing")),
 		"rolls":counter_rolls,
 		"is_counterattack":true,
 		"is_weapon_attack":true,
@@ -469,9 +469,12 @@ func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void
 	event.set_result("ap_gained",attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain",1))))
 
 func _weapon_skill_hit_penalty(attacker: CombatantState, weapon_index: int) -> float:
-	var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
-	if profiles.is_empty(): return 0.0
-	var profile:Dictionary=profiles[clampi(weapon_index,0,profiles.size()-1)]
+	var profile:Dictionary={}
+	for candidate in WeaponAttackProfile.all(attacker):
+		if int(candidate.get("weapon_index",-1))==weapon_index:
+			profile=candidate
+			break
+	if profile.is_empty(): return 0.0
 	var weapon_class:=String(profile.get("weapon_class",""))
 	if weapon_class.is_empty(): return 0.0
 	var item_level:=maxi(1,int(profile.get("item_level",1)))
