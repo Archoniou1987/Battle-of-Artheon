@@ -170,8 +170,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	name_label.position = Vector2(65, 3)
 	inner.add_child(name_label)
 	var portrait := TextureRect.new()
-	portrait.position = Vector2(36, 40)
-	portrait.custom_minimum_size = Vector2(160, 156)
+	portrait.position = Vector2(48, 48)
+	portrait.custom_minimum_size = Vector2(136, 140)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if is_player and ResourceLoader.exists(AVATAR_PATH):
@@ -197,9 +197,9 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			var slot: String = slots[index]
 			var icon := ItemIcon.new()
 			icon.name = slot
-			icon.position = Vector2(2 if side == 0 else 199, 42 + index * 22)
+			icon.position = Vector2(2 if side == 0 else 199, 25 + index * 24)
 			icon.custom_minimum_size = Vector2(30, 30)
-			icon.scale = Vector2.ONE * 0.52
+			icon.scale = Vector2.ONE * 0.74
 			inner.add_child(icon)
 			if is_player:
 				player_slots[slot] = icon
