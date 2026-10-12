@@ -40,8 +40,7 @@ func _build_debug_combat()->void:
 	var hero := CharacterCombatBuilder.build(player, repository)
 	var enemy := CombatantState.new("enemy", "Training Raider", 1, 80, 0)
 	var enemy_two := CombatantState.new("enemy_two", "Raider Archer", 1, 65, 0)
-	enemy.combat_stats["main_hand_damage"]=7.0
-	enemy.combat_stats["main_hand_damage_type"]="blunt"
+	enemy.combat_stats["weapon_profiles"]=[{"damage_min":7.0,"damage_max":7.0,"damage_type":"blunt"}]
 	state.add_combatant(hero); state.add_combatant(enemy); state.add_combatant(enemy_two)
 	groups=GroupCombatState.new(state)
 	groups.add_member("A",hero_id); groups.add_member("B","enemy"); groups.add_member("B","enemy_two")
@@ -50,7 +49,7 @@ func _build_debug_combat()->void:
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone(hero_id,CombatZoneState.ZONE_2); zones.set_zone("enemy",CombatZoneState.ZONE_2); zones.set_zone("enemy_two",CombatZoneState.ZONE_3)
 	var ability_definitions := AbilityCatalog.load_json("res://data/test/abilities.json")
-	var assigned: Array = hero.combat_stats.get("abilities", [])
+	var assigned: Array = CombatModifierService.abilities(hero)
 	ability_scheduler = AbilityScheduler.new(ability_definitions, {hero_id: assigned.duplicate()})
 	var balance := AbilityCatalog.load_json("res://data/balance/physical_combat.json")
 	var effect_fixture := AbilityCatalog.load_json("res://data/test/effects.json")
