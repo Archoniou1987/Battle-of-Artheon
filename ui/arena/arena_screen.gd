@@ -34,6 +34,14 @@ var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
 var hp_label: Label
 var tabs: TabContainer
+var fighter_popup: AcceptDialog
+var fighter_popup_text: RichTextLabel
+var disclosed_enemy_stats: Dictionary = {}
+var disclosed_enemy_ratings: Dictionary = {}
+var disclosed_enemy_equipment: Dictionary = {}
+const RATING_KEYS := ["crit_chance_rating", "anti_crit_rating", "dodge_rating", "anti_dodge_rating", "hit_chance_rating", "manual_block_rating", "shield_auto_block_rating", "block_penetration_rating", "armour_penetration_rating", "counterattack_rating"]
+const RATING_NAMES := {"crit_chance_rating":"Крит", "anti_crit_rating":"Антикрит", "dodge_rating":"Уворот", "anti_dodge_rating":"Антиуворот", "hit_chance_rating":"Точность", "manual_block_rating":"Ручной блок", "shield_auto_block_rating":"Автоблок", "block_penetration_rating":"Пробивание блока", "armour_penetration_rating":"Пробивание брони", "counterattack_rating":"Контрудар"}
+const PRIMARY_NAMES := {"STR":"Сила", "DEX":"Ловкость", "INTU":"Интуиция", "WIS":"Мудрость", "INT":"Интеллект", "END":"Выносливость"}
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -74,14 +82,38 @@ func _ready() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	log_column.add_child(tabs)
 	for title in ["Журнал", "Баффы", "Дебаффы"]:
-		var page := RichTextLabel.new()
-		page.name = title
-		page.bbcode_enabled = true
-		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		page.text = "Арена готова. Боевые события появятся после подключения CombatEngine." if title == "Журнал" else "Нет доступных данных об эффектах."
-		tabs.add_child(page)
 		if title == "Журнал":
+			var page := RichTextLabel.new()
+			page.name = title
+			page.bbcode_enabled = true
+			page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			page.text = "Арена готова. Боевые события появятся после подключения CombatEngine."
+			tabs.add_child(page)
 			log_view = page
+		else:
+			var comparison := HBoxContainer.new()
+			comparison.name = title
+			comparison.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			tabs.add_child(comparison)
+			for fighter_name in ["Игрок", "Противник"]:
+				var column := VBoxContainer.new()
+				column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				comparison.add_child(column)
+				var heading := Label.new()
+				heading.text = fighter_name
+				column.add_child(heading)
+				var details := Label.new()
+				details.text = "Нет активных эффектов" if fighter_name == "Игрок" else "Нет известных эффектов"
+				details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				column.add_child(details)
+	fighter_popup = AcceptDialog.new()
+	fighter_popup.title = "Характеристики"
+	fighter_popup.min_size = Vector2i(340, 370)
+	add_child(fighter_popup)
+	fighter_popup_text = RichTextLabel.new()
+	fighter_popup_text.bbcode_enabled = true
+	fighter_popup_text.custom_minimum_size = Vector2(310, 330)
+	fighter_popup.add_child(fighter_popup_text)
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
@@ -95,7 +127,7 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 34), true)
 	_build_fighter(Vector2(244, 34), false)
 	var ability_title := Label.new()
-	ability_title.text = "АКТИВНЫЕ СПОСОБНОСТИ (ABI)"
+	ability_title.text = "СПОСОБНОСТИ"
 	ability_title.position = Vector2(106, 366)
 	square_content.add_child(ability_title)
 	var abilities := HBoxContainer.new()
@@ -105,9 +137,10 @@ func _build_square() -> void:
 	for index in range(8):
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(52, 36)
-		button.text = "ABI %d" % (index + 1)
+		button.text = str(index + 1) if index < 5 else "🔒"
+		button.tooltip_text = "Активная способность %d" % (index + 1) if index < 5 else "Резервный слот"
 		button.toggle_mode = true
-		button.disabled = true # Enabled when the character's actual ABI loadout is wired.
+		button.disabled = true # Five agreed active slots; three reserved, no gameplay effect.
 		abilities.add_child(button)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
@@ -137,6 +170,13 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if is_player and ResourceLoader.exists(AVATAR_PATH):
 		portrait.texture = load(AVATAR_PATH)
 	inner.add_child(portrait)
+	var inspect := Button.new()
+	inspect.flat = true
+	inspect.position = Vector2(40, 44)
+	inspect.custom_minimum_size = Vector2(152, 145)
+	inspect.tooltip_text = "Посмотреть характеристики"
+	inspect.pressed.connect(_show_fighter_details.bind(is_player))
+	inner.add_child(inspect)
 	if not is_player:
 		var hidden := Label.new()
 		hidden.text = "?"
@@ -194,7 +234,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	for index in range(ZONES.size()):
 		var zone: String = ZONES[index]
 		var button := Button.new()
-		button.text = ZONE_ICONS[index] + "\n" + ZONE_NAMES[index].substr(0, 2)
+		button.text = ZONE_ICONS[index]
+		button.add_theme_font_size_override("font_size", 21)
 		button.tooltip_text = ZONE_NAMES[index]
 		button.custom_minimum_size = Vector2(44, 38)
 		button.toggle_mode = true
@@ -221,6 +262,41 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			row.add_child(icon)
 		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
 	_update_zone_buttons()
+
+## UI-only disclosure contract. Callers must provide ratings computed from visible
+## primary stats and disclosed equipment; never pass combatant totals here.
+func set_disclosed_enemy(primary_stats: Dictionary, ratings: Dictionary, equipment: Dictionary = {}) -> void:
+	disclosed_enemy_stats = primary_stats.duplicate(true)
+	disclosed_enemy_ratings = ratings.duplicate(true)
+	disclosed_enemy_equipment = equipment.duplicate(true)
+	for slot in enemy_slots:
+		var item: Dictionary = disclosed_enemy_equipment.get(slot, {})
+		(enemy_slots[slot] as ItemIcon).set_item(item, String(SLOT_SYMBOLS.get(slot, "◇")) if not item.is_empty() else "?")
+
+func _show_fighter_details(is_player: bool) -> void:
+	var primary: Dictionary = {}
+	var ratings: Dictionary = {}
+	if is_player and character != null and repository != null:
+		primary = character.effective_stats(repository)
+		ratings = CharacterStatsService.snapshot(character, repository)
+	elif not is_player:
+		primary = disclosed_enemy_stats
+		ratings = disclosed_enemy_ratings
+	fighter_popup.title = "Игрок" if is_player else "Противник"
+	var lines: PackedStringArray = []
+	lines.append("[b]Характеристики[/b]")
+	for key in PRIMARY_NAMES:
+		if primary.has(key):
+			lines.append("%s: %s" % [PRIMARY_NAMES[key], str(primary[key])])
+	lines.append("")
+	lines.append("[b]Рейтинги[/b]")
+	for key in RATING_KEYS:
+		if ratings.has(key):
+			lines.append("%s: %s" % [RATING_NAMES[key], str(ratings[key])])
+	if primary.is_empty() and ratings.is_empty():
+		lines.append("Нет доступных характеристик")
+	fighter_popup_text.text = "\n".join(lines)
+	fighter_popup.popup_centered()
 
 func _select_zone(is_player: bool, zone: String) -> void:
 	var index := ZONES.find(zone)
@@ -290,7 +366,8 @@ func refresh() -> void:
 		icon.set_item(item, String(SLOT_SYMBOLS.get(slot, "◇")), instance_id != null)
 	for slot in enemy_slots:
 		var icon := enemy_slots[slot] as ItemIcon
-		icon.set_item({}, "?")
+		var disclosed: Dictionary = disclosed_enemy_equipment.get(slot, {})
+		icon.set_item(disclosed, String(SLOT_SYMBOLS.get(slot, "◇")) if not disclosed.is_empty() else "?")
 	if character != null and repository != null and hp_label != null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
