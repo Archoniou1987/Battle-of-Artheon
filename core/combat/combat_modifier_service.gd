@@ -84,6 +84,12 @@ static func manual_block_zones(combatant: CombatantState) -> Array:
 static func equipped_item_types(combatant: CombatantState) -> Array:
 	return Array(combatant.combat_stats.get("equipped_item_types", [])).duplicate(true)
 
+static func weapon_on_hit_effects(combatant: CombatantState) -> Array:
+	return Array(combatant.combat_stats.get("weapon_on_hit_effects", [])).duplicate(true)
+
+static func manual_block_effects(combatant: CombatantState) -> Array:
+	return Array(combatant.combat_stats.get("on_manual_block_effects", [])).duplicate(true)
+
 static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int) -> float:
 	var key := resist_type.to_lower()
 	if key.is_empty():
@@ -123,6 +129,8 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	result["manual_block_zone_capacity"] = manual_block_zone_capacity(combatant)
 	result["manual_block_zones"] = manual_block_zones(combatant)
 	result["equipped_item_types"] = equipped_item_types(combatant)
+	result["weapon_on_hit_effects"] = weapon_on_hit_effects(combatant)
+	result["on_manual_block_effects"] = manual_block_effects(combatant)
 	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
