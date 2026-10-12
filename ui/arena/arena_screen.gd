@@ -136,11 +136,6 @@ func _ready() -> void:
 	refresh()
 
 func _build_square() -> void:
-	var title := Label.new()
-	title.text = "АРЕНА — ПОЕДИНОК"
-	title.position = Vector2(12, 4)
-	title.add_theme_font_size_override("font_size", 18)
-	square_content.add_child(title)
 	_build_fighter(Vector2(4, 34), true)
 	_build_fighter(Vector2(244, 34), false)
 	var ability_title := Label.new()
