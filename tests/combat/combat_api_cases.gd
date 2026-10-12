@@ -9,6 +9,8 @@ static func run()->bool:
 	hero.tempo=10.0
 	hero.combat_stats["tempo"]=5.0
 	hero.combat_stats["damage_reduction"]=0.25
+	hero.combat_stats["manual_block_zone_capacity"]=2
+	hero.combat_stats["manual_block_zones"]=["head","chest"]
 	hero.active_effects.append({
 		"effect_id":"EFF_API",
 		"definition":{"tempo":15.0,"damage_reduction":0.25},
@@ -32,6 +34,8 @@ static func run()->bool:
 	var combat_stats:Dictionary=hero_view.get("combat_stats",{})
 	if not is_equal_approx(float(combat_stats.get("effective_tempo",0.0)),30.0): return false
 	if not is_equal_approx(float(combat_stats.get("damage_reduction",0.0)),0.5): return false
+	if Array(hero_view.get("manual_block_zones",[]))!=["head","chest"]: return false
+	if int(hero_view.get("manual_block_zone_capacity",0))!=2: return false
 	if String(hero_view.get("active_opponent_id",""))!="enemy": return false
 	if int(hero_view.get("zone_id",-1))!=CombatZoneState.ZONE_1: return false
 	var targets:=api.target_options("hero")
