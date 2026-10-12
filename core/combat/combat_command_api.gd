@@ -225,8 +225,6 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		return intent
 	var target_id:=String(intent.get("target_id",""))
 	var profile:Dictionary=intent.get("attack_profile",{})
-	var damage_min:=float(profile.get("damage_min",0.0))
-	var damage_max:=float(profile.get("damage_max",damage_min))
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	var event_ids:Array[int]=[]
 	# Every constituent hit of one Base Attack shares an AP group. AP is awarded
@@ -236,34 +234,15 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		var event_rolls:=_basic_attack_hit_rolls(rolls,hit_index)
 		var damage_roll:=float(event_rolls.get("damage",randf()))
 		event_rolls["damage"]=damage_roll
-		var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)
-		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{
-			"raw_damage":raw_damage,
-			"damage_min":damage_min,
-			"damage_max":damage_max,
-			"damage_roll":damage_roll,
-			"zone":String(event_rolls.get("zone",requested_zone)),
-			"damage_type":String(profile.get("damage_type","slashing")),
-			"rolls":event_rolls,
-			"weapon_index":int(profile.get("weapon_index",0)),
-			"is_weapon_attack":true,
-			"attack_profile_id":attack_profile_id,
-			"hit_index":hit_index,
-			"hit_count":hit_count,
-			"delivery_type":String(profile.get("delivery_type","MELEE")),
-			"min_zone_distance":int(profile.get("min_zone_distance",0)),
-			"max_zone_distance":int(profile.get("max_zone_distance",0)),
-			"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
-			"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
-			"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
-			"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
-			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
-			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
+		var payload:=WeaponAttackProfile.attack_payload(profile,event_rolls,String(event_rolls.get("zone",requested_zone)),{
 			# AP belongs to the whole Base Attack action. Any connected constituent
 			# may earn it; the engine deduplicates by ap_group_id.
 			"generates_ap":not bool(event_rolls.get("suppress_ap",false)),
-			"ap_group_id":ap_group_id
+			"ap_group_id":ap_group_id,
+			"hit_index":hit_index,
+			"hit_count":hit_count
 		})
+		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,payload)
 		state.queue_event(event)
 		event_ids.append(event.event_id)
 	return {"ok":true,"reason":"queued","event_id":event_ids[0],"event_ids":event_ids,"hit_count":hit_count,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile_id":attack_profile_id}

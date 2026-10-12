@@ -5,6 +5,7 @@ extends RefCounted
 ## Spatial target validation belongs to CombatCommandApi; consumers without a
 ## spatial context (for example duel smoke simulation) can still use the same
 ## weapon semantics.
+const PHYSICAL_DAMAGE_TYPES := ["physical","slashing","piercing","chopping","blunt"]
 
 static func all(combatant:CombatantState)->Array[Dictionary]:
 	var result:Array[Dictionary]=[]
@@ -39,3 +40,40 @@ static func normalize(weapon:Dictionary,raw_profile:Dictionary,weapon_index:int)
 	profile["magic_hit_modifier"]=float(profile.get("magic_hit_modifier",weapon.get("magic_hit_modifier",0.0)))
 	profile["hit_count"]=maxi(1,int(profile.get("hit_count",weapon.get("hit_count",1))))
 	return profile
+
+static func attack_payload(profile:Dictionary,rolls:Dictionary,zone:String="chest",overrides:Dictionary={}) -> Dictionary:
+	var event_rolls:=rolls.duplicate(true)
+	var damage_roll:=float(event_rolls.get("damage",0.0))
+	event_rolls["damage"]=damage_roll
+	var damage_min:=float(profile.get("damage_min",0.0))
+	var damage_max:=float(profile.get("damage_max",damage_min))
+	var damage_type:=String(profile.get("damage_type","slashing"))
+	var uses_magic_hit:=bool(profile.get("uses_magic_hit",false))
+	var payload:Dictionary={
+		"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll)*float(overrides.get("damage_multiplier",1.0)),
+		"damage_min":damage_min,
+		"damage_max":damage_max,
+		"damage_roll":damage_roll,
+		"damage_type":damage_type,
+		"zone":zone,
+		"rolls":event_rolls,
+		"weapon_index":int(profile.get("weapon_index",0)),
+		"is_weapon_attack":true,
+		"attack_profile_id":String(profile.get("id","basic")),
+		"hit_index":int(overrides.get("hit_index",0)),
+		"hit_count":maxi(1,int(profile.get("hit_count",1))),
+		"delivery_type":String(profile.get("delivery_type","MELEE")),
+		"min_zone_distance":int(profile.get("min_zone_distance",0)),
+		"max_zone_distance":int(profile.get("max_zone_distance",0)),
+		"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
+		"uses_magic_hit":uses_magic_hit,
+		"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
+		"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
+		"uses_physical_block":not uses_magic_hit,
+		"bypass_physical_mitigation":not PHYSICAL_DAMAGE_TYPES.has(damage_type.to_lower())
+	}
+	for key in overrides:
+		if key=="damage_multiplier":
+			continue
+		payload[key]=overrides[key]
+	return payload

@@ -403,31 +403,12 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 	var counter_rolls:Dictionary=Dictionary(parent.payload.get("counterattack_rolls",{})).duplicate(true)
 	var damage_roll:=float(counter_rolls.get("damage",randf()))
 	counter_rolls["damage"]=damage_roll
-	var damage_min:=float(weapon.get("damage_min",0.0))
-	var damage_max:=float(weapon.get("damage_max",damage_min))
-	var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)*float(physical_balance.get("counterattack_damage_coefficient",0.8))
-	var child := state.create_event(CombatEvent.Kind.ATTACK, defender.combatant_id, attacker.combatant_id, {
-		"raw_damage":raw_damage,
-		"damage_min":damage_min,
-		"damage_max":damage_max,
-		"damage_roll":damage_roll,
-		"zone":String(parent.payload.get("counterattack_zone","chest")),
-		"damage_type":String(weapon.get("damage_type","slashing")),
-		"rolls":counter_rolls,
+	var payload:=WeaponAttackProfile.attack_payload(weapon,counter_rolls,String(parent.payload.get("counterattack_zone","chest")),{
+		"damage_multiplier":float(physical_balance.get("counterattack_damage_coefficient",0.8)),
 		"is_counterattack":true,
-		"is_weapon_attack":true,
 		"generates_ap":false,
-		"weapon_index":int(weapon.get("weapon_index",0)),
-		"attack_profile_id":String(weapon.get("id","basic")),
-		"delivery_type":String(weapon.get("delivery_type","MELEE")),
-		"min_zone_distance":int(weapon.get("min_zone_distance",0)),
-		"max_zone_distance":int(weapon.get("max_zone_distance",0)),
-		"uses_magic_hit":bool(weapon.get("uses_magic_hit",false)),
-		"magic_hit_modifier":float(weapon.get("magic_hit_modifier",0.0)),
-		"magic_hit_roll":int(counter_rolls.get("magic_hit",1)),
-		"uses_physical_block":not bool(weapon.get("uses_magic_hit",false)),
-		"bypass_physical_mitigation":not String(weapon.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
-	}, parent.event_id)
+	})
+	var child := state.create_event(CombatEvent.Kind.ATTACK, defender.combatant_id, attacker.combatant_id, payload, parent.event_id)
 	state.queue_event(child); parent.set_result("counterattack_event_id", child.event_id)
 
 func _counterattack_weapon_profile(combatant:CombatantState)->Dictionary:

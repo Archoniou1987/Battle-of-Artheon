@@ -58,26 +58,14 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 		var rolls:=_attack_rolls()
 		var damage_roll:=rng.randf()
 		rolls["damage"]=damage_roll
-		var damage_min:=float(profile.get("damage_min",0.0))
-		var damage_max:=float(profile.get("damage_max",damage_min))
-		result.append(state.create_event(CombatEvent.Kind.ATTACK,attacker.combatant_id,defender.combatant_id,{
-			"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
-			"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
-			"zone":HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],
-			"damage_type":String(profile.get("damage_type","slashing")),"rolls":rolls,
-			"is_extra_attack":extra,"generates_ap":not extra,"ap_group_id":ap_group_id if ap_group_id>=0 else state.next_event_id,"weapon_index":weapon_index,
-			"is_weapon_attack":true,"attack_profile_id":String(profile.get("id","basic")),
-			"hit_index":hit_index,"hit_count":hit_count,
-			"delivery_type":String(profile.get("delivery_type","MELEE")),
-			"min_zone_distance":int(profile.get("min_zone_distance",0)),
-			"max_zone_distance":int(profile.get("max_zone_distance",0)),
-			"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
-			"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
-			"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
-			"magic_hit_roll":int(rolls.get("magic_hit",1)),
-			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
-			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
-		}))
+		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],{
+			"is_extra_attack":extra,
+			"generates_ap":not extra,
+			"ap_group_id":ap_group_id if ap_group_id>=0 else state.next_event_id,
+			"weapon_index":weapon_index,
+			"hit_index":hit_index
+		})
+		result.append(state.create_event(CombatEvent.Kind.ATTACK,attacker.combatant_id,defender.combatant_id,payload))
 	return result
 
 func _weapon_profile(attacker:CombatantState,weapon_index:int)->Dictionary:
