@@ -48,6 +48,15 @@ static func effective_percent(combatant: CombatantState, key: String, round_numb
 	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
 	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + float(combatant.combat_stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
 
+## Canonical rating percentages take priority; legacy direct chances remain valid
+## for NPCs and older combat fixtures without a canonical character snapshot.
+static func combat_chance(combatant: CombatantState, rating_key: String, legacy_key: String, round_number: int, legacy_default: float = 0.0) -> float:
+	var stats := combatant.combat_stats
+	var direct_key := rating_key.trim_suffix("_rating") + "_direct_pct"
+	if stats.has(rating_key + "_percent"):
+		return effective_percent(combatant, rating_key, round_number)
+	return float(stats.get(legacy_key, legacy_default)) + float(stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
+
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result: Dictionary = combatant.combat_stats.duplicate(true)
 	for field in trait_modifiers(combatant):
