@@ -8,6 +8,7 @@ static func run() -> bool:
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
+		and _case_manual_block_accessors_normalize_capacity()
 	)
 
 static func _combatant() -> CombatantState:
@@ -67,3 +68,9 @@ static func _case_damage_reduction_uses_runtime_overlay() -> bool:
 		"remaining_rounds": 1
 	})
 	return is_equal_approx(CombatModifierService.damage_reduction(combatant, 1), 1.0)
+
+static func _case_manual_block_accessors_normalize_capacity() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["manual_block_zone_count"] = 4
+	combatant.combat_stats["manual_block_zones"] = ["head", "chest"]
+	return CombatModifierService.manual_block_zone_capacity(combatant) == 3 and CombatModifierService.manual_block_zones(combatant) == ["head", "chest"]
