@@ -46,6 +46,9 @@ jobs:
       - name: Character UI smoke test
         run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
 
+      - name: Arena opening smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/arena_open_smoke.gd
+
       - name: Install virtual display for visual previews
         run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
 
