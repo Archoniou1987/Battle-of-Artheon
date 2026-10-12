@@ -19,7 +19,7 @@ func regenerate_mana()->void:
 func queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
 func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
-	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(attacker.tempo): return
+	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(CombatModifierService.effective_tempo(attacker, state.round_number)): return
 	var weapon_indices:Array=[]
 	var canonical_profiles:=WeaponAttackProfile.all(attacker)
 	# Legacy damage fields describe one main-hand attack. Canonical multi-weapon
@@ -38,7 +38,8 @@ func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Combat
 		if _weapon_attack_available(attacker,weapon_index):
 			for event in _make_basic_attacks(attacker,defender,false,weapon_index,ap_group_id):
 				round.lock_action(event)
-	if attacker.tempo>0.0 and CombatMath.roll_success(minf(attacker.tempo,100.0),_roll()):
+	var current_tempo := CombatModifierService.effective_tempo(attacker, state.round_number)
+	if current_tempo>0.0 and CombatMath.roll_success(minf(current_tempo,100.0),_roll()):
 		for event in _make_basic_attacks(attacker,defender,true,0):
 			round.lock_action(event)
 func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
