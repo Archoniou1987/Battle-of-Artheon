@@ -288,11 +288,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	if _is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
-	# One mitigation stage for permanent reduction and active defensive EFF.
-	# Values are fractions (0.75 = 75%); the total cannot exceed 100%.
-	var permanent_reduction := float(target.combat_stats.get("damage_reduction", 0.0))
-	var temporary_reduction := _active_effect_value(target, "damage_reduction")
-	var total_reduction := clampf(permanent_reduction + temporary_reduction, 0.0, 1.0)
+	var total_reduction := CombatModifierService.damage_reduction(target, state.round_number)
 	amount *= 1.0 - total_reduction
 	event.set_result("damage_reduction", total_reduction)
 	var final_damage := CombatMath.final_damage_floor(amount)
