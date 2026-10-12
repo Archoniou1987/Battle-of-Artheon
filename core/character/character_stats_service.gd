@@ -49,7 +49,7 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 	if result.has("main_hand_min_damage") and result.has("main_hand_max_damage"):
 		result["main_hand_damage"] = [result["main_hand_min_damage"], result["main_hand_max_damage"]]
 	for key in config.get("rating_stats", []):
-		var direct_key := String(key) + "_direct_pct"
+		var direct_key := String(key).trim_suffix("_rating") + "_direct_pct"
 		result[String(key) + "_percent"] = PrimaryStatEffects.effective_chance(float(result.get(key, 0.0)), character.progression.level, float(direct_effects.get(direct_key, 0.0)), config)
 	return result
 
