@@ -13,7 +13,7 @@ func _init(combat_state:CombatState,seed_value:int=1)->void:
 
 func regenerate_mana()->void:
 	for combatant in state.combatants.values():
-		var regen:=maxi(0,int(combatant.combat_stats.get("mana_regen",0)))
+		var regen:=maxi(0,int(CombatModifierService.value(combatant, "mana_regen", state.round_number)))
 		combatant.mana=mini(combatant.max_mana,combatant.mana+regen)
 
 func queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
