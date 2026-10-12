@@ -14,7 +14,7 @@ const SERVICES := [
 	{"name": "Кузнец", "symbol": "⚒", "position": Vector2(0.18, 0.49)},
 	{"name": "Рынок", "symbol": "◆", "position": Vector2(0.37, 0.54)},
 	{"name": "Главное здание", "symbol": "⌂", "position": Vector2(0.51, 0.40)},
-	{"name": "Тренировочное поле", "symbol": "⚔", "position": Vector2(0.80, 0.53)}
+	{"name": "Арена", "symbol": "⚔", "position": Vector2(0.80, 0.53)}
 ]
 const NAVIGATION := [
 	{"name": "Персонаж", "symbol": "♟"},
@@ -42,6 +42,7 @@ var portrait_nav: GridContainer
 var player_character: CharacterState
 var character_screen: CharacterScreen
 var inventory_screen: InventoryScreen
+var arena_screen: ArenaScreen
 var item_repository: ItemRepository
 var landscape_nav: HBoxContainer
 
@@ -244,7 +245,20 @@ func _open_inventory_screen() -> void:
 	inventory_screen.refresh()
 
 
+func _open_arena_screen() -> void:
+	if arena_screen == null:
+		arena_screen = ArenaScreen.new(player_character, item_repository)
+		arena_screen.name = "ArenaScreen"
+		add_child(arena_screen)
+		arena_screen.back_requested.connect(func() -> void: arena_screen.visible = false)
+	arena_screen.visible = true
+	arena_screen.refresh()
+
+
 func _open_panel(section: String) -> void:
+	if section == "Арена":
+		_open_arena_screen()
+		return
 	if section == "Инвентарь":
 		_open_inventory_screen()
 		return
