@@ -341,7 +341,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
 
 func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defender: CombatantState, rolls: Dictionary) -> void:
-	var effects:Array=attacker.combat_stats.get("weapon_on_hit_effects",[])
+	var effects:Array=CombatModifierService.weapon_on_hit_effects(attacker)
 	if effects.is_empty(): return
 	var attack_weapon_index:=int(parent.payload.get("weapon_index",0))
 	var per_source_rolls:Array=rolls.get("on_hit_effects",[])
@@ -360,7 +360,7 @@ func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defen
 		state.queue_event(state.create_event(CombatEvent.Kind.EFFECT,attacker.combatant_id,defender.combatant_id if String(trigger.get("effect_id"))=="EFF001" else attacker.combatant_id,payload,parent.event_id))
 
 func _trigger_manual_block_effects(parent: CombatEvent, defender: CombatantState, rolls: Dictionary) -> void:
-	var triggers: Array = defender.combat_stats.get("on_manual_block_effects", [])
+	var triggers: Array = CombatModifierService.manual_block_effects(defender)
 	for trigger in triggers:
 		if CombatMath.roll_success(float(trigger.get("chance", 0.0)), int(rolls.get("manual_block_effect", 100))):
 			var payload := {"effect_id":String(trigger.get("effect_id", "")),"source_type":String(trigger.get("source_type", "item")),"source_instance_id":String(trigger.get("source_instance_id", ""))}
