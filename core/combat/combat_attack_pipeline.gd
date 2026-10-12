@@ -48,7 +48,7 @@ func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 		return false
 	var requirement:=String(profile.get("requires_off_hand_type",""))
 	if requirement.is_empty(): return true
-	var equipped_types:Array=attacker.combat_stats.get("equipped_item_types",[])
+	var equipped_types:Array=CombatModifierService.equipped_item_types(attacker)
 	return equipped_types.has(requirement)
 
 func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int,ap_group_id:int=-1)->Array[CombatEvent]:
