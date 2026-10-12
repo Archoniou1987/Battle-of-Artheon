@@ -11,6 +11,7 @@ static func run() -> bool:
 		and _case_manual_block_accessors_normalize_capacity()
 		and _case_equipped_item_types_accessor_copies_values()
 		and _case_effect_trigger_accessors_copy_values()
+		and _case_abilities_accessor_copies_values()
 	)
 
 static func _combatant() -> CombatantState:
@@ -93,3 +94,10 @@ static func _case_effect_trigger_accessors_copy_values() -> bool:
 	on_hit.clear()
 	on_block.clear()
 	return CombatModifierService.weapon_on_hit_effects(combatant).size() == 1 and CombatModifierService.manual_block_effects(combatant).size() == 1
+
+static func _case_abilities_accessor_copies_values() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["abilities"] = ["ABI001"]
+	var abilities := CombatModifierService.abilities(combatant)
+	abilities.append("ABI999")
+	return CombatModifierService.abilities(combatant) == ["ABI001"]
