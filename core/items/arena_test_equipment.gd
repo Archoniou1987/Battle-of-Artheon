@@ -45,5 +45,7 @@ static func seed(character: CharacterState, repository: ItemRepository) -> void:
 		ItemDurabilityService.initialize_item(item, 100)
 		if repository.add_item(item):
 			character.receive_item(id, repository)
-		if definition.has("slot"):
-			character.equip(String(definition["slot"]), id, repository)
+			if definition.has("slot"):
+				var target_slot := String(definition["slot"])
+				if character.equipment.get_equipped_instance_id(target_slot) == null:
+					character.equip(target_slot, id, repository)
