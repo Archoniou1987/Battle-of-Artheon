@@ -139,12 +139,12 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(10, 389)
-	abilities.add_theme_constant_override("separation", 5)
+	abilities.position = Vector2(94, 377)
+	abilities.add_theme_constant_override("separation", 8)
 	square_content.add_child(abilities)
 	for index in range(5):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(84, 36)
+		button.custom_minimum_size = Vector2(52, 52)
 		button.text = str(index + 1)
 		button.tooltip_text = "Активная способность %d" % (index + 1)
 		button.toggle_mode = true
