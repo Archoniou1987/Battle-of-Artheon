@@ -304,6 +304,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 				enemy_slots[slot] = icon
 			icon.set_item({}, slot)
 			icon.pressed.connect(_show_equipment_details.bind(is_player, slot))
+	_add_resource_frame(inner, Vector2(36, 17), Vector2(160, 15))
 	var health_bar := ProgressBar.new()
 	health_bar.position = Vector2(38, 19)
 	health_bar.custom_minimum_size = Vector2(156, 11)
@@ -312,8 +313,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	health_bar.value = 100 if is_player else 0
 	var bar_bg := StyleBoxFlat.new()
 	bar_bg.bg_color = Color("#35383e")
-	bar_bg.border_color = Color("#b39a69")
-	bar_bg.set_border_width_all(1)
+	bar_bg.border_color = Color("#35383e")
+	bar_bg.set_border_width_all(0)
 	health_bar.add_theme_stylebox_override("background", bar_bg)
 	inner.add_child(health_bar)
 	var health := Label.new()
@@ -585,12 +586,26 @@ func set_fighter_resources(is_player: bool, mana: int, max_mana: int, ap: int, m
 		segment.color = Color("#c09a49") if i < clampi(ap, 0, capped_max) else Color("#41392b")
 	(ap_labels[key] as Label).text = "%d / %d AP" % [clampi(ap, 0, capped_max), capped_max]
 
+func _add_resource_frame(parent: Control, frame_position: Vector2, frame_size: Vector2) -> void:
+	var frame := Panel.new()
+	frame.position = frame_position
+	frame.size = frame_size
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var border := StyleBoxFlat.new()
+	border.bg_color = Color(0, 0, 0, 0)
+	border.border_color = Color("#b99a5c")
+	border.set_border_width_all(1)
+	frame.add_theme_stylebox_override("panel", border)
+	parent.add_child(frame)
+
 func _build_resource_display(is_player: bool) -> void:
 	var key := "player" if is_player else "enemy"
 	var host := Control.new()
 	host.position = Vector2(12 if is_player else 344, 389)
 	host.custom_minimum_size = Vector2(124, 47)
 	square_content.add_child(host)
+	_add_resource_frame(host, Vector2(-2, -2), Vector2(128, 20))
+	_add_resource_frame(host, Vector2(-2, 19), Vector2(128, 13))
 	var mana := ProgressBar.new()
 	mana.position = Vector2.ZERO
 	mana.custom_minimum_size = Vector2(124, 16)
