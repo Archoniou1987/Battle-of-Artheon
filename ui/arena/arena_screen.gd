@@ -725,17 +725,26 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 	set_combat_ready(false)
 	var result: Dictionary = combat_session.play_round(targets, blocks)
 	if not bool(result.get("ok", false)):
-		log_view.append_text("\nКоманда отклонена: %s" % String(result.get("reason", "unknown")))
+		_prepend_combat_log("Команда отклонена: %s" % String(result.get("reason", "unknown")))
 		set_combat_ready(true)
 		return
 	_sync_combat_session()
-	log_view.append_text("\n\nРаунд %d" % int(result.get("round", 0)))
+	var round_lines: Array[String] = ["Раунд %d" % int(result.get("round", 0))]
 	for line in Array(result.get("lines", [])):
-		log_view.append_text("\n" + String(line))
+		round_lines.append(String(line))
 	if String(result.get("outcome", "ongoing")) == "ongoing":
 		set_combat_ready(true)
 	else:
-		log_view.append_text("\nБой завершён: " + String(result.get("outcome", "")))
+		round_lines.append("Бой завершён: " + String(result.get("outcome", "")))
+	_prepend_combat_log("\n".join(round_lines))
+
+func _prepend_combat_log(entry: String) -> void:
+	if log_view == null:
+		return
+	var previous := log_view.text
+	log_view.text = entry if previous.is_empty() else entry + "\n\n" + previous
+	log_view.scroll_to_line(0)
+
 
 func _sync_combat_session() -> void:
 	if combat_session == null:
