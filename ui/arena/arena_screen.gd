@@ -171,10 +171,11 @@ func _build_square() -> void:
 	var arena_background := TextureRect.new()
 	arena_background.texture = load("res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png") as Texture2D
 	arena_background.position = Vector2.ZERO
-	arena_background.custom_minimum_size = Vector2(480, 480)
+	arena_background.custom_minimum_size = Vector2.ZERO
 	arena_background.size = Vector2(480, 480)
 	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	arena_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	arena_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	arena_background.clip_contents = true
 	arena_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	square_content.add_child(arena_background)
 	_build_fighter(Vector2(4, 8), true)
