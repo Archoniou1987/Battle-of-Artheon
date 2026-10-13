@@ -534,7 +534,7 @@ func _update_hp(bar: ProgressBar, overlay: Label, current: int, maximum: int) ->
 	bar.max_value = maxi(1, maximum)
 	bar.value = clampi(current, 0, maxi(1, maximum))
 	overlay.text = "%d / %d" % [current, maximum]
-		var fill := StyleBoxFlat.new()
+	var fill := StyleBoxFlat.new()
 	fill.bg_color = Color("#b93642")
 	fill.set_corner_radius_all(2)
 	bar.add_theme_stylebox_override("fill", fill)
