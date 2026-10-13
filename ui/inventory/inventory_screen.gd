@@ -97,13 +97,13 @@ func _ready() -> void:
 	equipment_content.add_child(equipment_background)
 	var middle := Control.new()
 	middle.name = "EquipmentMiddle"
-	middle.position = Vector2(12, 8)
-	middle.scale = Vector2.ONE * 0.95
+	middle.position = Vector2(23, 18)
+	middle.scale = Vector2.ONE * 0.9025
 	equipment_content.add_child(middle)
 	var left_slots := Control.new()
 	left_slots.name = "LeftSlots"
 	middle.add_child(left_slots)
-	left_slots.position = Vector2(0, 0)
+	left_slots.position = Vector2(4, 0)
 	for slot in ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]:
 		_add_equipment_slot(left_slots, slot)
 	character_portrait = PanelContainer.new()
@@ -151,15 +151,15 @@ func _ready() -> void:
 	var right_slots := Control.new()
 	right_slots.name = "RightSlots"
 	middle.add_child(right_slots)
-	right_slots.position = Vector2(424, 0)
+	right_slots.position = Vector2(420, 0)
 	for slot in ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]:
 		_add_equipment_slot(right_slots, slot)
 	var elixirs := HBoxContainer.new()
-	elixirs.position = Vector2(122, 420)
+	elixirs.position = Vector2(122, 418)
 	elixirs.name = "ElixirSlots"
 	elixirs.alignment = BoxContainer.ALIGNMENT_CENTER
 	elixirs.add_theme_constant_override("separation", 4)
-	equipment_content.add_child(elixirs)
+	middle.add_child(elixirs)
 	for i in range(4):
 		var quick := ItemIcon.new()
 		quick.name = "Elixir%d" % (i + 1)
