@@ -3,6 +3,7 @@ extends Control
 
 ## Arena UI foundation. Combat commands are deliberately not simulated here.
 signal back_requested
+signal end_turn_requested(attack_targets: Array[String], block_zones: Array[String])
 
 const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
@@ -207,8 +208,9 @@ func _build_square() -> void:
 	round_button.text = "ПРОВЕСТИ РАУНД"
 	round_button.position = Vector2(90, 423)
 	round_button.custom_minimum_size = Vector2(300, 42)
-	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
-	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
+	round_button.disabled = true # Enabled by the combat session controller.
+	round_button.tooltip_text = "Ожидание боевого сеанса"
+	round_button.pressed.connect(_request_end_turn)
 	square_content.add_child(round_button)
 	var invisible_button_style := StyleBoxEmpty.new()
 	for button_state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
@@ -545,6 +547,15 @@ func set_attack_count(count: int) -> void:
 	while attack_zones.size() > attack_count:
 		attack_zones.pop_back()
 	_update_zone_buttons()
+
+func set_combat_ready(ready: bool) -> void:
+	if round_button != null:
+		round_button.disabled = not ready
+
+func _request_end_turn() -> void:
+	if round_button == null or round_button.disabled:
+		return
+	end_turn_requested.emit(selected_attack_targets(), selected_block_zones())
 
 func selected_attack_targets() -> Array[String]:
 	var result: Array[String] = []
