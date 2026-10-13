@@ -163,6 +163,15 @@ func _ready() -> void:
 	refresh()
 
 func _build_square() -> void:
+	var arena_background := TextureRect.new()
+	arena_background.texture = load("res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png") as Texture2D
+	arena_background.position = Vector2.ZERO
+	arena_background.custom_minimum_size = Vector2(480, 480)
+	arena_background.size = Vector2(480, 480)
+	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	arena_background.stretch_mode = TextureRect.STRETCH_SCALE
+	arena_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	square_content.add_child(arena_background)
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
@@ -196,24 +205,37 @@ func _build_square() -> void:
 	_apply_end_turn_skin(1)
 
 const END_TURN_SKIN_COUNT := 10
-const END_TURN_SKIN_DIR := "res://assets/ui/buttons/end_turn/"
+const END_TURN_ATLAS_PATH := "res://assets/ui/buttons/end_turn/BOA_END_TURN_SKINS_ATLAS_V1.png"
+var end_turn_atlas: Texture2D
+
+## Skin IDs follow atlas reading order: left-to-right, top-to-bottom.
+## Exposed for a future settings selector; visual only, no combat behavior.
+func set_end_turn_skin(skin_id: int) -> void:
+	_apply_end_turn_skin(skin_id)
 
 func _apply_end_turn_skin(skin_id: int) -> void:
 	if round_button == null:
 		return
+	if end_turn_atlas == null:
+		if not ResourceLoader.exists(END_TURN_ATLAS_PATH):
+			return
+		end_turn_atlas = load(END_TURN_ATLAS_PATH) as Texture2D
+	if end_turn_atlas == null:
+		return
 	var selected_id: int = clampi(skin_id, 1, END_TURN_SKIN_COUNT)
-	var path := "%sBOA_END_TURN_SKIN_%02d.png" % [END_TURN_SKIN_DIR, selected_id]
-	if not ResourceLoader.exists(path):
-		return
-	var texture: Texture2D = load(path) as Texture2D
-	if texture == null:
-		return
+	var cell_width := float(end_turn_atlas.get_width()) / 2.0
+	var cell_height := float(end_turn_atlas.get_height()) / 5.0
+	var index := selected_id - 1
+	var texture := AtlasTexture.new()
+	texture.atlas = end_turn_atlas
+	texture.region = Rect2((index % 2) * cell_width, (index / 2) * cell_height, cell_width, cell_height)
+	texture.filter_clip = true
 	var style := StyleBoxTexture.new()
 	style.texture = texture
 	for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
 		round_button.add_theme_stylebox_override(state, style)
-	round_button.text = "" # Artwork already includes END TURN.
-	round_button.tooltip_text = "END TURN · skin %d" % selected_id
+	round_button.text = "" # END TURN is baked into the atlas artwork.
+	round_button.tooltip_text = "END TURN · скин %d" % selected_id
 
 func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var panel := PanelContainer.new()
