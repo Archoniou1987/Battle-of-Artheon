@@ -12,6 +12,9 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	var combatant := CombatantState.new(character.character_id, character.display_name, character.progression.level, health, mana_pool)
 	combatant.stats = primary.duplicate(true)
 	combatant.combat_stats = base.get("combat_stats", {}).duplicate(true)
+	# One adjacent manual block zone is the baseline; shields add to it.
+	if not combatant.combat_stats.has("manual_block_zone_capacity"):
+		combatant.combat_stats["manual_block_zone_capacity"] = 1
 	combatant.armour = base.get("armour", {}).duplicate(true)
 	combatant.tempo = float(base.get("tempo", 0.0))
 	combatant.max_action_points = int(base.get("max_action_points", 5))
