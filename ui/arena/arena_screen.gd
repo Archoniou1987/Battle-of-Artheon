@@ -228,7 +228,7 @@ func _apply_end_turn_skin(skin_id: int) -> void:
 	var index := selected_id - 1
 	var texture := AtlasTexture.new()
 	texture.atlas = end_turn_atlas
-	texture.region = Rect2((index % 2) * cell_width, (index / 2) * cell_height, cell_width, cell_height)
+	texture.region = Rect2((index % 2) * cell_width, floori(float(index) / 2.0) * cell_height, cell_width, cell_height)
 	texture.filter_clip = true
 	var style := StyleBoxTexture.new()
 	style.texture = texture
