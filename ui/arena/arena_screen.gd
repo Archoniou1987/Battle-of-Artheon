@@ -267,8 +267,9 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 10)
 	name_label.add_theme_color_override("font_color", Color("#f1ddbb"))
-	name_label.add_theme_font_override("font", ThemeDB.fallback_font)
-	name_label.add_theme_font_size_override("font_size", 10)
+	var name_font := SystemFont.new()
+	name_font.font_weight = 700
+	name_label.add_theme_font_override("font", name_font)
 	inner.add_child(name_label)
 	fighter_names["player" if is_player else "enemy"] = name_label
 	var portrait := TextureRect.new()
