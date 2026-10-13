@@ -32,7 +32,7 @@ static func seed(character: CharacterState, repository: ItemRepository) -> void:
 			"requirements": {},
 			"guaranteed_stats": {},
 			"bonuses": Dictionary(definition.get("bonus", {})).duplicate(true),
-			"combat_stats": Dictionary(definition.get("bonus", {})).duplicate(true),
+			"combat_stats": {},
 			"description": "Тестовая экипировка Arena. Параметры участвуют в расчёте боя."
 		}
 		if definition.has("damage"):
