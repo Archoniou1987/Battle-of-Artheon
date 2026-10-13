@@ -172,12 +172,12 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(109, 386)
+	abilities.position = Vector2(129, 391)
 	abilities.add_theme_constant_override("separation", 8)
 	square_content.add_child(abilities)
 	for index in range(5):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(46, 46)
+		button.custom_minimum_size = Vector2(38, 38)
 		button.text = ""
 		var abi_style := StyleBoxTexture.new()
 		abi_style.texture = ItemIcon.empty_slot_texture("abi")
@@ -190,7 +190,7 @@ func _build_square() -> void:
 		abilities.add_child(button)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(30, 437)
+	round_button.position = Vector2(30, 439)
 	round_button.custom_minimum_size = Vector2(420, 39)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
