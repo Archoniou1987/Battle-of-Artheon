@@ -56,6 +56,16 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 		var triggers:Array=combatant.combat_stats.get("on_manual_block_effects",[])
 		var block_effect:Dictionary=item.on_manual_block_effect.duplicate(true); block_effect["source_type"]="item"; block_effect["source_instance_id"]=String(item.get("instance_id",item.get("id","")))
 		triggers.append(block_effect); combatant.combat_stats["on_manual_block_effects"]=triggers
+	var zoned_armour:Dictionary=item.get("armour_by_zone",{})
+	for raw_zone in zoned_armour:
+		var zone:=String(raw_zone)
+		if not HIT_ZONES.has(zone):
+			continue
+		var value:=float(zoned_armour[raw_zone])
+		var zone_armour:Dictionary=combatant.armour.get(zone,{})
+		for damage_type in PHYSICAL_TYPES:
+			zone_armour[damage_type]=float(zone_armour.get(damage_type,0.0))+value
+		combatant.armour[zone]=zone_armour
 	var armour:=float(item.get("armour_all_zones_all_physical",0.0))
 	if armour>0.0:_add_universal_physical_armour(combatant,armour)
 static func set_manual_block_zones(combatant:CombatantState,zones:Array)->void:
