@@ -52,13 +52,11 @@ func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
 	_load_saved_progression()
 	item_repository = ItemRepository.new()
-	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
-		# Test fixture v2 intentionally replaces the previous decorative preview save.
-		if not _load_saved_inventory() or not item_repository.has_item("arena_test_sword"):
-			item_repository = ItemRepository.new()
-			player_character.inventory = InventoryState.new(player_character.character_id)
-			player_character.equipment = EquipmentState.new()
-			ArenaTestEquipment.seed(player_character, item_repository)
+	var inventory_loaded := _load_saved_inventory()
+	# Never replace an existing save: doing so destroys user items and breaks persistence.
+	# The training fixture is only generated for a fresh, interactive preview.
+	if not inventory_loaded and ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
+		ArenaTestEquipment.seed(player_character, item_repository)
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
