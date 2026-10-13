@@ -205,7 +205,7 @@ func _build_square() -> void:
 	_build_resource_display(false)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(90, 426)
+	round_button.position = Vector2(90, 423)
 	round_button.custom_minimum_size = Vector2(300, 42)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
@@ -262,8 +262,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	panel.add_child(inner)
 	var name_label := Label.new()
 	name_label.text = "Герой [1]" if is_player else "Противник [1]"
-	name_label.position = Vector2(38, -5)
-	name_label.custom_minimum_size = Vector2(156, 18)
+	name_label.position = Vector2(38, 1)
+	name_label.custom_minimum_size = Vector2(156, 13)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 10)
 	name_label.add_theme_color_override("font_color", Color("#f1ddbb"))
@@ -356,7 +356,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(6, 333)
+	zone_row.position = Vector2(6 if is_player else 0, 333)
 	zone_row.add_theme_constant_override("separation", 4)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
