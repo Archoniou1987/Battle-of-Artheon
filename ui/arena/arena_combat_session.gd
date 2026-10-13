@@ -13,7 +13,7 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	var player := CharacterCombatBuilder.build(character, repository)
 	player_id = player.combatant_id
 	var enemy := CombatantState.new(ENEMY_ID, "Тренировочный противник", player.level, 100, 0)
-	enemy.combat_stats["weapon_profiles"] = [{"damage_min": 3.0, "damage_max": 6.0, "damage_type": "blunt"}]
+	enemy.combat_stats["weapon_profiles"] = [{"damage_min": 4.0, "damage_max": 7.0, "damage_type": "slashing"}]
 	state.add_combatant(player)
 	state.add_combatant(enemy)
 	var group := GroupCombatState.new(state)
