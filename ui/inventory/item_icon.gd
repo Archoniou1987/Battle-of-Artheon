@@ -33,7 +33,7 @@ static func empty_slot_texture(slot: String) -> Texture2D:
 	# Prefer verified, individually cropped textures when installed.
 	# Legacy atlas fallback keeps existing scenes functional during asset upload.
 	if index >= 0 and index < EMPTY_SPRITE_FILES.size():
-		var sprite_path := EMPTY_SPRITE_DIR + EMPTY_SPRITE_FILES[index]
+		var sprite_path: String = EMPTY_SPRITE_DIR + String(EMPTY_SPRITE_FILES[index])
 		if ResourceLoader.exists(sprite_path):
 			var sprite := load(sprite_path) as Texture2D
 			if sprite != null:
