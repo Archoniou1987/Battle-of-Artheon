@@ -174,7 +174,7 @@ func _build_square() -> void:
 	arena_background.custom_minimum_size = Vector2(480, 480)
 	arena_background.size = Vector2(480, 480)
 	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	arena_background.stretch_mode = TextureRect.STRETCH_SCALE
+	arena_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	arena_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	square_content.add_child(arena_background)
 	_build_fighter(Vector2(4, 8), true)
@@ -200,7 +200,7 @@ func _build_square() -> void:
 	_build_resource_display(false)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(90, 438)
+	round_button.position = Vector2(90, 431)
 	round_button.custom_minimum_size = Vector2(300, 42)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
@@ -571,9 +571,12 @@ func set_fighter_resources(is_player: bool, mana: int, max_mana: int, ap: int, m
 	(mana_labels[key] as Label).text = "%d / %d" % [maxi(0, mana), maxi(0, max_mana)]
 	var segments: Array = ap_segments[key]
 	var capped_max := clampi(max_ap, 0, 8)
+	var gap := 3.0
+	var segment_width := (124.0 - gap * float(maxi(0, capped_max - 1))) / float(maxi(1, capped_max))
 	for i in range(segments.size()):
 		var segment := segments[i] as ColorRect
 		segment.visible = i < capped_max
+		segment.custom_minimum_size = Vector2(segment_width, 9)
 		segment.color = Color("#c09a49") if i < clampi(ap, 0, capped_max) else Color("#41392b")
 	(ap_labels[key] as Label).text = "%d / %d AP" % [clampi(ap, 0, capped_max), capped_max]
 
@@ -596,7 +599,7 @@ func _build_resource_display(is_player: bool) -> void:
 	host.add_child(mana)
 	var mana_text := Label.new()
 	mana_text.position = Vector2.ZERO
-	mana_text.custom_minimum_size = Vector2(132, 16)
+	mana_text.custom_minimum_size = Vector2(124, 16)
 	mana_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mana_text.add_theme_font_size_override("font_size", 10)
 	mana_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
