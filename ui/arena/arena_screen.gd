@@ -8,7 +8,7 @@ const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs",
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
 const ZONES := ["head", "chest", "arms", "waist", "legs"]
 const ZONE_NAMES := ["Голова", "Корпус", "Руки", "Пояс", "Ноги"]
-const COMBAT_ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_ATLAS_V1.png"
+const COMBAT_ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_v2.png"
 var zone_atlas: Texture2D
 var zone_textures: Dictionary = {}
 
@@ -22,23 +22,12 @@ func _zone_texture(is_player: bool, index: int) -> Texture2D:
 	var cell_key := index if is_player else index + 5
 	if zone_textures.has(cell_key):
 		return zone_textures[cell_key] as Texture2D
-	# The source PNG is 1536x614, so the 5-column split is fractional.
-	# Inset each region to prevent bilinear sampling from adjacent red/blue cells.
+	# The corrected atlas is a clean 5x2 grid; do not trim frame pixels.
 	var cell_width := float(zone_atlas.get_width()) / 5.0
 	var cell_height := float(zone_atlas.get_height()) / 2.0
-	# Crop the actual art inside each cell: avoid neighboring colors and
-	# the black strip at the bottom of the supplied atlas.
-	var inset_x := 3.0
-	var inset_top := 3.0
-	var inset_bottom := 14.0 if not is_player else 3.0
 	var cropped := AtlasTexture.new()
 	cropped.atlas = zone_atlas
-	cropped.region = Rect2(
-		index * cell_width + inset_x,
-		(0 if is_player else 1) * cell_height + inset_top,
-		cell_width - inset_x * 2.0,
-		cell_height - inset_top - inset_bottom
-	)
+	cropped.region = Rect2(index * cell_width, (0 if is_player else 1) * cell_height, cell_width, cell_height)
 	cropped.filter_clip = true
 	zone_textures[cell_key] = cropped
 	return cropped
@@ -61,6 +50,11 @@ var defense_buttons: Array[Button] = []
 var attack_buttons: Array[Button] = []
 var hp_bars: Dictionary = {}
 var hp_overlays: Dictionary = {}
+var fighter_names: Dictionary = {}
+var mana_bars: Dictionary = {}
+var mana_labels: Dictionary = {}
+var ap_segments: Dictionary = {}
+var ap_labels: Dictionary = {}
 var effects_rows: Dictionary = {}
 var selected_ability := ""
 var player_slots: Dictionary = {}
@@ -172,12 +166,12 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(129, 391)
-	abilities.add_theme_constant_override("separation", 8)
+	abilities.position = Vector2(140, 389)
+	abilities.add_theme_constant_override("separation", 7)
 	square_content.add_child(abilities)
 	for index in range(5):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(38, 38)
+		button.custom_minimum_size = Vector2(34, 34)
 		button.text = ""
 		var abi_style := StyleBoxTexture.new()
 		abi_style.texture = ItemIcon.empty_slot_texture("abi")
@@ -188,10 +182,12 @@ func _build_square() -> void:
 		button.toggle_mode = true
 		button.disabled = true # UI only until CombatCommandApi integration.
 		abilities.add_child(button)
+	_build_resource_display(true)
+	_build_resource_display(false)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(30, 439)
-	round_button.custom_minimum_size = Vector2(420, 39)
+	round_button.position = Vector2(30, 443)
+	round_button.custom_minimum_size = Vector2(420, 34)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
 	square_content.add_child(round_button)
@@ -205,10 +201,11 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	inner.custom_minimum_size = Vector2(232, 328)
 	panel.add_child(inner)
 	var name_label := Label.new()
-	name_label.text = "ИГРОК" if is_player else "ПРОТИВНИК"
-	name_label.position = Vector2(65, -5)
-	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.text = "Герой [1]" if is_player else "Противник [1]"
+	name_label.position = Vector2(35, -5)
+	name_label.add_theme_font_size_override("font_size", 12)
 	inner.add_child(name_label)
+	fighter_names["player" if is_player else "enemy"] = name_label
 	var portrait := TextureRect.new()
 	portrait.position = Vector2(48, 39)
 	portrait.custom_minimum_size = Vector2(136, 233)
@@ -265,7 +262,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	health.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	health.add_theme_font_size_override("font_size", 9)
 	health.add_theme_color_override("font_color", Color.WHITE)
-	health.text = "HP —" if is_player else "HP ? / ?"
+	health.text = "— / —"
 	inner.add_child(health)
 	hp_bars["player" if is_player else "enemy"] = health_bar
 	hp_overlays["player" if is_player else "enemy"] = health
@@ -293,7 +290,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
 	zone_row.position = Vector2(6, 333)
-	zone_row.add_theme_constant_override("separation", 2)
+	zone_row.add_theme_constant_override("separation", 4)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
 		var zone: String = ZONES[index]
@@ -306,7 +303,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
 				button.add_theme_stylebox_override(state, zone_style)
 		button.tooltip_text = ZONE_NAMES[index]
-		button.custom_minimum_size = Vector2(44, 44)
+		button.custom_minimum_size = Vector2(42, 44)
 		button.toggle_mode = true
 		button.button_pressed = is_player and zone == "chest"
 		button.pressed.connect(_select_zone.bind(is_player, zone))
@@ -319,7 +316,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	# until actual effect data is supplied. No placeholder icons over the face.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(elixir_row.position.x + 2, elixir_row.position.y - (44 if row_type == "Баффы" else 23))
+		row.position = Vector2(elixir_row.position.x, elixir_row.position.y - (43 if row_type == "Баффы" else 22))
 		row.add_theme_constant_override("separation", 1)
 		row.visible = true # Temporary debug markers for layout review
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -491,12 +488,85 @@ func _update_zone_buttons() -> void:
 func _update_hp(bar: ProgressBar, overlay: Label, current: int, maximum: int) -> void:
 	bar.max_value = maxi(1, maximum)
 	bar.value = clampi(current, 0, maxi(1, maximum))
-	overlay.text = "HP %d / %d" % [current, maximum]
-	var fraction := float(current) / float(maxi(1, maximum))
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color("#e34b4b") if fraction <= 0.20 else (Color("#e3bf42") if fraction <= 0.50 else Color("#35bd61"))
+	overlay.text = "%d / %d" % [current, maximum]
+		var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("#b93642")
 	fill.set_corner_radius_all(2)
 	bar.add_theme_stylebox_override("fill", fill)
+
+
+## UI-only snapshots; resource mechanics are owned by gameplay services.
+func set_fighter_header(is_player: bool, fighter_name: String, fighter_level: int) -> void:
+	var key := "player" if is_player else "enemy"
+	if fighter_names.has(key):
+		(fighter_names[key] as Label).text = "%s [%d]" % [fighter_name, maxi(1, fighter_level)]
+
+func set_fighter_hp(is_player: bool, current: int, maximum: int) -> void:
+	var key := "player" if is_player else "enemy"
+	if hp_bars.has(key):
+		_update_hp(hp_bars[key], hp_overlays[key], current, maximum)
+
+func set_fighter_resources(is_player: bool, mana: int, max_mana: int, ap: int, max_ap: int) -> void:
+	var key := "player" if is_player else "enemy"
+	if not mana_bars.has(key):
+		return
+	var bar := mana_bars[key] as ProgressBar
+	bar.max_value = maxi(1, max_mana)
+	bar.value = clampi(mana, 0, maxi(0, max_mana))
+	(mana_labels[key] as Label).text = "%d / %d" % [maxi(0, mana), maxi(0, max_mana)]
+	var segments: Array = ap_segments[key]
+	var capped_max := clampi(max_ap, 0, 8)
+	for i in range(segments.size()):
+		var segment := segments[i] as ColorRect
+		segment.visible = i < capped_max
+		segment.color = Color("#c09a49") if i < clampi(ap, 0, capped_max) else Color("#41392b")
+	(ap_labels[key] as Label).text = "%d / %d AP" % [clampi(ap, 0, capped_max), capped_max]
+
+func _build_resource_display(is_player: bool) -> void:
+	var key := "player" if is_player else "enemy"
+	var host := Control.new()
+	host.position = Vector2(8 if is_player else 340, 389)
+	host.custom_minimum_size = Vector2(132, 47)
+	square_content.add_child(host)
+	var mana := ProgressBar.new()
+	mana.position = Vector2.ZERO
+	mana.custom_minimum_size = Vector2(132, 16)
+	mana.show_percentage = false
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color("#172b43")
+	mana.add_theme_stylebox_override("background", bg)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color("#347abd")
+	mana.add_theme_stylebox_override("fill", fill)
+	host.add_child(mana)
+	var mana_text := Label.new()
+	mana_text.position = Vector2.ZERO
+	mana_text.custom_minimum_size = Vector2(132, 16)
+	mana_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mana_text.add_theme_font_size_override("font_size", 10)
+	mana_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.add_child(mana_text)
+	var ap_row := HBoxContainer.new()
+	ap_row.position = Vector2(0, 21)
+	ap_row.add_theme_constant_override("separation", 3)
+	host.add_child(ap_row)
+	var segments: Array = []
+	for i in range(8):
+		var segment := ColorRect.new()
+		segment.custom_minimum_size = Vector2(13, 9)
+		ap_row.add_child(segment)
+		segments.append(segment)
+	var ap_text := Label.new()
+	ap_text.position = Vector2(0, 31)
+	ap_text.custom_minimum_size = Vector2(132, 14)
+	ap_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ap_text.add_theme_font_size_override("font_size", 9)
+	host.add_child(ap_text)
+	mana_bars[key] = mana
+	mana_labels[key] = mana_text
+	ap_segments[key] = segments
+	ap_labels[key] = ap_text
+	set_fighter_resources(is_player, 0, 0, 5, 5)
 
 func refresh() -> void:
 	for slot in player_slots:
@@ -511,6 +581,8 @@ func refresh() -> void:
 	if character != null and repository != null and hp_label != null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
+		set_fighter_header(true, character.display_name, character.level)
+		set_fighter_resources(true, snapshot.mana, snapshot.max_mana, 5, 5)
 
 func _apply_layout() -> void:
 	if layout == null:
