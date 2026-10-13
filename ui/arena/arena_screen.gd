@@ -183,7 +183,7 @@ func _build_square() -> void:
 	arena_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	square_content.add_child(arena_background)
 	_build_fighter(Vector2(4, 8), true)
-	_build_fighter(Vector2(244, 8), false)
+	_build_fighter(Vector2(242, 8), false)
 	var abilities := HBoxContainer.new()
 	abilities.position = Vector2(144, 389)
 	abilities.add_theme_constant_override("separation", 4)
@@ -205,7 +205,7 @@ func _build_square() -> void:
 	_build_resource_display(false)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(90, 431)
+	round_button.position = Vector2(90, 426)
 	round_button.custom_minimum_size = Vector2(300, 42)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
@@ -294,7 +294,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			var slot: String = slots[index]
 			var icon := ItemIcon.new()
 			icon.name = slot
-			icon.position = Vector2(2 if side == 0 else 190, 35 + index * 42)
+			icon.position = Vector2(5 if side == 0 else 187, 35 + index * 42)
 			icon.custom_minimum_size = Vector2(30, 30)
 			icon.scale = Vector2.ONE * 0.74
 			inner.add_child(icon)
