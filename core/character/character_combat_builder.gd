@@ -28,6 +28,23 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		if key == "weapon_profiles":
 			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
 		combatant.combat_stats[key] = canonical[key]
+	# Keep EquipmentBuilder weapon identity, but apply canonical derived damage.
+	var damage_bonus := float(canonical.get("physical_damage_flat", 0.0))
+	var runtime_profiles: Array = combatant.combat_stats.get("weapon_profiles", [])
+	for i in range(runtime_profiles.size()):
+		var profile: Dictionary = runtime_profiles[i]
+		profile["damage_min"] = float(profile.get("damage_min", 0.0)) + damage_bonus
+		profile["damage_max"] = float(profile.get("damage_max", 0.0)) + damage_bonus
+		var attacks: Array = profile.get("attack_profiles", [])
+		for j in range(attacks.size()):
+			if attacks[j] is Dictionary:
+				var attack: Dictionary = attacks[j]
+				if attack.has("damage_min"):
+					attack["damage_min"] = float(attack["damage_min"]) + damage_bonus
+				if attack.has("damage_max"):
+					attack["damage_max"] = float(attack["damage_max"]) + damage_bonus
+		runtime_profiles[i] = profile
+	combatant.combat_stats["weapon_profiles"] = runtime_profiles
 	var canonical_profiles:Array = canonical.get("weapon_profiles", [])
 	if combatant.combat_stats.get("weapon_profiles", []).is_empty() and not canonical_profiles.is_empty():
 		combatant.combat_stats["weapon_profiles"] = canonical_profiles.duplicate(true)
