@@ -191,6 +191,29 @@ func _build_square() -> void:
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
 	square_content.add_child(round_button)
+	# Cosmetic END TURN skins; the first skin is the default.
+	# Until the transparent PNGs are uploaded, keep the original button.
+	_apply_end_turn_skin(1)
+
+const END_TURN_SKIN_COUNT := 10
+const END_TURN_SKIN_DIR := "res://assets/ui/buttons/end_turn/"
+
+func _apply_end_turn_skin(skin_id: int) -> void:
+	if round_button == null:
+		return
+	var selected_id: int = clampi(skin_id, 1, END_TURN_SKIN_COUNT)
+	var path := "%sBOA_END_TURN_SKIN_%02d.png" % [END_TURN_SKIN_DIR, selected_id]
+	if not ResourceLoader.exists(path):
+		return
+	var texture: Texture2D = load(path) as Texture2D
+	if texture == null:
+		return
+	var style := StyleBoxTexture.new()
+	style.texture = texture
+	for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
+		round_button.add_theme_stylebox_override(state, style)
+	round_button.text = "" # Artwork already includes END TURN.
+	round_button.tooltip_text = "END TURN · skin %d" % selected_id
 
 func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var panel := PanelContainer.new()
