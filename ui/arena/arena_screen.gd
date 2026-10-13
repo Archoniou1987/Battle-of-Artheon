@@ -193,10 +193,11 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	panel.add_child(inner)
 	var name_label := Label.new()
 	name_label.text = "ИГРОК" if is_player else "ПРОТИВНИК"
-	name_label.position = Vector2(65, 3)
+	name_label.position = Vector2(65, -5)
+	name_label.add_theme_font_size_override("font_size", 15)
 	inner.add_child(name_label)
 	var portrait := TextureRect.new()
-	portrait.position = Vector2(48, 48)
+	portrait.position = Vector2(48, 39)
 	portrait.custom_minimum_size = Vector2(136, 233)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -205,7 +206,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	inner.add_child(portrait)
 	var inspect := Button.new()
 	inspect.flat = true
-	inspect.position = Vector2(40, 44)
+	inspect.position = Vector2(40, 35)
 	inspect.custom_minimum_size = Vector2(152, 237)
 	inspect.tooltip_text = "Посмотреть характеристики"
 	inspect.pressed.connect(_show_fighter_details.bind(is_player))
@@ -223,7 +224,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			var slot: String = slots[index]
 			var icon := ItemIcon.new()
 			icon.name = slot
-			icon.position = Vector2(2 if side == 0 else 190, 44 + index * 42)
+			icon.position = Vector2(2 if side == 0 else 190, 35 + index * 42)
 			icon.custom_minimum_size = Vector2(30, 30)
 			icon.scale = Vector2.ONE * 0.74
 			inner.add_child(icon)
@@ -234,8 +235,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			icon.set_item({}, slot)
 			icon.pressed.connect(_show_equipment_details.bind(is_player, slot))
 	var health_bar := ProgressBar.new()
-	health_bar.position = Vector2(38, 23)
-	health_bar.custom_minimum_size = Vector2(156, 15)
+	health_bar.position = Vector2(38, 19)
+	health_bar.custom_minimum_size = Vector2(156, 11)
 	health_bar.show_percentage = false
 	health_bar.max_value = 100
 	health_bar.value = 100 if is_player else 0
@@ -246,8 +247,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	health_bar.add_theme_stylebox_override("background", bar_bg)
 	inner.add_child(health_bar)
 	var health := Label.new()
-	health.position = Vector2(38, 22)
-	health.custom_minimum_size = Vector2(156, 17)
+	health.position = Vector2(38, 17)
+	health.custom_minimum_size = Vector2(156, 14)
 	health.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	health.add_theme_font_size_override("font_size", 12)
 	health.add_theme_color_override("font_color", Color.WHITE)
@@ -258,7 +259,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if is_player:
 		hp_label = health
 	var elixir_row := HBoxContainer.new()
-	elixir_row.position = Vector2(48, 285)
+	elixir_row.position = Vector2(48, 276)
 	elixir_row.add_theme_constant_override("separation", 4)
 	inner.add_child(elixir_row)
 	for elixir_index in range(4):
@@ -305,7 +306,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	# until actual effect data is supplied. No placeholder icons over the face.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(50, 234 if row_type == "Баффы" else 255)
+		row.position = Vector2(50, 225 if row_type == "Баффы" else 246)
 		row.add_theme_constant_override("separation", 1)
 		row.visible = true # Temporary debug markers for layout review
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
