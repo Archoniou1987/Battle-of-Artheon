@@ -4,6 +4,8 @@ extends Control
 signal inventory_changed
 
 ## Responsive inventory shell. Uses live inventory/equipment instance IDs.
+const INVENTORY_LOGICAL_EXTENT := 480.0
+const INVENTORY_BACKGROUND_PATH := "res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png"
 const SLOT_NAMES := {
 	"head": "Голова", "shoulders": "Плечи", "neck": "Шея", "back": "Спина",
 	"chest": "Грудь", "wrists": "Наручи", "hands": "Перчатки", "waist": "Пояс", "legs": "Ноги",
@@ -37,6 +39,7 @@ var bag_scroll: ScrollContainer
 var bag_title: Label
 var bag_panel: PanelContainer
 var equipment_content: Control
+var equipment_background: TextureRect
 var hp_label: Label
 var hp_bar: ProgressBar
 var stats_content: VBoxContainer
@@ -80,10 +83,22 @@ func _ready() -> void:
 	equipment_content = Control.new()
 	equipment_content.name = "SquareContent"
 	equipment_content.position = Vector2.ZERO
-	equipment_content.custom_minimum_size = Vector2(480, 480)
+	equipment_content.size = Vector2(INVENTORY_LOGICAL_EXTENT, INVENTORY_LOGICAL_EXTENT)
 	square_host.add_child(equipment_content)
+	equipment_background = TextureRect.new()
+	equipment_background.name = "InventoryBackground"
+	equipment_background.texture = load(INVENTORY_BACKGROUND_PATH) as Texture2D
+	equipment_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	equipment_background.custom_minimum_size = Vector2.ZERO
+	equipment_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	equipment_background.stretch_mode = TextureRect.STRETCH_SCALE
+	equipment_background.size = Vector2(INVENTORY_LOGICAL_EXTENT, INVENTORY_LOGICAL_EXTENT)
+	equipment_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	equipment_content.add_child(equipment_background)
 	var middle := Control.new()
 	middle.name = "EquipmentMiddle"
+	middle.position = Vector2(12, 8)
+	middle.scale = Vector2.ONE * 0.95
 	equipment_content.add_child(middle)
 	var left_slots := Control.new()
 	left_slots.name = "LeftSlots"
@@ -289,12 +304,23 @@ func _apply_layout() -> void:
 	_last_portrait = portrait
 	layout_row.vertical = portrait
 	var square_host := layout_row.get_node("EquipmentPanel") as Control
-	var available := minf(size.x, size.y)
-	var square_size := maxf(1.0, available)
+	var separation := float(layout_row.get_theme_constant("separation"))
+	var available_width := size.x
+	var available_height := size.y
+	if portrait:
+		available_height = maxf(1.0, size.y - 180.0 - separation)
+	else:
+		available_width = maxf(1.0, size.x - 260.0 - separation)
+	var square_size := floorf(maxf(1.0, minf(available_width, available_height)))
 	square_host.custom_minimum_size = Vector2(square_size, square_size)
+	square_host.size = Vector2(square_size, square_size)
+	equipment_content.position = Vector2.ZERO
+	equipment_content.size = Vector2(INVENTORY_LOGICAL_EXTENT, INVENTORY_LOGICAL_EXTENT)
+	if equipment_background != null:
+		equipment_background.size = Vector2(INVENTORY_LOGICAL_EXTENT, INVENTORY_LOGICAL_EXTENT)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	equipment_content.scale = Vector2.ONE * (square_size / 480.0)
+	equipment_content.scale = Vector2.ONE * (square_size / INVENTORY_LOGICAL_EXTENT)
 	layout_row.add_theme_constant_override("separation", 10)
 	var cell_size := ItemIcon.CELL_SIZE * (square_size / 480.0)
 	var gap := 8.0 * (square_size / 480.0)
