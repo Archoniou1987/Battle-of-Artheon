@@ -5,6 +5,7 @@ const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 # Temporary browser preview fixture; disable before public gameplay release.
 const ENABLE_INVENTORY_PREVIEW_ITEMS := true
+const ARENA_TEST_INVENTORY_VERSION := 2
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const PORTRAIT_NAV_COLUMNS := 3
@@ -51,8 +52,13 @@ func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
 	_load_saved_progression()
 	item_repository = ItemRepository.new()
-	if not _load_saved_inventory() and ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
-		_seed_inventory_preview()
+	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
+		# Test fixture v2 intentionally replaces the previous decorative preview save.
+		if not _load_saved_inventory() or not item_repository.has_item("arena_test_sword"):
+			item_repository = ItemRepository.new()
+			player_character.inventory = InventoryState.new(player_character.character_id)
+			player_character.equipment = EquipmentState.new()
+			ArenaTestEquipment.seed(player_character, item_repository)
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
