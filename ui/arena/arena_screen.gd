@@ -8,7 +8,10 @@ const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs",
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
 const ZONES := ["head", "chest", "arms", "waist", "legs"]
 const ZONE_NAMES := ["Голова", "Корпус", "Руки", "Пояс", "Ноги"]
+const END_TURN_SKIN_COUNT := 10
+const END_TURN_ATLAS_PATH := "res://assets/ui/buttons/end_turn/BOA_END_TURN_SKINS_ATLAS_V1.png"
 const COMBAT_ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_v2.png"
+var end_turn_atlas: Texture2D
 var zone_atlas: Texture2D
 var zone_textures: Dictionary = {}
 
@@ -204,9 +207,6 @@ func _build_square() -> void:
 	# Until the transparent PNGs are uploaded, keep the original button.
 	_apply_end_turn_skin(1)
 
-const END_TURN_SKIN_COUNT := 10
-const END_TURN_ATLAS_PATH := "res://assets/ui/buttons/end_turn/BOA_END_TURN_SKINS_ATLAS_V1.png"
-var end_turn_atlas: Texture2D
 
 ## Skin IDs follow atlas reading order: left-to-right, top-to-bottom.
 ## Exposed for a future settings selector; visual only, no combat behavior.
