@@ -582,7 +582,7 @@ func refresh() -> void:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
 		set_fighter_header(true, character.display_name, character.level)
-		set_fighter_resources(true, snapshot.mana, snapshot.max_mana, 5, 5)
+		set_fighter_resources(true, snapshot.mana, snapshot.max_mana, snapshot.action_points, snapshot.max_action_points)
 
 func _apply_layout() -> void:
 	if layout == null:
