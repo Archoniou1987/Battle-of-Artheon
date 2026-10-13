@@ -51,7 +51,12 @@ func _ready() -> void:
 	_empty_background = TextureRect.new()
 	_empty_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_empty_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_empty_background.stretch_mode = TextureRect.STRETCH_SCALE
+	_empty_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# Keep the atlas cell square and inside the button: no stretching of metal borders.
+	_empty_background.offset_left = 1
+	_empty_background.offset_top = 1
+	_empty_background.offset_right = -1
+	_empty_background.offset_bottom = -1
 	_empty_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_empty_background)
 	_icon_texture = TextureRect.new()
