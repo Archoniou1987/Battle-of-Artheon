@@ -179,10 +179,17 @@ static func _read_registry(path: String, collection: String) -> Array:
 static func _atlas_cell(atlas: Texture2D, index: int, columns: int, rows: int) -> Texture2D:
 	if atlas == null or columns <= 0 or rows <= 0 or index < 0 or index >= columns * rows:
 		return null
-	var cell := Vector2i(atlas.get_width() / columns, atlas.get_height() / rows)
+	var column := index % columns
+	var row := index / columns
+	var x0 := roundi(float(column) * float(atlas.get_width()) / float(columns))
+	var x1 := roundi(float(column + 1) * float(atlas.get_width()) / float(columns))
+	var y0 := roundi(float(row) * float(atlas.get_height()) / float(rows))
+	var y1 := roundi(float(row + 1) * float(atlas.get_height()) / float(rows))
+	var cell := Vector2i(x1 - x0, y1 - y0)
 	if cell.x <= 0 or cell.y <= 0:
 		return null
 	var cropped := AtlasTexture.new()
 	cropped.atlas = atlas
-	cropped.region = Rect2(Vector2i(index % columns, index / columns) * cell, cell)
+	cropped.region = Rect2(Vector2i(x0, y0), cell)
+	cropped.filter_clip = true
 	return cropped
