@@ -4,6 +4,8 @@ extends Button
 ## One square presentation for equipped items, bag items and future loot/shop cells.
 const CELL_SIZE := 56.0
 const EMPTY_ATLAS_PATH := "res://assets/ui/slots/BOA_EMPTY_EQUIPMENT_SLOTS_ATLAS_V2.png"
+const EMPTY_SPRITE_DIR := "res://assets/ui/slots/empty_slots/"
+const EMPTY_SPRITE_FILES := ["empty_00_head.png", "empty_01_shoulders.png", "empty_02_chest.png", "empty_03_main_hand.png", "empty_04_waist.png", "empty_05_legs.png", "empty_06_feet.png", "empty_07_neck.png", "empty_08_back.png", "empty_09_wrists.png", "empty_10_hands.png", "empty_11_off_hand.png", "empty_12_ring1.png", "empty_13_ring2.png", "empty_14_elixir1.png", "empty_15_elixir2.png", "empty_16_elixir3.png", "empty_17_elixir4.png", "empty_18_abi.png", "empty_19_bag.png", "empty_20_unused.png"]
 const EMPTY_SLOT_INDICES := {"head":0,"shoulders":1,"chest":2,"main_hand":3,"waist":4,"legs":5,"feet":6,"neck":7,"back":8,"wrists":9,"hands":10,"off_hand":11,"ring1":12,"ring2":12,"elixir":14,"abi":18,"bag":19}
 static var _empty_atlas: Texture2D
 static var _empty_cells: Dictionary = {}
@@ -14,6 +16,15 @@ static func empty_slot_texture(slot: String) -> Texture2D:
 	var index: int = int(EMPTY_SLOT_INDICES[slot])
 	if _empty_cells.has(index):
 		return _empty_cells[index] as Texture2D
+	# Prefer verified, individually cropped textures when installed.
+	# Legacy atlas fallback keeps existing scenes functional during asset upload.
+	if index >= 0 and index < EMPTY_SPRITE_FILES.size():
+		var sprite_path := EMPTY_SPRITE_DIR + EMPTY_SPRITE_FILES[index]
+		if ResourceLoader.exists(sprite_path):
+			var sprite := load(sprite_path) as Texture2D
+			if sprite != null:
+				_empty_cells[index] = sprite
+				return sprite
 	if _empty_atlas == null:
 		if not ResourceLoader.exists(EMPTY_ATLAS_PATH):
 			return null
