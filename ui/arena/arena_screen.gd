@@ -203,7 +203,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			var slot: String = slots[index]
 			var icon := ItemIcon.new()
 			icon.name = slot
-			icon.position = Vector2(2 if side == 0 else 190, 44 + index * 40)
+			icon.position = Vector2(2 if side == 0 else 190, 44 + index * 41)
 			icon.custom_minimum_size = Vector2(30, 30)
 			icon.scale = Vector2.ONE * 0.74
 			inner.add_child(icon)
@@ -276,20 +276,22 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			defense_buttons.append(button)
 		else:
 			attack_buttons.append(button)
+	# Effect indicators occupy the bottom-left of the portrait and stay hidden
+	# until actual effect data is supplied. No placeholder icons over the face.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(49, 146 if row_type == "Баффы" else 168)
+		row.position = Vector2(50, 233 if row_type == "Баффы" else 254)
 		row.add_theme_constant_override("separation", 1)
+		row.visible = false
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inner.add_child(row)
-		var label := Label.new()
-		label.text = "↑" if row_type == "Баффы" else "↓"
-		label.custom_minimum_size.x = 13
-		row.add_child(label)
 		for i in range(5):
-			var icon := PanelContainer.new()
-			icon.custom_minimum_size = Vector2(19, 19)
-			icon.tooltip_text = "Нет эффекта"
-			row.add_child(icon)
+			var effect_icon := TextureRect.new()
+			effect_icon.custom_minimum_size = Vector2(19, 19)
+			effect_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			effect_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			effect_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(effect_icon)
 		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
 	_update_zone_buttons()
 
