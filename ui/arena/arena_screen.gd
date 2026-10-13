@@ -26,14 +26,18 @@ func _zone_texture(is_player: bool, index: int) -> Texture2D:
 	# Inset each region to prevent bilinear sampling from adjacent red/blue cells.
 	var cell_width := float(zone_atlas.get_width()) / 5.0
 	var cell_height := float(zone_atlas.get_height()) / 2.0
-	var inset := 3.0
+	# Crop the actual art inside each cell: avoid neighboring colors and
+	# the black strip at the bottom of the supplied atlas.
+	var inset_x := 3.0
+	var inset_top := 3.0
+	var inset_bottom := 14.0 if not is_player else 3.0
 	var cropped := AtlasTexture.new()
 	cropped.atlas = zone_atlas
 	cropped.region = Rect2(
-		index * cell_width + inset,
-		(0 if is_player else 1) * cell_height + inset,
-		cell_width - inset * 2.0,
-		cell_height - inset * 2.0
+		index * cell_width + inset_x,
+		(0 if is_player else 1) * cell_height + inset_top,
+		cell_width - inset_x * 2.0,
+		cell_height - inset_top - inset_bottom
 	)
 	cropped.filter_clip = true
 	zone_textures[cell_key] = cropped
@@ -289,7 +293,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
 	zone_row.position = Vector2(6, 333)
-	zone_row.add_theme_constant_override("separation", 5)
+	zone_row.add_theme_constant_override("separation", 2)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
 		var zone: String = ZONES[index]
@@ -302,7 +306,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
 				button.add_theme_stylebox_override(state, zone_style)
 		button.tooltip_text = ZONE_NAMES[index]
-		button.custom_minimum_size = Vector2(40, 40)
+		button.custom_minimum_size = Vector2(44, 44)
 		button.toggle_mode = true
 		button.button_pressed = is_player and zone == "chest"
 		button.pressed.connect(_select_zone.bind(is_player, zone))
