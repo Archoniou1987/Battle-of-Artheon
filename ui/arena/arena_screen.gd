@@ -9,6 +9,9 @@ const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "r
 const ZONES := ["head", "chest", "arms", "waist", "legs"]
 const ZONE_NAMES := ["Голова", "Корпус", "Руки", "Пояс", "Ноги"]
 const END_TURN_SKIN_COUNT := 10
+const ARENA_LOGICAL_EXTENT := 480.0
+const PORTRAIT_LOG_MIN_HEIGHT := 180.0
+const LANDSCAPE_LOG_MIN_WIDTH := 260.0
 const END_TURN_ATLAS_PATH := "res://assets/ui/buttons/end_turn/BOA_END_TURN_SKINS_ATLAS_V1.png"
 const COMBAT_ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_v2.png"
 var end_turn_atlas: Texture2D
@@ -42,6 +45,7 @@ var repository: ItemRepository
 var layout: BoxContainer
 var square_host: Control
 var square_content: Control
+var arena_background: TextureRect
 var log_view: RichTextLabel
 var round_button: Button
 var round_button_art: TextureRect
@@ -102,7 +106,7 @@ func _ready() -> void:
 	square_host.clip_contents = true
 	layout.add_child(square_host)
 	square_content = Control.new()
-	square_content.size = Vector2(480, 480)
+	square_content.size = Vector2(ARENA_LOGICAL_EXTENT, ARENA_LOGICAL_EXTENT)
 	square_content.mouse_filter = Control.MOUSE_FILTER_PASS
 	square_host.add_child(square_content)
 	_build_square()
@@ -168,20 +172,16 @@ func _ready() -> void:
 	refresh()
 
 func _build_square() -> void:
-	var arena_background := TextureRect.new()
+	arena_background = TextureRect.new()
 	arena_background.texture = load("res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png") as Texture2D
-	arena_background.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	arena_background.position = Vector2.ZERO
+	arena_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	arena_background.custom_minimum_size = Vector2.ZERO
 	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	arena_background.stretch_mode = TextureRect.STRETCH_SCALE
-	arena_background.size = Vector2(480, 480)
-	arena_background.clip_contents = true
+	arena_background.size = Vector2(ARENA_LOGICAL_EXTENT, ARENA_LOGICAL_EXTENT)
+	arena_background.clip_contents = false
 	arena_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	square_content.add_child(arena_background)
-	# Explicitly set size after entering the scene tree: the background must match
-	# the logical 480x480 arena, never its source PNG pixel dimensions.
-	arena_background.set_deferred("size", Vector2(480, 480))
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
@@ -652,9 +652,21 @@ func _apply_layout() -> void:
 		return
 	var portrait := size.y > size.x
 	layout.vertical = portrait
-	var edge := maxf(1.0, minf(size.x, size.y))
+	var separation := float(layout.get_theme_constant("separation"))
+	var available_width := size.x
+	var available_height := size.y
+	if portrait:
+		available_height = maxf(1.0, size.y - PORTRAIT_LOG_MIN_HEIGHT - separation)
+	else:
+		available_width = maxf(1.0, size.x - LANDSCAPE_LOG_MIN_WIDTH - separation)
+	var edge := floorf(maxf(1.0, minf(available_width, available_height)))
+	var logical_size := Vector2(ARENA_LOGICAL_EXTENT, ARENA_LOGICAL_EXTENT)
 	square_host.custom_minimum_size = Vector2(edge, edge)
-	square_content.size = Vector2(480, 480)
+	square_host.size = Vector2(edge, edge)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	square_content.scale = Vector2.ONE * (edge / 480.0)
+	square_content.position = Vector2.ZERO
+	square_content.size = logical_size
+	square_content.scale = Vector2.ONE * (edge / ARENA_LOGICAL_EXTENT)
+	if arena_background != null:
+		arena_background.size = logical_size
