@@ -122,7 +122,7 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	_icon_texture.texture = texture
 	_fallback.visible = texture == null and empty_texture == null
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
-	_marker.text = "◆" if equipped else ""
+	_marker.text = ""
 	tooltip_text = String(item.get("name", slot_name))
 
 static func _resolve_empty_slot(value: String) -> String:
