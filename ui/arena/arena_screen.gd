@@ -262,8 +262,13 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	panel.add_child(inner)
 	var name_label := Label.new()
 	name_label.text = "Герой [1]" if is_player else "Противник [1]"
-	name_label.position = Vector2(35, -5)
-	name_label.add_theme_font_size_override("font_size", 12)
+	name_label.position = Vector2(38, -5)
+	name_label.custom_minimum_size = Vector2(156, 18)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 10)
+	name_label.add_theme_color_override("font_color", Color("#f1ddbb"))
+	name_label.add_theme_font_override("font", ThemeDB.fallback_font)
+	name_label.add_theme_font_size_override("font_size", 10)
 	inner.add_child(name_label)
 	fighter_names["player" if is_player else "enemy"] = name_label
 	var portrait := TextureRect.new()
@@ -451,24 +456,42 @@ func _show_equipment_details(is_player: bool, slot: String) -> void:
 				item = repository.get_item(String(instance_id))
 	else:
 		item = disclosed_enemy_equipment.get(slot, {})
+	# Empty equipment slots must never open a card.
 	if item.is_empty():
-		item_popup.title = "Слот экипировки"
-		item_popup_text.text = "Нет доступной информации о предмете."
-	else:
-		item_popup.title = String(item.get("name", "Предмет"))
-		var lines: PackedStringArray = []
-		lines.append("[b]%s[/b]" % String(item.get("name", "Предмет")))
-		for field in ["type", "rarity", "item_level", "description"]:
-			if item.has(field):
-				lines.append("%s: %s" % [field, str(item[field])])
-		for field in ["guaranteed_stats", "bonuses", "requirements"]:
-			var values: Variant = item.get(field, {})
-			if values is Dictionary and not values.is_empty():
-				lines.append("")
-				lines.append("[b]%s[/b]" % field)
-				for key in values:
-					lines.append("%s: %s" % [str(key), str(values[key])])
-		item_popup_text.text = "\n".join(lines)
+		return
+	var rarity := String(item.get("rarity", "grey")).to_lower()
+	var quality_color := String(ItemIcon.RARITY_COLORS.get(rarity, "#aab0b8"))
+	var item_name := String(item.get("name", "Предмет"))
+	item_popup.title = item_name
+	item_popup_text.clear()
+	var texture: Texture2D = null
+	var icon_path := String(item.get("icon_path", ""))
+	if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+		texture = load(icon_path) as Texture2D
+	elif item.has("icon_id"):
+		texture = ItemIcon._texture_from_icon_id(String(item["icon_id"]))
+	elif item.has("atlas_index") and ResourceLoader.exists(ItemIcon.ATLAS_PATH):
+		texture = ItemIcon._atlas_cell(load(ItemIcon.ATLAS_PATH) as Texture2D, int(item["atlas_index"]), ItemIcon.ATLAS_COLUMNS, ItemIcon.ATLAS_ROWS)
+	if texture != null:
+		item_popup_text.add_image(texture, 56, 56)
+		item_popup_text.add_text("\n")
+	item_popup_text.push_color(Color(quality_color))
+	item_popup_text.push_bold()
+	item_popup_text.add_text(item_name)
+	item_popup_text.pop()
+	item_popup_text.pop()
+	item_popup_text.add_text("\nУровень: %s   Слот: %s\n" % [str(item.get("item_level", "—")), slot])
+	for field in ["guaranteed_stats", "bonuses", "requirements"]:
+		var values: Variant = item.get(field, {})
+		if values is Dictionary and not values.is_empty():
+			item_popup_text.push_bold()
+			item_popup_text.add_text("\n%s\n" % field)
+			item_popup_text.pop()
+			for key in values:
+				item_popup_text.add_text("%s: %s\n" % [str(key), str(values[key])])
+	var description := String(item.get("description", ""))
+	if not description.is_empty():
+		item_popup_text.add_text("\n" + description)
 	item_popup.popup_centered()
 
 func _show_fighter_details(is_player: bool) -> void:
