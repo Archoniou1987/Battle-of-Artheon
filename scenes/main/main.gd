@@ -55,7 +55,8 @@ func _ready() -> void:
 	var inventory_loaded := _load_saved_inventory()
 	# Never replace an existing save: doing so destroys user items and breaks persistence.
 	# The training fixture is only generated for a fresh, interactive preview.
-	if not inventory_loaded and ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
+	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
+		# Merge missing test instances without deleting saved inventory or replacing equipped items.
 		ArenaTestEquipment.seed(player_character, item_repository)
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
