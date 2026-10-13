@@ -145,7 +145,12 @@ func _build_square() -> void:
 	for index in range(5):
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(52, 52)
-		button.text = str(index + 1)
+		button.text = ""
+		var abi_style := StyleBoxTexture.new()
+		abi_style.texture = ItemIcon.empty_slot_texture("abi")
+		if abi_style.texture != null:
+			for state in ["normal", "hover", "pressed", "disabled"]:
+				button.add_theme_stylebox_override(state, abi_style)
 		button.tooltip_text = "Активная способность %d" % (index + 1)
 		button.toggle_mode = true
 		button.disabled = true # UI only until CombatCommandApi integration.
@@ -206,7 +211,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 				player_slots[slot] = icon
 			else:
 				enemy_slots[slot] = icon
-			icon.set_item({}, String(SLOT_SYMBOLS.get(slot, "◇")))
+			icon.set_item({}, slot)
 			icon.pressed.connect(_show_equipment_details.bind(is_player, slot))
 	var health_bar := ProgressBar.new()
 	health_bar.position = Vector2(38, 23)
@@ -241,6 +246,11 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		elixir_button.custom_minimum_size = Vector2(31, 32)
 		elixir_button.add_theme_font_size_override("font_size", 10)
 		elixir_button.disabled = true # UI only; no consumption or round action yet.
+		var elixir_style := StyleBoxTexture.new()
+		elixir_style.texture = ItemIcon.empty_slot_texture("elixir")
+		if elixir_style.texture != null:
+			for state in ["normal", "hover", "pressed", "disabled"]:
+				elixir_button.add_theme_stylebox_override(state, elixir_style)
 		elixir_row.add_child(elixir_button)
 		if is_player:
 			player_elixir_slots.append(elixir_button)
@@ -291,7 +301,7 @@ func set_disclosed_enemy(primary_stats: Dictionary, ratings: Dictionary, equipme
 	disclosed_enemy_equipment = equipment.duplicate(true)
 	for slot in enemy_slots:
 		var item: Dictionary = disclosed_enemy_equipment.get(slot, {})
-		(enemy_slots[slot] as ItemIcon).set_item(item, String(SLOT_SYMBOLS.get(slot, "◇")) if not item.is_empty() else "?")
+		(enemy_slots[slot] as ItemIcon).set_item(item, slot)
 
 ## UI-only belt capacity and charge snapshots. The caller owns gameplay state.
 ## Each entry may contain icon, charges and max_charges; no charges are spent here.
@@ -317,11 +327,11 @@ func _update_elixir_slots() -> void:
 			var button := buttons[index]
 			button.disabled = true
 			if index >= capacity:
-				button.text = "🔒"
+				button.text = ""
 				button.tooltip_text = "Слот эликсира недоступен — нужен пояс"
 				continue
 			if index >= entries.size() or entries[index].is_empty():
-				button.text = "♧"
+				button.text = ""
 				button.tooltip_text = "Пустой слот эликсира"
 				continue
 			var item: Dictionary = entries[index]
@@ -453,11 +463,11 @@ func refresh() -> void:
 		var icon := player_slots[slot] as ItemIcon
 		var instance_id: Variant = character.equipment.get_equipped_instance_id(slot) if character != null else null
 		var item: Dictionary = repository.get_item(String(instance_id)) if instance_id != null and repository != null else {}
-		icon.set_item(item, String(SLOT_SYMBOLS.get(slot, "◇")), instance_id != null)
+		icon.set_item(item, slot, instance_id != null)
 	for slot in enemy_slots:
 		var icon := enemy_slots[slot] as ItemIcon
 		var disclosed: Dictionary = disclosed_enemy_equipment.get(slot, {})
-		icon.set_item(disclosed, String(SLOT_SYMBOLS.get(slot, "◇")) if not disclosed.is_empty() else "?")
+		icon.set_item(disclosed, slot)
 	if character != null and repository != null and hp_label != null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
