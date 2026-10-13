@@ -40,6 +40,9 @@ jobs:
       - name: CharacterState integration smoke test
         run: timeout 120s godot --headless --path . --script res://tests/character/character_state_progression_smoke.gd
 
+      - name: Diagnose ArenaScreen parser directly
+        run: timeout 30s godot --headless --path . --check-only --script res://ui/arena/arena_screen.gd
+
       - name: Character and inventory persistence smoke test
         run: timeout 120s godot --headless --path . --script res://tests/character/persistence_smoke.gd
 
