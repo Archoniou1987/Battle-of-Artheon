@@ -159,12 +159,12 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(94, 377)
+	abilities.position = Vector2(109, 387)
 	abilities.add_theme_constant_override("separation", 8)
 	square_content.add_child(abilities)
 	for index in range(5):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(52, 52)
+		button.custom_minimum_size = Vector2(46, 46)
 		button.text = ""
 		var abi_style := StyleBoxTexture.new()
 		abi_style.texture = ItemIcon.empty_slot_texture("abi")
@@ -177,7 +177,7 @@ func _build_square() -> void:
 		abilities.add_child(button)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(30, 433)
+	round_button.position = Vector2(30, 439)
 	round_button.custom_minimum_size = Vector2(420, 39)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
@@ -223,7 +223,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			var slot: String = slots[index]
 			var icon := ItemIcon.new()
 			icon.name = slot
-			icon.position = Vector2(2 if side == 0 else 190, 44 + index * 41)
+			icon.position = Vector2(2 if side == 0 else 190, 44 + index * 42)
 			icon.custom_minimum_size = Vector2(30, 30)
 			icon.scale = Vector2.ONE * 0.74
 			inner.add_child(icon)
@@ -278,7 +278,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(6, 324)
+	zone_row.position = Vector2(6, 336)
 	zone_row.add_theme_constant_override("separation", 5)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
