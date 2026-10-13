@@ -91,6 +91,16 @@ func _render() -> void:
 	_add_separator()
 	_add_stat_lines(item.get("guaranteed_stats", {}), Color("#f1f4f8"))
 	_add_stat_lines(item.get("bonuses", {}), Color("#65d58b"))
+	var damage: Dictionary = item.get("damage", {})
+	if not damage.is_empty():
+		_add_text("Урон %s–%s" % [str(damage.get("min", 0)), str(damage.get("max", 0))], Color("#f1f4f8"))
+	var block_zones := int(item.get("manual_block_zones_added", 0))
+	if block_zones > 0:
+		_add_text("+%d зона ручного блока" % block_zones, Color("#f1f4f8"))
+	var armour: Dictionary = item.get("armour_by_zone", {})
+	for zone in ["head", "chest", "arms", "waist", "legs"]:
+		if armour.has(zone):
+			_add_text("+%s брони: %s" % [str(armour[zone]), _stat_label(zone)], Color("#f1f4f8"))
 	if not source_slot.is_empty() and not character.is_equipment_active(item_id, repository):
 		_add_text("НЕАКТИВНО — требования не выполнены", Color("#ed5961"), 17)
 	var description := str(item.get("description", ""))
@@ -144,6 +154,7 @@ const STAT_NAMES := {
 	"crit_chance_rating":"рейтинг крита", "crit_rating":"рейтинг крита",
 	"dodge_rating":"рейтинг уворота", "anti_dodge_rating":"рейтинг антиуворота",
 	"hit_chance_rating":"рейтинг попадания", "anti_crit_rating":"рейтинг антикрита",
+	"manual_block_rating":"рейтинг блокирования", "head":"голова", "chest":"грудь", "arms":"руки", "waist":"пояс", "legs":"ноги",
 	"max_hp_flat":"макс. HP", "max_mana_flat":"макс. маны",
 	"weapon":"Оружие", "armour":"Доспех", "armor":"Доспех",
 	"ring":"Кольцо", "shield":"Щит", "consumable":"Расходный предмет"
@@ -163,7 +174,7 @@ func _add_stat_lines(values: Variant, tint: Color) -> void:
 		var value: Variant = values[key]
 		var amount := str(value)
 		if value is int or value is float:
-			amount = ("%+g" % float(value))
+			amount = ("+" + str(value)) if float(value) >= 0.0 else str(value)
 		_add_text("%s %s" % [amount, _stat_label(String(key))], tint)
 
 func _add_text(value: String, tint: Color, font_size: int = 15) -> void:
