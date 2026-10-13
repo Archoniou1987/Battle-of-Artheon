@@ -6,7 +6,7 @@ const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 # Temporary browser preview fixture; disable before public gameplay release.
 const ENABLE_INVENTORY_PREVIEW_ITEMS := false
 const INVENTORY_RESET_MARKER_PATH := "user://inventory_reset_empty_v1.marker"
-const ARENA_TEST_INVENTORY_VERSION := 2
+const TEST_ITEMS_GRANT_MARKER_PATH := "user://combat_test_items_v1_granted.marker"
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const PORTRAIT_NAV_COLUMNS := 3
@@ -55,11 +55,7 @@ func _ready() -> void:
 	item_repository = ItemRepository.new()
 	var inventory_loaded := _load_saved_inventory()
 	_reset_preview_inventory_once()
-	# Never replace an existing save: doing so destroys user items and breaks persistence.
-	# The training fixture is only generated for a fresh, interactive preview.
-	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
-		# Merge missing test instances without deleting saved inventory or replacing equipped items.
-		ArenaTestEquipment.seed(player_character, item_repository)
+	_grant_combat_test_items_once()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
@@ -80,6 +76,22 @@ func _reset_preview_inventory_once() -> void:
 	marker.store_string("reset_v1")
 	marker.close()
 	_save_inventory()
+
+
+# Grant the five genuine test instances once, without auto-equipping.
+# A persistent marker prevents re-creating deleted items on later launches.
+func _grant_combat_test_items_once() -> void:
+	if FileAccess.file_exists(TEST_ITEMS_GRANT_MARKER_PATH):
+		return
+	if not ArenaTestEquipment.seed(player_character, item_repository):
+		return
+	_save_inventory()
+	var marker := FileAccess.open(TEST_ITEMS_GRANT_MARKER_PATH, FileAccess.WRITE)
+	if marker == null:
+		push_warning("Test items grant marker could not be saved")
+		return
+	marker.store_string("granted_v1")
+	marker.close()
 
 
 func _build_screen() -> void:
