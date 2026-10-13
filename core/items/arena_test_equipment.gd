@@ -13,7 +13,7 @@ const ITEMS := [
 	{"id":"hp_ring","name":"Кольцо жизни +1000 HP","type":"ring","slots":["ring1","ring2"],"icon":51,"bonus":{"max_hp_flat":1000},"slot":"ring1"},
 	{"id":"shield","name":"Щит: +1 зона ручного блока","type":"shield","slots":["off_hand"],"icon":17,"block":1},
 	{"id":"dodge_boots","name":"Сапоги уклонения +100","type":"armour","slots":["feet"],"icon":49,"bonus":{"dodge_rating":100},"slot":"feet"},
-	{"id":"crit_boots","name":"Сапоги крита +100","type":"armour","slots":["feet"],"icon":49,"bonus":{"crit_rating":100}}
+	{"id":"crit_boots","name":"Сапоги крита +100","type":"armour","slots":["feet"],"icon":49,"bonus":{"crit_chance_rating":100}}
 ]
 
 static func seed(character: CharacterState, repository: ItemRepository) -> void:
@@ -43,6 +43,15 @@ static func seed(character: CharacterState, repository: ItemRepository) -> void:
 		if definition.has("armour"):
 			item["armour_by_zone"] = {String(definition["zone"]): float(definition["armour"])}
 		ItemDurabilityService.initialize_item(item, 100)
+		# Upgrade only the known preview fixture, preserving saved inventory.
+		if id == "arena_test_crit_boots" and repository.has_item(id):
+			var saved := repository.get_item(id)
+			var saved_bonuses: Dictionary = saved.get("bonuses", {})
+			if saved_bonuses.has("crit_rating") and not saved_bonuses.has("crit_chance_rating"):
+				saved_bonuses.erase("crit_rating")
+				saved_bonuses["crit_chance_rating"] = 100
+				saved["bonuses"] = saved_bonuses
+				repository.update_item(saved)
 		if repository.add_item(item):
 			character.receive_item(id, repository)
 			if definition.has("slot"):
