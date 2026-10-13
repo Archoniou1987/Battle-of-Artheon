@@ -3,6 +3,25 @@ extends Button
 
 ## One square presentation for equipped items, bag items and future loot/shop cells.
 const CELL_SIZE := 56.0
+const EMPTY_ATLAS_PATH := "res://assets/ui/slots/BOA_EMPTY_EQUIPMENT_SLOTS_ATLAS_V2.png"
+const EMPTY_SLOT_INDICES := {"head":0,"shoulders":1,"chest":2,"main_hand":3,"waist":4,"legs":5,"feet":6,"neck":7,"back":8,"wrists":9,"hands":10,"off_hand":11,"ring1":12,"ring2":12,"elixir":14,"abi":18,"bag":19}
+static var _empty_atlas: Texture2D
+static var _empty_cells: Dictionary = {}
+
+static func empty_slot_texture(slot: String) -> Texture2D:
+	if not EMPTY_SLOT_INDICES.has(slot):
+		return null
+	var index: int = int(EMPTY_SLOT_INDICES[slot])
+	if _empty_cells.has(index):
+		return _empty_cells[index] as Texture2D
+	if _empty_atlas == null:
+		if not ResourceLoader.exists(EMPTY_ATLAS_PATH):
+			return null
+		_empty_atlas = load(EMPTY_ATLAS_PATH) as Texture2D
+	var result: Texture2D = _atlas_cell(_empty_atlas, index, 7, 3)
+	_empty_cells[index] = result
+	return result
+
 const ATLAS_REGISTRY := "res://data/graphics/atlas_registry.json"
 const ICON_REGISTRY := "res://data/graphics/icon_registry.json"
 const ATLAS_PATH := "res://assets/items/items_atlas_01.png"
@@ -21,6 +40,7 @@ var is_equipped := false
 var _icon_texture: TextureRect
 var _fallback: Label
 var _marker: Label
+var _empty_background: TextureRect
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(CELL_SIZE, CELL_SIZE)
@@ -28,6 +48,12 @@ func _ready() -> void:
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	clip_text = true
 	text = ""
+	_empty_background = TextureRect.new()
+	_empty_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_empty_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_empty_background.stretch_mode = TextureRect.STRETCH_SCALE
+	_empty_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_empty_background)
 	_icon_texture = TextureRect.new()
 	_icon_texture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_icon_texture.offset_left = 5
@@ -61,6 +87,8 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	instance_id = String(item.get("instance_id", ""))
 	is_equipped = equipped
 	var rarity := String(item.get("rarity", "grey")).to_lower()
+	var empty_key := _resolve_empty_slot(slot_name)
+	var empty_texture: Texture2D = empty_slot_texture(empty_key) if item.is_empty() else null
 	var border := Color(String(RARITY_COLORS.get(rarity, "#777f8a"))) if not item.is_empty() else Color("#66543d")
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#263346")
@@ -71,9 +99,12 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 		style.shadow_size = 5
 	style.set_corner_radius_all(4)
 	style.set_content_margin_all(0)
+	if empty_texture != null:
+		style.bg_color = Color.TRANSPARENT
+		style.set_border_width_all(0)
 	add_theme_stylebox_override("normal", style)
 	var hover := style.duplicate() as StyleBoxFlat
-	hover.bg_color = Color("#35465a")
+	hover.bg_color = Color("#35465a") if empty_texture == null else Color.TRANSPARENT
 	add_theme_stylebox_override("hover", hover)
 	add_theme_stylebox_override("pressed", hover)
 	var icon_path := String(item.get("icon_path", ""))
@@ -86,11 +117,23 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 		texture = _atlas_cell(load(ATLAS_PATH) as Texture2D, int(item["atlas_index"]), ATLAS_COLUMNS, ATLAS_ROWS)
 	if _icon_texture == null:
 		return
+	_empty_background.texture = empty_texture
+	_empty_background.visible = empty_texture != null
 	_icon_texture.texture = texture
-	_fallback.visible = texture == null
+	_fallback.visible = texture == null and empty_texture == null
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
 	_marker.text = "◆" if equipped else ""
 	tooltip_text = String(item.get("name", slot_name))
+
+static func _resolve_empty_slot(value: String) -> String:
+	if EMPTY_SLOT_INDICES.has(value):
+		return value
+	if value.begins_with("Эликсир"):
+		return "elixir"
+	if value.is_empty():
+		return "bag"
+	const LABEL_TO_SLOT := {"Голова":"head","Плечи":"shoulders","Грудь":"chest","Осн. рука":"main_hand","Пояс":"waist","Ноги":"legs","Ступни":"feet","Шея":"neck","Спина":"back","Наручи":"wrists","Перчатки":"hands","Вторая рука":"off_hand","Кольцо I":"ring1","Кольцо II":"ring2"}
+	return String(LABEL_TO_SLOT.get(value, ""))
 
 func _short_label(value: String) -> String:
 	if value.is_empty():
