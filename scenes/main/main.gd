@@ -252,11 +252,14 @@ func _open_inventory_screen() -> void:
 
 
 func _open_arena_screen() -> void:
-	if arena_screen == null:
-		arena_screen = ArenaScreen.new(player_character, item_repository)
-		arena_screen.name = "ArenaScreen"
-		add_child(arena_screen)
-		arena_screen.back_requested.connect(func() -> void: arena_screen.visible = false)
+	# Each entry starts a fresh training duel using the current equipment.
+	if arena_screen != null:
+		remove_child(arena_screen)
+		arena_screen.queue_free()
+	arena_screen = ArenaScreen.new(player_character, item_repository)
+	arena_screen.name = "ArenaScreen"
+	add_child(arena_screen)
+	arena_screen.back_requested.connect(func() -> void: arena_screen.visible = false)
 	arena_screen.visible = true
 	arena_screen.refresh()
 
