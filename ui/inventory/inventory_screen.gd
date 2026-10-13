@@ -159,7 +159,7 @@ func _ready() -> void:
 	elixirs.name = "ElixirSlots"
 	elixirs.alignment = BoxContainer.ALIGNMENT_CENTER
 	elixirs.add_theme_constant_override("separation", 4)
-	middle.add_child(elixirs)
+	equipment_content.add_child(elixirs)
 	for i in range(4):
 		var quick := ItemIcon.new()
 		quick.name = "Elixir%d" % (i + 1)
