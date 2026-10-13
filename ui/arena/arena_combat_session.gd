@@ -13,7 +13,16 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	var player := CharacterCombatBuilder.build(character, repository)
 	player_id = player.combatant_id
 	var enemy := CombatantState.new(ENEMY_ID, "Тренировочный противник", player.level, 100, 0)
-	enemy.combat_stats["weapon_profiles"] = [{"damage_min": 4.0, "damage_max": 7.0, "damage_type": "slashing"}]
+	# Enemy uses the same equipment adapter as the player.
+	EquipmentBuilder.equip(enemy, {
+		"id": "arena_enemy_sword", "instance_id": "arena_enemy_sword",
+		"slot": "main_hand", "item_type": "weapon",
+		"damage": {"min": 4.0, "max": 7.0, "type": "slashing"}
+	})
+	var enemy_ring := {"id": "arena_enemy_hp_ring", "instance_id": "arena_enemy_hp_ring", "item_type": "ring", "combat_stats": {"max_hp_flat": 1000}}
+	EquipmentBuilder.equip(enemy, enemy_ring)
+	enemy.max_hp += int(enemy_ring["combat_stats"]["max_hp_flat"])
+	enemy.hp = enemy.max_hp
 	state.add_combatant(player)
 	state.add_combatant(enemy)
 	var group := GroupCombatState.new(state)
