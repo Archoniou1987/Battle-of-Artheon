@@ -22,11 +22,20 @@ func _zone_texture(is_player: bool, index: int) -> Texture2D:
 	var cell_key := index if is_player else index + 5
 	if zone_textures.has(cell_key):
 		return zone_textures[cell_key] as Texture2D
+	# The source PNG is 1536x614, so the 5-column split is fractional.
+	# Inset each region to prevent bilinear sampling from adjacent red/blue cells.
 	var cell_width := float(zone_atlas.get_width()) / 5.0
 	var cell_height := float(zone_atlas.get_height()) / 2.0
+	var inset := 3.0
 	var cropped := AtlasTexture.new()
 	cropped.atlas = zone_atlas
-	cropped.region = Rect2(index * cell_width, (0 if is_player else 1) * cell_height, cell_width, cell_height)
+	cropped.region = Rect2(
+		index * cell_width + inset,
+		(0 if is_player else 1) * cell_height + inset,
+		cell_width - inset * 2.0,
+		cell_height - inset * 2.0
+	)
+	cropped.filter_clip = true
 	zone_textures[cell_key] = cropped
 	return cropped
 const SLOT_SYMBOLS := {"head":"♙", "shoulders":"♜", "neck":"◉", "back":"▤", "chest":"▣", "wrists":"▥", "hands":"✋", "waist":"▰", "legs":"♧", "feet":"♧", "main_hand":"⚔", "off_hand":"⬟", "ring1":"◯", "ring2":"◯"}
