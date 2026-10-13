@@ -142,13 +142,13 @@ func _build_square() -> void:
 	abilities.position = Vector2(10, 389)
 	abilities.add_theme_constant_override("separation", 5)
 	square_content.add_child(abilities)
-	for index in range(8):
+	for index in range(5):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(52, 36)
-		button.text = str(index + 1) if index < 5 else "🔒"
-		button.tooltip_text = "Активная способность %d" % (index + 1) if index < 5 else "Резервный слот"
+		button.custom_minimum_size = Vector2(84, 36)
+		button.text = str(index + 1)
+		button.tooltip_text = "Активная способность %d" % (index + 1)
 		button.toggle_mode = true
-		button.disabled = true # Five agreed active slots; three reserved, no gameplay effect.
+		button.disabled = true # UI only until CombatCommandApi integration.
 		abilities.add_child(button)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
