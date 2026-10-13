@@ -151,6 +151,10 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	if empty_texture != null or ResourceLoader.exists(SLOT_BACKGROUND_PATH):
 		style.bg_color = Color.TRANSPARENT
 		style.set_border_width_all(0)
+	# Subtle cool-blue outline only for empty slots; filled items retain rarity styling.
+	if item.is_empty():
+		style.border_color = Color("#83B8D9", 0.65)
+		style.set_border_width_all(1)
 	add_theme_stylebox_override("normal", style)
 	var hover := style.duplicate() as StyleBoxFlat
 	hover.bg_color = Color("#35465a") if empty_texture == null and not ResourceLoader.exists(SLOT_BACKGROUND_PATH) else Color.TRANSPARENT
