@@ -44,6 +44,7 @@ var square_host: Control
 var square_content: Control
 var log_view: RichTextLabel
 var round_button: Button
+var round_button_art: TextureRect
 var defense_zone := "chest"
 var defense_capacity := 1
 var defense_start := 1
@@ -101,7 +102,8 @@ func _ready() -> void:
 	square_host.clip_contents = true
 	layout.add_child(square_host)
 	square_content = Control.new()
-	square_content.custom_minimum_size = Vector2(480, 480)
+	square_content.size = Vector2(480, 480)
+	square_content.mouse_filter = Control.MOUSE_FILTER_PASS
 	square_host.add_child(square_content)
 	_build_square()
 	var log_panel := PanelContainer.new()
@@ -178,8 +180,8 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(140, 389)
-	abilities.add_theme_constant_override("separation", 7)
+	abilities.position = Vector2(144, 389)
+	abilities.add_theme_constant_override("separation", 4)
 	square_content.add_child(abilities)
 	for index in range(5):
 		var button := Button.new()
@@ -198,11 +200,21 @@ func _build_square() -> void:
 	_build_resource_display(false)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(30, 443)
-	round_button.custom_minimum_size = Vector2(420, 34)
+	round_button.position = Vector2(90, 438)
+	round_button.custom_minimum_size = Vector2(300, 42)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
 	square_content.add_child(round_button)
+	var invisible_button_style := StyleBoxEmpty.new()
+	for button_state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
+		round_button.add_theme_stylebox_override(button_state, invisible_button_style)
+	round_button_art = TextureRect.new()
+	round_button_art.position = round_button.position
+	round_button_art.size = Vector2(300, 42)
+	round_button_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	round_button_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	round_button_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	square_content.add_child(round_button_art)
 	# Cosmetic END TURN skins; the first skin is the default.
 	# Until the transparent PNGs are uploaded, keep the original button.
 	_apply_end_turn_skin(1)
@@ -230,10 +242,8 @@ func _apply_end_turn_skin(skin_id: int) -> void:
 	texture.atlas = end_turn_atlas
 	texture.region = Rect2((index % 2) * cell_width, floori(float(index) / 2.0) * cell_height, cell_width, cell_height)
 	texture.filter_clip = true
-	var style := StyleBoxTexture.new()
-	style.texture = texture
-	for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
-		round_button.add_theme_stylebox_override(state, style)
+	if round_button_art != null:
+		round_button_art.texture = texture
 	round_button.text = "" # END TURN is baked into the atlas artwork.
 	round_button.tooltip_text = "END TURN · скин %d" % selected_id
 
@@ -570,12 +580,12 @@ func set_fighter_resources(is_player: bool, mana: int, max_mana: int, ap: int, m
 func _build_resource_display(is_player: bool) -> void:
 	var key := "player" if is_player else "enemy"
 	var host := Control.new()
-	host.position = Vector2(8 if is_player else 340, 389)
-	host.custom_minimum_size = Vector2(132, 47)
+	host.position = Vector2(12 if is_player else 344, 389)
+	host.custom_minimum_size = Vector2(124, 47)
 	square_content.add_child(host)
 	var mana := ProgressBar.new()
 	mana.position = Vector2.ZERO
-	mana.custom_minimum_size = Vector2(132, 16)
+	mana.custom_minimum_size = Vector2(124, 16)
 	mana.show_percentage = false
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color("#172b43")
@@ -603,7 +613,7 @@ func _build_resource_display(is_player: bool) -> void:
 		segments.append(segment)
 	var ap_text := Label.new()
 	ap_text.position = Vector2(0, 31)
-	ap_text.custom_minimum_size = Vector2(132, 14)
+	ap_text.custom_minimum_size = Vector2(124, 14)
 	ap_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ap_text.add_theme_font_size_override("font_size", 9)
 	host.add_child(ap_text)
@@ -635,7 +645,9 @@ func _apply_layout() -> void:
 	var portrait := size.y > size.x
 	layout.vertical = portrait
 	var edge := maxf(1.0, minf(size.x, size.y))
-	square_host.custom_minimum_size = Vector2(edge, edge)
+	square_host.custom_minimum_size = Vector2.ZERO
+	square_host.size = Vector2(edge, edge)
+	square_content.size = Vector2(480, 480)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	square_content.scale = Vector2.ONE * (edge / 480.0)
