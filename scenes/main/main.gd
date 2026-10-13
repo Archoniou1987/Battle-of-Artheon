@@ -4,7 +4,8 @@ const LOCATION_NAME := "Стартовая деревня"
 const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 # Temporary browser preview fixture; disable before public gameplay release.
-const ENABLE_INVENTORY_PREVIEW_ITEMS := true
+const ENABLE_INVENTORY_PREVIEW_ITEMS := false
+const INVENTORY_RESET_MARKER_PATH := "user://inventory_reset_empty_v1.marker"
 const ARENA_TEST_INVENTORY_VERSION := 2
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
@@ -53,6 +54,7 @@ func _ready() -> void:
 	_load_saved_progression()
 	item_repository = ItemRepository.new()
 	var inventory_loaded := _load_saved_inventory()
+	_reset_preview_inventory_once()
 	# Never replace an existing save: doing so destroys user items and breaks persistence.
 	# The training fixture is only generated for a fresh, interactive preview.
 	if ENABLE_INVENTORY_PREVIEW_ITEMS and DisplayServer.get_name() != "headless":
@@ -61,6 +63,23 @@ func _ready() -> void:
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
+
+
+# One-time preview migration: clear existing bag, equipment and quick slots.
+# The marker prevents wiping items earned after the migration.
+func _reset_preview_inventory_once() -> void:
+	if FileAccess.file_exists(INVENTORY_RESET_MARKER_PATH):
+		return
+	player_character.inventory = InventoryState.new(player_character.character_id)
+	player_character.equipment = EquipmentState.new()
+	item_repository = ItemRepository.new()
+	var marker := FileAccess.open(INVENTORY_RESET_MARKER_PATH, FileAccess.WRITE)
+	if marker == null:
+		push_warning("Inventory reset marker could not be saved")
+		return
+	marker.store_string("reset_v1")
+	marker.close()
+	_save_inventory()
 
 
 func _build_screen() -> void:
