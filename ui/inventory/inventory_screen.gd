@@ -155,7 +155,7 @@ func _ready() -> void:
 	for slot in ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]:
 		_add_equipment_slot(right_slots, slot)
 	var elixirs := HBoxContainer.new()
-	elixirs.position = Vector2(122, 409)
+	elixirs.position = Vector2(122, 405)
 	elixirs.name = "ElixirSlots"
 	elixirs.alignment = BoxContainer.ALIGNMENT_CENTER
 	elixirs.add_theme_constant_override("separation", 4)
