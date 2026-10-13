@@ -373,8 +373,12 @@ func refresh() -> void:
 	xp_bar.max_value = max(1, required)
 	xp_bar.value = progression.xp_into_level
 	points_label.text = "Характеристики  •  Свободные очки: %d" % progression.unspent_stat_points
+	var effective := character.effective_stats(item_repository) if item_repository != null else progression.base_stats
 	for stat in STAT_ORDER:
-		(stat_values[stat] as Label).text = str(progression.displayed_stat(stat))
+		var base_value := progression.displayed_stat(stat)
+		var equipment_bonus := int(effective.get(stat, 0)) - int(progression.base_stats.get(stat, 0))
+		var total := base_value + equipment_bonus
+		(stat_values[stat] as Label).text = ("%d (+%d)" % [total, equipment_bonus]) if equipment_bonus > 0 else (("%d (%d)" % [total, equipment_bonus]) if equipment_bonus < 0 else str(total))
 		(stat_buttons[stat] as Button).disabled = progression.unspent_stat_points <= 0
 		(stat_minus_buttons[stat] as Button).disabled = int(progression.pending_stats.get(stat, 0)) <= 0
 	save_button.disabled = progression.pending_stats.is_empty()
