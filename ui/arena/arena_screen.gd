@@ -319,7 +319,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	# until actual effect data is supplied. No placeholder icons over the face.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(50, 225 if row_type == "Баффы" else 246)
+		row.position = Vector2(elixir_row.position.x + 2, elixir_row.position.y - (44 if row_type == "Баффы" else 23))
 		row.add_theme_constant_override("separation", 1)
 		row.visible = true # Temporary debug markers for layout review
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
