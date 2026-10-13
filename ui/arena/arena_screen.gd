@@ -374,6 +374,12 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			zone_style.texture = zone_texture
 			for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
 				button.add_theme_stylebox_override(state, zone_style)
+		var selected_style := StyleBoxFlat.new()
+		selected_style.bg_color = Color(0, 0, 0, 0)
+		selected_style.border_color = Color("#e6c476")
+		selected_style.set_border_width_all(2)
+		selected_style.set_corner_radius_all(3)
+		button.add_theme_stylebox_override("focus", selected_style)
 		button.tooltip_text = ZONE_NAMES[index]
 		button.custom_minimum_size = Vector2(42, 44)
 		button.toggle_mode = true
@@ -580,9 +586,13 @@ func selected_block_zones() -> Array[String]:
 
 func _update_zone_buttons() -> void:
 	for i in range(defense_buttons.size()):
-		defense_buttons[i].set_pressed_no_signal(i >= defense_start and i < defense_start + defense_capacity)
+		var chosen := i >= defense_start and i < defense_start + defense_capacity
+		defense_buttons[i].set_pressed_no_signal(chosen)
+		defense_buttons[i].modulate = Color("#ffe0a0") if chosen else Color.WHITE
 	for i in range(attack_buttons.size()):
-		attack_buttons[i].set_pressed_no_signal(attack_zones.has(ZONES[i]))
+		var chosen := attack_zones.has(ZONES[i])
+		attack_buttons[i].set_pressed_no_signal(chosen)
+		attack_buttons[i].modulate = Color("#ffe0a0") if chosen else Color.WHITE
 
 func _update_hp(bar: ProgressBar, overlay: Label, current: int, maximum: int) -> void:
 	bar.max_value = maxi(1, maximum)
