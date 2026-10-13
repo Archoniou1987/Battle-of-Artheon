@@ -172,7 +172,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	inner.add_child(name_label)
 	var portrait := TextureRect.new()
 	portrait.position = Vector2(48, 48)
-	portrait.custom_minimum_size = Vector2(136, 140)
+	portrait.custom_minimum_size = Vector2(136, 233)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	if is_player and ResourceLoader.exists(AVATAR_PATH):
@@ -181,7 +181,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var inspect := Button.new()
 	inspect.flat = true
 	inspect.position = Vector2(40, 44)
-	inspect.custom_minimum_size = Vector2(152, 145)
+	inspect.custom_minimum_size = Vector2(152, 237)
 	inspect.tooltip_text = "Посмотреть характеристики"
 	inspect.pressed.connect(_show_fighter_details.bind(is_player))
 	inner.add_child(inspect)
