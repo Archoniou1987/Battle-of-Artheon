@@ -75,10 +75,8 @@ func _render() -> void:
 		child.queue_free()
 	var item := repository.get_item(item_id)
 	_add_text(str(item.get("name", item_id)), Color("#f1ddbb"), 21)
-	_add_text("Тип: %s    Уровень предмета: %s" % [str(item.get("type", "—")), str(item.get("item_level", "—"))], Color.WHITE)
-	_add_text("Редкость: " + str(item.get("rarity", "—")), Color("#e0c38d"))
-	_add_dictionary("Характеристики", item.get("guaranteed_stats", {}))
-	_add_dictionary("Дополнительные свойства", item.get("bonuses", {}))
+	_add_text("Уровень %s · %s" % [str(item.get("item_level", item.get("level", "—"))), _stat_label(String(item.get("type", "предмет")))], Color("#b6c2d0"))
+	_add_separator()
 	var requirements: Variant = item.get("requirements", {})
 	var allowed := true
 	if requirements is Dictionary and not requirements.is_empty():
@@ -89,11 +87,15 @@ func _render() -> void:
 			var met := actual >= needed
 			if not met:
 				allowed = false
-			_add_text("%s: %d / %d" % [str(stat), actual, needed], Color("#e2e5eb") if met else Color("#e05d5d"))
+			_add_text("%d %s" % [needed, _stat_label(String(stat))], Color("#e2e5eb") if met else Color("#e05d5d"))
+	_add_separator()
+	_add_stat_lines(item.get("guaranteed_stats", {}), Color("#f1f4f8"))
+	_add_stat_lines(item.get("bonuses", {}), Color("#65d58b"))
 	if not source_slot.is_empty() and not character.is_equipment_active(item_id, repository):
 		_add_text("НЕАКТИВНО — требования не выполнены", Color("#ed5961"), 17)
 	var description := str(item.get("description", ""))
 	if not description.is_empty():
+		_add_separator()
 		_add_text(description, Color("#bac6d4"))
 	var action := Button.new()
 	if String(item.get("type", "")) == "consumable":
@@ -136,12 +138,33 @@ func _update_dialog_size() -> void:
 	panel.position = Vector2(px, py)
 
 
-func _add_dictionary(title: String, values: Variant) -> void:
-	if not values is Dictionary or values.is_empty():
+const STAT_NAMES := {
+	"STR":"Силы", "DEX":"Ловкости", "INTU":"Интуиции", "WIS":"Мудрости",
+	"INT":"Интеллекта", "END":"Выносливости", "STA":"Выносливости",
+	"crit_chance_rating":"рейтинг крита", "crit_rating":"рейтинг крита",
+	"dodge_rating":"рейтинг уворота", "anti_dodge_rating":"рейтинг антиуворота",
+	"hit_chance_rating":"рейтинг попадания", "anti_crit_rating":"рейтинг антикрита",
+	"max_hp_flat":"макс. HP", "max_mana_flat":"макс. маны",
+	"weapon":"Оружие", "armour":"Доспех", "armor":"Доспех",
+	"ring":"Кольцо", "shield":"Щит", "consumable":"Расходный предмет"
+}
+
+func _stat_label(key: String) -> String:
+	return String(STAT_NAMES.get(key, key.replace("_", " ")))
+
+func _add_separator() -> void:
+	var line := HSeparator.new()
+	content.add_child(line)
+
+func _add_stat_lines(values: Variant, tint: Color) -> void:
+	if not values is Dictionary:
 		return
-	_add_text(title, Color("#f1ddbb"), 17)
 	for key in values:
-		_add_text("%s: %s" % [str(key), str(values[key])], Color("#e2e5eb"))
+		var value: Variant = values[key]
+		var amount := str(value)
+		if value is int or value is float:
+			amount = ("%+g" % float(value))
+		_add_text("%s %s" % [amount, _stat_label(String(key))], tint)
 
 func _add_text(value: String, tint: Color, font_size: int = 15) -> void:
 	var label := Label.new()
