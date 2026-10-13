@@ -8,7 +8,27 @@ const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs",
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
 const ZONES := ["head", "chest", "arms", "waist", "legs"]
 const ZONE_NAMES := ["Голова", "Корпус", "Руки", "Пояс", "Ноги"]
-const ZONE_ICONS := ["◎", "▣", "✋", "◇", "♧"]
+const COMBAT_ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_ATLAS_V1.png"
+var zone_atlas: Texture2D
+var zone_textures: Dictionary = {}
+
+func _zone_texture(is_player: bool, index: int) -> Texture2D:
+	if zone_atlas == null:
+		if not ResourceLoader.exists(COMBAT_ZONE_ATLAS):
+			return null
+		zone_atlas = load(COMBAT_ZONE_ATLAS) as Texture2D
+	if zone_atlas == null:
+		return null
+	var cell_key := index if is_player else index + 5
+	if zone_textures.has(cell_key):
+		return zone_textures[cell_key] as Texture2D
+	var cell_width := float(zone_atlas.get_width()) / 5.0
+	var cell_height := float(zone_atlas.get_height()) / 2.0
+	var cropped := AtlasTexture.new()
+	cropped.atlas = zone_atlas
+	cropped.region = Rect2(index * cell_width, (0 if is_player else 1) * cell_height, cell_width, cell_height)
+	zone_textures[cell_key] = cropped
+	return cropped
 const SLOT_SYMBOLS := {"head":"♙", "shoulders":"♜", "neck":"◉", "back":"▤", "chest":"▣", "wrists":"▥", "hands":"✋", "waist":"▰", "legs":"♧", "feet":"♧", "main_hand":"⚔", "off_hand":"⬟", "ring1":"◯", "ring2":"◯"}
 const AVATAR_PATH := "res://assets/avatars/hero_realistic_01.png"
 
@@ -258,16 +278,21 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(3, 330)
-	zone_row.add_theme_constant_override("separation", 1)
+	zone_row.position = Vector2(6, 324)
+	zone_row.add_theme_constant_override("separation", 5)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
 		var zone: String = ZONES[index]
 		var button := Button.new()
-		button.text = ZONE_ICONS[index]
-		button.add_theme_font_size_override("font_size", 21)
+		button.text = ""
+		var zone_texture := _zone_texture(is_player, index)
+		if zone_texture != null:
+			var zone_style := StyleBoxTexture.new()
+			zone_style.texture = zone_texture
+			for state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
+				button.add_theme_stylebox_override(state, zone_style)
 		button.tooltip_text = ZONE_NAMES[index]
-		button.custom_minimum_size = Vector2(44, 34)
+		button.custom_minimum_size = Vector2(40, 40)
 		button.toggle_mode = true
 		button.button_pressed = is_player and zone == "chest"
 		button.pressed.connect(_select_zone.bind(is_player, zone))
@@ -280,16 +305,15 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	# until actual effect data is supplied. No placeholder icons over the face.
 	for row_type in ["Баффы", "Дебаффы"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(50, 233 if row_type == "Баффы" else 254)
+		row.position = Vector2(50, 234 if row_type == "Баффы" else 255)
 		row.add_theme_constant_override("separation", 1)
-		row.visible = false
+		row.visible = true # Temporary debug markers for layout review
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inner.add_child(row)
 		for i in range(5):
-			var effect_icon := TextureRect.new()
+			var effect_icon := ColorRect.new()
 			effect_icon.custom_minimum_size = Vector2(19, 19)
-			effect_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			effect_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			effect_icon.color = Color(0.18, 0.43, 0.65, 0.55) if row_type == "Баффы" else Color(0.65, 0.24, 0.28, 0.55)
 			effect_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_child(effect_icon)
 		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
