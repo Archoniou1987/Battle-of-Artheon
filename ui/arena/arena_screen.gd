@@ -645,8 +645,7 @@ func _apply_layout() -> void:
 	var portrait := size.y > size.x
 	layout.vertical = portrait
 	var edge := maxf(1.0, minf(size.x, size.y))
-	square_host.custom_minimum_size = Vector2.ZERO
-	square_host.size = Vector2(edge, edge)
+	square_host.custom_minimum_size = Vector2(edge, edge)
 	square_content.size = Vector2(480, 480)
 	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
