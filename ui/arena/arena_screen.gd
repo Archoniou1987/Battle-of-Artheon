@@ -66,6 +66,7 @@ var ap_segments: Dictionary = {}
 var ap_labels: Dictionary = {}
 var effects_rows: Dictionary = {}
 var selected_ability := ""
+var combat_session: ArenaCombatSession
 var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
 var hp_label: Label
@@ -171,6 +172,7 @@ func _ready() -> void:
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
+	_start_combat_session()
 
 func _build_square() -> void:
 	arena_background = TextureRect.new()
@@ -211,6 +213,7 @@ func _build_square() -> void:
 	round_button.disabled = true # Enabled by the combat session controller.
 	round_button.tooltip_text = "Ожидание боевого сеанса"
 	round_button.pressed.connect(_request_end_turn)
+	end_turn_requested.connect(_play_combat_round)
 	square_content.add_child(round_button)
 	var invisible_button_style := StyleBoxEmpty.new()
 	for button_state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
@@ -681,6 +684,45 @@ func _build_resource_display(is_player: bool) -> void:
 	ap_labels[key] = ap_text
 	set_fighter_resources(is_player, 0, 0, 5, 5)
 
+func _start_combat_session() -> void:
+	if character == null or repository == null:
+		return
+	combat_session = ArenaCombatSession.new(character, repository)
+	set_attack_count(combat_session.player_attack_count())
+	set_defense_capacity(CombatModifierService.manual_block_zone_capacity(combat_session.fighter(true)))
+	set_fighter_header(false, combat_session.fighter(false).display_name, combat_session.fighter(false).level)
+	_sync_combat_session()
+	log_view.text = "Тренировочный бой начат. Выберите зоны атаки и защиты."
+	set_combat_ready(true)
+
+func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
+	if combat_session == null:
+		return
+	set_combat_ready(false)
+	var result: Dictionary = combat_session.play_round(targets, blocks)
+	if not bool(result.get("ok", false)):
+		log_view.append_text("\nКоманда отклонена: %s" % String(result.get("reason", "unknown")))
+		set_combat_ready(true)
+		return
+	_sync_combat_session()
+	log_view.append_text("\n\nРаунд %d" % int(result.get("round", 0)))
+	for line in Array(result.get("lines", [])):
+		log_view.append_text("\n" + String(line))
+	if String(result.get("outcome", "ongoing")) == "ongoing":
+		set_combat_ready(true)
+	else:
+		log_view.append_text("\nБой завершён: " + String(result.get("outcome", "")))
+
+func _sync_combat_session() -> void:
+	if combat_session == null:
+		return
+	var player := combat_session.fighter(true)
+	var enemy := combat_session.fighter(false)
+	set_fighter_hp(true, player.visible_hp(), player.max_hp)
+	set_fighter_hp(false, enemy.visible_hp(), enemy.max_hp)
+	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
+	set_fighter_resources(false, enemy.mana, enemy.max_mana, enemy.action_points, enemy.max_action_points)
+
 func refresh() -> void:
 	for slot in player_slots:
 		var icon := player_slots[slot] as ItemIcon
@@ -691,7 +733,7 @@ func refresh() -> void:
 		var icon := enemy_slots[slot] as ItemIcon
 		var disclosed: Dictionary = disclosed_enemy_equipment.get(slot, {})
 		icon.set_item(disclosed, slot)
-	if character != null and repository != null and hp_label != null:
+	if character != null and repository != null and hp_label != null and combat_session == null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
 		set_fighter_header(true, character.display_name, character.level)
