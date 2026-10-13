@@ -5,6 +5,7 @@ extends Button
 const CELL_SIZE := 56.0
 const SLOT_BACKGROUND_PATH := "res://assets/ui/slots/BOA_SLOT_BACKGROUND_V1.png"
 const SLOT_FRAME_PATH := "res://assets/ui/slots/BOA_SLOT_FRAME_V1.png"
+const SHOW_DECORATIVE_SLOT_FRAMES := false
 const NEW_EMPTY_ATLAS_PATH := "res://assets/ui/slots/BOA_EMPTY_SLOT_ICONS_ATLAS_V3.png"
 const NEW_EMPTY_SLOT_INDICES := {"head":0,"shoulders":1,"chest":2,"main_hand":3,"waist":4,"legs":5,"feet":6,"neck":7,"back":8,"wrists":9,"hands":10,"off_hand":11,"ring1":12,"ring2":12,"elixir":13,"bag":14}
 const EMPTY_ATLAS_PATH := "res://assets/ui/slots/BOA_EMPTY_EQUIPMENT_SLOTS_ATLAS_V2.png"
@@ -147,7 +148,7 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 		style.shadow_size = 5
 	style.set_corner_radius_all(4)
 	style.set_content_margin_all(0)
-	if empty_texture != null or (ResourceLoader.exists(SLOT_BACKGROUND_PATH) and ResourceLoader.exists(SLOT_FRAME_PATH)):
+	if empty_texture != null or ResourceLoader.exists(SLOT_BACKGROUND_PATH):
 		style.bg_color = Color.TRANSPARENT
 		style.set_border_width_all(0)
 	add_theme_stylebox_override("normal", style)
@@ -165,9 +166,9 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 		texture = _atlas_cell(load(ATLAS_PATH) as Texture2D, int(item["atlas_index"]), ATLAS_COLUMNS, ATLAS_ROWS)
 	if _icon_texture == null:
 		return
-	var use_new_slot_art := ResourceLoader.exists(NEW_EMPTY_ATLAS_PATH) and ResourceLoader.exists(SLOT_FRAME_PATH) and ResourceLoader.exists(SLOT_BACKGROUND_PATH)
+	var use_new_slot_art := ResourceLoader.exists(NEW_EMPTY_ATLAS_PATH) and ResourceLoader.exists(SLOT_BACKGROUND_PATH)
 	_slot_background.visible = use_new_slot_art
-	_slot_frame.visible = use_new_slot_art
+	_slot_frame.visible = use_new_slot_art and SHOW_DECORATIVE_SLOT_FRAMES
 	_empty_background.texture = empty_texture
 	_empty_background.visible = empty_texture != null
 	_icon_texture.texture = texture
