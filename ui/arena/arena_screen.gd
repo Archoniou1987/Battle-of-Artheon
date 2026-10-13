@@ -159,7 +159,7 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(244, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(109, 387)
+	abilities.position = Vector2(109, 386)
 	abilities.add_theme_constant_override("separation", 8)
 	square_content.add_child(abilities)
 	for index in range(5):
@@ -177,7 +177,7 @@ func _build_square() -> void:
 		abilities.add_child(button)
 	round_button = Button.new()
 	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(30, 439)
+	round_button.position = Vector2(30, 437)
 	round_button.custom_minimum_size = Vector2(420, 39)
 	round_button.disabled = true # No fake rounds: wait for CombatCommandApi integration.
 	round_button.tooltip_text = "Подключение CombatCommandApi — следующий этап"
@@ -250,7 +250,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	health.position = Vector2(38, 17)
 	health.custom_minimum_size = Vector2(156, 14)
 	health.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	health.add_theme_font_size_override("font_size", 12)
+	health.add_theme_font_size_override("font_size", 9)
 	health.add_theme_color_override("font_color", Color.WHITE)
 	health.text = "HP —" if is_player else "HP ? / ?"
 	inner.add_child(health)
@@ -259,7 +259,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	if is_player:
 		hp_label = health
 	var elixir_row := HBoxContainer.new()
-	elixir_row.position = Vector2(48, 276)
+	elixir_row.position = Vector2(48, 296)
 	elixir_row.add_theme_constant_override("separation", 4)
 	inner.add_child(elixir_row)
 	for elixir_index in range(4):
@@ -279,7 +279,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			enemy_elixir_slots.append(elixir_button)
 	_update_elixir_slots()
 	var zone_row := HBoxContainer.new()
-	zone_row.position = Vector2(6, 336)
+	zone_row.position = Vector2(6, 333)
 	zone_row.add_theme_constant_override("separation", 5)
 	inner.add_child(zone_row)
 	for index in range(ZONES.size()):
