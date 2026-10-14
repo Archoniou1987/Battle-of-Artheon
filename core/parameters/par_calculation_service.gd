@@ -32,6 +32,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 		base[PRIMARY_IDS[index]] = float(character.progression.base_stats.get(PRIMARY_IDS[index], 0))
 	var equipment := {}
 	var active_weapon_count := 0
+	var attack_ranges := {"PAR050": {}, "PAR051": {}}
 	if repository != null:
 		var active := character.active_equipment_ids(repository)
 		for instance_id in active:
@@ -43,11 +44,13 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			var damage: Variant = item.get("damage", {})
 			if damage is Dictionary and not damage.is_empty():
 				active_weapon_count += 1
+				var target_par := "PAR051" if String(item.get("slot", "")) == "off_hand" else "PAR050"
+				attack_ranges[target_par] = {"min": float(damage.get("min", 0.0)), "max": float(damage.get("max", 0.0)), "type": String(damage.get("type", "blunt"))}
 			_accumulate(equipment, item.get("par_stats", {}), definitions)
 			_accumulate(equipment, item.get("par_bonuses", {}), definitions)
 	# Unarmed fallback counts as the sole main-hand attack.
 	# PAR057 is derived from active weapon count, not item bonuses.
-	base["PAR057"] = float(maxi(1, active_weapon_count))
+	base["PAR057"] = 1.0 if active_weapon_count == 0 else 0.0
 	# Primary-derived formulas live here; source_key resolves only exact PAR equivalents.
 	var derived := {}
 	var unmapped := {}
@@ -74,7 +77,10 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 		else:
 			unmapped[source_key] = derived[source_key]
 	# Do not let arbitrary item bonuses duplicate the weapon-count rule.
-	equipment.erase("PAR057")
+	if active_weapon_count > 0 and int(equipment.get("PAR057", 0)) != active_weapon_count:
+		push_error("Each equipped weapon must contribute PAR057 = 1")
+	if active_weapon_count < 2:
+		attack_ranges["PAR051"] = {}
 	var totals := {}
 	var breakdown := {}
 	for par_id in definitions:
@@ -86,7 +92,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 		}
 		breakdown[par_id] = parts
 		totals[par_id] = parts["basic"] + parts["equipment"] + parts["talents"] + parts["effects"]
-	return {"totals": totals, "sources": breakdown, "unmapped_derived": unmapped}
+	return {"totals": totals, "sources": breakdown, "attack_ranges": attack_ranges, "unmapped_derived": unmapped}
 
 static func _accumulate(target: Dictionary, incoming: Variant, definitions: Dictionary) -> void:
 	if not incoming is Dictionary:
