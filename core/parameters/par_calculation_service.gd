@@ -27,18 +27,27 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 	if definitions.is_empty():
 		push_error("PAR registry unavailable")
 		return {}
-	var base := {}
+	var base := {"PAR073": 2.0}
 	for index in range(PRIMARY_IDS.size()):
 		base[PRIMARY_IDS[index]] = float(character.progression.base_stats.get(PRIMARY_IDS[index], 0))
 	var equipment := {}
+	var active_weapon_count := 0
 	if repository != null:
 		var active := character.active_equipment_ids(repository)
 		for instance_id in active:
 			var item := repository.get_item(String(instance_id))
 			if item.is_empty():
 				continue
+			# Each active weapon contributes one attack; shields do not.
+			# Deduplicated active IDs prevent two-handed items counting twice.
+			var damage: Variant = item.get("damage", {})
+			if damage is Dictionary and not damage.is_empty():
+				active_weapon_count += 1
 			_accumulate(equipment, item.get("par_stats", {}), definitions)
 			_accumulate(equipment, item.get("par_bonuses", {}), definitions)
+	# Unarmed fallback counts as the sole main-hand attack.
+	# PAR057 is derived from active weapon count, not item bonuses.
+	base["PAR057"] = float(maxi(1, active_weapon_count))
 	# Primary-derived formulas live here; source_key resolves only exact PAR equivalents.
 	var derived := {}
 	var unmapped := {}
@@ -64,6 +73,8 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			base[target_id] = float(base.get(target_id, 0.0)) + float(derived[source_key])
 		else:
 			unmapped[source_key] = derived[source_key]
+	# Do not let arbitrary item bonuses duplicate the weapon-count rule.
+	equipment.erase("PAR057")
 	var totals := {}
 	var breakdown := {}
 	for par_id in definitions:
