@@ -31,8 +31,8 @@ func _run() -> void:
 	assert(is_equal_approx(float(test_bonuses["dodge_rating"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["crit_damage_rating"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["max_hp_flat"]), 200.0))
-	assert(is_equal_approx(float(test_bonuses["crit_chance_rating"]), 100.0))
-	assert(is_equal_approx(float(test_bonuses["magic_hit_rating"]), 50.0))
+	assert(is_equal_approx(float(test_bonuses["crit_chance_rating"]), 150.0))
+	assert(is_equal_approx(float(test_bonuses["hit_chance_rating"]), 50.0))
 	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
 	assert((screen.detail_values["crit_damage_rating"] as Label).text.contains("%)"))
 	assert((screen.detail_values["slash_damage_rating"] as Label).text == "0 (0%)")
@@ -68,12 +68,11 @@ func _run() -> void:
 	assert(not screen.detail_values.has("main_hand_min_damage"))
 	assert(not screen.detail_values.has("main_hand_max_damage"))
 
-	var anchors: Array = primary_config["rating_curve"]["anchors"]
-	for anchor in anchors:
-		assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, int(anchor["level"]), primary_config), float(anchor["percent"])))
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(150.0, 40, primary_config), 20.0))
-	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0, primary_config), 15.0))
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30, primary_config), 45.0))
+	# RatingMatrix v1: 100 rating = 20% at level 1, 2.5% at level 100.
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 1, primary_config), 20.0))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100, primary_config), 2.5))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30, primary_config), 3.0 * (20.0 - 17.5 * 29.0 / 99.0)))
+	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0, primary_config), 12.5))
 	assert((screen.detail_values["dodge_rating"] as Label).text.contains("("))
 	assert((screen.detail_values["crit_chance_rating"] as Label).text.contains("%)"))
 
