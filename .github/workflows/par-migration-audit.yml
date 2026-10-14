@@ -30,6 +30,7 @@ jobs:
           set -euo pipefail
           mkdir -p test-results/par-audit
           for script in \
+            tests/parameters/rating_matrix_runner.gd \
             tests/parameters/par_migration_runner.gd \
             tests/character/progression_smoke.gd \
             tests/character/character_state_progression_smoke.gd \
