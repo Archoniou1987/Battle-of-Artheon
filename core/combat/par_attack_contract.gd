@@ -27,13 +27,11 @@ static func validate(combatant: CombatantState) -> Dictionary:
 		if not ["main_hand", "off_hand"].has(slot) or seen.has(slot):
 			return {"ok": false, "reason": "invalid_weapon_hand_identity"}
 		seen[slot] = true
-		if count == 2.0:
+		if count == 2.0 and not bool(weapon.get("is_unarmed", false)):
 			var instance_id := String(weapon.get("instance_id", ""))
 			if instance_id.is_empty() or weapon_ids.has(instance_id):
 				return {"ok": false, "reason": "two_distinct_weapon_instances_required"}
 			weapon_ids[instance_id] = true
-		if count == 2.0 and bool(weapon.get("is_unarmed", false)):
-			return {"ok": false, "reason": "two_weapons_required"}
 		var id := "PAR050" if slot == "main_hand" else "PAR051"
 		if not ParCalculationService.valid_damage_range(ranges.get(id)):
 			return {"ok": false, "reason": "missing_or_invalid_" + id}
