@@ -18,7 +18,7 @@ static func total_earned_stat_points(at_level: int) -> int:
 	var safe_level := maxi(FIRST_LEVEL, at_level)
 	return STARTING_POINTS + safe_level - FIRST_LEVEL + (BONUS_POINTS_AT_LEVEL_100 if safe_level >= BONUS_LEVEL else 0)
 ## All six primary stats start at one; allocated points are committed separately.
-var base_stats: Dictionary = {"STR": 1, "DEX": 1, "INTU": 1, "INT": 1, "WIS": 1, "END": 1}
+var base_stats: Dictionary = {"PAR001": 1, "PAR002": 1, "PAR003": 1, "PAR004": 1, "PAR005": 1, "PAR006": 1}
 var _table: Dictionary = {}
 
 func _init(start_level: int = 1, table: Dictionary = {}) -> void:
@@ -122,7 +122,7 @@ func restore(data: Dictionary) -> bool:
 		return false
 	if restored_level == MAX_CONFIGURED_LEVEL and restored_xp != 0:
 		return false
-	var keys := ["STR", "DEX", "INTU", "INT", "WIS", "END"]
+	var keys := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
 	var total := restored_points
 	for key in keys:
 		if not restored_stats.has(key) or not _is_whole_number(restored_stats[key]) or int(restored_stats[key]) < 1:
