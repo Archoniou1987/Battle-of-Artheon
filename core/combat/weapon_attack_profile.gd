@@ -58,6 +58,7 @@ static func attack_payload(profile:Dictionary,rolls:Dictionary,zone:String="ches
 		"weapon_index":int(profile.get("weapon_index",0)),
 		"is_weapon_attack":true,
 		"attack_profile_id":String(profile.get("id","basic")),
+		"ability_id":"ABI001" if String(profile.get("id","basic"))=="basic" else "",
 		"hit_index":int(overrides.get("hit_index",0)),
 		"hit_count":maxi(1,int(profile.get("hit_count",1))),
 		"delivery_type":String(profile.get("delivery_type","MELEE")),
