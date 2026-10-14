@@ -38,9 +38,8 @@ func _build_debug_combat()->void:
 	var player: CharacterState = debug_character["character"]
 	var repository: ItemRepository = debug_character["repository"]
 	var hero := CharacterCombatBuilder.build(player, repository)
-	var enemy := CombatantState.new("enemy", "Training Raider", 1, 80, 0)
-	var enemy_two := CombatantState.new("enemy_two", "Raider Archer", 1, 65, 0)
-	enemy.combat_stats["weapon_profiles"]=[{"damage_min":7.0,"damage_max":7.0,"damage_type":"blunt"}]
+	var enemy := _build_debug_enemy("enemy", "Training Raider", 80, true)
+	var enemy_two := _build_debug_enemy("enemy_two", "Raider Archer", 65, false)
 	state.add_combatant(hero); state.add_combatant(enemy); state.add_combatant(enemy_two)
 	groups=GroupCombatState.new(state)
 	groups.add_member("A",hero_id); groups.add_member("B","enemy"); groups.add_member("B","enemy_two")
@@ -188,3 +187,19 @@ func _cast_ability(ability_id: String) -> void:
 	if bool(result.get("ok", false)):
 		engine.resolve_pending_events()
 	_refresh()
+
+## Explicit debug fixtures use the same canonical builder as the Arena.
+func _build_debug_enemy(id: String, display_name: String, health: int, armed: bool) -> CombatantState:
+	var character := CharacterState.new(id, display_name)
+	# The former fixture had no primary-stat bonuses: keep its configured damage.
+	for par_id in ParCalculationService.PRIMARY_IDS:
+		character.progression.base_stats[par_id] = 0
+	var repository := ItemRepository.new()
+	if armed:
+		var instance_id := id + "_debug_weapon"
+		var item := {"instance_id":instance_id,"equip_slots":["main_hand"],"slot_usage":["main_hand"],"par_stats":{"PAR057":1},"damage":{"min":7.0,"max":7.0,"type":"blunt"}}
+		ItemDurabilityService.initialize_item(item, 100)
+		repository.add_item(item)
+		character.receive_item(instance_id, repository)
+		character.equip("main_hand", instance_id, repository)
+	return CharacterCombatBuilder.build(character, repository, {"health":health,"mana":0})

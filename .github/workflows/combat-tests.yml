@@ -20,6 +20,9 @@ jobs:
       - name: Validate combat debug scene
         run: GODOT_TEST_TIMEOUT=30 bash tools/run_godot_check.sh --scene res://scenes/debug/debug_combat_viewer.tscn
 
+      - name: Validate canonical debug combat interactions
+        run: GODOT_TEST_TIMEOUT=30 bash tools/run_godot_check.sh tests/ui/debug_combat_scene_runner.gd
+
       - name: Run combat regression gate
         run: |
           set -o pipefail
