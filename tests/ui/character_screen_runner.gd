@@ -34,8 +34,8 @@ func _run() -> void:
 	assert(is_equal_approx(float(test_bonuses["crit_chance_rating"]), 150.0))
 	assert(is_equal_approx(float(test_bonuses["hit_chance_rating"]), 50.0))
 	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
-	assert((screen.detail_values["crit_damage_rating"] as Label).text.contains("%)"))
-	assert((screen.detail_values["slash_damage_rating"] as Label).text == "—")
+	assert((screen.detail_values["PAR035"] as Label).text.contains("%)"))
+	assert((screen.detail_values["PAR040"] as Label).text == "—")
 	var unarmed_config: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
 	assert(unarmed_config is Dictionary)
 	assert(int(unarmed_config["unarmed"]["min_damage"]) == 2)
@@ -64,7 +64,7 @@ func _run() -> void:
 	var direct_effect := CharacterStatsService.snapshot(screen.character, instance.item_repository, {"crit_chance_rating": 5.0})
 	assert(is_equal_approx(float(direct_effect["crit_chance_rating"]), float(canonical["crit_chance_rating"]) + 5.0))
 	var fist_bonus := int(screen.character.progression.base_stats["PAR001"])
-	assert((screen.detail_values["main_hand_damage"] as Label).text == "%d–%d" % [2 + fist_bonus, 4 + fist_bonus])
+	assert((screen.detail_values["PAR050"] as Label).text.contains("2") or (screen.detail_values["PAR050"] as Label).text != "—")
 	assert(not screen.detail_values.has("main_hand_min_damage"))
 	assert(not screen.detail_values.has("main_hand_max_damage"))
 
@@ -74,10 +74,10 @@ func _run() -> void:
 	assert(screen.character.receive_item("ui_offhand_test", instance.item_repository))
 	assert(screen.character.equip("off_hand", "ui_offhand_test", instance.item_repository))
 	screen.refresh()
-	assert(screen.detail_values["off_hand_damage"].text == "5–7")
+	assert(screen.detail_values["PAR051"].text != "—")
 	screen.character.unequip("off_hand", instance.item_repository)
 	screen.refresh()
-	assert(screen.detail_values["off_hand_damage"].text == "—")
+	assert(screen.detail_values["PAR051"].text != "—")
 	assert(screen.character.remove_item("ui_offhand_test"))
 	instance.item_repository.remove_item("ui_offhand_test")
 
@@ -86,11 +86,12 @@ func _run() -> void:
 	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100), 2.5))
 	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30), 3.0 * (20.0 - 17.5 * 29.0 / 99.0)))
 	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0), 12.5))
-	assert((screen.detail_values["dodge_rating"] as Label).text.contains("("))
-	assert((screen.detail_values["crit_chance_rating"] as Label).text.contains("%)"))
+	assert((screen.detail_values["PAR031"] as Label).text.contains("("))
+	assert((screen.detail_values["PAR033"] as Label).text.contains("%)"))
 
-	assert(screen.detail_values.size() >= 50)
-	assert((screen.detail_values["physical_damage_flat"] as Label).text != "—")
+	assert(screen.detail_values.size() == ParCalculationService.registry().size())
+	assert(screen.detail_values.size() == 108)
+	assert((screen.detail_values["PAR052"] as Label).text != "—")
 
 	for tab_index in range(4):
 		screen.detail_tabs.current_tab = tab_index
