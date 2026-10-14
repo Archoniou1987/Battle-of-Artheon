@@ -12,7 +12,7 @@ func _init() -> void:
 		var character:CharacterState = pair[0]
 		var item:Dictionary = pair[1]
 		repository.add_item(item); character.receive_item(String(item.instance_id), repository); character.equip("main_hand", String(item.instance_id), repository)
-	var base := {"health":100,"mana":25,"stats":{"STR":0,"DEX":0,"INTU":0,"INT":0,"WIS":0,"END":0},"combat_stats":{"mana_regen":2}}
+	var base := {"health":100,"mana":25,"combat_stats":{"mana_regen":2}}
 	var fighter_a := CharacterCombatBuilder.build(first, repository, base)
 	var fighter_b := CharacterCombatBuilder.build(second, repository, base)
 	var stats_a := CharacterCombatBuilder.stats_snapshot(fighter_a)
@@ -25,7 +25,7 @@ func _init() -> void:
 	var effect_data:Dictionary = TestFixtureLoader.load_json("res://data/test/effects.json"); var effect_map := {}
 	for effect in effect_data.get("effects", []): effect_map[String(effect.get("id", ""))] = effect
 	balance["effects"] = effect_map
-	var simulator := CombatSimulator.new(state, balance, 5150); simulator.max_rounds = 20
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 5150); simulator.max_rounds = 20
 	var result := simulator.run_duel("CHAR_A", "CHAR_B")
 	var combat_ran := int(result.get("rounds",0)) > 0 and state.event_log.size() > 0
 	var ok := ready_a and ready_b and combat_ran

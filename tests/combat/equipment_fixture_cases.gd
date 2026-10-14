@@ -14,7 +14,7 @@ static func run() -> bool:
 	var second_dagger:Dictionary=dagger_profiles[1]
 	var mixed_profiles:Array=mixed.combat_stats.get("weapon_profiles",[])
 	if mixed_profiles.size()!=2: return false
-	var legacy_only:=CombatantState.new("legacy","Legacy",1,100)
+	var legacy_only:=TestFixtureLoader.new_combatant("legacy","Legacy",1,100)
 	legacy_only.combat_stats={"main_hand_damage_min":99.0,"main_hand_damage_max":99.0,"main_hand_damage_type":"piercing"}
 	if not WeaponAttackProfile.all(legacy_only).is_empty(): return false
 	var mixed_first:Dictionary=mixed_profiles[0]

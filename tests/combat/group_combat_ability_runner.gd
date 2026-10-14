@@ -2,16 +2,16 @@ extends SceneTree
 
 func _initialize()->void:
 	var state:=CombatState.new()
-	var player:=CombatantState.new("TEST_DAGGER_FIGHTER","Player",5,100,20)
+	var player:=TestFixtureLoader.new_combatant("TEST_DAGGER_FIGHTER","Player",5,100,20)
 	player.combat_stats={"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 	state.add_combatant(player)
-	var enemy:=CombatantState.new("ENEMY","Enemy",1,100,0)
+	var enemy:=TestFixtureLoader.new_combatant("ENEMY","Enemy",1,100,0)
 	enemy.combat_stats={"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 	state.add_combatant(enemy)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players",player.combatant_id)
 	group.add_member("enemies",enemy.combatant_id)
-	var simulator:=GroupCombatSimulator.new(state,group)
+	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)
 	var result:=simulator.run_round()
 	var valid:=bool(result.get("ok",false))
 	var saw_ability:=false
@@ -33,18 +33,18 @@ func _initialize()->void:
 
 func _test_lethal_base_attack_abi_target()->bool:
 	var state:=CombatState.new()
-	var player:=CombatantState.new("TEST_DAGGER_FIGHTER","Player",5,100,20)
+	var player:=TestFixtureLoader.new_combatant("TEST_DAGGER_FIGHTER","Player",5,100,20)
 	player.combat_stats={"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 	state.add_combatant(player)
 	for id in ["ENEMY_A","ENEMY_B"]:
-		var enemy:=CombatantState.new(id,id,1,50,0)
+		var enemy:=TestFixtureLoader.new_combatant(id,id,1,50,0)
 		enemy.combat_stats={"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 		state.add_combatant(enemy)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players",player.combatant_id)
 	group.add_member("enemies","ENEMY_A")
 	group.add_member("enemies","ENEMY_B")
-	var simulator:=GroupCombatSimulator.new(state,group)
+	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)
 	if group.active_opponent(player.combatant_id)!="ENEMY_A": return false
 	var result:=simulator.run_round()
 	if not bool(result.get("ok",false)): return false

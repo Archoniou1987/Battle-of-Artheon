@@ -4,10 +4,10 @@ extends SceneTree
 ## bonuses activate on the following round, not the application round.
 func _initialize() -> void:
 	var state := CombatState.new()
-	var caster := CombatantState.new("caster", "Caster", 1, 100, 100)
+	var caster := TestFixtureLoader.new_combatant("caster", "Caster", 1, 100, 100)
 	caster.combat_stats["magic_damage_flat"] = 5.0
 	caster.combat_stats["magic_damage_rating_percent"] = 20.0
-	var target := CombatantState.new("target", "Target", 1, 200, 0)
+	var target := TestFixtureLoader.new_combatant("target", "Target", 1, 200, 0)
 	state.add_combatant(caster)
 	state.add_combatant(target)
 	var engine := CombatEngine.new(state)

@@ -23,7 +23,7 @@ func _init() -> void:
 			var equipped := bot.equip(String(SLOT_BY_TEMPLATE[String(template.id)]), String(item.instance_id), repository)
 			if not equipped: _fail("equip failed " + String(template.id)); return
 			all_items.append(item)
-	var base := {"mana":30,"stats":{"STR":5,"DEX":5,"INTU":5,"INT":5,"WIS":5,"END":5},"combat_stats":{"mana_regen":2.0,"crit":5.0,"dodge":5.0}}
+	var base := {"mana":30,"combat_stats":{"mana_regen":2.0,"crit":5.0,"dodge":5.0}}
 	var snapshots:Array[Dictionary] = []
 	for bot in bots:
 		var fighter := CharacterCombatBuilder.build(bot, repository, base)
@@ -73,11 +73,11 @@ func _validate_snapshot(snapshot:Dictionary)->bool:
 	if weapon_profiles.is_empty():
 		_fail_condition("weapon_profiles", character_id, {"expected_non_empty":true, "actual":weapon_profiles, "weapon_attack_count":cs.get("weapon_attack_count", 0)})
 		valid = false
-	if float(cs.get("dodge", 0)) <= 0.0:
-		_fail_condition("dodge", character_id, {"expected_gt":0, "actual":cs.get("dodge", 0), "combat_stats":cs})
+	if float(cs.get("dodge_rating_percent", 0)) <= 0.0:
+		_fail_condition("dodge", character_id, {"expected_gt":0, "actual":cs.get("dodge_rating_percent", 0), "combat_stats":cs})
 		valid = false
-	if float(cs.get("auto_block", 0)) <= 0.0:
-		_fail_condition("auto_block", character_id, {"expected_gt":0, "actual":cs.get("auto_block", 0), "combat_stats":cs})
+	if float(cs.get("shield_auto_block_rating_percent", 0)) <= 0.0:
+		_fail_condition("auto_block", character_id, {"expected_gt":0, "actual":cs.get("shield_auto_block_rating_percent", 0), "combat_stats":cs})
 		valid = false
 	if armour.is_empty():
 		_fail_condition("armour", character_id, {"expected_non_empty":true, "actual":armour})

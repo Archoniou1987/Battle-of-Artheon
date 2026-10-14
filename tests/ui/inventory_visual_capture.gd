@@ -58,7 +58,7 @@ func _seed_preview_items(game: Node) -> void:
 			"type": "preview",
 			"item_level": 1,
 			"equip_slots": ["main_hand"] if i == 0 else [],
-			"guaranteed_stats": {"STR": 1} if i == 0 else {},
+			"par_stats": {"PAR001": 1} if i == 0 else {},
 			"requirements": {},
 			"description": "Тестовый предмет для проверки отображения интерфейса."
 		}

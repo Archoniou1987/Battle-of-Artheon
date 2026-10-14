@@ -2,18 +2,18 @@ extends SceneTree
 
 func _initialize()->void:
 	var state:=CombatState.new()
-	var player:=CombatantState.new("PLAYER","Player",5,100)
+	var player:=TestFixtureLoader.new_combatant("PLAYER","Player",5,100)
 	player.combat_stats={"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 	state.add_combatant(player)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players","PLAYER")
 	for i in range(3):
 		var id:="E%d"%i
-		var enemy:=CombatantState.new(id,id,1,50)
+		var enemy:=TestFixtureLoader.new_combatant(id,id,1,50)
 		enemy.combat_stats={"weapon_profiles":[{"damage_min":5.0,"damage_max":5.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
 		state.add_combatant(enemy)
 		group.add_member("enemies",id)
-	var simulator:=GroupCombatSimulator.new(state,group)
+	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)
 	var valid:=group.active_opponent("PLAYER")=="E0"
 	var r1:=simulator.run_round()
 	valid=valid and bool(r1.get("ok",false)) and state.get_combatant("E0").is_death_finalized()

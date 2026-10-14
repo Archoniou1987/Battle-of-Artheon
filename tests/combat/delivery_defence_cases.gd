@@ -14,8 +14,8 @@ static func run(balance: Dictionary) -> bool:
 
 static func _state() -> CombatState:
 	var state := CombatState.new()
-	var source := CombatantState.new("source", "Source", 10, 100)
-	var target := CombatantState.new("target", "Target", 10, 100)
+	var source := TestFixtureLoader.new_combatant("source", "Source", 10, 100)
+	var target := TestFixtureLoader.new_combatant("target", "Target", 10, 100)
 	state.add_combatant(source)
 	state.add_combatant(target)
 	state.begin_round()

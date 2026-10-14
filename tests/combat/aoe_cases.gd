@@ -10,9 +10,9 @@ static func run(base_balance:Dictionary) -> bool:
 
 static func _state(count:int)->CombatState:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("source","Source",10,1000))
+	state.add_combatant(TestFixtureLoader.new_combatant("source","Source",10,1000))
 	for i in range(count):
-		state.add_combatant(CombatantState.new("t%d"%i,"Target",10,1000))
+		state.add_combatant(TestFixtureLoader.new_combatant("t%d"%i,"Target",10,1000))
 	state.begin_round()
 	return state
 

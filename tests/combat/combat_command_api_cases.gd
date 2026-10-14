@@ -3,8 +3,8 @@ extends RefCounted
 
 static func run()->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",10,100,10)
-	var enemy:=CombatantState.new("enemy","Enemy",10,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",10,100,10)
+	var enemy:=TestFixtureLoader.new_combatant("enemy","Enemy",10,100)
 	state.add_combatant(hero)
 	state.add_combatant(enemy)
 	var group:=GroupCombatState.new(state)

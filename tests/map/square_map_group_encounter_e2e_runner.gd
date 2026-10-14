@@ -16,7 +16,7 @@ func _initialize()->void:
 		npcs.append(npc)
 		valid=valid and bridge.register_npc(map,npc,contact)
 		var item_id:="E2E_ITEM_%03d"%(i+1)
-		var item:Dictionary={"instance_id":item_id,"template_id":"TEST_DAGGER","quality":"common","durability":{"current":15,"max":20}}
+		var item:Dictionary={"instance_id":item_id,"generated_from_template":"TEST_DAGGER","quality":"common","durability":{"current":15,"max":20}}
 		item_repo.add_item(item)
 		valid=valid and npc.receive_item(item_id,item_repo)
 
@@ -26,7 +26,7 @@ func _initialize()->void:
 	valid=valid and encounter.get("npc_instance_ids",[]).size()==3
 
 	var player_character:=CharacterState.new("PLAYER","Artheon Hero",5)
-	var player:=CombatantState.new("PLAYER","Artheon Hero",5,200)
+	var player:=TestFixtureLoader.new_combatant("PLAYER","Artheon Hero",5,200)
 	player.combat_stats={"weapon_profiles":[{"damage_min":500.0,"damage_max":500.0,"damage_type":"slashing"}]}
 	var session:=MapEncounterCombatService.begin(encounter,npc_repo,player)
 	valid=valid and bool(session.get("ok",false))
@@ -34,7 +34,7 @@ func _initialize()->void:
 	var group:GroupCombatState=session.get("group") as GroupCombatState
 	valid=valid and state!=null and group!=null and state.combatants.size()==4
 
-	var simulator:=GroupCombatSimulator.new(state,group)
+	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)
 	var combat_result:=simulator.run()
 	valid=valid and String(combat_result.get("winning_team",""))=="players"
 	valid=valid and combat_result.get("dead_ids",[]).size()==3

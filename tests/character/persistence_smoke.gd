@@ -15,11 +15,16 @@ func _run() -> void:
 	await process_frame
 	var character := first.get("player_character") as CharacterState
 	var repository := first.get("item_repository") as ItemRepository
-	var item := {"instance_id": "persist_test_ring", "name": "Persistence ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "guaranteed_stats": {}}
+	var item := {"instance_id": "persist_test_ring", "name": "Persistence ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "par_stats": {}}
 	ItemDurabilityService.initialize_item(item, 100)
 	assert(repository.add_item(item))
 	assert(character.receive_item("persist_test_ring", repository))
 	assert(character.equip("ring1", "persist_test_ring", repository))
+	var second_ring := item.duplicate(true)
+	second_ring["instance_id"] = "persist_alternate_ring"
+	assert(repository.add_item(second_ring))
+	assert(character.receive_item("persist_alternate_ring", repository))
+	assert(character.equip("ring2", "persist_alternate_ring", repository))
 	first.call("_save_inventory")
 	assert(FileAccess.file_exists(save_path))
 	assert(character.progression.allocate_stat("PAR001"))
@@ -34,6 +39,7 @@ func _run() -> void:
 	assert((second.get("player_character") as CharacterState).inventory.owns("persist_test_ring"))
 	assert((second.get("player_character") as CharacterState).equipment.get_equipped_instance_id("ring1") == "persist_test_ring")
 	assert((second.get("item_repository") as ItemRepository).has_item("persist_test_ring"))
+	assert((second.get("player_character") as CharacterState).equipment.get_equipped_instance_id("ring2") == "persist_alternate_ring")
 	assert((second.get("player_character") as CharacterState).progression.base_stats["PAR001"] == 2)
 	second.queue_free()
 	await process_frame

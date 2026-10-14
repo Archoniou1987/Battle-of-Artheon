@@ -2,9 +2,9 @@ extends SceneTree
 
 func _init() -> void:
 	var state := CombatState.new()
-	var source_a := CombatantState.new("SOURCE_A", "Source A", 50, 100, 0)
-	var source_b := CombatantState.new("SOURCE_B", "Source B", 50, 100, 0)
-	var target := CombatantState.new("TARGET", "Target", 50, 200, 0)
+	var source_a := TestFixtureLoader.new_combatant("SOURCE_A", "Source A", 50, 100, 0)
+	var source_b := TestFixtureLoader.new_combatant("SOURCE_B", "Source B", 50, 100, 0)
+	var target := TestFixtureLoader.new_combatant("TARGET", "Target", 50, 200, 0)
 	state.add_combatant(source_a)
 	state.add_combatant(source_b)
 	state.add_combatant(target)

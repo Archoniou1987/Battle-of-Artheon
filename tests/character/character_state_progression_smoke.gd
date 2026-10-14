@@ -17,7 +17,7 @@ func _initialize() -> void:
 	assert(character.progression.base_stats["PAR006"] == 2)
 	var repository := ItemRepository.new()
 	var strength_ring := {"instance_id": "ring", "equip_slots": ["ring1"], "slot_usage": ["ring1"], "requirements": {}, "par_bonuses": {"PAR001": 6}}
-	var dependent_sword := {"instance_id": "sword", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"PAR001": 7}, "guaranteed_stats": {}}
+	var dependent_sword := {"instance_id": "sword", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"PAR001": 7}, "par_stats": {}}
 	ItemDurabilityService.initialize_item(strength_ring, 100)
 	ItemDurabilityService.initialize_item(dependent_sword, 100)
 	ItemDurabilityService.initialize_item(strength_ring, 100)
@@ -42,7 +42,7 @@ func _initialize() -> void:
 	assert(character.unequip("ring1", repository) == "ring")
 	assert(character.equipment.is_equipped("sword"))
 	assert(CharacterCombatBuilder.equipped_items(character, repository).is_empty())
-	var replacement := {"instance_id": "replacement", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"PAR001": 7}, "guaranteed_stats": {}}
+	var replacement := {"instance_id": "replacement", "equip_slots": ["main_hand"], "slot_usage": ["main_hand"], "requirements": {"PAR001": 7}, "par_stats": {}}
 	ItemDurabilityService.initialize_item(replacement, 100)
 	assert(repository.add_item(replacement))
 	assert(character.receive_item("replacement", repository))

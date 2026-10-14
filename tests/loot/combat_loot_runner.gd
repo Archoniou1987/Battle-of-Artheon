@@ -11,15 +11,16 @@ func _initialize() -> void:
 
 	var repository := ItemRepository.new()
 	var player := CharacterState.new("PLAYER_01", "Artheon Hero", 20)
-	var player_fighter := CharacterCombatBuilder.build(player, repository, {"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"weapon_profiles":[{"damage_min":35.0,"damage_max":35.0,"damage_type":"slashing"}]}})
-	var bandit := CombatantState.new("NPC_TEST_BANDIT_001", "Test Bandit", 10, 25, 0)
+	TestFixtureLoader.equip_character_weapon(player, repository, 35)
+	var player_fighter := CharacterCombatBuilder.build(player, repository, {"health":160,"mana":30})
+	var bandit := TestFixtureLoader.new_combatant("NPC_TEST_BANDIT_001", "Test Bandit", 10, 25, 0)
 	bandit.combat_stats = {"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}
 
 	var state := CombatState.new()
 	state.add_combatant(player_fighter)
 	state.add_combatant(bandit)
 	var balance: Dictionary = TestFixtureLoader.load_json("res://data/balance/physical_combat.json")
-	var simulator := CombatSimulator.new(state, balance, 6060)
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 6060)
 	simulator.max_rounds = 10
 	var result := simulator.run_duel(player.character_id, bandit.combatant_id)
 
@@ -29,9 +30,9 @@ func _initialize() -> void:
 	var drops:Array[Dictionary]=[]
 	for item_id in pool.item_ids():
 		drops.append(repository.get_item(item_id))
-	var valid:=not pool.item_ids().is_empty() and player.inventory.size()==0
+	var valid:=not pool.item_ids().is_empty() and player.bag_item_count()==0
 	valid=valid and  String(result.get("winner_id", "")) == player.character_id and String(result.get("loser_id", "")) == bandit.combatant_id
-	valid = valid and drops.size() == 2 and repository.size() == 2 and pool.item_ids().size() == 2
+	valid = valid and drops.size() == 2 and repository.size() == 3 and pool.item_ids().size() == 2
 	for item in drops:
 		var instance_id := String(item.get("instance_id", ""))
 		valid = valid and pool.available_for(player.character_id).has(instance_id) and repository.has_item(instance_id)
@@ -39,7 +40,7 @@ func _initialize() -> void:
 
 	for item_id in pool.item_ids().duplicate():
 		valid=valid and pool.claim(item_id,player,repository)
-	valid=valid and player.inventory.size()==2 and pool.item_ids().is_empty()
+	valid=valid and player.bag_item_count()==2 and pool.item_ids().is_empty()
 	print("COMBAT_LOOT outcome=%s bandit_hp=%d drops=%d inventory=%d repository=%d" % [String(result.get("outcome", "")), int(result.get("second_hp", -1)), drops.size(), player.inventory.size(), repository.size()])
 	for item in drops:
 		print("COMBAT_LOOT_ITEM " + JSON.stringify(item))

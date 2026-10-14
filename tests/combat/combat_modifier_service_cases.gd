@@ -15,7 +15,7 @@ static func run() -> bool:
 	)
 
 static func _combatant() -> CombatantState:
-	var combatant := CombatantState.new("subject", "Subject", 10, 100, 50)
+	var combatant := TestFixtureLoader.new_combatant("subject", "Subject", 10, 100, 50)
 	return combatant
 
 static func _case_canonical_percent_avoids_direct_pct_double_count() -> bool:

@@ -1,0 +1,57 @@
+name: PAR Migration Audit
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: par-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  par-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import and compile
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 120s godot --headless --editor --path . --quit 2>&1 | tee par-import.log
+          ! grep -Eq 'SCRIPT ERROR|ERROR:' par-import.log
+      - name: Verify PAR ownership, persistence, items and combat
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-results/par-audit
+          for script in \
+            tests/parameters/par_migration_runner.gd \
+            tests/character/progression_smoke.gd \
+            tests/character/character_state_progression_smoke.gd \
+            tests/character/persistence_smoke.gd \
+            tests/items/item_generator_runner.gd \
+            tests/items/generated_item_combat_runner.gd \
+            tests/character/character_combat_builder_runner.gd \
+            tests/character/ten_player_stats_runner.gd \
+            tests/npc/npc_entity_runner.gd \
+            tests/arena_equipment_contract_test.gd \
+            tests/combat/combat_regression_runner.gd \
+            tests/ui/character_screen_runner.gd \
+            tests/ui/arena_open_smoke.gd; do
+            log="test-results/par-audit/$(basename "$script").log"
+            XDG_DATA_HOME="$(mktemp -d)" timeout 45s godot --headless --path . --script "res://$script" 2>&1 | tee "$log"
+            ! grep -Eq 'SCRIPT ERROR|ERROR:|=FAIL|: FAIL' "$log"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: par-migration-audit
+          path: |
+            par-import.log
+            test-results/par-audit/*.log
+          retention-days: 7

@@ -24,7 +24,7 @@ static func run()->bool:
 static func _fixture()->Dictionary:
 	var state:=CombatState.new()
 	for id in ["a","b","a2"]:
-		state.add_combatant(CombatantState.new(id,id.to_upper(),1,100))
+		state.add_combatant(TestFixtureLoader.new_combatant(id,id.to_upper(),1,100))
 	var group:=GroupCombatState.new(state)
 	group.add_member("team_a","a")
 	group.add_member("team_a","a2")

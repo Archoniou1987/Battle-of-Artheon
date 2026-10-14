@@ -19,13 +19,16 @@ func check(ok: bool, description: String) -> void:
 
 func fixture() -> Dictionary:
 	var hero := CharacterState.new("test_hero", "Test")
-	hero.progression.base_stats["STR"] = 4
-	hero.progression.base_stats["INTU"] = 2
+	hero.progression.base_stats["PAR001"] = 4
+	hero.progression.base_stats["PAR003"] = 2
 	return {"hero": hero, "repo": ItemRepository.new()}
 
 func put(hero: CharacterState, repo: ItemRepository, id: String, slot: String, extra: Dictionary) -> void:
 	var item := {"instance_id": id, "id": id, "item_type": "armour", "equip_slots": [slot], "requirements": {}}
 	item.merge(extra, true)
+	if not Dictionary(item.get("damage", {})).is_empty():
+		item["par_stats"] = {"PAR057":1}
+	ItemDurabilityService.initialize_item(item, 100)
 	check(repo.add_item(item), id + ": add failed")
 	check(hero.receive_item(id, repo), id + ": receive failed")
 	check(hero.equip(slot, id, repo), id + ": equip failed")
@@ -35,8 +38,8 @@ func test_strength() -> void:
 	var hero: CharacterState = f["hero"]
 	var repo: ItemRepository = f["repo"]
 	put(hero, repo, "test_sword", "main_hand", {"item_type": "weapon", "damage": {"min": 4, "max": 7, "type": "slashing"}})
-	put(hero, repo, "test_ring", "ring1", {"bonuses": {"STR": 25}})
-	check(int(hero.effective_stats(repo).get("STR", 0)) == 29, "Strength: expected 29")
+	put(hero, repo, "test_ring", "ring1", {"par_bonuses": {"PAR001": 25}})
+	check(int(hero.effective_stats(repo).get("PAR001", 0)) == 29, "Strength: expected 29")
 	var view := CharacterStatsService.snapshot(hero, repo)
 	var fighter := CharacterCombatBuilder.build(hero, repo)
 	var profiles := WeaponAttackProfile.all(fighter)
@@ -61,7 +64,7 @@ func test_critical_rating() -> void:
 	var f := fixture()
 	var hero: CharacterState = f["hero"]
 	var repo: ItemRepository = f["repo"]
-	put(hero, repo, "test_crit_boots", "feet", {"combat_stats": {"crit_chance_rating": 100}})
+	put(hero, repo, "test_crit_boots", "feet", {"par_stats": {"PAR033": 100}})
 	var view := CharacterStatsService.snapshot(hero, repo)
 	var fighter := CharacterCombatBuilder.build(hero, repo)
 	check(is_equal_approx(float(fighter.combat_stats.get("crit_chance_rating", 0)), 110.0), "Critical: combat rating should be 110")

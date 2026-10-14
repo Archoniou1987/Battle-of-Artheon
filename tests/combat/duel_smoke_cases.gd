@@ -38,7 +38,7 @@ static func run(balance: Dictionary) -> bool:
 
 static func _equal_duel_finishes(balance: Dictionary) -> bool:
 	var state := _make_state(30, 30, 10.0, 10.0)
-	var result := CombatSimulator.new(state, balance, 42).run_duel("a", "b")
+	var result := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 42).run_duel("a", "b")
 	return result.get("rounds", 0) > 0 and result.get("rounds", 0) <= 100 and result.get("outcome", "timeout") != "timeout"
 
 
@@ -57,7 +57,7 @@ static func _locked_actions_survive_death(balance: Dictionary) -> bool:
 static func _tempo_minus_100_cannot_attack(balance: Dictionary) -> bool:
 	var state := _make_state(30, 30, 10.0, 10.0)
 	state.get_combatant("a").tempo = -100.0
-	var simulator := CombatSimulator.new(state, balance, 7)
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 7)
 	simulator.max_rounds = 1
 	simulator.run_duel("a", "b")
 	var attacks_from_a := 0
@@ -70,7 +70,7 @@ static func _tempo_minus_100_cannot_attack(balance: Dictionary) -> bool:
 
 static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 	var attacker := TestFixtureLoader.build_combatant("TEST_MIXED_WEAPON_FIGHTER")
-	var defender := CombatantState.new("target", "Target", 10, 1000)
+	var defender := TestFixtureLoader.new_combatant("target", "Target", 10, 1000)
 	if attacker == null: return false
 	attacker.combatant_id = "mixed"
 	attacker.combat_stats["hit_modifier"] = 100.0
@@ -78,7 +78,7 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 	var state := CombatState.new()
 	state.add_combatant(attacker)
 	state.add_combatant(defender)
-	var simulator := CombatSimulator.new(state, balance, 17)
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 17)
 	simulator.max_rounds = 1
 	simulator.run_duel("mixed", "target")
 	var attacks:Array[CombatEvent]=[]
@@ -99,16 +99,16 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 
 
 static func _simulator_base_attack_ap_group(balance:Dictionary)->bool:
-	var attacker:=CombatantState.new("ap_user","AP User",10,100)
+	var attacker:=TestFixtureLoader.new_combatant("ap_user","AP User",10,100)
 	attacker.combat_stats["hit_modifier"]=100.0
 	attacker.combat_stats["weapon_profiles"]=[
-		{"damage_min":1.0,"damage_max":1.0,"damage_type":"piercing","hit_count":2},
+		{"damage_min":1.0,"damage_max":1.0,"damage_type":"piercing","attack_profiles":[{"id":"fixture_multi_hit","hit_count":2}]},
 		{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}
 	]
-	var defender:=CombatantState.new("ap_target","AP Target",10,1000)
+	var defender:=TestFixtureLoader.new_combatant("ap_target","AP Target",10,1000)
 	defender.combat_stats["dodge"]=0.0
 	var state:=CombatState.new(); state.add_combatant(attacker); state.add_combatant(defender)
-	var simulator:=CombatSimulator.new(state,balance,23); simulator.max_rounds=1
+	var simulator:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),balance,23); simulator.max_rounds=1
 	simulator.run_duel("ap_user","ap_target")
 	var normal_attacks:Array[CombatEvent]=[]
 	var ap_events:=0
@@ -126,7 +126,7 @@ static func _weapon_skill_penalties(balance: Dictionary) -> bool:
 	var attacker := TestFixtureLoader.build_combatant("TEST_DAGGER_FIGHTER")
 	if attacker == null: return false
 	attacker.combatant_id = "skill"
-	var defender := CombatantState.new("skill_target", "Skill Target", 10, 100)
+	var defender := TestFixtureLoader.new_combatant("skill_target", "Skill Target", 10, 100)
 	var state := CombatState.new()
 	state.add_combatant(attacker); state.add_combatant(defender)
 	var engine := CombatEngine.new(state,balance)
@@ -147,14 +147,14 @@ static func _bow_requires_quiver(balance: Dictionary) -> bool:
 	without.combatant_id="bow_without"; with_quiver.combatant_id="bow_with"
 	var canonical_profiles:=WeaponAttackProfile.all(with_quiver)
 	if canonical_profiles.is_empty() or String(canonical_profiles[0].get("requires_off_hand_type",""))!="quiver": return false
-	var target_a:=CombatantState.new("target_a","Target A",10,1000)
+	var target_a:=TestFixtureLoader.new_combatant("target_a","Target A",10,1000)
 	var state_a:=CombatState.new(); state_a.add_combatant(without); state_a.add_combatant(target_a)
-	var sim_a:=CombatSimulator.new(state_a,balance,31); sim_a.max_rounds=1; sim_a.run_duel("bow_without","target_a")
+	var sim_a:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state_a),balance,31); sim_a.max_rounds=1; sim_a.run_duel("bow_without","target_a")
 	for event in state_a.event_log:
 		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="bow_without": return false
-	var target_b:=CombatantState.new("target_b","Target B",10,1000)
+	var target_b:=TestFixtureLoader.new_combatant("target_b","Target B",10,1000)
 	var state_b:=CombatState.new(); state_b.add_combatant(with_quiver); state_b.add_combatant(target_b)
-	var sim_b:=CombatSimulator.new(state_b,balance,31); sim_b.max_rounds=1; sim_b.run_duel("bow_with","target_b")
+	var sim_b:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state_b),balance,31); sim_b.max_rounds=1; sim_b.run_duel("bow_with","target_b")
 	for event in state_b.event_log:
 		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="bow_with": return true
 	return false
@@ -167,18 +167,18 @@ static func _multiple_profiles_require_default(balance:Dictionary)->bool:
 			{"id":"bolt","delivery_type":"PROJECTILE","max_zone_distance":2}
 		]
 	}]
-	var attacker:=CombatantState.new("profile_user","Profile User",10,100)
+	var attacker:=TestFixtureLoader.new_combatant("profile_user","Profile User",10,100)
 	attacker.combat_stats["weapon_profiles"]=profiles.duplicate(true)
-	var state:=CombatState.new(); state.add_combatant(attacker); state.add_combatant(CombatantState.new("profile_target","Profile Target",10,1000))
-	var simulator:=CombatSimulator.new(state,balance,44); simulator.max_rounds=1
+	var state:=CombatState.new(); state.add_combatant(attacker); state.add_combatant(TestFixtureLoader.new_combatant("profile_target","Profile Target",10,1000))
+	var simulator:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),balance,44); simulator.max_rounds=1
 	simulator.run_duel("profile_user","profile_target")
 	for event in state.event_log:
 		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="profile_user": return false
 	profiles[0]["attack_profiles"][0]["is_default"]=true
-	var clean:=CombatantState.new("profile_user2","Profile User",10,100)
+	var clean:=TestFixtureLoader.new_combatant("profile_user2","Profile User",10,100)
 	clean.combat_stats["weapon_profiles"]=profiles.duplicate(true)
-	var clean_state:=CombatState.new(); clean_state.add_combatant(clean); clean_state.add_combatant(CombatantState.new("profile_target2","Profile Target 2",10,1000))
-	var simulator2:=CombatSimulator.new(clean_state,balance,44); simulator2.max_rounds=1
+	var clean_state:=CombatState.new(); clean_state.add_combatant(clean); clean_state.add_combatant(TestFixtureLoader.new_combatant("profile_target2","Profile Target 2",10,1000))
+	var simulator2:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(clean_state),balance,44); simulator2.max_rounds=1
 	simulator2.run_duel("profile_user2","profile_target2")
 	for event in clean_state.event_log:
 		if event.kind==CombatEvent.Kind.ATTACK and event.source_id=="profile_user2":
@@ -206,9 +206,9 @@ static func _abi_v2_scheduler_payload() -> bool:
 	if not AbilityRuntime.validate_definition("ABI001",AbilityCatalog.definition(definitions,"ABI001")).is_empty(): return false
 	if not AbilityRuntime.validate_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004")).is_empty(): return false
 	if AbilityRuntime.validate_definition("BAD",{"delivery_type":"TELEPORT","target_scope":"SINGLE","components":[]}).is_empty(): return false
-	var source:=CombatantState.new("abi_source","ABI Source",10,100)
+	var source:=TestFixtureLoader.new_combatant("abi_source","ABI Source",10,100)
 	source.mana=100
-	var target:=CombatantState.new("abi_target","ABI Target",10,100)
+	var target:=TestFixtureLoader.new_combatant("abi_target","ABI Target",10,100)
 	var state:=CombatState.new(); state.add_combatant(source); state.add_combatant(target)
 	var scheduler:=AbilityScheduler.new(definitions,{"abi_source":["ABI001"]})
 	var events:=scheduler.ready_events(state,"abi_source","abi_target")
@@ -219,8 +219,8 @@ static func _abi_v2_scheduler_payload() -> bool:
 
 static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) -> CombatState:
 	var state := CombatState.new()
-	var a := CombatantState.new("a", "A", 1, hp_a)
-	var b := CombatantState.new("b", "B", 1, hp_b)
+	var a := TestFixtureLoader.new_combatant("a", "A", 1, hp_a)
+	var b := TestFixtureLoader.new_combatant("b", "B", 1, hp_b)
 	a.combat_stats["weapon_profiles"] = [{"damage_min":damage_a,"damage_max":damage_a,"damage_type":"slashing"}]
 	b.combat_stats["weapon_profiles"] = [{"damage_min":damage_b,"damage_max":damage_b,"damage_type":"slashing"}]
 	state.add_combatant(a)

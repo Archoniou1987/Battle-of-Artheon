@@ -5,8 +5,8 @@ static func run() -> bool:
 	print("CASE_SUITE_START=action_resolver_cases")
 	var ok := true
 	var state := CombatState.new()
-	var source := CombatantState.new("source", "Source", 1, 100)
-	var target := CombatantState.new("target", "Target", 1, 100)
+	var source := TestFixtureLoader.new_combatant("source", "Source", 1, 100)
+	var target := TestFixtureLoader.new_combatant("target", "Target", 1, 100)
 	state.add_combatant(source)
 	state.add_combatant(target)
 	var engine := CombatEngine.new(state, {})

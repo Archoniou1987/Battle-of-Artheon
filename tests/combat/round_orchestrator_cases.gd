@@ -28,8 +28,8 @@ static func run(balance:Dictionary) -> bool:
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,10))
-	state.add_combatant(CombatantState.new("b","B",1,10))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,10))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,10))
 	return state
 
 static func _lethal(state:CombatState,source:String,target:String)->CombatEvent:
@@ -71,10 +71,10 @@ static func _living_source_resolves_deferred(balance:Dictionary)->bool:
 
 static func _pending_death_can_be_healed(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",1,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",1,100)
 	hero.hp=20
 	state.add_combatant(hero)
-	state.add_combatant(CombatantState.new("ally","Ally",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("ally","Ally",1,100))
 	var engine:=CombatEngine.new(state,balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
@@ -86,7 +86,7 @@ static func _pending_death_can_be_healed(balance:Dictionary)->bool:
 
 static func _insufficient_heal_still_dies(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",1,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",1,100)
 	hero.hp=20
 	state.add_combatant(hero)
 	var engine:=CombatEngine.new(state,balance)
@@ -99,7 +99,7 @@ static func _insufficient_heal_still_dies(balance:Dictionary)->bool:
 
 static func _finalized_death_cannot_be_healed(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",1,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",1,100)
 	hero.hp=-5
 	state.add_combatant(hero)
 	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance))
@@ -109,9 +109,9 @@ static func _finalized_death_cannot_be_healed(balance:Dictionary)->bool:
 
 static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("caster","Caster",1,100))
-	state.add_combatant(CombatantState.new("t0","T0",1,100))
-	state.add_combatant(CombatantState.new("t1","T1",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("caster","Caster",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("t0","T0",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("t1","T1",1,100))
 	var engine:=CombatEngine.new(state,balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	var initial:=AbilityRuntime.build_action_event(state,"caster","t0","ABI_DOT_AREA",{
@@ -130,7 +130,7 @@ static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool:
 	var state:=CombatState.new()
 	for id in ["caster","leaver","enterer"]:
-		state.add_combatant(CombatantState.new(id,id,1,100))
+		state.add_combatant(TestFixtureLoader.new_combatant(id,id,1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","caster")
 	groups.add_member("B","leaver")
@@ -177,7 +177,7 @@ static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
 static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 	var state:=CombatState.new()
 	for id in ["a","b","victim"]:
-		state.add_combatant(CombatantState.new(id,id,1,100))
+		state.add_combatant(TestFixtureLoader.new_combatant(id,id,1,100))
 	var engine:=CombatEngine.new(state,balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
@@ -187,7 +187,7 @@ static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 	if summary.get("kill_attribution",{}).get("victim",[])!=["a"]: return false
 	var state2:=CombatState.new()
 	for id in ["a","b","victim"]:
-		state2.add_combatant(CombatantState.new(id,id,1,100))
+		state2.add_combatant(TestFixtureLoader.new_combatant(id,id,1,100))
 	var engine2:=CombatEngine.new(state2,balance)
 	var orchestrator2:=RoundOrchestrator.new(state2,engine2)
 	orchestrator2.begin_round()
@@ -199,8 +199,8 @@ static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 
 static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
@@ -216,8 +216,8 @@ static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
 
 static func _opposing_forced_tie_stays_put(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
@@ -234,9 +234,9 @@ static func _opposing_forced_tie_stays_put(balance:Dictionary)->bool:
 
 static func _forced_movement_uses_data_driven_contest(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var a:=CombatantState.new("a","A",1,100)
-	a.stats["STR"]=4.0
-	state.add_combatant(a); state.add_combatant(CombatantState.new("b","B",1,100))
+	var a:=TestFixtureLoader.new_combatant("a","A",1,100)
+	a.stats["PAR001"]=4.0
+	state.add_combatant(a); state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
@@ -244,14 +244,14 @@ static func _forced_movement_uses_data_driven_contest(balance:Dictionary)->bool:
 	zones.set_zone("a",CombatZoneState.ZONE_2); zones.set_zone("b",CombatZoneState.ZONE_3)
 	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
 	orchestrator.begin_round()
-	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":["STR"],"flat_power":1.0,"multiplier":2.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":["PAR001"],"flat_power":1.0,"multiplier":2.0}): return false
 	var results:=orchestrator.resolve_movement_phase()
 	return results.size()==1 and bool(results[0].get("moved",false)) and float(results[0].get("contest_power",0.0))==10.0 and zones.zone_of("a")==CombatZoneState.ZONE_3
 
 
 static func _forced_movement_rejects_non_adjacent_effect(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100)); state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100)); state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
@@ -265,8 +265,8 @@ static func _forced_movement_rejects_non_adjacent_effect(balance:Dictionary)->bo
 
 static func _movement_edges_and_root(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var a:=CombatantState.new("a","A",1,100)
-	var b:=CombatantState.new("b","B",1,100)
+	var a:=TestFixtureLoader.new_combatant("a","A",1,100)
+	var b:=TestFixtureLoader.new_combatant("b","B",1,100)
 	state.add_combatant(a); state.add_combatant(b)
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
@@ -286,8 +286,8 @@ static func _movement_edges_and_root(balance:Dictionary)->bool:
 
 static func _forced_movement_overrides_navigation(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
@@ -303,8 +303,8 @@ static func _forced_movement_overrides_navigation(balance:Dictionary)->bool:
 
 static func _opposing_forced_overrides_navigation(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)

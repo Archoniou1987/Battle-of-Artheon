@@ -12,7 +12,7 @@ jobs:
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.4.1
+          version: 4.5.1
           use-dotnet: false
           include-templates: false
       - name: Import project and register script classes

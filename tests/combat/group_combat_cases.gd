@@ -6,9 +6,9 @@ static func run(balance:Dictionary) -> bool:
 
 static func _state(enemy_count:int)->CombatState:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("player","Player",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("player","Player",10,100))
 	for i in range(enemy_count):
-		state.add_combatant(CombatantState.new("e%d"%i,"Enemy",10,100))
+		state.add_combatant(TestFixtureLoader.new_combatant("e%d"%i,"Enemy",10,100))
 	return state
 
 static func _group(state:CombatState,enemy_count:int)->GroupCombatState:

@@ -6,10 +6,10 @@ static func run(balance:Dictionary)->bool:
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("player","Player",10,100))
-	state.add_combatant(CombatantState.new("e0","E0",10,100))
-	state.add_combatant(CombatantState.new("e1","E1",10,100))
-	state.add_combatant(CombatantState.new("e2","E2",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("player","Player",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("e0","E0",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("e1","E1",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("e2","E2",10,100))
 	var group:=GroupCombatState.new(state)
 	group.add_member("players","player")
 	group.add_member("enemies","e0")

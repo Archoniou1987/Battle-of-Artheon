@@ -15,7 +15,7 @@ func _initialize() -> void:
 			repository.add_item(item)
 			bot.receive_item(String(item.instance_id),repository)
 			bot.equip(String(SLOT_BY_TEMPLATE[String(template.id)]),String(item.instance_id),repository)
-	var base := {"health":100,"mana":30,"stats":{"STR":5,"DEX":5,"INTU":5,"INT":5,"WIS":5,"END":5},"combat_stats":{"mana_regen":2.0,"crit":5.0,"dodge":5.0}}
+	var base := {"health":100,"mana":30,"combat_stats":{"mana_regen":2.0,"crit":5.0,"dodge":5.0}}
 	var initial := _run_series(bot_a,bot_b,repository,base,100,10000)
 	var repaired := {"BOT_A":_repair_all(bot_a,repository),"BOT_B":_repair_all(bot_b,repository)}
 	var after_repair := [_bot_report(bot_a,repository),_bot_report(bot_b,repository)]
@@ -42,7 +42,7 @@ func _run_series(a:CharacterState,b:CharacterState,repository:ItemRepository,bas
 		var state := CombatState.new()
 		state.add_combatant(CharacterCombatBuilder.build(a,repository,base))
 		state.add_combatant(CharacterCombatBuilder.build(b,repository,base))
-		var sim := CombatSimulator.new(state,TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),seed_base+battle)
+		var sim := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),seed_base+battle)
 		var result := sim.run_duel(a.character_id,b.character_id)
 		var loser_id := String(result.get("loser_id",""))
 		if loser_id.is_empty():
