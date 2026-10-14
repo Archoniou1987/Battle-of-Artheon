@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "purpose": "Canonical mutable item cores. Instances reference template_id; PAR definitions remain locked.",
+  "templates": [
+    {
+      "id": "sword_mh",
+      "name": "Тестовый меч",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 10,
+        "max": 14,
+        "type": "slashing"
+      },
+      "slot": "main_hand",
+      "weapon_class": "sword",
+      "par_stats": {
+        "PAR033": 200,
+        "PAR031": 200
+      }
+    },
+    {
+      "id": "dagger_oh",
+      "name": "Тестовый кинжал",
+      "type": "weapon",
+      "equip_slots": [
+        "off_hand"
+      ],
+      "icon_id": "ICON_0015",
+      "damage": {
+        "min": 6,
+        "max": 9,
+        "type": "piercing"
+      },
+      "slot": "off_hand",
+      "weapon_class": "dagger",
+      "par_stats": {
+        "PAR031": 200,
+        "PAR030": 500
+      }
+    },
+    {
+      "id": "ring_attributes",
+      "name": "Кольцо характеристик",
+      "type": "ring",
+      "equip_slots": [
+        "ring1",
+        "ring2"
+      ],
+      "icon_id": "ICON_0051",
+      "par_stats": {
+        "PAR010": 2000,
+        "PAR001": 50,
+        "PAR002": 45,
+        "PAR003": 40,
+        "PAR004": 35,
+        "PAR005": 30,
+        "PAR006": 25
+      }
+    },
+    {
+      "id": "ring_defense",
+      "name": "Кольцо защиты",
+      "type": "ring",
+      "equip_slots": [
+        "ring1",
+        "ring2"
+      ],
+      "icon_id": "ICON_0052",
+      "par_stats": {
+        "PAR034": 600,
+        "PAR032": 600
+      }
+    },
+    {
+      "id": "shield",
+      "name": "Тестовый щит",
+      "type": "shield",
+      "equip_slots": [
+        "off_hand"
+      ],
+      "icon_id": "ICON_0017",
+      "par_stats": {
+        "PAR070": 400
+      },
+      "armour_by_zone": {
+        "head": 200,
+        "chest": 200
+      },
+      "manual_block_zones_added": 1
+    }
+  ]
+}
