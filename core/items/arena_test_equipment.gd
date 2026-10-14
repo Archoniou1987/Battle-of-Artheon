@@ -12,7 +12,7 @@ static func seed(character: CharacterState, repository: ItemRepository) -> bool:
 		if not templates.has(template_id):
 			push_error("ArenaTestEquipment: missing template " + template_id)
 			return changed
-		var instance_id := "combat_test_v1_" + template_id
+		var instance_id: String = "combat_test_v1_" + String(template_id)
 		if repository.has_item(instance_id):
 			# Existing items keep their individual wear, quality and ownership.
 			# No duplicate grants or template-stat copies.
