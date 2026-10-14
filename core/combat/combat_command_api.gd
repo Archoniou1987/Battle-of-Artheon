@@ -244,7 +244,10 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		# ABI001 reads its damage range from the selected PAR source.
 		var attacker:=state.get_combatant(source_id)
 		if String(payload.get("ability_id",""))=="ABI001" and attacker!=null and attacker.combat_stats.has("par_attack_ranges"):
-			var source_par:="PAR051" if int(profile.get("weapon_index",0))==1 else "PAR050"
+			var weapons:Array=attacker.combat_stats.get("weapon_profiles",[])
+			var weapon_index:=int(profile.get("weapon_index",0))
+			var weapon_slot:=String(Dictionary(weapons[weapon_index]).get("slot","")) if weapon_index>=0 and weapon_index<weapons.size() else ""
+			var source_par:="PAR051" if weapon_slot=="off_hand" else "PAR050"
 			var ranges:Dictionary=attacker.combat_stats.get("par_attack_ranges",{})
 			var source_range:Dictionary=ranges.get(source_par,{})
 			if not source_range.is_empty():
