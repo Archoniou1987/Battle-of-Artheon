@@ -22,7 +22,7 @@ func _run() -> void:
 	assert(character.equip("ring1", "persist_test_ring", repository))
 	first.call("_save_inventory")
 	assert(FileAccess.file_exists(save_path))
-	assert(character.progression.allocate_stat("STR"))
+	assert(character.progression.allocate_stat("PAR001"))
 	assert(character.progression.save_pending_stats())
 	first.call("_save_progression")
 	assert(FileAccess.file_exists(progression_path))
@@ -34,7 +34,7 @@ func _run() -> void:
 	assert((second.get("player_character") as CharacterState).inventory.owns("persist_test_ring"))
 	assert((second.get("player_character") as CharacterState).equipment.get_equipped_instance_id("ring1") == "persist_test_ring")
 	assert((second.get("item_repository") as ItemRepository).has_item("persist_test_ring"))
-	assert((second.get("player_character") as CharacterState).progression.base_stats["STR"] == 2)
+	assert((second.get("player_character") as CharacterState).progression.base_stats["PAR001"] == 2)
 	second.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
