@@ -345,7 +345,7 @@ func _allocate(stat: String) -> void:
 	refresh()
 
 func _remove_pending(stat: String) -> void:
-	if character != null and character.progression.remove_pending_stat(String(PRIMARY_STORAGE_KEYS.get(stat, ""))):
+	if character != null and character.progression.remove_pending_stat(stat):
 		refresh()
 
 func _reset_pending() -> void:
