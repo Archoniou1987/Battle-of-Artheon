@@ -5,11 +5,6 @@ signal stats_committed
 
 ## Self-contained responsive character view. No combat simulation mutations.
 const PRIMARY_PAR_IDS := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
-# Compatibility boundary: progression persistence still uses its six legacy keys.
-const PRIMARY_STORAGE_KEYS := {
-	"PAR001": "STR", "PAR002": "DEX", "PAR003": "INTU",
-	"PAR004": "INT", "PAR005": "WIS", "PAR006": "END"
-}
 const BG := Color("#172334")
 const PANEL := Color("#243247")
 const GOLD := Color("#e9d2a5")
@@ -345,7 +340,7 @@ func _label(value: String, font_size: int, color: Color) -> Label:
 	return label
 
 func _allocate(stat: String) -> void:
-	if character == null or not character.allocate_stat(String(PRIMARY_STORAGE_KEYS.get(stat, ""))):
+	if character == null or not character.allocate_stat(stat):
 		return
 	refresh()
 
@@ -380,8 +375,7 @@ func refresh() -> void:
 	var par_totals: Dictionary = par_snapshot.get("totals", {})
 	var par_sources: Dictionary = par_snapshot.get("sources", {})
 	for par_id in PRIMARY_PAR_IDS:
-		var storage_key := String(PRIMARY_STORAGE_KEYS[par_id])
-		var pending := int(progression.pending_stats.get(storage_key, 0))
+		var pending := int(progression.pending_stats.get(par_id, 0))
 		var parts: Dictionary = par_sources.get(par_id, {})
 		var equipment_bonus := int(round(float(parts.get("equipment", 0))))
 		var total := int(round(float(par_totals.get(par_id, 0)))) + pending
@@ -406,8 +400,8 @@ func _refresh_derived_sections() -> void:
 	# Only values already defined by CharacterCombatBuilder are displayed.
 	# Other combat formulas will be connected when their data contracts are finalized.
 	var stats := character.progression.base_stats
-	var hp := 100 + int(stats.get("END", 0)) * 10
-	var mana := int(stats.get("WIS", 0)) * 15
+	var hp := 100 + int(stats.get("PAR006", 0)) * 10
+	var mana := int(stats.get("PAR005", 0)) * 15
 	_add_derived_row(combat_section, "Здоровье (база)", str(hp))
 	_add_derived_row(combat_section, "Мана (база)", str(mana))
 	_add_derived_row(combat_section, "Макс. очки действий (база)", "5")
