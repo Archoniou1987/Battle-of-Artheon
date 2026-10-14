@@ -28,25 +28,8 @@ static func calculate(stats: Dictionary, config: Dictionary = {}) -> Dictionary:
 
 ## Rating effectiveness at a given level, interpolated between editable anchors.
 ## This is the raw chance contribution, before combat caps and opposition.
-static func rating_to_percent(rating: float, level: int, config: Dictionary = {}) -> float:
-	var source := config if not config.is_empty() else load_config()
-	var curve: Dictionary = source.get("rating_curve", {})
-	var reference := float(curve.get("reference_rating", 300))
-	var anchors: Array = curve.get("anchors", [])
-	if reference <= 0.0 or anchors.is_empty():
-		return 0.0
-	var current_level := clampi(level, int(anchors[0]["level"]), int(anchors[-1]["level"]))
-	var efficiency := float(anchors[-1]["percent"])
-	for i in range(anchors.size() - 1):
-		var left: Dictionary = anchors[i]
-		var right: Dictionary = anchors[i + 1]
-		var first := int(left["level"])
-		var last := int(right["level"])
-		if current_level <= last:
-			var t := float(current_level - first) / float(maxi(1, last - first))
-			efficiency = lerpf(float(left["percent"]), float(right["percent"]), t)
-			break
-	return rating / reference * efficiency
+static func rating_to_percent(rating: float, level: int, _config: Dictionary = {}) -> float:
+	return RatingMatrix.to_percent(rating, level)
 
 ## ABI/EFF direct percentage points are added separately, without level scaling.
 static func effective_chance(rating: float, level: int, direct_percent: float = 0.0, config: Dictionary = {}) -> float:
