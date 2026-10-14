@@ -3,10 +3,8 @@ extends RefCounted
 const PHYSICAL_TYPES := ["piercing","slashing","chopping","blunt"]
 const HIT_ZONES := ["head","chest","arms","waist","legs"]
 static func equip(combatant:CombatantState,item:Dictionary)->void:
-	var item_stats:Dictionary=item.get("combat_stats",{})
-	for stat_name in item_stats:combatant.combat_stats[stat_name]=float(combatant.combat_stats.get(stat_name,0.0))+float(item_stats[stat_name])
-	var final_stats:Dictionary=item.get("final_stats",{})
-	for stat_name in final_stats:combatant.stats[stat_name]=float(combatant.stats.get(stat_name,0.0))+float(final_stats[stat_name])
+	# Numeric item modifiers are aggregated exclusively by ParCalculationService.
+	# This builder owns weapon identity, triggers, blocking layout and armour runtime data.
 	var equipped_types:Array=combatant.combat_stats.get("equipped_item_types",[])
 	var item_type:=String(item.get("item_type",""))
 	if not item_type.is_empty() and not equipped_types.has(item_type):
