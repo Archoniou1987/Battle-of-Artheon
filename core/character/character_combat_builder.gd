@@ -46,6 +46,14 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	# Keep EquipmentBuilder weapon identity, but apply canonical derived damage.
 	var damage_bonus := float(primary["PAR052"])
 	var runtime_profiles: Array = combatant.combat_stats.get("weapon_profiles", [])
+	# An empty MH is a virtual fist, including when an OH weapon is equipped.
+	var main_item_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
+	if main_item_id == null:
+		var fist: Dictionary = par_snapshot["attack_ranges"]["PAR050"]
+		if not ParCalculationService.valid_damage_range(fist):
+			push_error("Missing mandatory unarmed main-hand range")
+			return null
+		runtime_profiles.push_front({"slot":"main_hand", "instance_id":"unarmed_main_hand", "is_unarmed":true, "damage_min":float(fist["min"]), "damage_max":float(fist["max"]), "damage_type":String(fist["type"]), "attack_profiles":[]})
 	for i in range(runtime_profiles.size()):
 		var profile: Dictionary = runtime_profiles[i]
 		var attacks: Array = profile.get("attack_profiles", [])
