@@ -51,6 +51,15 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 					attack["damage_min"] = float(attack["damage_min"]) + damage_bonus
 				if attack.has("damage_max"):
 					attack["damage_max"] = float(attack["damage_max"]) + damage_bonus
+		# PAR050/PAR051 are authoritative for the ordinary weapon damage range.
+		# Preserve specialised attack profiles until ABI migration is complete.
+		var source_par := "PAR051" if String(profile.get("slot", "")) == "off_hand" else "PAR050"
+		var ranges: Dictionary = par_snapshot.get("attack_ranges", {})
+		var canonical_range: Dictionary = ranges.get(source_par, {})
+		if not canonical_range.is_empty():
+			profile["damage_min"] = float(canonical_range.get("min", 0.0)) + damage_bonus
+			profile["damage_max"] = float(canonical_range.get("max", 0.0)) + damage_bonus
+			profile["damage_type"] = String(canonical_range.get("type", profile.get("damage_type", "blunt")))
 		runtime_profiles[i] = profile
 	combatant.combat_stats["weapon_profiles"] = runtime_profiles
 	var canonical_profiles:Array = canonical.get("weapon_profiles", [])
