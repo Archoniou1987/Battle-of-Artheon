@@ -35,7 +35,7 @@ func _run() -> void:
 	assert(is_equal_approx(float(test_bonuses["hit_chance_rating"]), 50.0))
 	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
 	assert((screen.detail_values["PAR035"] as Label).text.contains("%)"))
-	assert((screen.detail_values["PAR040"] as Label).text == "—")
+	assert((screen.detail_values["PAR151"] as Label).text == "—")
 	var unarmed_config: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
 	assert(unarmed_config is Dictionary)
 	assert(int(unarmed_config["unarmed"]["min_damage"]) == 2)
