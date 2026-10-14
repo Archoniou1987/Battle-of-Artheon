@@ -215,15 +215,40 @@ func _ready() -> void:
 	resized.connect(_apply_layout)
 	call_deferred("_apply_layout")
 
+func _par_tab(par_id: String, group: String) -> String:
+	if group == "Магический урон / Пробивание" or group == "Магическая защита":
+		return "Магия"
+	if group == "Броня / Физическая защита" or group == "Контроль / Сопротивления":
+		return "Защита"
+	if group == "Ресурсы: HP / Mana / AP / Tempo" or group == "Мир / Перемещение" or group == "Базовые характеристики":
+		return "Прочее"
+	if group == "Попадание / Уворот / Крит" and ["PAR031", "PAR034"].has(par_id):
+		return "Защита"
+	if group == "Блок / Контратака" and ["PAR070", "PAR071", "PAR073", "PAR074"].has(par_id):
+		return "Защита"
+	return "Атака"
+
+
 func _build_detail_tabs() -> void:
-	# All rows are driven by the editable catalog; unsupported values stay unknown.
+	# Registry is the only authority for the list and IDs. Never enumerate a partial UI catalog.
 	detail_tabs = TabContainer.new()
 	detail_tabs.name = "DetailTabs"
 	detail_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	details_panel.add_child(detail_tabs)
-	var config := PrimaryStatEffects.load_config()
-	var categories: Dictionary = config.get("categories", {})
+	var definitions := ParCalculationService.registry()
+	var groups_by_tab := {}
+	for tab_name in DETAIL_TAB_NAMES:
+		groups_by_tab[tab_name] = {}
+	var ids: Array = definitions.keys()
+	ids.sort()
+	for par_id in ids:
+		var definition: Dictionary = definitions[par_id]
+		var group := String(definition.get("group", "Прочее"))
+		var tab := _par_tab(String(par_id), group)
+		if not groups_by_tab[tab].has(group):
+			groups_by_tab[tab][group] = []
+		groups_by_tab[tab][group].append(par_id)
 	for tab_name in DETAIL_TAB_NAMES:
 		var page := ScrollContainer.new()
 		page.name = tab_name
@@ -235,73 +260,64 @@ func _build_detail_tabs() -> void:
 		content.name = "DetailsContent"
 		content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		page.add_child(content)
-		var groups: Dictionary = categories.get(tab_name, {})
-		for group_name in groups:
-			var heading := _label(String(group_name), 17, GOLD)
-			content.add_child(heading)
-			for raw_key in groups[group_name]:
-				var key := String(raw_key)
+		for group in groups_by_tab[tab_name]:
+			content.add_child(_label(String(group), 17, GOLD))
+			for par_id in groups_by_tab[tab_name][group]:
+				var definition: Dictionary = definitions[par_id]
 				var row := HBoxContainer.new()
 				content.add_child(row)
-				var caption := _label(_detail_caption(key), 14, MUTED)
+				var caption := _label("%s — %s" % [par_id, String(definition.get("name", par_id))], 14, MUTED)
 				caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				row.add_child(caption)
 				var value := _label("—", 14, GOLD)
 				row.add_child(value)
-				detail_values[key] = value
+				detail_values[par_id] = value
 
-
-func _detail_caption(key: String) -> String:
-	if DETAIL_LABELS.has(key):
-		return String(DETAIL_LABELS[key])
-	if key.ends_with("_rating"):
-		var base := key.trim_suffix("_rating")
-		var legacy := base + "_pct"
-		if DETAIL_LABELS.has(legacy):
-			return String(DETAIL_LABELS[legacy]).replace(", %", "")
-		if DETAIL_LABELS.has(base):
-			return String(DETAIL_LABELS[base])
-	return key
 
 func _refresh_detail_values() -> void:
 	for value in detail_values.values():
 		(value as Label).text = "—"
 	if character == null:
 		return
+	var par_snapshot := ParCalculationService.calculate(character, item_repository)
+	if par_snapshot.is_empty():
+		return
+	var totals: Dictionary = par_snapshot.get("totals", {})
+	var sources: Dictionary = par_snapshot.get("sources", {})
+	var definitions := ParCalculationService.registry()
+	var stats := CharacterStatsService.snapshot(character, item_repository, {}, par_snapshot)
 	var config := PrimaryStatEffects.load_config()
-	var bonuses := CharacterStatsService.snapshot(character, item_repository)
 	var rating_stats: Array = config.get("rating_stats", [])
-	var percent_stats: Array = config.get("direct_percent_stats", [])
-	var level := character.progression.level
-	for key in detail_values:
-		var stat_key := String(key)
-		var value: Label = detail_values[key]
-		if stat_key == "main_hand_damage" and bonuses.has("main_hand_damage"):
-			var damage_range: Array = bonuses["main_hand_damage"]
-			value.text = "%s–%s" % [_format_stat_number(float(damage_range[0])), _format_stat_number(float(damage_range[1]))]
-		elif stat_key == "off_hand_damage" and bonuses.has("off_hand_damage"):
-			var offhand_range: Array = bonuses["off_hand_damage"]
-			value.text = "%s–%s" % [_format_stat_number(float(offhand_range[0])), _format_stat_number(float(offhand_range[1]))]
-		elif rating_stats.has(stat_key):
-			if not bonuses.has(stat_key + "_percent"):
-				value.text = "—"
-				continue
-			var percent := CharacterStatsService.rating_effect(bonuses, stat_key)
-			if not bonuses.has(stat_key):
-				value.text = _format_stat_number(percent) + "%" # Explicit direct-only chance.
-			else:
-				var rating := float(bonuses[stat_key])
-				value.text = "%s (%s%%)" % [_format_stat_number(rating), _format_stat_number(percent)]
-		elif bonuses.has(stat_key):
-			var amount := float(bonuses[stat_key])
-			var suffix := "%" if percent_stats.has(stat_key) or stat_key.ends_with("_pct") else ""
-			var sign := "+" if amount >= 0.0 else ""
-			value.text = sign + _format_stat_number(amount) + suffix
-		elif percent_stats.has(stat_key) or stat_key.ends_with("_pct") or stat_key in ["slash_damage", "pierce_damage", "chop_damage", "blunt_damage", "fire_damage", "water_damage", "air_damage", "earth_damage", "dark_damage", "light_damage"]:
-			value.text = "—"
-		else:
-			value.text = "—"
+	var direct_stats: Array = config.get("direct_percent_stats", [])
+	var derived_keys := {}
+	for effects in Dictionary(config.get("effects", {})).values():
+		for key in Dictionary(effects):
+			derived_keys[String(key)] = true
+	for par_id in detail_values:
+		if not totals.has(par_id):
+			continue
+		var definition: Dictionary = definitions.get(par_id, {})
+		var source_key := String(definition.get("source_key", ""))
+		var parts: Dictionary = sources.get(par_id, {})
+		var basic := float(parts.get("basic", 0.0))
+		var equipment := float(parts.get("equipment", 0.0))
+		var other := float(parts.get("talents", 0.0)) + float(parts.get("effects", 0.0))
+		var total := float(totals[par_id])
+		# Zero in a registry placeholder does not prove that the mechanic is implemented.
+		var supported := ParCalculationService.PRIMARY_IDS.has(par_id) or derived_keys.has(source_key) or ["PAR014", "PAR050", "PAR051", "PAR057", "PAR073", "PAR100", "PAR101", "PAR102", "PAR103", "PAR104"].has(par_id)
+		if not supported and is_zero_approx(total):
+			continue
+		var rendered := "%s (%s + %s" % [_format_stat_number(total), _format_stat_number(basic), _format_stat_number(equipment)]
+		if not is_zero_approx(other):
+			rendered += " + " + _format_stat_number(other)
+		rendered += ")"
+		if rating_stats.has(source_key) and stats.has(source_key + "_percent"):
+			rendered += " (%.2f%%)" % float(stats[source_key + "_percent"])
+		elif direct_stats.has(source_key) or source_key.ends_with("_pct"):
+			rendered += "%"
+		(detail_values[par_id] as Label).text = rendered
+
 
 func _format_stat_number(amount: float) -> String:
 	if is_equal_approx(amount, roundf(amount)):
