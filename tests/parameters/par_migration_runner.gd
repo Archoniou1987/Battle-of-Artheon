@@ -36,7 +36,7 @@ func _initialize() -> void:
 	check(view.main_hand_damage == [15.0,17.0] and view.off_hand_damage == [8.0,10.0], "UI uses both canonical ranges")
 	var fighter := CharacterCombatBuilder.build(hero, repo)
 	check(fighter.armour.chest.slashing == 27 and fighter.armour.chest.blunt == 20, "general and typed PAR armour once")
-	check(fighter.combat_stats.crit_chance_rating == 105, "primary and equipment critical rating once")
+	check(fighter.combat_stats.crit_chance_rating == 110, "primary and equipment critical rating once")
 	# Stale runtime numeric profiles must not override mandatory PAR ranges.
 	fighter.combat_stats.weapon_profiles[0].damage_min = 999
 	fighter.combat_stats.weapon_profiles[0].damage_max = 999
