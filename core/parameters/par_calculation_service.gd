@@ -6,7 +6,6 @@ extends RefCounted
 ## This service never converts PAR IDs into legacy stat names.
 const REGISTRY_PATH := "res://data/parameters/par_registry.json"
 const PRIMARY_IDS := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
-const PRIMARY_KEYS := ["STR", "DEX", "INTU", "INT", "WIS", "END"]
 
 static func registry() -> Dictionary:
 	if not FileAccess.file_exists(REGISTRY_PATH):
@@ -29,7 +28,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 		return {}
 	var base := {}
 	for index in range(PRIMARY_IDS.size()):
-		base[PRIMARY_IDS[index]] = float(character.progression.base_stats.get(PRIMARY_KEYS[index], 0))
+		base[PRIMARY_IDS[index]] = float(character.progression.base_stats.get(PRIMARY_IDS[index], 0))
 	var equipment := {}
 	if repository != null:
 		var active := character.active_equipment_ids(repository)
