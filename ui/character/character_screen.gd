@@ -4,11 +4,12 @@ extends Control
 signal stats_committed
 
 ## Self-contained responsive character view. No combat simulation mutations.
-const STAT_LABELS := {
-	"STR": "Сила", "DEX": "Ловкость", "INTU": "Интуиция",
-	"WIS": "Мудрость", "INT": "Интеллект", "END": "Выносливость"
+const PRIMARY_PAR_IDS := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
+# Compatibility boundary: progression persistence still uses its six legacy keys.
+const PRIMARY_STORAGE_KEYS := {
+	"PAR001": "STR", "PAR002": "DEX", "PAR003": "INTU",
+	"PAR004": "INT", "PAR005": "WIS", "PAR006": "END"
 }
-const STAT_ORDER := ["STR", "DEX", "INTU", "WIS", "INT", "END"]
 const BG := Color("#172334")
 const PANEL := Color("#243247")
 const GOLD := Color("#e9d2a5")
@@ -177,28 +178,30 @@ func _ready() -> void:
 	stats_card.add_child(stats_content)
 	points_label = _label("", 17, GOLD)
 	stats_content.add_child(points_label)
-	for stat in STAT_ORDER:
+	for par_id in PRIMARY_PAR_IDS:
 		var row := HBoxContainer.new()
 		stats_content.add_child(row)
-		var name_label := _label(STAT_LABELS[stat], 16, MUTED)
+		var definitions := ParCalculationService.registry()
+		var definition: Dictionary = definitions.get(par_id, {})
+		var name_label := _label(String(definition.get("name", par_id)), 16, MUTED)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
 		var value := _label("", 17, GOLD)
 		value.custom_minimum_size.x = 45
 		row.add_child(value)
-		stat_values[stat] = value
+		stat_values[par_id] = value
 		var minus := Button.new()
 		minus.text = "−"
 		minus.custom_minimum_size = Vector2(46, 44)
-		minus.pressed.connect(_remove_pending.bind(stat))
+		minus.pressed.connect(_remove_pending.bind(par_id))
 		row.add_child(minus)
-		stat_minus_buttons[stat] = minus
+		stat_minus_buttons[par_id] = minus
 		var plus := Button.new()
 		plus.text = "+"
 		plus.custom_minimum_size = Vector2(46, 44)
-		plus.pressed.connect(_allocate.bind(stat))
+		plus.pressed.connect(_allocate.bind(par_id))
 		row.add_child(plus)
-		stat_buttons[stat] = plus
+		stat_buttons[par_id] = plus
 	var actions := HBoxContainer.new()
 	stats_content.add_child(actions)
 	reset_button = Button.new()
@@ -342,12 +345,12 @@ func _label(value: String, font_size: int, color: Color) -> Label:
 	return label
 
 func _allocate(stat: String) -> void:
-	if character == null or not character.allocate_stat(stat):
+	if character == null or not character.allocate_stat(String(PRIMARY_STORAGE_KEYS.get(stat, ""))):
 		return
 	refresh()
 
 func _remove_pending(stat: String) -> void:
-	if character != null and character.progression.remove_pending_stat(stat):
+	if character != null and character.progression.remove_pending_stat(String(PRIMARY_STORAGE_KEYS.get(stat, ""))):
 		refresh()
 
 func _reset_pending() -> void:
@@ -373,14 +376,18 @@ func refresh() -> void:
 	xp_bar.max_value = max(1, required)
 	xp_bar.value = progression.xp_into_level
 	points_label.text = "Характеристики  •  Свободные очки: %d" % progression.unspent_stat_points
-	var effective := character.effective_stats(item_repository) if item_repository != null else progression.base_stats
-	for stat in STAT_ORDER:
-		var base_value := progression.displayed_stat(stat)
-		var equipment_bonus := int(effective.get(stat, 0)) - int(progression.base_stats.get(stat, 0))
-		var total := base_value + equipment_bonus
-		(stat_values[stat] as Label).text = ("%d (+%d)" % [total, equipment_bonus]) if equipment_bonus > 0 else (("%d (%d)" % [total, equipment_bonus]) if equipment_bonus < 0 else str(total))
-		(stat_buttons[stat] as Button).disabled = progression.unspent_stat_points <= 0
-		(stat_minus_buttons[stat] as Button).disabled = int(progression.pending_stats.get(stat, 0)) <= 0
+	var par_snapshot := ParCalculationService.calculate(character, item_repository)
+	var par_totals: Dictionary = par_snapshot.get("totals", {})
+	var par_sources: Dictionary = par_snapshot.get("sources", {})
+	for par_id in PRIMARY_PAR_IDS:
+		var storage_key := String(PRIMARY_STORAGE_KEYS[par_id])
+		var pending := int(progression.pending_stats.get(storage_key, 0))
+		var parts: Dictionary = par_sources.get(par_id, {})
+		var equipment_bonus := int(round(float(parts.get("equipment", 0))))
+		var total := int(round(float(par_totals.get(par_id, 0)))) + pending
+		(stat_values[par_id] as Label).text = ("%d (+%d)" % [total, equipment_bonus]) if equipment_bonus > 0 else (("%d (%d)" % [total, equipment_bonus]) if equipment_bonus < 0 else str(total))
+		(stat_buttons[par_id] as Button).disabled = progression.unspent_stat_points <= 0
+		(stat_minus_buttons[par_id] as Button).disabled = pending <= 0
 	save_button.disabled = progression.pending_stats.is_empty()
 	reset_button.disabled = progression.pending_stats.is_empty()
 	_refresh_detail_values()
