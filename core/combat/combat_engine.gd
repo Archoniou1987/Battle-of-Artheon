@@ -136,7 +136,7 @@ func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
 	var source:=state.get_combatant(event.source_id)
 	if source==null:
 		return false
-	var chance:=CombatModifierService.combat_chance(source, "magic_hit_rating", "magic_hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
+	var chance:=CombatModifierService.combat_chance(source, "hit_chance_rating", "hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
 	return CombatMath.roll_success(clampf(chance,0.0,100.0),int(event.payload.get("magic_hit_roll",1)))
 
 func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
@@ -200,7 +200,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var is_weapon_attack:=bool(event.payload.get("is_weapon_attack",event.payload.has("weapon_index") and String(event.payload.get("source_kind",""))!="ability"))
 	var weapon_skill_penalty:=0.0 if uses_magic_hit or not is_weapon_attack else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index",0)))
 	var physical_hit:=_hit_chance(attacker.level - defender.level) + CombatModifierService.combat_chance(attacker, "hit_chance_rating", "hit_modifier", state.round_number, 0.0)
-	var hit_chance:=CombatModifierService.combat_chance(attacker, "magic_hit_rating", "magic_hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else physical_hit - weapon_skill_penalty + distance_hit_modifier
+	var hit_chance:=CombatModifierService.combat_chance(attacker, "hit_chance_rating", "hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else physical_hit - weapon_skill_penalty + distance_hit_modifier
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
 	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
