@@ -11,7 +11,15 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 	var config := PrimaryStatEffects.load_config()
 	var par_snapshot := ParCalculationService.calculate(character, repository)
 	var primary: Dictionary = par_snapshot.get("totals", {})
-	var result := PrimaryStatEffects.calculate(primary, config)
+	var result: Dictionary = par_snapshot.get("unmapped_derived", {}).duplicate(true)
+	var definitions := ParCalculationService.registry()
+	for par_id in primary:
+		if ParCalculationService.PRIMARY_IDS.has(par_id):
+			continue
+		var definition: Dictionary = definitions.get(par_id, {})
+		var source_key := String(definition.get("source_key", ""))
+		if not source_key.is_empty():
+			result[source_key] = primary[par_id]
 	var active: Dictionary = character.active_equipment_ids(repository) if repository != null else {}
 	# PAR totals are owned by ParCalculationService; never add item bonuses twice.
 	for key in direct_effects:
