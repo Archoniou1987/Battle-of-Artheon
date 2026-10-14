@@ -16,6 +16,7 @@ func weapon(minimum: float, kind: String = "slashing") -> Dictionary:
 	return {"type":"weapon", "damage":{"min":minimum,"max":minimum,"type":kind}, "par_stats":{"PAR057":1}}
 
 func _initialize() -> void:
+	balance_cases()
 	weapon_cases()
 	shared_combat_cases()
 	npc_level_cases()
@@ -95,6 +96,11 @@ func shared_combat_cases() -> void:
 	check(view.crit_damage_rating == 105 and is_equal_approx(view.crit_damage_rating_percent, 21), "PAR035 is a rating")
 	check(view.counterattack_rating == 105 and is_equal_approx(view.counterattack_rating_percent, 21), "PAR075 is a rating, never direct percent")
 	check(view.magic_damage_rating == 105 and is_equal_approx(view.magic_damage_rating_percent, 21), "PAR150 is a rating")
+	var old_errors := Engine.print_error_messages
+	Engine.print_error_messages = false
+	for invalid in ["bad", null, NAN, INF]:
+		check(CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":invalid}).is_empty(), "reject invalid snapshot overlay before coercion")
+	Engine.print_error_messages = old_errors
 	var direct := CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":7})
 	check(is_equal_approx(direct.magic_damage_rating_percent, 28), "direct percentage is added after conversion")
 	var target := CharacterCombatBuilder.build(CharacterState.new("target", "Target"), ItemRepository.new(), {"health":2000})
@@ -135,7 +141,7 @@ func shared_combat_cases() -> void:
 	zones.set_zone("caster", CombatZoneState.ZONE_2)
 	zones.set_zone("target", CombatZoneState.ZONE_2)
 	var api := CombatCommandApi.new(state, group, zones, RoundOrchestrator.new(state, engine, group, zones))
-	for id in ParCombatContract.RATINGS:
+	for id in ParCombatContract.RATINGS.keys() + ["PAR073"]:
 		var saved: Variant = fighter.combat_stats.par_totals[id]
 		fighter.combat_stats.par_totals.erase(id)
 		check(not bool(ParCombatContract.validate(fighter).ok), "diagnose missing " + id)
@@ -198,3 +204,22 @@ func stun_cases() -> void:
 		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == fighter.combatant_id:
 			attacks += 1
 	check(attacks == 0, "stun suppresses player attacks in Arena")
+
+func balance_cases() -> void:
+	var state := CombatState.new()
+	var engine := CombatEngine.new(state)
+	check(engine._hit_chance(-10) == 20 and engine._hit_chance(5) == 100, "default engine loads approved level hit table")
+	check(is_equal_approx(BalanceCurve.sample(engine.physical_balance.armour_reduction_curve, 500), 0.5), "default engine loads approved armour curve")
+	var explicit := CombatEngine.new(state, TestFixtureLoader.load_json("res://data/balance/physical_combat.json"))
+	check(engine.physical_balance == explicit.physical_balance, "Arena/default and explicit balance contracts agree")
+
+	var attacker := CharacterCombatBuilder.build(CharacterState.new("balance_attacker", "A"), ItemRepository.new())
+	var defender := CharacterCombatBuilder.build(CharacterState.new("balance_defender", "D"), ItemRepository.new(), {"health":1000})
+	defender.armour = {"chest":{"slashing":500.0}}
+	state.add_combatant(attacker)
+	state.add_combatant(defender)
+	state.begin_round()
+	var event := state.create_event(CombatEvent.Kind.ATTACK, attacker.combatant_id, defender.combatant_id, {"raw_damage":100.0,"damage_type":"slashing","zone":"chest","rolls":{"hit":1,"crit":100,"dodge":100}})
+	state.queue_event(event)
+	engine.resolve_pending_events()
+	check(defender.hp == 950, "default runtime engine applies 500 armour = 50 percent reduction")

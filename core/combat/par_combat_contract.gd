@@ -18,6 +18,11 @@ static func validate(combatant: CombatantState) -> Dictionary:
 	var totals: Variant = combatant.combat_stats.get("par_totals")
 	if not totals is Dictionary:
 		return {"ok":false, "reason":"missing_par_totals"}
+	if not totals.has("PAR073") or not RatingMatrix._number(totals["PAR073"]):
+		return {"ok":false, "reason":"missing_or_invalid_PAR073"}
+	var capacity := float(totals["PAR073"])
+	if capacity != floor(capacity) or capacity < 0 or capacity > 5:
+		return {"ok":false, "reason":"invalid_PAR073"}
 	for id in RATINGS:
 		var key: String = RATINGS[id]
 		if not totals.has(id) or not RatingMatrix._number(totals[id]):

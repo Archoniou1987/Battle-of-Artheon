@@ -73,10 +73,10 @@ static func block_crush_chance(combatant: CombatantState, round_number: int) -> 
 	return value(combatant, "block_crush", round_number)
 
 static func armour_penetration_flat(combatant: CombatantState, round_number: int) -> float:
-	return value(combatant, "armour_penetration_flat", round_number, float(combatant.combat_stats.get("flat_armour_pen", 0.0)))
+	return value(combatant, "armour_penetration_flat", round_number)
 
 static func armour_reduction_percent(combatant: CombatantState, round_number: int) -> float:
-	var value_percent := value(combatant, "armour_penetration_percent", round_number, float(combatant.combat_stats.get("percent_armour_reduction", 0.0)))
+	var value_percent := value(combatant, "armour_penetration_percent", round_number)
 	if value_percent > 1.0:
 		value_percent /= 100.0
 	return clampf(value_percent, 0.0, 1.0)
@@ -85,13 +85,11 @@ static func damage_reduction(combatant: CombatantState, round_number: int) -> fl
 	return clampf(value(combatant, "damage_reduction", round_number), 0.0, 1.0)
 
 static func manual_block_zone_capacity(combatant: CombatantState) -> int:
-	if combatant.combat_stats.has("par_totals"):
-		var totals: Dictionary = combatant.combat_stats["par_totals"]
-		if not totals.has("PAR073"):
-			push_error("Missing mandatory PAR073")
-			return 0
-		return int(totals["PAR073"])
-	return clampi(int(combatant.combat_stats.get("manual_block_zone_capacity", 1)), 1, 3)
+	var totals: Variant = combatant.combat_stats.get("par_totals")
+	if not totals is Dictionary or not totals.has("PAR073") or not RatingMatrix._number(totals["PAR073"]):
+		push_error("Missing or invalid mandatory PAR073")
+		return 0 # Diagnostic failure; combat entry points reject the contract before resolving.
+	return int(totals["PAR073"])
 
 static func manual_block_zones(combatant: CombatantState) -> Array:
 	return Array(combatant.combat_stats.get("manual_block_zones", [])).duplicate(true)

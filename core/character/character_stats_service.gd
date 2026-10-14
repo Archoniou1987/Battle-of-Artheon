@@ -41,6 +41,9 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 					result[key] = float(result.get(key, 0)) + float(overlays[key])
 	# Runtime effects are explicit semantic overlays; permanent item PAR was already added.
 	for key in direct_effects:
+		if not RatingMatrix._number(direct_effects[key]):
+			push_error("Invalid direct effect overlay: " + String(key))
+			return {}
 		result[key] = float(result.get(key, 0.0)) + float(direct_effects[key])
 	var ranges: Dictionary = par_snapshot["attack_ranges"]
 	var bonus := float(result["physical_damage_flat"])

@@ -3,6 +3,7 @@ extends RefCounted
 
 var state: CombatState
 var physical_balance: Dictionary
+var _balance_valid := true
 var _next_effect_stack_id: int = 1
 var group_state:GroupCombatState
 var zone_state:CombatZoneState
@@ -15,7 +16,15 @@ func configure_spatial_context(groups:GroupCombatState,zones:CombatZoneState)->v
 
 func _init(combat_state: CombatState, balance: Dictionary = {}) -> void:
 	state = combat_state
-	physical_balance = balance
+	physical_balance = balance.duplicate(true)
+	if balance.is_empty():
+		var file := FileAccess.open("res://data/balance/physical_combat.json", FileAccess.READ)
+		var parsed: Variant = JSON.parse_string(file.get_as_text()) if file != null else null
+		if not parsed is Dictionary or not parsed.get("hit_by_level_difference") is Dictionary or not parsed.get("armour_reduction_curve") is Array or parsed.get("armour_reduction_curve", []).is_empty():
+			_balance_valid = false
+			push_error("CombatEngine: required physical_combat.json is missing or invalid")
+			return
+		physical_balance = parsed
 
 func resolve_pending_events() -> void:
 	while not state.pending_events.is_empty():
@@ -23,6 +32,10 @@ func resolve_pending_events() -> void:
 		resolve_event(event)
 
 func resolve_event(event: CombatEvent) -> void:
+	if not _balance_valid:
+		event.set_result("outcome", "invalid_balance_config")
+		state.record_event(event)
+		return
 	match event.kind:
 		CombatEvent.Kind.ACTION: _resolve_action(event)
 		CombatEvent.Kind.ATTACK: _resolve_attack(event)
