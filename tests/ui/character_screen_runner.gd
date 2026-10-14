@@ -9,6 +9,10 @@ func _run() -> void:
 	var instance := scene.instantiate()
 	root.add_child(instance)
 	await process_frame
+	# Declare the empty inventory fixture explicitly; a fresh game seeds arena test items.
+	instance.item_repository = ItemRepository.new()
+	instance.player_character.inventory = InventoryState.new(instance.player_character.character_id)
+	instance.player_character.equipment = EquipmentState.new()
 	instance.call("_open_panel", "Персонаж")
 	await process_frame
 	var screen := instance.get_node_or_null("CharacterScreen") as CharacterScreen
