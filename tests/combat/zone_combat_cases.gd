@@ -113,7 +113,7 @@ static func _magic_hit_and_heal_follow_spatial_rules()->bool:
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("a2",CombatZoneState.ZONE_2)
 	zones.set_zone("b",CombatZoneState.ZONE_3)
-	state.get_combatant("a").combat_stats["magic_hit"]=50.0
+	state.get_combatant("a").combat_stats["hit"]=50.0
 	state.get_combatant("a2").hp=50
 	var engine:=CombatEngine.new(state,{})
 	engine.configure_spatial_context(group,zones)
@@ -177,7 +177,7 @@ static func _zone_target_magic_hit_uses_zone_distance()->bool:
 	var zones:CombatZoneState=f["zones"]
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("b",CombatZoneState.ZONE_3)
-	state.get_combatant("a").combat_stats["magic_hit"]=75.0
+	state.get_combatant("a").combat_stats["hit"]=75.0
 	var engine:=CombatEngine.new(state,{})
 	engine.configure_spatial_context(group,zones)
 	var spell:=AbilityRuntime.build_action_event(state,"a","b","ZONE_SPELL",{
