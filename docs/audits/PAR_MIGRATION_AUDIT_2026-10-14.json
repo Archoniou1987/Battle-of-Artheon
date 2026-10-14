@@ -1,0 +1,1217 @@
+{
+  "project": "Battle of Artheon",
+  "audit_date": "2026-10-14",
+  "repository": "Archoniou1987/Battle-of-Artheon",
+  "branch": "feature/character-inventory-ui-v1",
+  "base_sha": "d72dda833c19d1d611172437f1199c39da8ee9c9",
+  "code_commits": [
+    "2ec41c3089875c60100fff049b43864e3ff112e8",
+    "9b280c829afefef73b617a39d3d70f3d52582500",
+    "60b414174ee90b8c37758cfa9ce416b3fa66687e",
+    "0437e717250684779a1d2066d49ef330aff5e1a5"
+  ],
+  "status": "confirmed_migration_fixes_applied_full_PAR_closure_requires_decisions",
+  "full_canonical_closure": false,
+  "scope": {
+    "tracked_baseline_files": 260,
+    "reviewed_file_types": [
+      "GDScript",
+      "JSON",
+      "TSCN",
+      "project configuration",
+      "GitHub workflow YAML",
+      "test fixtures"
+    ],
+    "chain": [
+      "CharacterProgression",
+      "CharacterState",
+      "ItemRepository/ItemTemplateService",
+      "Equipment",
+      "ParCalculationService",
+      "CharacterStatsService",
+      "CharacterCombatBuilder",
+      "Combat Engine/commands/simulation",
+      "Arena/Character/Inventory UI"
+    ],
+    "other_paths": [
+      "NPC",
+      "item generation",
+      "requirements",
+      "persistence",
+      "loot"
+    ],
+    "text_search_not_used_as_completion_criterion": true
+  },
+  "locked_registry": {
+    "path": "data/parameters/par_registry.json",
+    "byte_identical_to_base": true,
+    "sha256": "da8ab4595573cec58a3b81fecb6c096e7d1e733d8a42c672d2e5f5420d01e8ee",
+    "parameter_count": 108,
+    "note": "Actual locked registry extends beyond PAR108. Existing IDs and structure are unchanged."
+  },
+  "balance_formula_config_unchanged": true,
+  "findings": [
+    {
+      "id": "PAR-01",
+      "category": "critical",
+      "problem": "ItemGenerator emits legacy primary IDs and ignored base_stats/final_stats.",
+      "baseline_locations": [
+        {
+          "file": "core/items/item_generator.gd",
+          "lines": [
+            4,
+            21
+          ],
+          "match": "STAT_POOL"
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "lines": [
+            24
+          ],
+          "match": "\"base_stats\":scaled_stats"
+        }
+      ],
+      "resolution": "Generate PAR001–PAR006; put scaled contributions in par_stats and rolled contributions in par_bonuses. Each weapon contributes PAR057=1 exactly once.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-02",
+      "category": "critical",
+      "problem": "Generated materialized items use template_id, colliding with the unrelated arena template resolver.",
+      "baseline_locations": [
+        {
+          "file": "core/items/item_generator.gd",
+          "lines": [
+            24
+          ],
+          "match": "\"template_id\":"
+        },
+        {
+          "file": "core/items/item_template_service.gd",
+          "lines": [
+            40
+          ],
+          "match": "Item template not found"
+        }
+      ],
+      "resolution": "Use generated_from_template as provenance; retain strict template_id resolution for linked arena instances.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-03",
+      "category": "critical",
+      "problem": "Basic attacks can bypass PAR when snapshots are absent; simulator/counterattacks take old numeric profiles.",
+      "baseline_locations": [
+        {
+          "file": "core/combat/combat_command_api.gd",
+          "lines": [
+            242
+          ],
+          "match": "attacker.combat_stats.has(\"par_attack_ranges\")"
+        },
+        {
+          "file": "core/combat/combat_attack_pipeline.gd",
+          "lines": [
+            24,
+            73
+          ],
+          "match": "WeaponAttackProfile.all"
+        },
+        {
+          "file": "core/combat/weapon_attack_profile.gd",
+          "lines": [
+            19
+          ],
+          "match": "result.append(normalize"
+        }
+      ],
+      "resolution": "ParAttackContract validates mandatory PAR052/PAR057/PAR073 and ranges; WeaponAttackProfile resolves basic damage only from PAR. Commands, simulation and counterattacks share it. Specialised non-basic profiles remain intact.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-04",
+      "category": "critical",
+      "problem": "PAR057 is silently clamped, cached independently of totals, and does not prove two distinct weapons.",
+      "baseline_locations": [
+        {
+          "file": "core/combat/combat_command_api.gd",
+          "lines": [
+            347
+          ],
+          "match": "allowed:=clampi"
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "lines": [
+            89
+          ],
+          "match": "Each equipped weapon must contribute"
+        }
+      ],
+      "resolution": "Validate exact integer count 1 or 2, matching hand metadata, two distinct weapon instance IDs for dual wield, and one basic hit per weapon. Reject malformed sequences before queue mutation.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-05",
+      "category": "critical",
+      "problem": "ParCalculationService and CharacterStatsService recalculate unarmed damage with hidden defaults.",
+      "baseline_locations": [
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "lines": [
+            52
+          ],
+          "match": "var fist_range"
+        },
+        {
+          "file": "core/character/character_stats_service.gd",
+          "lines": [
+            6,
+            39
+          ],
+          "match": "UNARMED_PATH"
+        }
+      ],
+      "resolution": "Only ParCalculationService reads mandatory unarmed configuration. Missing/invalid config or range rejects the snapshot; UI reads the canonical ranges.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-06",
+      "category": "functional",
+      "problem": "MH/OH range ownership is inferred from preferred item.slot rather than actual equipment placement.",
+      "baseline_locations": [
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "lines": [
+            47
+          ],
+          "match": "var target_par"
+        },
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "lines": [
+            101
+          ],
+          "match": "result.append(item)"
+        }
+      ],
+      "resolution": "Resolve actual equipped hand, deduplicate two-handed instances, and attach actual hand identity to runtime metadata. OH-only weapons fail explicitly pending a rule decision.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-07",
+      "category": "functional",
+      "problem": "NPC primary IDs and resource reads retain END/WIS and the old six-key schema.",
+      "baseline_locations": [
+        {
+          "file": "core/npc/npc_combat_builder.gd",
+          "lines": [
+            5
+          ],
+          "match": "stats.get(\"END\""
+        },
+        {
+          "file": "data/npc/starting_region_npcs.json",
+          "lines": [
+            16,
+            55,
+            93,
+            131,
+            170
+          ],
+          "match": "\"STR\""
+        }
+      ],
+      "resolution": "Migrate explicit primary keys. Add explicit NPC PAR damage/count/block snapshots without recalculating NPC balance. Preserve configured NPC HP/mana/damage and existing resource coefficients.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-08",
+      "category": "functional",
+      "problem": "Forced movement contests use STR/STA and an END compatibility fallback.",
+      "baseline_locations": [
+        {
+          "file": "core/combat/round_orchestrator.gd",
+          "lines": [
+            115
+          ],
+          "match": "contest.get(\"stats\""
+        },
+        {
+          "file": "core/combat/round_orchestrator.gd",
+          "lines": [
+            119
+          ],
+          "match": "var fallback"
+        }
+      ],
+      "resolution": "Use PAR001/PAR006 and diagnose missing contest parameters; engine fixtures explicitly declare zero primary inputs.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-09",
+      "category": "functional",
+      "problem": "Canonical PAR armour totals are not applied to combatant.armour.",
+      "baseline_locations": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "lines": [
+            22
+          ],
+          "match": "combatant.armour ="
+        },
+        {
+          "file": "core/items/equipment_builder.gd",
+          "lines": [
+            55,
+            56,
+            60
+          ],
+          "match": "zoned_armour"
+        }
+      ],
+      "resolution": "Aggregate structural armour once at PAR boundary and build combat armour from general PAR100–104 plus typed PAR105–124. Preserve low-level EquipmentBuilder structural support.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-10",
+      "category": "functional",
+      "problem": "Registry armour_pen_flat/armour_pen_pct names do not match engine read names.",
+      "baseline_locations": [
+        {
+          "file": "core/character/character_stats_service.gd",
+          "lines": [
+            22
+          ],
+          "match": "result[source_key]"
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "lines": [
+            66,
+            67,
+            141
+          ],
+          "match": "armour_penetration_flat"
+        }
+      ],
+      "resolution": "Add explicit same-unit aliases for PAR125/PAR126; preserve existing mitigation math.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-11",
+      "category": "functional",
+      "problem": "PAR071/PAR075 direct percentages can be hidden behind zero rating-derived percentages.",
+      "baseline_locations": [
+        {
+          "file": "core/character/character_stats_service.gd",
+          "lines": [
+            49
+          ],
+          "match": "var direct_percent"
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "lines": [
+            56
+          ],
+          "match": "if stats.has(rating_key"
+        }
+      ],
+      "resolution": "Feed exact direct percentage contributions into the existing direct-percent overlays; no conversion to rating.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-12",
+      "category": "functional",
+      "problem": "Arena primary popup uses old primary keys; item dialogs read guaranteed_stats/bonuses.",
+      "baseline_locations": [
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "lines": [
+            90,
+            529,
+            531
+          ],
+          "match": "PRIMARY_NAMES"
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "lines": [
+            504
+          ],
+          "match": "\"guaranteed_stats\""
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "lines": [
+            92
+          ],
+          "match": "\"guaranteed_stats\""
+        }
+      ],
+      "resolution": "Use canonical primary IDs, par_stats/par_bonuses and locked registry display names.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-13",
+      "category": "functional",
+      "problem": "Character UI recomputes HP/mana with obsolete coefficients.",
+      "baseline_locations": [
+        {
+          "file": "ui/character/character_screen.gd",
+          "lines": [
+            403
+          ],
+          "match": "var hp := 100"
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "lines": [
+            404
+          ],
+          "match": "var mana :="
+        }
+      ],
+      "resolution": "Display existing canonical PAR resource contributions instead of duplicating formulas.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-14",
+      "category": "functional",
+      "problem": "Mixed primary schemas can pass progression restore by carrying extra keys.",
+      "baseline_locations": [
+        {
+          "file": "core/character/character_progression.gd",
+          "lines": [
+            126
+          ],
+          "match": "var total := restored_points"
+        }
+      ],
+      "resolution": "Require exactly six canonical primary keys and retain the existing stat-point conservation checks; surface rejected progression loads.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-15",
+      "category": "functional",
+      "problem": "Alternate ring slot equip succeeds, but saved equipment validation rejects ring2-only placement of a ring1-compatible item.",
+      "baseline_locations": [
+        {
+          "file": "scenes/main/main.gd",
+          "lines": [
+            460
+          ],
+          "match": "if not allowed.has(occupied[0])"
+        }
+      ],
+      "resolution": "Apply the same alternate ring-slot contract on restore; persistence smoke now saves and restores both rings.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-16",
+      "category": "functional",
+      "problem": "Missing primary data, unknown PAR contributions and unresolved equipped instances can silently disappear from snapshots.",
+      "baseline_locations": [
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "lines": [
+            32
+          ],
+          "match": "base[PRIMARY_IDS[index]]"
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "lines": [
+            111
+          ],
+          "match": "Unknown PAR ignored"
+        }
+      ],
+      "resolution": "Validate mandatory primary/schema/config data, reject unknown/non-finite contributions and unresolved equipped references. No compatibility translation is introduced.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-17",
+      "category": "obsolete_test_data",
+      "problem": "Tests inject legacy primary stats and numeric weapon overrides into CharacterCombatBuilder.",
+      "baseline_locations": [
+        {
+          "file": "tests/character/ten_player_stats_runner.gd",
+          "lines": [
+            26,
+            70
+          ],
+          "match": "\"stats\":"
+        },
+        {
+          "file": "tests/items/combat_defeat_consequence_runner.gd",
+          "lines": [
+            17
+          ],
+          "match": "\"stats\":"
+        },
+        {
+          "file": "tests/loot/dagger_level_drop_runner.gd",
+          "lines": [
+            10
+          ],
+          "match": "\"stats\":"
+        }
+      ],
+      "resolution": "Builder rejects those overrides; character integration fixtures equip real canonical test weapons. Low-level engine fixture preparation is explicit in development-only TestFixtureLoader.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-18",
+      "category": "obsolete_test_data",
+      "problem": "Generator, equipment, loot and UI fixtures assume removed fields, old template provenance or numeric aggregation by EquipmentBuilder.",
+      "baseline_locations": [
+        {
+          "file": "tests/items/generated_item_combat_runner.gd",
+          "lines": [
+            43
+          ],
+          "match": "\"final_stats\""
+        },
+        {
+          "file": "tests/arena_equipment_contract_test.gd",
+          "lines": [
+            38
+          ],
+          "match": "\"bonuses\""
+        },
+        {
+          "file": "tests/ui/character_screen_runner.gd",
+          "lines": [
+            25,
+            62,
+            97,
+            98,
+            99,
+            100,
+            104
+          ],
+          "match": "\"STR\""
+        },
+        {
+          "file": "tests/loot/loot_persistence_restart_runner.gd",
+          "lines": [
+            10,
+            37
+          ],
+          "match": "\"template_id\":\"TEST\""
+        }
+      ],
+      "resolution": "Migrate assertions and input data; use CharacterCombatBuilder for generated-item integration, explicit PAR in engine fixtures, canonical item fields, durability and valid provenance.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-19",
+      "category": "obsolete_test_data",
+      "problem": "ABI001 fixture encodes two hits in a single basic weapon profile.",
+      "baseline_locations": [
+        {
+          "file": "tests/combat/duel_smoke_cases.gd",
+          "lines": [
+            105
+          ],
+          "match": "\"damage_type\":\"piercing\",\"hit_count\":2"
+        }
+      ],
+      "resolution": "Keep multi-hit AP-group coverage as an explicitly named specialised fixture profile; ordinary ABI001 remains one hit per weapon.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-20",
+      "category": "functional",
+      "problem": "Two combat workflows run Godot 4.4.1 while target engine is 4.5.1.",
+      "baseline_locations": [
+        {
+          "file": ".github/workflows/abi-branch-tests.yml",
+          "lines": [
+            12
+          ],
+          "match": "version: 4.4.1"
+        },
+        {
+          "file": ".github/workflows/combat-tests.yml",
+          "lines": [
+            15
+          ],
+          "match": "version: 4.4.1"
+        }
+      ],
+      "resolution": "Align both to 4.5.1. Add manually dispatched PAR Migration Audit with log-error gates and isolated per-test save directories. No GitHub Actions were launched.",
+      "status": "fixed"
+    },
+    {
+      "id": "PAR-21",
+      "category": "critical",
+      "problem": "A declared weapon with missing damage may silently become an unarmed attack; generator omits weapon identity/reach metadata.",
+      "baseline_locations": [
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "lines": [
+            44
+          ],
+          "match": "var damage: Variant"
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "lines": [
+            25
+          ],
+          "match": "if template.has(\"on_hit_effect\")"
+        }
+      ],
+      "resolution": "Reject declared weapons without a mandatory damage range. Preserve generated weapon class, item type, specialised attack metadata, off-hand requirements and equip requirements using detached copies. Negative contract test verifies no unarmed substitution.",
+      "status": "fixed"
+    }
+  ],
+  "remaining": [
+    {
+      "id": "OPEN-01",
+      "category": "requires_game_rule_and_registry_approval",
+      "parameters": [
+        "counterattack_rating",
+        "crit_damage_rating",
+        "magic_crit_rating",
+        "magic_damage_rating",
+        "magic_hit_rating"
+      ],
+      "files": [
+        "data/character/primary_stat_effects.json",
+        "data/parameters/par_registry.json",
+        "core/parameters/par_calculation_service.gd"
+      ],
+      "problem": "Five approved derived ratings have no exact source_key equivalent in the locked registry. They remain explicitly named in unmapped_derived and the semantic combat/UI adapter.",
+      "action": "Agree exact PAR IDs and units or explicitly approve keeping these semantic derived fields. Do not equate ratings with percentage PAR or change coefficients."
+    },
+    {
+      "id": "OPEN-02",
+      "category": "requires_game_rule_approval",
+      "problem": "Only an off-hand weapon with no active main-hand weapon has no approved ordinary attack source rule.",
+      "current_behavior": "Explicit diagnostic and build rejection; no unarmed main-hand substitute and no silently ignored OH."
+    },
+    {
+      "id": "OPEN-03",
+      "category": "pre_existing_unrelated_test_failure",
+      "test": "tests/map/hex_offset_geometry_runner.gd",
+      "baseline_confirmed": true,
+      "baseline_sha": "d72dda833c19d1d611172437f1199c39da8ee9c9",
+      "log": "baseline_hex_geometry.log"
+    },
+    {
+      "id": "OPEN-04",
+      "category": "pre_existing_unrelated_test_failure",
+      "test": "tests/ui/starting_village_runner.gd",
+      "baseline_confirmed": true,
+      "baseline_sha": "d72dda833c19d1d611172437f1199c39da8ee9c9",
+      "problem": "Test expects village action Тренировочное поле.",
+      "log": "baseline_starting_village.log"
+    },
+    {
+      "id": "OPEN-05",
+      "category": "existing_balance_feature_limit",
+      "problem": "Not every declared PAR has a completed engine consumer. For example crit_damage_pct is declared while the engine still uses the configured 1.5 critical multiplier; magic-derived ratings lack canonical registry counterparts.",
+      "action": "Keep the approved formulas; agree parameter-to-formula semantics before adding new balance behavior. This audit does not claim every registry entry is implemented gameplay."
+    }
+  ],
+  "changed_files": [
+    ".github/workflows/abi-branch-tests.yml",
+    ".github/workflows/combat-tests.yml",
+    ".github/workflows/par-migration-audit.yml",
+    "core/character/character_combat_builder.gd",
+    "core/character/character_progression.gd",
+    "core/character/character_stats_service.gd",
+    "core/combat/combat_attack_pipeline.gd",
+    "core/combat/combat_command_api.gd",
+    "core/combat/combat_modifier_service.gd",
+    "core/combat/par_attack_contract.gd",
+    "core/combat/round_orchestrator.gd",
+    "core/combat/weapon_attack_profile.gd",
+    "core/data/test_fixture_loader.gd",
+    "core/items/equipment_builder.gd",
+    "core/items/item_generator.gd",
+    "core/items/item_template_service.gd",
+    "core/map/map_encounter_combat_service.gd",
+    "core/npc/npc_combat_builder.gd",
+    "core/parameters/par_calculation_service.gd",
+    "data/npc/starting_region_npcs.json",
+    "data/test/bot_equipment_templates.json",
+    "data/test/combatants.json",
+    "data/test/item_generator_eff001_template.json",
+    "data/test/item_generator_template.json",
+    "scenes/main/main.gd",
+    "tests/arena_equipment_contract_test.gd",
+    "tests/character/character_combat_builder_runner.gd",
+    "tests/character/character_state_progression_smoke.gd",
+    "tests/character/persistence_smoke.gd",
+    "tests/character/ten_player_stats_runner.gd",
+    "tests/combat/action_resolver_cases.gd",
+    "tests/combat/aoe_cases.gd",
+    "tests/combat/combat_api_cases.gd",
+    "tests/combat/combat_command_api_cases.gd",
+    "tests/combat/combat_modifier_service_cases.gd",
+    "tests/combat/combat_stress_cases.gd",
+    "tests/combat/delivery_defence_cases.gd",
+    "tests/combat/duel_smoke_cases.gd",
+    "tests/combat/effect_stacking_runner.gd",
+    "tests/combat/engagement_cases.gd",
+    "tests/combat/equipment_fixture_cases.gd",
+    "tests/combat/group_action_policy_cases.gd",
+    "tests/combat/group_combat_ability_runner.gd",
+    "tests/combat/group_combat_cases.gd",
+    "tests/combat/group_combat_simulator_runner.gd",
+    "tests/combat/magic_abi_scaling_runner.gd",
+    "tests/combat/opportunity_action_cases.gd",
+    "tests/combat/physical_attack_cases.gd",
+    "tests/combat/resist_effect_cases.gd",
+    "tests/combat/round_orchestrator_cases.gd",
+    "tests/combat/tournament_runner.gd",
+    "tests/combat/zone_combat_cases.gd",
+    "tests/items/combat_defeat_consequence_runner.gd",
+    "tests/items/generated_eff001_combat_runner.gd",
+    "tests/items/generated_eff001_item_runner.gd",
+    "tests/items/generated_item_combat_runner.gd",
+    "tests/items/hundred_bot_durability_runner.gd",
+    "tests/items/item_abi_combat_runner.gd",
+    "tests/loot/combat_loot_runner.gd",
+    "tests/loot/dagger_level_drop_runner.gd",
+    "tests/loot/loot_persistence_restart_runner.gd",
+    "tests/loot/npc_worn_loot_chain_runner.gd",
+    "tests/map/hex_map_group_encounter_e2e_runner.gd",
+    "tests/map/hex_npc_detection_join_runner.gd",
+    "tests/map/map_combat_outcome_runner.gd",
+    "tests/map/map_encounter_combat_runner.gd",
+    "tests/map/square_map_active_opponent_runner.gd",
+    "tests/map/square_map_encounter_bridge_runner.gd",
+    "tests/map/square_map_group_combat_outcome_runner.gd",
+    "tests/map/square_map_group_combat_state_runner.gd",
+    "tests/map/square_map_group_encounter_e2e_runner.gd",
+    "tests/parameters/par_migration_runner.gd",
+    "tests/ui/character_screen_runner.gd",
+    "tests/ui/inventory_visual_capture.gd",
+    "ui/arena/arena_combat_session.gd",
+    "ui/arena/arena_screen.gd",
+    "ui/character/character_screen.gd",
+    "ui/inventory/inventory_screen.gd",
+    "ui/inventory/item_detail_dialog.gd"
+  ],
+  "verification": {
+    "engine": "4.5.1.stable.official.f62fdbde1",
+    "headless_import": "PASS; no SCRIPT ERROR or ERROR lines",
+    "save_isolation": "Each final standalone runner uses a fresh XDG_DATA_HOME. Earlier non-isolated attempts exposed save contamination; those are not used as final results.",
+    "standalone_runners": [
+      {
+        "path": "tests/arena_equipment_contract_test.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_arena_equipment_contract_test.gd.log"
+      },
+      {
+        "path": "tests/character/character_combat_builder_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_character_character_combat_builder_runner.gd.log"
+      },
+      {
+        "path": "tests/character/character_state_progression_smoke.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_character_character_state_progression_smoke.gd.log"
+      },
+      {
+        "path": "tests/character/persistence_smoke.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_character_persistence_smoke.gd.log"
+      },
+      {
+        "path": "tests/character/progression_smoke.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_character_progression_smoke.gd.log"
+      },
+      {
+        "path": "tests/character/ten_player_stats_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_character_ten_player_stats_runner.gd.log"
+      },
+      {
+        "path": "tests/combat/combat_regression_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_combat_combat_regression_runner.gd.log"
+      },
+      {
+        "path": "tests/combat/effect_stacking_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_combat_effect_stacking_runner.gd.log"
+      },
+      {
+        "path": "tests/combat/group_combat_ability_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_combat_group_combat_ability_runner.gd.log"
+      },
+      {
+        "path": "tests/combat/group_combat_simulator_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_combat_group_combat_simulator_runner.gd.log"
+      },
+      {
+        "path": "tests/combat/magic_abi_scaling_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_combat_magic_abi_scaling_runner.gd.log"
+      },
+      {
+        "path": "tests/combat/tournament_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_combat_tournament_runner.gd.log"
+      },
+      {
+        "path": "tests/items/character_ownership_chain_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_character_ownership_chain_runner.gd.log"
+      },
+      {
+        "path": "tests/items/combat_defeat_consequence_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_combat_defeat_consequence_runner.gd.log"
+      },
+      {
+        "path": "tests/items/defeat_equipment_wear_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_defeat_equipment_wear_runner.gd.log"
+      },
+      {
+        "path": "tests/items/generated_eff001_combat_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_generated_eff001_combat_runner.gd.log"
+      },
+      {
+        "path": "tests/items/generated_eff001_item_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_generated_eff001_item_runner.gd.log"
+      },
+      {
+        "path": "tests/items/generated_item_combat_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_generated_item_combat_runner.gd.log",
+        "rerun_reason": "Final fixture correction / final strict weapon metadata validation"
+      },
+      {
+        "path": "tests/items/hundred_bot_durability_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_hundred_bot_durability_runner.gd.log"
+      },
+      {
+        "path": "tests/items/inventory_exploit_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_inventory_exploit_runner.gd.log"
+      },
+      {
+        "path": "tests/items/item_abi_chain_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_item_abi_chain_runner.gd.log"
+      },
+      {
+        "path": "tests/items/item_abi_combat_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_item_abi_combat_runner.gd.log"
+      },
+      {
+        "path": "tests/items/item_durability_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_item_durability_runner.gd.log"
+      },
+      {
+        "path": "tests/items/item_generator_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_item_generator_runner.gd.log",
+        "rerun_reason": "Final fixture correction / final strict weapon metadata validation"
+      },
+      {
+        "path": "tests/items/item_initial_condition_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_items_item_initial_condition_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/chest_loot_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_chest_loot_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/combat_loot_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_combat_loot_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/dagger_level_drop_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_dagger_level_drop_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/loot_group_level_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_loot_group_level_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/loot_persistence_restart_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_loot_persistence_restart_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/loot_pipeline_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_loot_pipeline_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/npc_possession_loot_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_npc_possession_loot_runner.gd.log"
+      },
+      {
+        "path": "tests/loot/npc_worn_loot_chain_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_loot_npc_worn_loot_chain_runner.gd.log"
+      },
+      {
+        "path": "tests/map/debug_map_viewer_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_debug_map_viewer_runner.gd.log"
+      },
+      {
+        "path": "tests/map/expedition_foundation_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_expedition_foundation_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_encounter_chain_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_encounter_chain_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_encounter_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_encounter_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_encounter_world_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_encounter_world_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_exploration_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_exploration_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_group_pause_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_group_pause_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_loot_expiry_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_loot_expiry_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_map_group_encounter_e2e_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_map_group_encounter_e2e_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_npc_boundary_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_npc_boundary_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_npc_chase_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_npc_chase_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_npc_detection_join_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_npc_detection_join_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_npc_edge_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_npc_edge_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_npc_integration_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_npc_integration_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_npc_retry_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_npc_retry_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_offset_geometry_runner.gd",
+        "status": "FAIL",
+        "exit_code": 1,
+        "log": "tests_map_hex_offset_geometry_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_pathfinding_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_pathfinding_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_pathfinding_stress_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_pathfinding_stress_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_patrol_chase_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_patrol_chase_runner.gd.log"
+      },
+      {
+        "path": "tests/map/hex_patrol_state_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_hex_patrol_state_runner.gd.log"
+      },
+      {
+        "path": "tests/map/location_generator_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_location_generator_runner.gd.log"
+      },
+      {
+        "path": "tests/map/map_areas_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_map_areas_runner.gd.log"
+      },
+      {
+        "path": "tests/map/map_combat_outcome_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_map_combat_outcome_runner.gd.log"
+      },
+      {
+        "path": "tests/map/map_encounter_combat_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_map_encounter_combat_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_active_opponent_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_active_opponent_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_encounter_bridge_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_encounter_bridge_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_entity_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_entity_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_group_combat_outcome_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_group_combat_outcome_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_group_combat_state_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_group_combat_state_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_group_encounter_e2e_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_group_encounter_e2e_runner.gd.log"
+      },
+      {
+        "path": "tests/map/square_map_movement_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_square_map_movement_runner.gd.log"
+      },
+      {
+        "path": "tests/map/tactical_map_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_tactical_map_runner.gd.log"
+      },
+      {
+        "path": "tests/map/world_object_interaction_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_world_object_interaction_runner.gd.log"
+      },
+      {
+        "path": "tests/map_generation_connectivity.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_map_generation_connectivity.gd.log"
+      },
+      {
+        "path": "tests/npc/npc_entity_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_npc_npc_entity_runner.gd.log"
+      },
+      {
+        "path": "tests/parameters/par_migration_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_parameters_par_migration_runner.gd.log",
+        "rerun_reason": "Final fixture correction / final strict weapon metadata validation"
+      },
+      {
+        "path": "tests/resources/resource_definition_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_resources_resource_definition_runner.gd.log"
+      },
+      {
+        "path": "tests/resources/resource_gathering_tool_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_resources_resource_gathering_tool_runner.gd.log"
+      },
+      {
+        "path": "tests/resources/resource_source_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_resources_resource_source_runner.gd.log"
+      },
+      {
+        "path": "tests/resources/resource_tool_interaction_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_resources_resource_tool_interaction_runner.gd.log"
+      },
+      {
+        "path": "tests/ui/arena_open_smoke.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_ui_arena_open_smoke.gd.log"
+      },
+      {
+        "path": "tests/ui/character_screen_runner.gd",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": "tests_ui_character_screen_runner.gd.log",
+        "rerun_reason": "Final fixture correction / final strict weapon metadata validation"
+      },
+      {
+        "path": "tests/ui/starting_village_runner.gd",
+        "status": "FAIL",
+        "exit_code": 1,
+        "log": "tests_ui_starting_village_runner.gd.log"
+      }
+    ],
+    "passed": 74,
+    "failed": 2,
+    "excluded": [
+      "tests/ui/inventory_visual_capture.gd: rendered screenshot capture not run; headless UI smoke tests cover construction and contracts"
+    ],
+    "diagnostics": "Raw logs are stored beside this JSON in par_migration_test_logs_2026-10-14.zip. Expected negative contract cases suppress error printing only while asserting explicit rejection and an empty queue.",
+    "github_actions_launched": 0
+  },
+  "next_workflow": {
+    "name": "PAR Migration Audit",
+    "path": ".github/workflows/par-migration-audit.yml",
+    "ref": "feature/character-inventory-ui-v1",
+    "trigger": "workflow_dispatch",
+    "expected_engine": "4.5.1",
+    "url": "https://github.com/Archoniou1987/Battle-of-Artheon/actions/workflows/par-migration-audit.yml"
+  },
+  "explicit_non_changes": [
+    "Locked PAR registry",
+    "Approved primary/rating/physical balance coefficients",
+    "Death finalization at end of round",
+    "Specialised non-basic weapon/ABI profile mechanism",
+    "No PR; no merge to main"
+  ],
+  "acceptance": {
+    "no_confirmed_active_legacy_primary_identifier_dependencies": true,
+    "canonical_ABI001_contract_enforced": true,
+    "known_migration_test_failures": 0,
+    "all_declared_parameters_have_a_full_canonical_pipeline": false,
+    "reason_not_fully_closed": "OPEN-01 and OPEN-05 require explicit semantics/registry decisions; OPEN-02 is fail-closed pending a gameplay decision. Two unrelated baseline test failures remain."
+  },
+  "local_validation_commit_mapping": [
+    {
+      "local": "46b8c77f6d2010bc88456b3def06d286ff8fc8c0",
+      "remote": "2ec41c3089875c60100fff049b43864e3ff112e8"
+    },
+    {
+      "local": "b551e4b6d816664314f6bc116de587cad05c1447",
+      "remote": "9b280c829afefef73b617a39d3d70f3d52582500"
+    },
+    {
+      "local": "09f5d6e5ac14cee3fff58739f423efd7f9f58552",
+      "remote": "60b414174ee90b8c37758cfa9ce416b3fa66687e"
+    },
+    {
+      "local": "d22199ca49c6049d7206cb321fa38a092fd12e3c",
+      "remote": "0437e717250684779a1d2066d49ef330aff5e1a5"
+    }
+  ]
+}
