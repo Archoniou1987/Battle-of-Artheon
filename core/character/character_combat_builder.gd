@@ -15,6 +15,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	combatant.combat_stats = base.get("combat_stats", {}).duplicate(true)
 	# Stable PAR snapshot for Duel/Pair and combat consumers; no legacy primary keys.
 	combatant.combat_stats["par_totals"] = primary.duplicate(true)
+	combatant.combat_stats["par_attack_ranges"] = par_snapshot.get("attack_ranges", {}).duplicate(true)
 	# One adjacent manual block zone is the baseline; shields add to it.
 	if not combatant.combat_stats.has("manual_block_zone_capacity"):
 		combatant.combat_stats["manual_block_zone_capacity"] = int(primary.get("PAR073", 2))
@@ -31,6 +32,8 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		if key == "weapon_profiles":
 			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
 		combatant.combat_stats[key] = canonical[key]
+	# Canonical attack count and ranges are the only PAR inputs for future ABI001 dispatch.
+	combatant.combat_stats["par_attack_count"] = int(primary.get("PAR057", 1))
 	# PAR073 overrides legacy equipment block metadata.
 	combatant.combat_stats["manual_block_zone_capacity"] = int(primary.get("PAR073", 2))
 	# Keep EquipmentBuilder weapon identity, but apply canonical derived damage.
