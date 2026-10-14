@@ -9,22 +9,11 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 	if character == null:
 		return {}
 	var config := PrimaryStatEffects.load_config()
-	var primary := character.progression.base_stats.duplicate(true)
-	if repository != null:
-		primary = character.effective_stats(repository)
+	var par_snapshot := ParCalculationService.calculate(character, repository)
+	var primary: Dictionary = par_snapshot.get("totals", {})
 	var result := PrimaryStatEffects.calculate(primary, config)
-	var active: Dictionary = {}
-	if repository != null:
-		active = character.active_equipment_ids(repository)
-		for instance_id in active:
-			var item: Dictionary = repository.get_item(String(instance_id))
-			for field in ["guaranteed_stats", "bonuses"]:
-				var values: Variant = item.get(field, {})
-				if not values is Dictionary:
-					continue
-				for key in values:
-					if not primary.has(key):
-						result[key] = float(result.get(key, 0.0)) + float(values[key])
+	var active: Dictionary = character.active_equipment_ids(repository) if repository != null else {}
+	# PAR totals are owned by ParCalculationService; never add item bonuses twice.
 	for key in direct_effects:
 		result[key] = float(result.get(key, 0.0)) + float(direct_effects[key])
 	var weapon_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
