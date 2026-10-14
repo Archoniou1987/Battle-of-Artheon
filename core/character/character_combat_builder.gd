@@ -17,7 +17,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	combatant.combat_stats["par_totals"] = primary.duplicate(true)
 	# One adjacent manual block zone is the baseline; shields add to it.
 	if not combatant.combat_stats.has("manual_block_zone_capacity"):
-		combatant.combat_stats["manual_block_zone_capacity"] = 1
+		combatant.combat_stats["manual_block_zone_capacity"] = int(primary.get("PAR073", 2))
 	combatant.armour = base.get("armour", {}).duplicate(true)
 	combatant.tempo = float(base.get("tempo", 0.0))
 	combatant.max_action_points = int(base.get("max_action_points", 5))
@@ -31,6 +31,8 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		if key == "weapon_profiles":
 			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
 		combatant.combat_stats[key] = canonical[key]
+	# PAR073 overrides legacy equipment block metadata.
+	combatant.combat_stats["manual_block_zone_capacity"] = int(primary.get("PAR073", 2))
 	# Keep EquipmentBuilder weapon identity, but apply canonical derived damage.
 	var damage_bonus := float(primary.get("PAR052", 0.0))
 	var runtime_profiles: Array = combatant.combat_stats.get("weapon_profiles", [])
@@ -60,13 +62,13 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	var main_hand:=repository.get_item(String(main_hand_id)) if main_hand_id!=null and character.is_equipment_active(String(main_hand_id), repository) else {}
 	var weapon_class:=String(main_hand.get("weapon_class",main_hand.get("subtype",""))).to_lower()
 	var is_bow:=weapon_class.contains("bow")
-	combatant.combat_stats["can_manual_block"]=not is_bow
+	combatant.combat_stats["can_manual_block"]=int(primary.get("PAR073", 2)) > 0
 	combatant.combat_stats["can_auto_block"]=not is_bow
 	combatant.lock_combat_loadout({
 		"equipment_slots":character.equipment.slots.duplicate(true),
 		"main_hand_instance_id":String(main_hand_id) if main_hand_id!=null else "",
 		"weapon_class":weapon_class,
-		"can_manual_block":not is_bow,
+		"can_manual_block":int(primary.get("PAR073", 2)) > 0,
 		"can_auto_block":not is_bow,
 		"abilities":combatant.combat_stats["abilities"].duplicate(true)
 	})
