@@ -310,6 +310,19 @@ func queue_default_weapon_attacks(source_id:String,rolls_by_weapon:Dictionary={}
 func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->Dictionary:
 	if attacks.is_empty():
 		return {"ok":false,"reason":"empty_attack_sequence"}
+	var source:=state.get_combatant(source_id)
+	if source==null or source.is_death_finalized():
+		return {"ok":false,"reason":"invalid_combatant"}
+	if source.combat_stats.has("par_attack_count"):
+		var allowed:=clampi(int(source.combat_stats.get("par_attack_count",1)),1,2)
+		if attacks.size()>allowed:
+			return {"ok":false,"reason":"par057_attack_limit","allowed_attacks":allowed}
+		var seen_weapons:Dictionary={}
+		for request in attacks:
+			var index:=int(request.get("weapon_index",-1))
+			if index<0 or index>=allowed or seen_weapons.has(index):
+				return {"ok":false,"reason":"invalid_par057_attack_sequence"}
+			seen_weapons[index]=true
 	# Validate the whole sequence before queueing anything. A rejected OH/profile
 	# must never leave an already queued MH attack behind.
 	for attack_index in range(attacks.size()):
