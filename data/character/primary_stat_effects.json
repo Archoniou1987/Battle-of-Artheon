@@ -44,9 +44,9 @@
         "crit_chance_rating",
         "crit_damage_rating",
         "armour_penetration_flat",
-        "armour_penetration_rating",
+        "armour_penetration_percent",
         "block_penetration_flat",
-        "block_penetration_rating"
+        "block_crush"
       ],
       "Темп и реакции": [
         "tempo",
@@ -125,43 +125,10 @@
       ]
     }
   },
-  "rating_curve": {
-    "reference_rating": 300,
-    "anchors": [
-      {
-        "level": 1,
-        "percent": 60
-      },
-      {
-        "level": 20,
-        "percent": 50
-      },
-      {
-        "level": 40,
-        "percent": 40
-      },
-      {
-        "level": 60,
-        "percent": 30
-      },
-      {
-        "level": 80,
-        "percent": 20
-      },
-      {
-        "level": 100,
-        "percent": 10
-      }
-    ],
-    "interpolation": "linear",
-    "notes": "Test anchors; interpolate between levels. All ratings from attributes and gear add before conversion. ABI/EFF direct percentage points add afterwards, without level scaling."
-  },
   "rating_stats": [
     "hit_chance_rating",
     "anti_dodge_rating",
     "crit_chance_rating",
-    "armour_penetration_rating",
-    "block_penetration_rating",
     "counterattack_rating",
     "dodge_rating",
     "anti_crit_rating",
@@ -200,6 +167,8 @@
     "movement_speed_pct",
     "gathering_speed_pct",
     "experience_bonus_pct",
-    "loot_bonus_pct"
+    "loot_bonus_pct",
+    "armour_penetration_percent",
+    "block_crush"
   ]
 }

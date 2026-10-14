@@ -42,6 +42,9 @@ func basic_attack_intent(source_id:String,attack_profile_id:String="basic",weapo
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
+	var status := ParCombatContract.action_status(combatant, state.round_number)
+	if not bool(status.ok):
+		return status
 	var target_id:=group.active_opponent(source_id)
 	if target_id.is_empty():
 		return {"ok":false,"reason":"no_active_opponent"}
@@ -78,6 +81,9 @@ func ability_intent(source_id:String,target_id:String,definition:Dictionary)->Di
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
+	var status := ParCombatContract.action_status(combatant, state.round_number)
+	if not bool(status.ok):
+		return status
 	if not action_policy.valid_targets(source_id,definition).has(target_id):
 		return {"ok":false,"reason":"target_out_of_reach"}
 	return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id}
@@ -120,6 +126,8 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
+	if CombatModifierService.effective_tempo(combatant, state.round_number) <= -100:
+		return {"ok":true,"reason":"stunned","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
 	var navigation:Array[int]=[]
 	if zones!=null and orchestrator!=null:
 		var current:=zones.zone_of(source_id)
@@ -167,6 +175,9 @@ func cast_zone_ability(source_id:String,zone_id:int,ability_id:String)->Dictiona
 	var source:=state.get_combatant(source_id)
 	if source==null or source.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
+	var status := ParCombatContract.action_status(source, state.round_number)
+	if not bool(status.ok):
+		return status
 	if zone_id<CombatZoneState.MIN_ZONE or zone_id>CombatZoneState.MAX_ZONE:
 		return {"ok":false,"reason":"invalid_zone"}
 	var definition:=AbilityCatalog.definition(ability_scheduler.definitions,ability_id)

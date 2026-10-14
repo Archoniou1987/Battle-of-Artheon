@@ -46,9 +46,9 @@ const DETAIL_LABELS := {
 	"crit_chance_rating": "Рейтинг критического удара",
 	"crit_damage_pct": "Критический урон (бонус)",
 	"armour_penetration_flat": "Пробивание брони",
-	"armour_penetration_rating": "Пробивание брони, %",
+	"armour_penetration_percent": "Пробивание брони, %",
 	"block_penetration_flat": "Пробивание блока",
-	"block_penetration_rating": "Пробивание блока, %",
+	"block_crush": "Пробивание блока, %",
 	"tempo": "Темп",
 	"attack_speed_pct": "Скорость атаки",
 	"counterattack_rating": "Рейтинг контрудара",
@@ -70,9 +70,6 @@ const DETAIL_LABELS := {
 	"chop_resistance_pct": "Сопр. рубящему",
 	"blunt_resistance_pct": "Сопр. дробящему",
 	"magic_damage_pct": "Магический урон (бонус)",
-	"magic_damage_flat": "Магический урон",
-	"magic_hit_rating": "Рейтинг магической точности",
-	"magic_crit_rating": "Рейтинг магического крита",
 	"magic_penetration_flat": "Магическое пробивание",
 	"magic_penetration_rating": "Магическое пробивание, %",
 	"fire_damage": "Урон огнём",
@@ -287,16 +284,24 @@ func _refresh_detail_values() -> void:
 			var offhand_range: Array = bonuses["off_hand_damage"]
 			value.text = "%s–%s" % [_format_stat_number(float(offhand_range[0])), _format_stat_number(float(offhand_range[1]))]
 		elif rating_stats.has(stat_key):
-			var rating := float(bonuses.get(stat_key, 0.0))
+			if not bonuses.has(stat_key + "_percent"):
+				value.text = "—"
+				continue
 			var percent := CharacterStatsService.rating_effect(bonuses, stat_key)
-			value.text = "%s (%s%%)" % [_format_stat_number(rating), _format_stat_number(percent)]
+			if not bonuses.has(stat_key):
+				value.text = _format_stat_number(percent) + "%" # Explicit direct-only chance.
+			else:
+				var rating := float(bonuses[stat_key])
+				value.text = "%s (%s%%)" % [_format_stat_number(rating), _format_stat_number(percent)]
 		elif bonuses.has(stat_key):
 			var amount := float(bonuses[stat_key])
 			var suffix := "%" if percent_stats.has(stat_key) or stat_key.ends_with("_pct") else ""
 			var sign := "+" if amount >= 0.0 else ""
 			value.text = sign + _format_stat_number(amount) + suffix
 		elif percent_stats.has(stat_key) or stat_key.ends_with("_pct") or stat_key in ["slash_damage", "pierce_damage", "chop_damage", "blunt_damage", "fire_damage", "water_damage", "air_damage", "earth_damage", "dark_damage", "light_damage"]:
-			value.text = "+0%"
+			value.text = "—"
+		else:
+			value.text = "—"
 
 func _format_stat_number(amount: float) -> String:
 	if is_equal_approx(amount, roundf(amount)):

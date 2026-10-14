@@ -23,6 +23,11 @@ static func ability_attack_payload(parent:CombatEvent, component:Dictionary, amo
 	var damage_type := String(component.get("damage_type", "physical"))
 	var payload := {
 		"raw_damage": amount,
+		"uses_magic_hit": bool(parent.payload.get("uses_magic_hit", false)),
+		"magic_hit_modifier": float(parent.payload.get("magic_hit_modifier", 0.0)),
+		"magic_hit_roll": int(parent.payload.get("magic_hit_roll", 1)),
+		"hit_already_resolved": bool(parent.payload.get("uses_magic_hit", false)),
+		"magic_rating_applied": is_magic_damage_type(damage_type),
 		"damage_type": damage_type,
 		"zone": String(component.get("zone", parent.payload.get("zone", "chest"))),
 		"rolls": parent.payload.get("rolls", {}),

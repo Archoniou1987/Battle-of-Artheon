@@ -35,10 +35,18 @@ func _resolve_action(event: CombatEvent) -> void:
 	if source == null:
 		event.set_result("outcome", "invalid_combatant")
 		return
+	if not _require_canonical(event, source):
+		return
+	if CombatModifierService.effective_tempo(source, state.round_number) <= -100:
+		event.set_result("outcome", "stunned")
+		return
 	var target_ids := _valid_action_targets(event)
 	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
 		return
+	for target_id in target_ids:
+		if not _require_canonical(event, state.get_combatant(String(target_id))):
+			return
 	var child_event_ids:Array[int] = []
 	var unsupported_components:Array[String] = []
 	# Magic AREA/CHAIN is one cast roll, not one independent roll per victim.
@@ -136,7 +144,10 @@ func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
 	var source:=state.get_combatant(event.source_id)
 	if source==null:
 		return false
-	var chance:=CombatModifierService.combat_chance(source, "hit_chance_rating", "hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
+	var target := state.get_combatant(target_id)
+	if not _require_canonical(event, source) or not _require_canonical(event, target):
+		return false
+	var chance := _common_hit_chance(source, target) + float(event.payload.get("magic_hit_modifier",0.0)) + _distance_modifier(event,target_id)
 	return CombatMath.roll_success(clampf(chance,0.0,100.0),int(event.payload.get("magic_hit_roll",1)))
 
 func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
@@ -194,25 +205,32 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var defender := state.get_combatant(event.target_id)
 	if attacker == null or defender == null:
 		event.set_result("outcome", "invalid_combatant"); return
+	if not _require_canonical(event, attacker) or not _require_canonical(event, defender):
+		return
+	if CombatModifierService.effective_tempo(attacker, state.round_number) <= -100:
+		event.set_result("outcome", "stunned")
+		return
 	var rolls: Dictionary = event.payload.get("rolls", {})
 	var uses_magic_hit:=bool(event.payload.get("uses_magic_hit",false))
 	var distance_hit_modifier:=_distance_modifier(event,event.target_id) if uses_magic_hit else _physical_ranged_distance_hit_modifier(event)
 	var is_weapon_attack:=bool(event.payload.get("is_weapon_attack",event.payload.has("weapon_index") and String(event.payload.get("source_kind",""))!="ability"))
 	var weapon_skill_penalty:=0.0 if uses_magic_hit or not is_weapon_attack else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index",0)))
-	var physical_hit:=_hit_chance(attacker.level - defender.level) + CombatModifierService.combat_chance(attacker, "hit_chance_rating", "hit_modifier", state.round_number, 0.0)
-	var hit_chance:=CombatModifierService.combat_chance(attacker, "hit_chance_rating", "hit", state.round_number, 95.0)+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else physical_hit - weapon_skill_penalty + distance_hit_modifier
+	var shared_hit := _common_hit_chance(attacker, defender)
+	var hit_chance := shared_hit - weapon_skill_penalty + distance_hit_modifier
+	if uses_magic_hit:
+		hit_chance += float(event.payload.get("magic_hit_modifier",0.0))
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
 	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
 	var hit_roll:=int(event.payload.get("magic_hit_roll",rolls.get("magic_hit",1))) if uses_magic_hit else int(rolls.get("hit",100))
 	event.set_result("hit_chance",clampf(hit_chance,0.0,100.0))
 	event.set_result("hit_roll",hit_roll)
-	if not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
+	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
 	var active_defence_available := not uses_magic_hit and not _effect_flag(defender, "active_defence_locked") and _active_defence_available(CombatModifierService.effective_tempo(defender, state.round_number), int(rolls.get("reaction", 100)))
 	event.set_result("active_defence_available",active_defence_available)
 	if active_defence_available:
-		var dodge := CombatMath.effective_dodge(CombatModifierService.combat_chance(defender, "dodge_rating", "dodge", state.round_number), CombatModifierService.combat_chance(attacker, "anti_dodge_rating", "anti_dodge", state.round_number))
+		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
 		event.set_result("dodge_chance",dodge)
 		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
@@ -238,10 +256,22 @@ func _resolve_attack(event: CombatEvent) -> void:
 			if not auto_block_crushed:
 				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
 
+	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
+	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus, CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
+	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
+	var raw_damage := float(event.payload.get("raw_damage", 0.0))
+	if CombatDamagePayload.is_magic_damage_type(String(event.payload.get("damage_type", ""))) and not bool(event.payload.get("magic_rating_applied", false)):
+		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(attacker, "magic_damage_rating", state.round_number) / 100.0)
+	if is_crit:
+		var critical_rating_bonus := CombatModifierService.effective_percent(attacker, "crit_damage_rating", state.round_number)
+		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5)) + critical_rating_bonus / 100.0
 	if _event_bypasses_physical_mitigation(event):
-		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, CombatDamagePayload.direct_damage_payload(event, String(event.payload.get("damage_type", "physical")), float(event.payload.get("raw_damage", 0.0)), "ability"), event.event_id)
+		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, CombatDamagePayload.direct_damage_payload(event, String(event.payload.get("damage_type", "physical")), raw_damage, "ability"), event.event_id)
 		state.queue_event(ability_damage)
 		event.set_result("outcome", "connected")
+		event.set_result("critical", is_crit)
+		event.set_result("crit_chance", crit)
+		event.set_result("raw_damage", raw_damage)
 		event.set_result("damage_event_id", ability_damage.event_id)
 		# Non-physical weapon attacks still complete the weapon pipeline.
 		if is_weapon_attack:
@@ -249,13 +279,6 @@ func _resolve_attack(event: CombatEvent) -> void:
 		_gain_basic_attack_ap(attacker, event)
 		return
 
-	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
-	var crit := CombatMath.effective_crit(CombatModifierService.combat_chance(attacker, "crit_chance_rating", "crit", state.round_number) + active_crit_bonus, CombatModifierService.combat_chance(defender, "anti_crit_rating", "anti_crit", state.round_number))
-	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
-	var raw_damage := float(event.payload.get("raw_damage", 0.0))
-	if is_crit:
-		var critical_rating_bonus := CombatModifierService.effective_percent(attacker, "crit_damage_rating", state.round_number)
-		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5)) + critical_rating_bonus / 100.0
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
 	var base_armour:=_armour_for(defender, zone, damage_type)
 	var armour_penetration_flat:=CombatModifierService.armour_penetration_flat(attacker, state.round_number)
@@ -387,7 +410,7 @@ func _effect_definition(effect_id: String) -> Dictionary:
 
 func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacker: CombatantState, rolls: Dictionary) -> void:
 	if bool(parent.payload.get("is_counterattack", false)): return
-	var chance := CombatModifierService.combat_chance(defender, "counterattack_rating", "counterattack", state.round_number)
+	var chance := CombatModifierService.effective_percent(defender, "counterattack_rating", state.round_number)
 	if not CombatMath.roll_success(chance, int(rolls.get("counterattack", 100))): return
 	var weapon:=_counterattack_weapon_profile(defender)
 	if weapon.is_empty(): return
@@ -494,3 +517,20 @@ func _physical_ranged_distance_hit_modifier(event:CombatEvent)->float:
 	if bool(event.payload.get("uses_magic_hit",false)):
 		return 0.0
 	return _distance_modifier(event,event.target_id)
+
+func _require_canonical(event: CombatEvent, combatant: CombatantState) -> bool:
+	var checked := ParCombatContract.validate(combatant)
+	if not bool(checked.ok):
+		push_error("Combat PAR invariant violated: " + String(checked.reason))
+		event.set_result("outcome", "invalid_par_contract")
+		event.set_result("error", checked.reason)
+		return false
+	for key in ParCombatContract.RATINGS.values():
+		if not is_finite(CombatModifierService.effective_percent(combatant, key, state.round_number)):
+			event.set_result("outcome", "invalid_par_contract")
+			event.set_result("error", "invalid_runtime_" + String(key))
+			return false
+	return true
+
+func _common_hit_chance(source: CombatantState, target: CombatantState) -> float:
+	return _hit_chance(source.level - target.level) + CombatModifierService.effective_percent(source, "hit_chance_rating", state.round_number)

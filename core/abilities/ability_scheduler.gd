@@ -14,6 +14,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 	var cooldowns: Dictionary = cooldowns_by_combatant.get(source_id, {})
 	var source := state.get_combatant(source_id)
 	if source == null: return events
+	if not _source_ready(source, state.round_number): return events
 	for raw_id in AbilityCatalog.assigned_abilities(loadouts, source_id):
 		var ability_id := String(raw_id)
 		if not AbilityRuntime.can_use(ability_id, cooldowns, state.round_number): continue
@@ -31,7 +32,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 
 func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
-	if source==null or not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
+	if source==null or not _source_ready(source, state.round_number) or not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
 		return null
 	var definition:=AbilityCatalog.definition(definitions,ability_id)
 	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
@@ -49,7 +50,7 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 
 func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
-	if source==null:
+	if source==null or not _source_ready(source, state.round_number):
 		return null
 	if not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
 		return null
@@ -66,3 +67,9 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
 	return event
+
+func _source_ready(source: CombatantState, round_number: int) -> bool:
+	var status := ParCombatContract.action_status(source, round_number)
+	if not bool(status.ok) and String(status.reason) != "stunned":
+		push_error("ABI PAR invariant violated: " + String(status.reason))
+	return bool(status.ok)

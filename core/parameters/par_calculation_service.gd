@@ -27,6 +27,9 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 	if definitions.is_empty():
 		push_error("PAR registry unavailable")
 		return {}
+	var validated_overlay := {}
+	if not _accumulate(validated_overlay, talent_par, definitions) or not _accumulate(validated_overlay, effect_par, definitions):
+		return {}
 	var base := {"PAR073": 2.0, "PAR014": 5.0}
 	for index in range(PRIMARY_IDS.size()):
 		var primary_id: String = PRIMARY_IDS[index]
@@ -123,14 +126,12 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 	if formulas.size() != PRIMARY_IDS.size():
 		push_error("Incomplete primary PAR derivation config")
 		return {}
-	for primary_id in formulas:
-		var modifiers: Variant = formulas[primary_id]
-		if not PRIMARY_IDS.has(primary_id) or not modifiers is Dictionary:
-			push_error("Invalid primary PAR derivation identifier: " + String(primary_id))
-			return {}
-		var input_value := float(base[primary_id]) + float(equipment.get(primary_id, 0.0)) + float(talent_par.get(primary_id, 0.0)) + float(effect_par.get(primary_id, 0.0))
-		for output_key in modifiers:
-			derived[output_key] = float(derived.get(output_key, 0.0)) + input_value * float(modifiers[output_key])
+	var primary_inputs := {}
+	for primary_id in PRIMARY_IDS:
+		primary_inputs[primary_id] = float(base[primary_id]) + float(equipment.get(primary_id, 0.0)) + float(talent_par.get(primary_id, 0.0)) + float(effect_par.get(primary_id, 0.0))
+	derived = PrimaryStatEffects.calculate(primary_inputs, config)
+	if derived.is_empty():
+		return {}
 	var source_to_id := {}
 	for par_id in definitions:
 		var source_key := String(definitions[par_id].get("source_key", ""))
@@ -141,10 +142,8 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			var target_id: String = source_to_id[source_key]
 			base[target_id] = float(base.get(target_id, 0.0)) + float(derived[source_key])
 		else:
-			unmapped[source_key] = derived[source_key]
-	var validated_overlay := {}
-	if not _accumulate(validated_overlay, talent_par, definitions) or not _accumulate(validated_overlay, effect_par, definitions):
-		return {}
+			push_error("Derived stat has no canonical PAR: " + String(source_key))
+			return {}
 	var totals := {}
 	var breakdown := {}
 	for par_id in definitions:

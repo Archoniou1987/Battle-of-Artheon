@@ -4,6 +4,9 @@ extends RefCounted
 ## Mandatory ABI001 boundary shared by commands, simulation and counterattacks.
 ## Weapon profiles supply identity/reach only; damage comes exclusively from PAR.
 static func validate(combatant: CombatantState) -> Dictionary:
+	var shared := ParCombatContract.validate(combatant)
+	if not bool(shared.ok):
+		return shared
 	var totals: Dictionary = combatant.combat_stats.get("par_totals", {})
 	for id in ["PAR052", "PAR057", "PAR073"]:
 		if not totals.has(id) or not (totals[id] is int or totals[id] is float) or not is_finite(float(totals[id])):
@@ -32,6 +35,8 @@ static func validate(combatant: CombatantState) -> Dictionary:
 			if instance_id.is_empty() or weapon_ids.has(instance_id):
 				return {"ok": false, "reason": "two_distinct_weapon_instances_required"}
 			weapon_ids[instance_id] = true
+		if slot == "off_hand" and bool(weapon.get("is_unarmed", false)):
+			return {"ok":false, "reason":"off_hand_requires_weapon"}
 		var id := "PAR050" if slot == "main_hand" else "PAR051"
 		if not ParCalculationService.valid_damage_range(ranges.get(id)):
 			return {"ok": false, "reason": "missing_or_invalid_" + id}

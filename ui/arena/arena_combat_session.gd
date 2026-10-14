@@ -76,15 +76,19 @@ func play_round(attacks: Array[String], blocks: Array[String]) -> Dictionary:
 	if orchestrator.battle_outcome() != "ongoing":
 		return {"ok": false, "reason": "battle_finished"}
 	var round := orchestrator.begin_round()
-	var block_result := commands.set_manual_block(player_id, blocks)
-	if not bool(block_result.get("ok", false)):
-		return {"ok": false, "reason": String(block_result.get("reason", "invalid_block"))}
-	var player_result := _queue_attacks(player_id, attacks)
-	if not bool(player_result.get("ok", false)):
-		return {"ok": false, "reason": String(player_result.get("reason", "attack_rejected"))}
-	var enemy_result := _queue_attacks(ENEMY_ID, ["chest"])
-	if not bool(enemy_result.get("ok", false)):
-		return {"ok": false, "reason": String(enemy_result.get("reason", "enemy_attack_rejected"))}
+	if CombatModifierService.effective_tempo(fighter(true), state.round_number) <= -100:
+		commands.clear_manual_block(player_id)
+	else:
+		var block_result := commands.set_manual_block(player_id, blocks)
+		if not bool(block_result.get("ok", false)):
+			return {"ok": false, "reason": String(block_result.get("reason", "invalid_block"))}
+		var player_result := _queue_attacks(player_id, attacks)
+		if not bool(player_result.get("ok", false)):
+			return {"ok": false, "reason": String(player_result.get("reason", "attack_rejected"))}
+	if CombatModifierService.effective_tempo(fighter(false), state.round_number) > -100:
+		var enemy_result := _queue_attacks(ENEMY_ID, ["chest"])
+		if not bool(enemy_result.get("ok", false)):
+			return {"ok": false, "reason": String(enemy_result.get("reason", "enemy_attack_rejected"))}
 	orchestrator.resolve_locked_actions(round)
 	var outcome: Dictionary = orchestrator.end_round()
 	var lines: Array[String] = []

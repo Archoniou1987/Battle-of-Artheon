@@ -14,6 +14,9 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		return null
 	var primary: Dictionary = par_snapshot["totals"]
 	var canonical := CharacterStatsService.combat_stats(character, repository, {}, par_snapshot)
+	if canonical.is_empty():
+		push_error("Character combat build rejected: invalid RatingMatrix snapshot")
+		return null
 	var health := int(base.get("health", 100 + int(primary["PAR010"])))
 	var mana_pool := int(base.get("mana", 30 + int(primary["PAR011"])))
 	var combatant := CombatantState.new(character.character_id, character.display_name, character.progression.level, health, mana_pool)
@@ -47,8 +50,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	var damage_bonus := float(primary["PAR052"])
 	var runtime_profiles: Array = combatant.combat_stats.get("weapon_profiles", [])
 	# An empty MH is a virtual fist, including when an OH weapon is equipped.
-	var main_item_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
-	if main_item_id == null:
+	if not runtime_profiles.any(func(profile): return profile.get("slot") == "main_hand"):
 		var fist: Dictionary = par_snapshot["attack_ranges"]["PAR050"]
 		if not ParCalculationService.valid_damage_range(fist):
 			push_error("Missing mandatory unarmed main-hand range")
@@ -73,10 +75,20 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		profile["damage_type"] = String(canonical_range["type"])
 		runtime_profiles[i] = profile
 	combatant.combat_stats["weapon_profiles"] = runtime_profiles
-	var canonical_profiles:Array = canonical.get("weapon_profiles", [])
-	if combatant.combat_stats.get("weapon_profiles", []).is_empty() and not canonical_profiles.is_empty():
-		combatant.combat_stats["weapon_profiles"] = canonical_profiles.duplicate(true)
-		combatant.combat_stats["weapon_attack_count"] = 1
+	combatant.combat_stats["weapon_attack_count"] = runtime_profiles.size()
+	# Virtual MH insertion must not transfer an OH item's trigger to the fist.
+	for trigger in combatant.combat_stats.get("weapon_on_hit_effects", []):
+		if int(trigger.get("weapon_index", -1)) < 0:
+			continue
+		var found := false
+		for index in range(runtime_profiles.size()):
+			if String(runtime_profiles[index].get("instance_id", "")) == String(trigger.get("source_instance_id", "")):
+				trigger["weapon_index"] = index
+				found = true
+				break
+		if not found:
+			push_error("Weapon trigger missing its active instance")
+			return null
 	var zone_ids := {"head":"PAR100", "chest":"PAR101", "arms":"PAR102", "waist":"PAR103", "legs":"PAR104"}
 	for zone_index in range(EquipmentBuilder.HIT_ZONES.size()):
 		var zone: String = EquipmentBuilder.HIT_ZONES[zone_index]
@@ -132,7 +144,7 @@ static func stats_snapshot(combatant:CombatantState) -> Dictionary:
 	}
 
 ## Converts learned TRA IDs into a single runtime overlay.
-## A TRA definition can provide {"modifiers": {"magic_damage_flat": 5}}.
+## A TRA definition can provide {"modifiers": {"magic_damage_direct_pct": 5}}.
 static func collect_trait_modifiers(character: CharacterState, definitions: Dictionary) -> Dictionary:
 	var totals: Dictionary = {}
 	for trait_id in character.learned_trait_ids:

@@ -68,6 +68,10 @@ func equip(slot: String, instance_id: String, repository: ItemRepository) -> boo
 		return false
 	if equipment.is_equipped(instance_id):
 		return false
+	if slot == "off_hand":
+		var main_id: Variant = equipment.get_equipped_instance_id("main_hand")
+		if main_id != null and equipment.get_equipped_instance_id("off_hand") == main_id:
+			return false # A two-handed MH reserves OH until explicitly unequipped.
 	var item := repository.get_item(instance_id)
 	if item.is_empty() or not ItemDurabilityService.is_usable(item):
 		return false

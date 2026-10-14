@@ -45,23 +45,32 @@ static func effective_stat(combatant: CombatantState, key: String, round_number:
 ## Rating conversion is owned by CharacterStatsService. Canonical *_percent
 ## already includes permanent *_direct_pct, so this layer adds runtime overlays only.
 static func effective_percent(combatant: CombatantState, key: String, round_number: int) -> float:
+	var field := key + "_percent"
+	if not combatant.combat_stats.has(field) or not RatingMatrix._number(combatant.combat_stats[field]):
+		push_error("Missing mandatory converted rating: " + field)
+		return NAN
 	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
-	return float(combatant.combat_stats.get(key + "_percent", 0.0)) + modifier(combatant, direct_key, round_number)
-
-## Canonical rating percentages take priority; legacy direct chances remain valid
-## for NPCs and older combat fixtures without a canonical character snapshot.
-static func combat_chance(combatant: CombatantState, rating_key: String, legacy_key: String, round_number: int, legacy_default: float = 0.0) -> float:
-	var stats := combatant.combat_stats
-	var direct_key := rating_key.trim_suffix("_rating") + "_direct_pct"
-	if stats.has(rating_key + "_percent"):
-		return effective_percent(combatant, rating_key, round_number)
-	return float(stats.get(legacy_key, legacy_default)) + float(stats.get(direct_key, 0.0)) + modifier(combatant, direct_key, round_number)
+	var permanent: Variant = trait_modifiers(combatant).get(direct_key, 0.0)
+	if not RatingMatrix._number(permanent):
+		push_error("Invalid runtime direct-percent modifier: " + direct_key)
+		return NAN
+	var result := float(combatant.combat_stats[field]) + float(permanent)
+	for record in active_effects(combatant, round_number):
+		var value: Variant = Dictionary(record.get("definition", {})).get(direct_key, 0.0)
+		if not RatingMatrix._number(value):
+			push_error("Invalid effect direct-percent modifier: " + direct_key)
+			return NAN
+		result += float(value)
+	if not is_finite(result):
+		push_error("Non-finite converted rating: " + field)
+		return NAN
+	return result
 
 static func block_chance(combatant: CombatantState, round_number: int) -> float:
-	return combat_chance(combatant, "shield_auto_block_rating", "auto_block", round_number)
+	return effective_percent(combatant, "shield_auto_block_rating", round_number)
 
 static func block_crush_chance(combatant: CombatantState, round_number: int) -> float:
-	return combat_chance(combatant, "block_crush_rating", "block_crush", round_number)
+	return value(combatant, "block_crush", round_number)
 
 static func armour_penetration_flat(combatant: CombatantState, round_number: int) -> float:
 	return value(combatant, "armour_penetration_flat", round_number, float(combatant.combat_stats.get("flat_armour_pen", 0.0)))
@@ -141,7 +150,7 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	result["weapon_on_hit_effects"] = weapon_on_hit_effects(combatant)
 	result["on_manual_block_effects"] = manual_block_effects(combatant)
 	result["abilities"] = abilities(combatant)
-	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "magic_hit_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
+	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "crit_damage_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
 	result["armour_penetration_flat"] = armour_penetration_flat(combatant, round_number)
