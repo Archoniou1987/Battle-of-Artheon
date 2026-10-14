@@ -16,8 +16,8 @@
       "crit_damage_rating": 5
     },
     "PAR004": {
-      "magic_hit_rating": 5,
-      "magic_crit_rating": 5,
+      "hit_chance_rating": 5,
+      "crit_chance_rating": 5,
       "magic_damage_rating": 5
     },
     "PAR005": {
@@ -82,9 +82,6 @@
     "Магия": {
       "Магическая атака": [
         "magic_damage_rating",
-        "magic_damage_flat",
-        "magic_hit_rating",
-        "magic_crit_rating",
         "magic_penetration_flat",
         "magic_penetration_rating"
       ],
@@ -171,8 +168,6 @@
     "manual_block_rating",
     "shield_auto_block_rating",
     "control_resistance_rating",
-    "magic_hit_rating",
-    "magic_crit_rating",
     "magic_penetration_rating",
     "slash_damage_rating",
     "pierce_damage_rating",
