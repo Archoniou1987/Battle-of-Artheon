@@ -254,7 +254,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var crit := CombatMath.effective_crit(CombatModifierService.combat_chance(attacker, "crit_chance_rating", "crit", state.round_number) + active_crit_bonus, CombatModifierService.combat_chance(defender, "anti_crit_rating", "anti_crit", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
-	if is_crit: raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5))
+	if is_crit:
+		var critical_rating_bonus := CombatModifierService.effective_percent(attacker, "crit_damage_rating", state.round_number)
+		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5)) + critical_rating_bonus / 100.0
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
 	var base_armour:=_armour_for(defender, zone, damage_type)
 	var armour_penetration_flat:=CombatModifierService.armour_penetration_flat(attacker, state.round_number)
