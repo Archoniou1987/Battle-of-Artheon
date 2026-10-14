@@ -91,6 +91,17 @@
         "PAR100": 200,
         "PAR101": 200
       }
+    },
+    {
+      "id": "ring_empty",
+      "name": "Пустое тестовое кольцо",
+      "type": "ring",
+      "equip_slots": [
+        "ring1",
+        "ring2"
+      ],
+      "icon_id": "ICON_0051",
+      "par_stats": {}
     }
   ]
 }
