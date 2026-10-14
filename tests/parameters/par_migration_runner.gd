@@ -102,6 +102,12 @@ func _initialize() -> void:
 	var generated_repo := ItemRepository.new()
 	check(generated_repo.add_item(generated) and not generated_repo.get_item(generated.instance_id).is_empty(), "generated materialized instance does not resolve arena template")
 	check(not generated.has("template_id") and generated.par_stats.PAR057 == 1, "generator provenance and attack count")
+	var broken_hero := CharacterState.new("broken_metadata", "Broken")
+	var broken_repo := ItemRepository.new()
+	equip(broken_hero, broken_repo, "invalid_weapon", "main_hand", {"type":"weapon"})
+	Engine.print_error_messages = false
+	check(ParCalculationService.calculate(broken_hero, broken_repo).is_empty(), "declared weapon cannot become unarmed when damage is missing")
+	Engine.print_error_messages = previous_print_errors
 	for error in failures:
 		push_error(error)
 	print("PAR_MIGRATION_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=", failures.size())

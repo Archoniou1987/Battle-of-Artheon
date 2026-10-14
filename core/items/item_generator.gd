@@ -25,6 +25,10 @@ func generate(template:Dictionary,quality:String,condition_rule:Dictionary={})->
 	if dmax > 0:
 		item["par_stats"]["PAR057"] = 1
 	item["slot"] = String(template.get("slot", Array(template.get("equip_slots", [""]))[0]))
+	for field in ["type", "item_type", "weapon_class", "requires_off_hand_type", "attack_profiles", "requirements"]:
+		if template.has(field):
+			var value: Variant = template[field]
+			item[field] = value.duplicate(true) if value is Dictionary or value is Array else value
 	if template.has("on_hit_effect"):item["on_hit_effect"]=(template.get("on_hit_effect",{}) as Dictionary).duplicate(true)
 	if template.has("on_manual_block_effect"):item["on_manual_block_effect"]=(template.get("on_manual_block_effect",{}) as Dictionary).duplicate(true)
 	if template.has("abilities"):item["abilities"]=(template.get("abilities",[]) as Array).duplicate(true)

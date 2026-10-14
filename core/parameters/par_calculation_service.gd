@@ -58,6 +58,10 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				push_error("PAR calculation: active item unavailable: " + String(instance_id))
 				return {}
 			var damage: Variant = item.get("damage", {})
+			var declared_weapon := String(item.get("type", "")) == "weapon" or String(item.get("item_type", "")) == "weapon" or not String(item.get("weapon_class", "")).is_empty()
+			if declared_weapon and (not damage is Dictionary or damage.is_empty()):
+				push_error("Declared weapon missing mandatory damage range: " + String(instance_id))
+				return {}
 			if damage is Dictionary and not damage.is_empty():
 				active_weapon_count += 1
 				# Equipment owns placement; a template's preferred slot is not authoritative.
