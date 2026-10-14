@@ -90,7 +90,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				var armour := float(Dictionary(item.get("armour_by_zone", {})).get(zone, 0)) + float(item.get("armour_all_zones_all_physical", 0))
 				var armour_id: String = zone_ids[zone]
 				equipment[armour_id] = float(equipment.get(armour_id, 0)) + armour
-	var main_unarmed := attack_ranges["PAR050"].is_empty()
+	var main_unarmed: bool = Dictionary(attack_ranges["PAR050"]).is_empty()
 	if main_unarmed:
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
 		if not parsed is Dictionary or not parsed.get("unarmed") is Dictionary:
