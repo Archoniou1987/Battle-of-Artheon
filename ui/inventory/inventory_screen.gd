@@ -28,6 +28,13 @@ var _last_tap_id := ""
 var _last_tap_ms := 0
 var discard_mode := false
 var discard_ids: Dictionary = {}
+var generator_dialog: AcceptDialog
+var generator_template: OptionButton
+var generator_par: OptionButton
+var generator_amount: SpinBox
+var generator_added: Label
+var generator_status: Label
+var generator_bonuses: Dictionary = {}
 var discard_button: Button
 var discard_cancel: Button
 var discard_confirm: ConfirmationDialog
@@ -256,6 +263,11 @@ func _ready() -> void:
 	bag_title.text = "Сумка"
 	bag_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bag_heading.add_child(bag_title)
+	var generate_button := Button.new()
+	generate_button.text = "Генератор"
+	generate_button.pressed.connect(_open_item_generator)
+	bag_heading.add_child(generate_button)
+	_build_item_generator()
 	discard_button = Button.new()
 	discard_button.text = "Выкинуть"
 	discard_button.pressed.connect(_discard_button_pressed)
@@ -535,3 +547,135 @@ func _confirm_discard() -> void:
 			character.remove_item(item_id)
 	_cancel_discard()
 	refresh()
+
+
+# Preview-only generator: produces real instances of locked templates.
+func _build_item_generator() -> void:
+	generator_dialog = AcceptDialog.new()
+	generator_dialog.title = "Генератор предметов (тест)"
+	generator_dialog.ok_button_text = "Закрыть"
+	generator_dialog.min_size = Vector2i(330, 430)
+	add_child(generator_dialog)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(310, 345)
+	generator_dialog.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(content)
+	var heading := Label.new()
+	heading.text = "Шаблон предмета"
+	content.add_child(heading)
+	generator_template = OptionButton.new()
+	content.add_child(generator_template)
+	var par_heading := Label.new()
+	par_heading.text = "Дополнительный PAR"
+	content.add_child(par_heading)
+	generator_par = OptionButton.new()
+	content.add_child(generator_par)
+	generator_amount = SpinBox.new()
+	generator_amount.min_value = -100000
+	generator_amount.max_value = 100000
+	generator_amount.step = 1
+	generator_amount.value = 10
+	generator_amount.rounded = true
+	content.add_child(generator_amount)
+	var add_button := Button.new()
+	add_button.text = "Добавить PAR"
+	add_button.pressed.connect(_generator_add_par)
+	content.add_child(add_button)
+	generator_added = Label.new()
+	generator_added.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(generator_added)
+	var clear_button := Button.new()
+	clear_button.text = "Очистить бонусы"
+	clear_button.pressed.connect(func() -> void:
+		generator_bonuses.clear()
+		_generator_update_summary()
+	)
+	content.add_child(clear_button)
+	var create_button := Button.new()
+	create_button.text = "Создать в сумке"
+	create_button.pressed.connect(_generator_create)
+	content.add_child(create_button)
+	generator_status = Label.new()
+	generator_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(generator_status)
+
+
+func _open_item_generator() -> void:
+	generator_template.clear()
+	var templates := ItemTemplateService.load_templates()
+	var template_ids: Array = templates.keys()
+	template_ids.sort()
+	for template_id in template_ids:
+		generator_template.add_item("%s — %s" % [template_id, String(Dictionary(templates[template_id]).get("name", template_id))])
+		generator_template.set_item_metadata(generator_template.item_count - 1, template_id)
+	generator_par.clear()
+	var definitions := ParCalculationService.registry()
+	var ids: Array = definitions.keys()
+	ids.sort()
+	for par_id in ids:
+		# PAR057 is structural: it must come exclusively from the weapon template.
+		if par_id == "PAR057":
+			continue
+		generator_par.add_item("%s — %s" % [par_id, String(Dictionary(definitions[par_id]).get("name", par_id))])
+		generator_par.set_item_metadata(generator_par.item_count - 1, par_id)
+	generator_bonuses.clear()
+	_generator_update_summary()
+	generator_status.text = "" if not template_ids.is_empty() else "Шаблоны не найдены."
+	generator_dialog.popup_centered()
+
+
+func _generator_add_par() -> void:
+	if generator_par.selected < 0:
+		return
+	var par_id := String(generator_par.get_selected_metadata())
+	var amount := int(generator_amount.value)
+	if amount == 0:
+		generator_status.text = "Укажите ненулевой бонус."
+		return
+	generator_bonuses[par_id] = amount
+	generator_status.text = ""
+	_generator_update_summary()
+
+
+func _generator_update_summary() -> void:
+	if generator_added == null:
+		return
+	var entries: Array[String] = []
+	var ids: Array = generator_bonuses.keys()
+	ids.sort()
+	for par_id in ids:
+		entries.append("%s: %+d" % [par_id, int(generator_bonuses[par_id])])
+	generator_added.text = "Бонусы: " + (", ".join(entries) if not entries.is_empty() else "нет")
+
+
+func _generator_create() -> void:
+	if character == null or repository == null or generator_template.selected < 0:
+		generator_status.text = "Выберите шаблон."
+		return
+	var template_id := String(generator_template.get_selected_metadata())
+	var templates := ItemTemplateService.load_templates()
+	if not templates.has(template_id):
+		generator_status.text = "Шаблон не найден."
+		return
+	var item := {
+		"instance_id": "preview_%s_%s" % [template_id, str(Time.get_ticks_usec())],
+		"template_id": template_id,
+		"origin": "preview_generator",
+		"par_bonuses": generator_bonuses.duplicate(true)
+	}
+	ItemDurabilityService.initialize_item(item, 100)
+	if ItemTemplateService.resolve(item).is_empty():
+		generator_status.text = "Предмет не прошёл проверку шаблона/PAR."
+		return
+	if not repository.add_item(item):
+		generator_status.text = "Не удалось создать экземпляр."
+		return
+	var instance_id := String(item["instance_id"])
+	if not character.receive_item(instance_id, repository):
+		repository.remove_item(instance_id)
+		generator_status.text = "Не удалось положить предмет в сумку."
+		return
+	refresh()
+	generator_status.text = "Создан: %s. Предмет в сумке." % String(Dictionary(templates[template_id]).get("name", template_id))
