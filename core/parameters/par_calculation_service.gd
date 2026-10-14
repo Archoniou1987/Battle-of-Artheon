@@ -90,7 +90,8 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				var armour := float(Dictionary(item.get("armour_by_zone", {})).get(zone, 0)) + float(item.get("armour_all_zones_all_physical", 0))
 				var armour_id: String = zone_ids[zone]
 				equipment[armour_id] = float(equipment.get(armour_id, 0)) + armour
-	if attack_ranges["PAR050"].is_empty():
+	var main_unarmed := attack_ranges["PAR050"].is_empty()
+	if main_unarmed:
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
 		if not parsed is Dictionary or not parsed.get("unarmed") is Dictionary:
 			push_error("Missing mandatory unarmed attack configuration")
@@ -107,7 +108,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 	if talent_par.has("PAR057") or effect_par.has("PAR057"):
 		push_error("PAR057 is owned exclusively by equipped weapons/unarmed configuration")
 		return {}
-	base["PAR057"] = 1.0 if attack_ranges["PAR050"].has("min") and active_weapon_count == 0 else (1.0 if attack_ranges["PAR050"].has("min") and attack_ranges["PAR051"].is_empty() else 1.0)
+	base["PAR057"] = 1.0 if main_unarmed else 0.0
 	# Primary-derived formulas live here; source_key resolves only exact PAR equivalents.
 	var derived := {}
 	var unmapped := {}
