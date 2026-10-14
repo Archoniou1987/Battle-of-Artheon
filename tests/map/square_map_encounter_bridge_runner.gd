@@ -20,7 +20,7 @@ func _initialize()->void:
 	valid=valid and encounter.get("npcs",[]).size()==2
 
 	var player:=TestFixtureLoader.new_combatant("PLAYER","Artheon Hero",5,150,0)
-	player.combat_stats={"weapon_profiles":[{"damage_min":25.0,"damage_max":25.0,"damage_type":"slashing"}]}
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":25.0,"damage_max":25.0,"damage_type":"slashing"}]}, true)
 	var session:=MapEncounterCombatService.begin(encounter,repo,player)
 	valid=valid and bool(session.get("ok",false))
 	valid=valid and session.get("npc")==first

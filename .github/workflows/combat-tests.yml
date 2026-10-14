@@ -16,14 +16,14 @@ jobs:
           use-dotnet: false
           include-templates: false
       - name: Import project and register script classes
-        run: timeout --signal=KILL 90s godot --headless --editor --path . --quit
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
       - name: Validate combat debug scene
-        run: timeout --signal=KILL 30s godot --headless --path . res://scenes/debug/debug_combat_viewer.tscn --quit-after 2
+        run: GODOT_TEST_TIMEOUT=30 bash tools/run_godot_check.sh --scene res://scenes/debug/debug_combat_viewer.tscn
 
       - name: Run combat regression gate
         run: |
           set -o pipefail
-          timeout --signal=KILL 45s stdbuf -oL -eL godot --headless --path . --script res://tests/combat/combat_regression_runner.gd 2>&1 | tee combat-regression.log
+          GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/combat_regression_runner.gd 2>&1 | tee combat-regression.log
       - name: Upload combat regression diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -33,4 +33,4 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
       - name: Run first tournament
-        run: timeout --signal=KILL 45s godot --headless --path . --script res://tests/combat/tournament_runner.gd
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/tournament_runner.gd

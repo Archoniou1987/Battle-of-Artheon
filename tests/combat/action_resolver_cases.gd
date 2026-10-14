@@ -9,7 +9,7 @@ static func run() -> bool:
 	var target := TestFixtureLoader.new_combatant("target", "Target", 1, 100)
 	state.add_combatant(source)
 	state.add_combatant(target)
-	var engine := CombatEngine.new(state, {})
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state), {})
 
 	var projectile := AbilityRuntime.build_action_event(state, "source", "target", "ABI_TEST", {
 		"delivery_type": "PROJECTILE",

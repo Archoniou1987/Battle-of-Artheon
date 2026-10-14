@@ -13,5 +13,6 @@
   "damage_max": 33,
   "par_stats": {
     "PAR006": 5
-  }
+  },
+  "combat_stats": {}
 }

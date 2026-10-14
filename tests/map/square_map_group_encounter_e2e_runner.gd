@@ -27,7 +27,7 @@ func _initialize()->void:
 
 	var player_character:=CharacterState.new("PLAYER","Artheon Hero",5)
 	var player:=TestFixtureLoader.new_combatant("PLAYER","Artheon Hero",5,200)
-	player.combat_stats={"weapon_profiles":[{"damage_min":500.0,"damage_max":500.0,"damage_type":"slashing"}]}
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":500.0,"damage_max":500.0,"damage_type":"slashing"}]}, true)
 	var session:=MapEncounterCombatService.begin(encounter,npc_repo,player)
 	valid=valid and bool(session.get("ok",false))
 	var state:CombatState=session.get("state") as CombatState

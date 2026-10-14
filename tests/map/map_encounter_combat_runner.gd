@@ -10,7 +10,7 @@ func _initialize()->void:
 	var step:=map.move_entity("PLAYER",Vector2i(5,5))
 	var encounter:=bridge.encounter_at(map,map.entity_positions["PLAYER"])
 	var player:=TestFixtureLoader.new_combatant("PLAYER","Artheon Hero",5,150,0)
-	player.combat_stats={"weapon_profiles":[{"damage_min":25.0,"damage_max":25.0,"damage_type":"slashing"}]}
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":25.0,"damage_max":25.0,"damage_type":"slashing"}]}, true)
 	var session:=MapEncounterCombatService.begin(encounter,repo,player)
 	valid=valid and bool(step.get("ok",false)) and bool(session.get("ok",false))
 	var enemy:CombatantState=session.get("enemy") as CombatantState

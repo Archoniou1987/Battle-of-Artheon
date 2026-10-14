@@ -3,10 +3,10 @@ extends SceneTree
 func _initialize()->void:
 	var state:=CombatState.new()
 	var player:=TestFixtureLoader.new_combatant("TEST_DAGGER_FIGHTER","Player",5,100,20)
-	player.combat_stats={"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 	state.add_combatant(player)
 	var enemy:=TestFixtureLoader.new_combatant("ENEMY","Enemy",1,100,0)
-	enemy.combat_stats={"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
+	enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 	state.add_combatant(enemy)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players",player.combatant_id)
@@ -34,11 +34,11 @@ func _initialize()->void:
 func _test_lethal_base_attack_abi_target()->bool:
 	var state:=CombatState.new()
 	var player:=TestFixtureLoader.new_combatant("TEST_DAGGER_FIGHTER","Player",5,100,20)
-	player.combat_stats={"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 	state.add_combatant(player)
 	for id in ["ENEMY_A","ENEMY_B"]:
 		var enemy:=TestFixtureLoader.new_combatant(id,id,1,50,0)
-		enemy.combat_stats={"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
+		enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 		state.add_combatant(enemy)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players",player.combatant_id)

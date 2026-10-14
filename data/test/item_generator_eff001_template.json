@@ -16,5 +16,6 @@
   "on_hit_effect": {
     "effect_id": "EFF001",
     "chance": 100.0
-  }
+  },
+  "combat_stats": {}
 }

@@ -16,7 +16,7 @@ func _init() -> void:
 	var fighter := TestFixtureLoader.new_combatant("EFF_HERO", "EFF Hero", 50, 100, 0)
 	var enemy := TestFixtureLoader.new_combatant("EFF_ENEMY", "EFF Enemy", 50, 200, 0)
 	EquipmentBuilder.equip(fighter, resolved)
-	enemy.combat_stats = {"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}
+	enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}, true)
 	state.add_combatant(fighter)
 	state.add_combatant(enemy)
 

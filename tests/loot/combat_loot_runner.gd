@@ -14,7 +14,7 @@ func _initialize() -> void:
 	TestFixtureLoader.equip_character_weapon(player, repository, 35)
 	var player_fighter := CharacterCombatBuilder.build(player, repository, {"health":160,"mana":30})
 	var bandit := TestFixtureLoader.new_combatant("NPC_TEST_BANDIT_001", "Test Bandit", 10, 25, 0)
-	bandit.combat_stats = {"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}
+	bandit.combat_stats.merge({"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}, true)
 
 	var state := CombatState.new()
 	state.add_combatant(player_fighter)

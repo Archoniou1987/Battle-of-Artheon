@@ -35,7 +35,7 @@ func _run() -> void:
 	assert(is_equal_approx(float(test_bonuses["hit_chance_rating"]), 50.0))
 	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
 	assert((screen.detail_values["crit_damage_rating"] as Label).text.contains("%)"))
-	assert((screen.detail_values["slash_damage_rating"] as Label).text == "0 (0%)")
+	assert((screen.detail_values["slash_damage_rating"] as Label).text == "—")
 	var unarmed_config: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
 	assert(unarmed_config is Dictionary)
 	assert(int(unarmed_config["unarmed"]["min_damage"]) == 2)
@@ -68,11 +68,24 @@ func _run() -> void:
 	assert(not screen.detail_values.has("main_hand_min_damage"))
 	assert(not screen.detail_values.has("main_hand_max_damage"))
 
+	var offhand_test := {"instance_id":"ui_offhand_test","type":"weapon","equip_slots":["off_hand"],"slot_usage":["off_hand"],"damage":{"min":4,"max":6,"type":"piercing"},"par_stats":{"PAR057":1}}
+	ItemDurabilityService.initialize_item(offhand_test, 100)
+	assert(instance.item_repository.add_item(offhand_test))
+	assert(screen.character.receive_item("ui_offhand_test", instance.item_repository))
+	assert(screen.character.equip("off_hand", "ui_offhand_test", instance.item_repository))
+	screen.refresh()
+	assert(screen.detail_values["off_hand_damage"].text == "5–7")
+	screen.character.unequip("off_hand", instance.item_repository)
+	screen.refresh()
+	assert(screen.detail_values["off_hand_damage"].text == "—")
+	assert(screen.character.remove_item("ui_offhand_test"))
+	instance.item_repository.remove_item("ui_offhand_test")
+
 	# RatingMatrix v1: 100 rating = 20% at level 1, 2.5% at level 100.
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 1, primary_config), 20.0))
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100, primary_config), 2.5))
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30, primary_config), 3.0 * (20.0 - 17.5 * 29.0 / 99.0)))
-	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0, primary_config), 12.5))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 1), 20.0))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100), 2.5))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30), 3.0 * (20.0 - 17.5 * 29.0 / 99.0)))
+	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0), 12.5))
 	assert((screen.detail_values["dodge_rating"] as Label).text.contains("("))
 	assert((screen.detail_values["crit_chance_rating"] as Label).text.contains("%)"))
 

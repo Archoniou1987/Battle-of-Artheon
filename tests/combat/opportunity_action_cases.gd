@@ -79,7 +79,7 @@ static func _base_attack_uses_attack_pipeline()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
 	var actor:CombatantState=x["state"].get_combatant("e1")
-	actor.combat_stats["weapon_profiles"]=[{"damage_min":7.0,"damage_max":7.0,"damage_type":"chopping","attack_profiles":[{"id":"opportunity_chop","delivery_type":"MELEE"}]}]
+	TestFixtureLoader.set_weapon_profiles(actor, [{"damage_min":7.0,"damage_max":7.0,"damage_type":"chopping","attack_profiles":[{"id":"opportunity_chop","delivery_type":"MELEE"}]}])
 	var decision:Dictionary={"kind":"BASE_ATTACK","source_id":"e1","target_id":"player"}
 	var event:Variant=resolver.base_attack_event(decision,{
 		"weapon_index":0,"attack_profile_id":"opportunity_chop",
@@ -104,10 +104,10 @@ static func _full_base_attack_sequence()->bool:
 	var x:=_context()
 	var resolver:OpportunityActionResolver=x["resolver"]
 	var actor:CombatantState=x["state"].get_combatant("e1")
-	actor.combat_stats["weapon_profiles"]=[
+	TestFixtureLoader.set_weapon_profiles(actor, [
 		{"damage_min":2.0,"damage_max":2.0,"damage_type":"piercing","attack_profiles":[{"id":"mh_double","delivery_type":"MELEE","hit_count":2}]},
 		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"oh_single","delivery_type":"MELEE"}]}
-	]
+	])
 	var decision:Dictionary={"kind":"BASE_ATTACK","source_id":"e1","target_id":"player"}
 	var result:=resolver.queue_base_attack(decision,{"rolls_by_weapon":{
 		0:{"hits":[{"zone":"head","damage":0.0},{"zone":"chest","damage":0.0}]},
@@ -150,7 +150,7 @@ static func _zone_reach_controls_opportunity_events()->bool:
 	zones.set_zone("e1",CombatZoneState.ZONE_3)
 	var resolver:=OpportunityActionResolver.new(group,25.0,20.0,zones)
 	var actor:CombatantState=x["state"].get_combatant("e1")
-	actor.combat_stats["weapon_profiles"]=[{"damage_min":10.0,"damage_max":10.0,"damage_type":"physical","attack_profiles":[{"id":"melee","delivery_type":"MELEE"}]}]
+	TestFixtureLoader.set_weapon_profiles(actor, [{"damage_min":10.0,"damage_max":10.0,"damage_type":"physical","attack_profiles":[{"id":"melee","delivery_type":"MELEE"}]}])
 	var decision:Dictionary={"source_id":"e1","target_id":"player"}
 	var melee:Variant=resolver.base_attack_event(decision,{"weapon_index":0,"attack_profile_id":"melee"})
 	if melee!=null: return false

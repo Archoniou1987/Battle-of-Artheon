@@ -70,7 +70,7 @@ static func _death_bypass(balance:Dictionary)->bool:
 	var controller:GroupCombatController=x["controller"]
 	controller.engagement.request_change("player","e1","player","PLAYER",50)
 	controller.engagement.resolve_end_round(10)
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"player","e1",{"amount":150.0,"damage_type":"physical"}))
@@ -83,7 +83,7 @@ static func _dead_requester_cannot_force_target(balance:Dictionary)->bool:
 	var x:=_context()
 	var state:CombatState=x["state"]
 	var controller:GroupCombatController=x["controller"]
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	controller.engagement.request_change("player","e1","e1","NPC",1)

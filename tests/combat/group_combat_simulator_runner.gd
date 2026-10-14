@@ -3,14 +3,14 @@ extends SceneTree
 func _initialize()->void:
 	var state:=CombatState.new()
 	var player:=TestFixtureLoader.new_combatant("PLAYER","Player",5,100)
-	player.combat_stats={"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 	state.add_combatant(player)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players","PLAYER")
 	for i in range(3):
 		var id:="E%d"%i
 		var enemy:=TestFixtureLoader.new_combatant(id,id,1,50)
-		enemy.combat_stats={"weapon_profiles":[{"damage_min":5.0,"damage_max":5.0,"damage_type":"slashing"}],"hit_modifier":100.0,"crit":0.0}
+		enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":5.0,"damage_max":5.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 		state.add_combatant(enemy)
 		group.add_member("enemies",id)
 	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)

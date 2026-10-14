@@ -15,7 +15,7 @@ static func run() -> bool:
 	var mixed_profiles:Array=mixed.combat_stats.get("weapon_profiles",[])
 	if mixed_profiles.size()!=2: return false
 	var legacy_only:=TestFixtureLoader.new_combatant("legacy","Legacy",1,100)
-	legacy_only.combat_stats={"main_hand_damage_min":99.0,"main_hand_damage_max":99.0,"main_hand_damage_type":"piercing"}
+	legacy_only.combat_stats.merge({"main_hand_damage_min":99.0,"main_hand_damage_max":99.0,"main_hand_damage_type":"piercing"}, true)
 	if not WeaponAttackProfile.all(legacy_only).is_empty(): return false
 	var mixed_first:Dictionary=mixed_profiles[0]
 	var mixed_second:Dictionary=mixed_profiles[1]
@@ -37,15 +37,15 @@ static func run() -> bool:
 		and is_equal_approx(float(first_dagger.get("damage_min",0.0)),2.0)
 		and is_equal_approx(float(second_dagger.get("damage_max",0.0)),3.0)
 		and dagger.hp == 100
-		and is_equal_approx(float(dagger.combat_stats.get("dodge",0.0)),15.0)
+		and is_equal_approx(float(dagger.combat_stats.get("dodge_rating_percent",0.0)),15.0)
 		and int(dagger.combat_stats.get("weapon_attack_count",0)) == 2
 		and int(dagger.combat_stats.get("manual_block_zone_capacity",0)) == 1
-		and is_equal_approx(float(sword.combat_stats.get("auto_block",0.0)),15.0)
-		and is_equal_approx(float(sword.combat_stats.get("anti_dodge",0.0)),5.0)
-		and is_equal_approx(float(axe.combat_stats.get("crit",0.0)),10.0)
+		and is_equal_approx(float(sword.combat_stats.get("shield_auto_block_rating_percent",0.0)),15.0)
+		and is_equal_approx(float(sword.combat_stats.get("anti_dodge_rating_percent",0.0)),5.0)
+		and is_equal_approx(float(axe.combat_stats.get("crit_chance_rating_percent",0.0)),10.0)
 		and is_equal_approx(float(shield.armour.get("head",{}).get("piercing",0.0)),15.0)
 		and is_equal_approx(float(shield.armour.get("legs",{}).get("blunt",0.0)),15.0)
 		and int(shield.combat_stats.get("manual_block_zone_capacity",0)) == 2
 		and not shield.combat_stats.has("manual_block_zone_count")
-		and is_equal_approx(float(shield.combat_stats.get("auto_block",0.0)),0.0)
+		and is_equal_approx(float(shield.combat_stats.get("shield_auto_block_rating_percent",0.0)),0.0)
 	)

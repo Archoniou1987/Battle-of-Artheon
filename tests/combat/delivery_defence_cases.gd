@@ -32,11 +32,11 @@ static func _action(state:CombatState, delivery:String, damage_type:String, roll
 
 static func _resolve(state:CombatState, balance:Dictionary, event:CombatEvent) -> void:
 	state.queue_event(event)
-	CombatEngine.new(state, balance).resolve_pending_events()
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state), balance).resolve_pending_events()
 
 static func _case_projectile_can_dodge(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").combat_stats["dodge"] = 100.0
+	state.get_combatant("target").combat_stats["dodge_rating_percent"] = 100.0
 	var event := _action(state, "PROJECTILE", "fire", {"hit":1,"dodge":1})
 	_resolve(state, balance, event)
 	return state.get_combatant("target").hp == 100 and _child_outcome(state, event.event_id) == "dodge"
@@ -44,7 +44,7 @@ static func _case_projectile_can_dodge(balance:Dictionary) -> bool:
 static func _case_projectile_magic_ignores_physical_block(balance:Dictionary) -> bool:
 	var state := _state()
 	state.get_combatant("target").combat_stats["manual_block_zones"] = ["chest"]
-	state.get_combatant("target").combat_stats["auto_block"] = 100.0
+	state.get_combatant("target").combat_stats["shield_auto_block_rating_percent"] = 100.0
 	var event := _action(state, "PROJECTILE", "fire", {"hit":1,"dodge":100,"auto_block":1,"crit":100})
 	_resolve(state, balance, event)
 	var child:=_child_attack(state,event.event_id)
@@ -60,9 +60,9 @@ static func _case_melee_physical_can_block(balance:Dictionary) -> bool:
 
 static func _case_direct_bypasses_active_defence(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").combat_stats["dodge"] = 100.0
+	state.get_combatant("target").combat_stats["dodge_rating_percent"] = 100.0
 	state.get_combatant("target").combat_stats["manual_block_zones"] = ["chest"]
-	state.get_combatant("target").combat_stats["auto_block"] = 100.0
+	state.get_combatant("target").combat_stats["shield_auto_block_rating_percent"] = 100.0
 	var event := _action(state, "DIRECT", "lightning", {"hit":100,"dodge":1,"auto_block":1})
 	_resolve(state, balance, event)
 	return state.get_combatant("target").hp == 90 and _has_direct_damage_child(state, event.event_id)
@@ -87,7 +87,7 @@ static func _has_direct_damage_child(state:CombatState, parent_id:int) -> bool:
 static func _case_manual_block_uses_explicit_shield_sector(balance:Dictionary)->bool:
 	var state:=_state()
 	var target:=state.get_combatant("target")
-	target.combat_stats["manual_block_zone_capacity"]=2
+	target.combat_stats["par_totals"]["PAR073"]=2
 	target.combat_stats["manual_block_zones"]=["head","chest"]
 	var blocked:=_action(state,"MELEE","physical",{"hit":1,"dodge":100,"block_crush":100})
 	blocked.payload["components"][0]["zone"]="head"
@@ -103,7 +103,7 @@ static func _case_manual_block_uses_explicit_shield_sector(balance:Dictionary)->
 static func _case_ability_attack_ignores_weapon_semantics(balance:Dictionary)->bool:
 	var state:=_state()
 	var source:=state.get_combatant("source")
-	source.combat_stats["weapon_profiles"]=[{"weapon_class":"dagger","item_level":100}]
+	TestFixtureLoader.set_weapon_profiles(source, [{"damage_min":999.0,"damage_max":999.0,"damage_type":"piercing","weapon_class":"dagger","item_level":100}])
 	source.set_weapon_progress("dagger",1)
 	source.combat_stats["weapon_on_hit_effects"]=[{"chance":100.0,"effect_id":"EFF001","source_type":"item","source_instance_id":"weapon_test"}]
 	var event:=_action(state,"MELEE","physical",{"hit":95,"dodge":100,"crit":100,"on_hit_effect":1})
@@ -120,7 +120,7 @@ static func _case_bow_loadout_has_no_block(balance:Dictionary)->bool:
 	var state:=_state()
 	var target:=state.get_combatant("target")
 	target.combat_stats["manual_block_zones"]=["chest"]
-	target.combat_stats["auto_block"]=100.0
+	target.combat_stats["shield_auto_block_rating_percent"]=100.0
 	target.combat_stats["can_manual_block"]=false
 	target.combat_stats["can_auto_block"]=false
 	target.lock_combat_loadout({"weapon_class":"bow","can_manual_block":false,"can_auto_block":false})

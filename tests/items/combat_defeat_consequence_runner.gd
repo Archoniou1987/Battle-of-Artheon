@@ -13,7 +13,7 @@ func _initialize() -> void:
 		hero.receive_item(String(item.instance_id), repository)
 		hero.equip(String((template.equip_slots as Array)[0]), String(item.instance_id), repository)
 	var enemy := TestFixtureLoader.new_combatant("NPC_WINNER", "Winner", 20, 100, 0)
-	enemy.combat_stats = {"weapon_profiles":[{"damage_min":100.0,"damage_max":100.0,"damage_type":"slashing"}]}
+	enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":100.0,"damage_max":100.0,"damage_type":"slashing"}]}, true)
 	var hero_fighter := CharacterCombatBuilder.build(hero, repository, {"health":10,"mana":0})
 	var state := CombatState.new()
 	state.add_combatant(hero_fighter)

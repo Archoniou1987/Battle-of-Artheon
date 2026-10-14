@@ -23,7 +23,7 @@ func _init() -> void:
 			var equipped := bot.equip(String(SLOT_BY_TEMPLATE[String(template.id)]), String(item.instance_id), repository)
 			if not equipped: _fail("equip failed " + String(template.id)); return
 			all_items.append(item)
-	var base := {"mana":30,"combat_stats":{"mana_regen":2.0,"crit":5.0,"dodge":5.0}}
+	var base := {"mana":30}
 	var snapshots:Array[Dictionary] = []
 	for bot in bots:
 		var fighter := CharacterCombatBuilder.build(bot, repository, base)

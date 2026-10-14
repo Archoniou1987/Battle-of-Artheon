@@ -22,11 +22,11 @@ static func _run_case(seed:int)->bool:
 			var id:="%s%d" % [team_id,index]
 			var combatant:=TestFixtureLoader.new_combatant(id,id,10,100,20)
 			var damage:=float(rng.randi_range(5,15))
-			combatant.combat_stats["weapon_profiles"]=[{"damage_min":damage,"damage_max":damage,"damage_type":"slashing"}]
+			TestFixtureLoader.set_weapon_profiles(combatant, [{"damage_min":damage,"damage_max":damage,"damage_type":"slashing"}])
 			state.add_combatant(combatant)
 			group.add_member(team_id,id)
 			zones.set_zone(id,CombatZoneState.ZONE_1 if team_id=="A" else CombatZoneState.ZONE_3)
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	var orchestrator:=RoundOrchestrator.new(state,engine,group,zones)
 	for round_index in range(999):
 		orchestrator.begin_round()

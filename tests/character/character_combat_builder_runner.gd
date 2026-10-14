@@ -12,7 +12,7 @@ func _init() -> void:
 		var character:CharacterState = pair[0]
 		var item:Dictionary = pair[1]
 		repository.add_item(item); character.receive_item(String(item.instance_id), repository); character.equip("main_hand", String(item.instance_id), repository)
-	var base := {"health":100,"mana":25,"combat_stats":{"mana_regen":2}}
+	var base := {"health":100,"mana":25}
 	var fighter_a := CharacterCombatBuilder.build(first, repository, base)
 	var fighter_b := CharacterCombatBuilder.build(second, repository, base)
 	var stats_a := CharacterCombatBuilder.stats_snapshot(fighter_a)

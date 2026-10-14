@@ -50,7 +50,7 @@ static func _locked_actions_survive_death(balance: Dictionary) -> bool:
 	var b := state.create_event(CombatEvent.Kind.ATTACK, "b", "a", {"raw_damage": 50.0, "zone": "chest", "damage_type": "slashing", "rolls": {"hit": 1, "crit": 100}})
 	round.lock_action(a)
 	round.lock_action(b)
-	round.resolve(CombatEngine.new(state, balance))
+	round.resolve(CombatEngine.new(TestFixtureLoader.canonicalize_state(state), balance))
 	return not state.get_combatant("a").is_alive() and not state.get_combatant("b").is_alive()
 
 
@@ -73,8 +73,8 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 	var defender := TestFixtureLoader.new_combatant("target", "Target", 10, 1000)
 	if attacker == null: return false
 	attacker.combatant_id = "mixed"
-	attacker.combat_stats["hit_modifier"] = 100.0
-	defender.combat_stats["dodge"] = 0.0
+	attacker.combat_stats["hit_chance_rating_percent"] = 100.0
+	defender.combat_stats["dodge_rating_percent"] = 0.0
 	var state := CombatState.new()
 	state.add_combatant(attacker)
 	state.add_combatant(defender)
@@ -100,13 +100,13 @@ static func _mixed_weapons_keep_attack_profiles(balance: Dictionary) -> bool:
 
 static func _simulator_base_attack_ap_group(balance:Dictionary)->bool:
 	var attacker:=TestFixtureLoader.new_combatant("ap_user","AP User",10,100)
-	attacker.combat_stats["hit_modifier"]=100.0
-	attacker.combat_stats["weapon_profiles"]=[
+	attacker.combat_stats["hit_chance_rating_percent"]=100.0
+	TestFixtureLoader.set_weapon_profiles(attacker, [
 		{"damage_min":1.0,"damage_max":1.0,"damage_type":"piercing","attack_profiles":[{"id":"fixture_multi_hit","hit_count":2}]},
 		{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}
-	]
+	])
 	var defender:=TestFixtureLoader.new_combatant("ap_target","AP Target",10,1000)
-	defender.combat_stats["dodge"]=0.0
+	defender.combat_stats["dodge_rating_percent"]=0.0
 	var state:=CombatState.new(); state.add_combatant(attacker); state.add_combatant(defender)
 	var simulator:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),balance,23); simulator.max_rounds=1
 	simulator.run_duel("ap_user","ap_target")
@@ -129,7 +129,7 @@ static func _weapon_skill_penalties(balance: Dictionary) -> bool:
 	var defender := TestFixtureLoader.new_combatant("skill_target", "Skill Target", 10, 100)
 	var state := CombatState.new()
 	state.add_combatant(attacker); state.add_combatant(defender)
-	var engine := CombatEngine.new(state,balance)
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var checks := [[15,15,0.0],[15,5,10.0],[15,1,14.0],[100,1,80.0]]
 	for check in checks:
 		var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
@@ -221,8 +221,8 @@ static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) 
 	var state := CombatState.new()
 	var a := TestFixtureLoader.new_combatant("a", "A", 1, hp_a)
 	var b := TestFixtureLoader.new_combatant("b", "B", 1, hp_b)
-	a.combat_stats["weapon_profiles"] = [{"damage_min":damage_a,"damage_max":damage_a,"damage_type":"slashing"}]
-	b.combat_stats["weapon_profiles"] = [{"damage_min":damage_b,"damage_max":damage_b,"damage_type":"slashing"}]
+	TestFixtureLoader.set_weapon_profiles(a, [{"damage_min":damage_a,"damage_max":damage_a,"damage_type":"slashing"}])
+	TestFixtureLoader.set_weapon_profiles(b, [{"damage_min":damage_b,"damage_max":damage_b,"damage_type":"slashing"}])
 	state.add_combatant(a)
 	state.add_combatant(b)
 	return state

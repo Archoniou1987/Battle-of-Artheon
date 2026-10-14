@@ -53,7 +53,7 @@ func _initialize() -> void:
 	var zones := CombatZoneState.new(group)
 	zones.set_zone(fighter.combatant_id, CombatZoneState.ZONE_2)
 	zones.set_zone(target.combatant_id, CombatZoneState.ZONE_2)
-	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state), group, zones)
+	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(TestFixtureLoader.canonicalize_state(state)), group, zones)
 	var api := CombatCommandApi.new(state, group, zones, orchestrator)
 	orchestrator.begin_round()
 	var requests: Array[Dictionary] = [{"weapon_index":0,"attack_profile_id":"basic"},{"weapon_index":1,"attack_profile_id":"basic"}]

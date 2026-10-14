@@ -12,7 +12,7 @@ func _init() -> void:
 		"EFF001": {"id":"EFF001","name":"Bleeding","kind":"dot","damage":2,"duration_rounds":3,"stacking":"stack","max_stacks":3},
 		"BUFF001": {"id":"BUFF001","name":"Test Buff","kind":"crit_buff","crit_bonus":20.0,"duration_rounds":3,"stacking":"unique","max_stacks":1}
 	}
-	var engine := CombatEngine.new(state, {"effects":effects})
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state), {"effects":effects})
 
 	# One Bleeding debuff may contain several stacks from different sources.
 	for source_id in ["SOURCE_A", "SOURCE_B", "SOURCE_A", "SOURCE_B"]:

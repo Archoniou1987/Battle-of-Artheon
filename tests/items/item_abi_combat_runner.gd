@@ -13,8 +13,8 @@ func _init() -> void:
 	var state := CombatState.new()
 	var first := TestFixtureLoader.new_combatant("ITEM_ABI_HERO", "Item ABI Hero", 50, 100, 25)
 	var second := TestFixtureLoader.new_combatant("ITEM_ABI_ENEMY", "Enemy", 50, 100, 0)
-	first.combat_stats = {"mana_regen":2,"weapon_profiles":[{"damage_min":2.0,"damage_max":2.0,"damage_type":"slashing"}],"hit_modifier":100.0}
-	second.combat_stats = {"mana_regen":0,"weapon_profiles":[{"damage_min":2.0,"damage_max":2.0,"damage_type":"slashing"}],"hit_modifier":100.0}
+	first.combat_stats.merge({"mana_regen":2,"weapon_profiles":[{"damage_min":2.0,"damage_max":2.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0}, true)
+	second.combat_stats.merge({"mana_regen":0,"weapon_profiles":[{"damage_min":2.0,"damage_max":2.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0}, true)
 	state.add_combatant(first)
 	state.add_combatant(second)
 

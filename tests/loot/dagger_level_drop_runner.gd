@@ -10,7 +10,7 @@ func _initialize()->void:
 	TestFixtureLoader.equip_character_weapon(player, repository, 40)
 	var fighter:=CharacterCombatBuilder.build(player,repository,{"health":200,"mana":0})
 	var bandit:=TestFixtureLoader.new_combatant("NPC_DAGGER_BANDIT","Unarmed Bandit",70,30,0)
-	bandit.combat_stats={"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"blunt"}]}
+	bandit.combat_stats.merge({"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"blunt"}]}, true)
 	var state:=CombatState.new()
 	state.add_combatant(fighter)
 	state.add_combatant(bandit)

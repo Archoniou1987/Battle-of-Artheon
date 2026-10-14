@@ -98,7 +98,7 @@ static func _engine_rejects_friendly_fire_and_out_of_reach()->bool:
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("a2",CombatZoneState.ZONE_1)
 	zones.set_zone("b",CombatZoneState.ZONE_3)
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	engine.configure_spatial_context(group,zones)
 	var attack:=AbilityRuntime.build_action_event(state,"a","b","RANGED",{"delivery_type":"PROJECTILE","max_zone_distance":1,"components":[{"kind":"damage","amount":10.0,"damage_type":"physical"}]})
 	attack.payload["target_ids"]=["a2","b"]
@@ -113,9 +113,9 @@ static func _magic_hit_and_heal_follow_spatial_rules()->bool:
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("a2",CombatZoneState.ZONE_2)
 	zones.set_zone("b",CombatZoneState.ZONE_3)
-	state.get_combatant("a").combat_stats["hit"]=50.0
+	state.get_combatant("a").combat_stats["hit_chance_rating_percent"]=-45.0
 	state.get_combatant("a2").hp=50
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	engine.configure_spatial_context(group,zones)
 	var spell:=AbilityRuntime.build_action_event(state,"a","b","SPELL",{"delivery_type":"DIRECT","max_zone_distance":2,"uses_magic_hit":true,"two_zone_hit_modifier":-50.0,"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]})
 	spell.payload["magic_hit_roll"]=1
@@ -152,7 +152,7 @@ static func _physical_projectile_distance_penalizes_hit()->bool:
 	var zones:CombatZoneState=f["zones"]
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("b",CombatZoneState.ZONE_3)
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	engine.configure_spatial_context(group,zones)
 	var attack:=AbilityRuntime.build_action_event(state,"a","b","BOW_SHOT",{
 		"delivery_type":"PROJECTILE",
@@ -177,8 +177,8 @@ static func _zone_target_magic_hit_uses_zone_distance()->bool:
 	var zones:CombatZoneState=f["zones"]
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("b",CombatZoneState.ZONE_3)
-	state.get_combatant("a").combat_stats["hit"]=75.0
-	var engine:=CombatEngine.new(state,{})
+	state.get_combatant("a").combat_stats["hit_chance_rating_percent"]=-20.0
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	engine.configure_spatial_context(group,zones)
 	var spell:=AbilityRuntime.build_action_event(state,"a","b","ZONE_SPELL",{
 		"delivery_type":"AREA",
@@ -202,7 +202,7 @@ static func _zone_target_resolves_current_occupants()->bool:
 	zones.set_zone("a",CombatZoneState.ZONE_1)
 	zones.set_zone("a2",CombatZoneState.ZONE_2)
 	zones.set_zone("b",CombatZoneState.ZONE_2)
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	engine.configure_spatial_context(group,zones)
 	var spell:=AbilityRuntime.build_action_event(state,"a","","ZONE_DAMAGE",{
 		"delivery_type":"AREA",

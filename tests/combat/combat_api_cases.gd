@@ -9,7 +9,7 @@ static func run()->bool:
 	hero.tempo=10.0
 	hero.combat_stats["tempo"]=5.0
 	hero.combat_stats["damage_reduction"]=0.25
-	hero.combat_stats["manual_block_zone_capacity"]=2
+	hero.combat_stats["par_totals"]["PAR073"]=2
 	hero.combat_stats["manual_block_zones"]=["head","chest"]
 	hero.active_effects.append({
 		"effect_id":"EFF_API",

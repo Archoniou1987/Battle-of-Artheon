@@ -8,7 +8,7 @@ static func run() -> bool:
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
-		and _case_manual_block_accessors_normalize_capacity()
+		and _case_manual_block_accessors_use_par073()
 		and _case_equipped_item_types_accessor_copies_values()
 		and _case_effect_trigger_accessors_copy_values()
 		and _case_abilities_accessor_copies_values()
@@ -72,11 +72,11 @@ static func _case_damage_reduction_uses_runtime_overlay() -> bool:
 	})
 	return is_equal_approx(CombatModifierService.damage_reduction(combatant, 1), 1.0)
 
-static func _case_manual_block_accessors_normalize_capacity() -> bool:
+static func _case_manual_block_accessors_use_par073() -> bool:
 	var combatant := _combatant()
-	combatant.combat_stats["manual_block_zone_capacity"] = 4
+	combatant.combat_stats["par_totals"]["PAR073"] = 2
 	combatant.combat_stats["manual_block_zones"] = ["head", "chest"]
-	return CombatModifierService.manual_block_zone_capacity(combatant) == 3 and CombatModifierService.manual_block_zones(combatant) == ["head", "chest"]
+	return CombatModifierService.manual_block_zone_capacity(combatant) == 2 and CombatModifierService.manual_block_zones(combatant) == ["head", "chest"]
 
 static func _case_equipped_item_types_accessor_copies_values() -> bool:
 	var combatant := _combatant()
