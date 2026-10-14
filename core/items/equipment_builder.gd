@@ -32,7 +32,6 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 		weapon_profiles.append(weapon_profile)
 		combatant.combat_stats["weapon_profiles"]=weapon_profiles
 		combatant.combat_stats["weapon_attack_count"]=weapon_profiles.size()
-		combatant.combat_stats["manual_block_zone_capacity"]=maxi(int(combatant.combat_stats.get("manual_block_zone_capacity",0)),int(item.get("manual_block_zones_added",0)))
 		var weapon_effects:Array=combatant.combat_stats.get("weapon_on_hit_effects",[])
 		var weapon_effect:Dictionary=weapon_profile["on_hit_effect"].duplicate(true)
 		if not weapon_effect.is_empty():
@@ -40,7 +39,6 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 			weapon_effects.append(weapon_effect)
 		combatant.combat_stats["weapon_on_hit_effects"]=weapon_effects
 	else:
-		var added:=int(item.get("manual_block_zones_added",0)); combatant.combat_stats["manual_block_zone_capacity"]=int(combatant.combat_stats.get("manual_block_zone_capacity",0))+added
 		if item.has("on_hit_effect"):
 			var item_effect:Dictionary=item.get("on_hit_effect",{}).duplicate(true)
 			if not item_effect.is_empty():
