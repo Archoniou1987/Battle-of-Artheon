@@ -263,6 +263,12 @@ func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary=
 	var attacks:Array[Dictionary]=[]
 	var weapon_indices:Array=by_weapon.keys()
 	weapon_indices.sort()
+	# Canonical PAR057 limits the ordinary MH/OH ABI001 sequence.
+	# Legacy and NPC combatants without a PAR snapshot retain their existing profiles.
+	if combatant.combat_stats.has("par_attack_count"):
+		var allowed_attacks:=clampi(int(combatant.combat_stats.get("par_attack_count", 1)), 1, 2)
+		while weapon_indices.size()>allowed_attacks:
+			weapon_indices.pop_back()
 	for raw_weapon_index in weapon_indices:
 		var weapon_index:=int(raw_weapon_index)
 		var profiles:Array=by_weapon[weapon_index]
