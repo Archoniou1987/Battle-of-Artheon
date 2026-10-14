@@ -84,7 +84,8 @@
       ],
       "icon_id": "ICON_0017",
       "par_stats": {
-        "PAR070": 400
+        "PAR070": 400,
+        "PAR073": 1
       },
       "armour_by_zone": {
         "head": 200,
