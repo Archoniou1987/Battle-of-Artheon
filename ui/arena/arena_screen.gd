@@ -71,6 +71,8 @@ var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
 var hp_label: Label
 var tabs: TabContainer
+var par_report_dialog: AcceptDialog
+var par_report_text: TextEdit
 var fighter_popup: AcceptDialog
 var item_popup: AcceptDialog
 var item_popup_text: RichTextLabel
@@ -124,6 +126,21 @@ func _ready() -> void:
 	back.text = "← Назад"
 	back.pressed.connect(func() -> void: back_requested.emit())
 	header.add_child(back)
+	var report_button := Button.new()
+	report_button.text = "PAR 108"
+	report_button.tooltip_text = "Снимок всех PAR персонажа и боевого участника"
+	report_button.pressed.connect(_show_par_report)
+	header.add_child(report_button)
+	par_report_dialog = AcceptDialog.new()
+	par_report_dialog.title = "PAR / Combat — 108 параметров"
+	par_report_dialog.min_size = Vector2i(350, 540)
+	add_child(par_report_dialog)
+	par_report_text = TextEdit.new()
+	par_report_text.editable = false
+	par_report_text.custom_minimum_size = Vector2(320, 470)
+	par_report_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	par_report_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	par_report_dialog.add_child(par_report_text)
 	tabs = TabContainer.new()
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -795,3 +812,48 @@ func _apply_layout() -> void:
 	square_content.scale = Vector2.ONE * (edge / ARENA_LOGICAL_EXTENT)
 	if arena_background != null:
 		arena_background.size = logical_size
+
+## Read-only diagnostic snapshot. No combat calculations are changed.
+func _show_par_report() -> void:
+	if combat_session == null or character == null or repository == null:
+		return
+	var registry := ParCalculationService.registry()
+	var snapshot := ParCalculationService.calculate(character, repository)
+	var totals: Dictionary = snapshot.get("totals", {})
+	var fighter := combat_session.fighter(true)
+	var combat_totals: Dictionary = fighter.combat_stats.get("par_totals", {})
+	var ids := registry.keys()
+	ids.sort()
+	var lines: Array[String] = [
+		"PAR / COMBAT DIAGNOSTIC",
+		"Round: %d | Level: %d" % [combat_session.state.round_number, fighter.level],
+		"Character PAR | Combat PAR | Status",
+		"NOTE: Combat PAR is the snapshot captured when the arena opened.",
+		"NOTE: NOT USED means no direct runtime field mapping; not a failure.",
+		""
+	]
+	var mismatch_count := 0
+	var missing_count := 0
+	for raw_id in ids:
+		var id := String(raw_id)
+		var definition: Dictionary = registry[id]
+		var name := String(definition.get("name_ru", definition.get("name", id)))
+		var current := float(totals.get(id, 0.0))
+		var has_combat := combat_totals.has(id)
+		var combat_value := float(combat_totals.get(id, 0.0))
+		var status := "OK" if has_combat and is_equal_approx(current, combat_value) else "MISMATCH"
+		if not has_combat:
+			status = "MISSING"
+			missing_count += 1
+		elif status == "MISMATCH":
+			mismatch_count += 1
+		var source_key := String(definition.get("source_key", ""))
+		var runtime := ""
+		if not source_key.is_empty() and fighter.combat_stats.has(source_key):
+			runtime = " | runtime %s=%s" % [source_key, str(fighter.combat_stats[source_key])]
+		lines.append("%s %s | %s | %s | %s%s" % [id, name, str(current), str(combat_value) if has_combat else "-", status, runtime])
+	lines.append("")
+	lines.append("Total: %d | Mismatch: %d | Missing: %d" % [ids.size(), mismatch_count, missing_count])
+	lines.append("Combat contract: " + JSON.stringify(ParCombatContract.validate(fighter)))
+	par_report_text.text = "\n".join(lines)
+	par_report_dialog.popup_centered()
