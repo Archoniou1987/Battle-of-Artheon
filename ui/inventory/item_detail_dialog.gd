@@ -89,8 +89,8 @@ func _render() -> void:
 				allowed = false
 			_add_text("%d %s" % [needed, _stat_label(String(stat))], Color("#e2e5eb") if met else Color("#e05d5d"))
 	_add_separator()
-	_add_stat_lines(item.get("guaranteed_stats", {}), Color("#f1f4f8"))
-	_add_stat_lines(item.get("bonuses", {}), Color("#65d58b"))
+	_add_stat_lines(item.get("par_stats", {}), Color("#f1f4f8"))
+	_add_stat_lines(item.get("par_bonuses", {}), Color("#65d58b"))
 	var damage: Dictionary = item.get("damage", {})
 	if not damage.is_empty():
 		_add_text("Урон %s–%s" % [str(damage.get("min", 0)), str(damage.get("max", 0))], Color("#f1f4f8"))
@@ -149,8 +149,8 @@ func _update_dialog_size() -> void:
 
 
 const STAT_NAMES := {
-	"STR":"Силы", "DEX":"Ловкости", "INTU":"Интуиции", "WIS":"Мудрости",
-	"INT":"Интеллекта", "END":"Выносливости", "STA":"Выносливости",
+	"PAR001":"Силы", "PAR002":"Ловкости", "PAR003":"Интуиции", "PAR005":"Мудрости",
+	"PAR004":"Интеллекта", "PAR006":"Выносливости",
 	"crit_chance_rating":"рейтинг крита", "crit_rating":"рейтинг крита",
 	"dodge_rating":"рейтинг уворота", "anti_dodge_rating":"рейтинг антиуворота",
 	"hit_chance_rating":"рейтинг попадания", "anti_crit_rating":"рейтинг антикрита",
@@ -161,6 +161,9 @@ const STAT_NAMES := {
 }
 
 func _stat_label(key: String) -> String:
+	var definitions := ParCalculationService.registry()
+	if definitions.has(key):
+		return String(definitions[key]["name"])
 	return String(STAT_NAMES.get(key, key.replace("_", " ")))
 
 func _add_separator() -> void:

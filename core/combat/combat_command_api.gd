@@ -215,16 +215,7 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 
 
 func _abi001_damage_source(combatant:CombatantState,profile:Dictionary)->Dictionary:
-	var weapons:Array=combatant.combat_stats.get("weapon_profiles",[])
-	var index:=int(profile.get("weapon_index",-1))
-	if index<0 or index>=weapons.size():
-		return {"ok":false,"reason":"missing_abi001_weapon_profile"}
-	var source_par:="PAR051" if String(Dictionary(weapons[index]).get("slot",""))=="off_hand" else "PAR050"
-	var ranges:Dictionary=combatant.combat_stats.get("par_attack_ranges",{})
-	var damage_range:Dictionary=ranges.get(source_par,{})
-	if not damage_range.has("min") or not damage_range.has("max") or not damage_range.has("type"):
-		return {"ok":false,"reason":"missing_abi001_damage_source","source_par":source_par}
-	return {"ok":true,"source_par":source_par,"range":damage_range}
+	return ParAttackContract.resolve(combatant, profile)
 
 
 func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
@@ -239,7 +230,7 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 	var profile:Dictionary=intent.get("attack_profile",{})
 	var attacker:=state.get_combatant(source_id)
 	var abi_source:Dictionary={}
-	if String(profile.get("id","basic"))=="basic" and attacker!=null and attacker.combat_stats.has("par_attack_ranges"):
+	if String(profile.get("id","basic"))=="basic" and attacker!=null:
 		abi_source=_abi001_damage_source(attacker,profile)
 		if not bool(abi_source.get("ok",false)):
 			push_error("ABI001 invariant violated: "+String(abi_source.get("reason","")))
@@ -263,7 +254,7 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		})
 		if not abi_source.is_empty():
 			var source_range:Dictionary=abi_source["range"]
-			var bonus:=float(Dictionary(attacker.combat_stats.get("par_totals",{})).get("PAR052",0.0))
+			var bonus:=float(attacker.combat_stats["par_totals"]["PAR052"])
 			var low:=float(source_range["min"])+bonus
 			var high:=float(source_range["max"])+bonus
 			payload["source_par"]=String(abi_source["source_par"])
@@ -294,9 +285,12 @@ func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary=
 	var weapon_indices:Array=by_weapon.keys()
 	weapon_indices.sort()
 	# Canonical PAR057 limits the ordinary MH/OH ABI001 sequence.
-	# Legacy and NPC combatants without a PAR snapshot retain their existing profiles.
-	if combatant.combat_stats.has("par_attack_count"):
-		var allowed_attacks:=clampi(int(combatant.combat_stats.get("par_attack_count", 1)), 1, 2)
+	# No basic attack may bypass the canonical contract.
+	if combatant.combat_stats.has("par_totals"):
+		var checked := ParAttackContract.validate(combatant)
+		if not bool(checked.ok):
+			return checked
+		var allowed_attacks := int(checked.count)
 		while weapon_indices.size()>allowed_attacks:
 			weapon_indices.pop_back()
 	for raw_weapon_index in weapon_indices:
@@ -343,8 +337,11 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 	var source:=state.get_combatant(source_id)
 	if source==null or source.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
-	if source.combat_stats.has("par_attack_count"):
-		var allowed:=clampi(int(source.combat_stats.get("par_attack_count",1)),1,2)
+	if source.combat_stats.has("par_totals"):
+		var contract := ParAttackContract.validate(source)
+		if not bool(contract.ok):
+			return contract
+		var allowed := int(contract.count)
 		if attacks.size()>allowed:
 			return {"ok":false,"reason":"par057_attack_limit","allowed_attacks":allowed}
 		var seen_weapons:Dictionary={}
@@ -366,7 +363,7 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 		var intent:=basic_attack_intent(source_id,String(request.get("attack_profile_id","basic")),int(request.get("weapon_index",-1)))
 		if not bool(intent.get("ok",false)):
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
-		if source.combat_stats.has("par_attack_ranges") and String(request.get("attack_profile_id","basic"))=="basic":
+		if String(request.get("attack_profile_id","basic"))=="basic":
 			var checked:Dictionary=_abi001_damage_source(source,Dictionary(intent.get("attack_profile",{})))
 			if not bool(checked.get("ok",false)):
 				push_error("ABI001 invariant violated: "+String(checked.get("reason","")))

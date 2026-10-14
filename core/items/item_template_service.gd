@@ -34,7 +34,7 @@ static func _valid_par_ids() -> Dictionary:
 static func resolve(instance: Dictionary) -> Dictionary:
 	var template_id := String(instance.get("template_id", ""))
 	if template_id.is_empty():
-		return instance.duplicate(true)
+		return instance.duplicate(true) if validate_parameters(instance) else {}
 	var templates := load_templates()
 	if not templates.has(template_id):
 		push_error("Item template not found: " + template_id)
@@ -57,4 +57,24 @@ static func resolve(instance: Dictionary) -> Dictionary:
 	for field in ["instance_id", "rarity", "quality", "quality_multiplier", "rolled_mods", "origin", "durability_max", "durability_current", "_durability_repair_progress", "owner_id"]:
 		if instance.has(field):
 			resolved[field] = instance[field]
-	return resolved
+	return resolved if validate_parameters(resolved) else {}
+
+static func validate_parameters(item: Dictionary) -> bool:
+	var definitions := _valid_par_ids()
+	for field in ["guaranteed_stats", "bonuses", "base_stats", "final_stats"]:
+		if not item.get(field, {}).is_empty():
+			push_error("Obsolete item parameter field: " + field)
+			return false
+	for field in ["par_stats", "par_bonuses", "requirements"]:
+		var values: Variant = item.get(field, {})
+		if not values is Dictionary:
+			push_error("Invalid item parameter dictionary: " + field)
+			return false
+		for key in values:
+			if not definitions.has(key) or not (values[key] is int or values[key] is float) or not is_finite(float(values[key])):
+				push_error("Invalid item parameter: " + field + "." + String(key))
+				return false
+			if field == "requirements" and not ParCalculationService.PRIMARY_IDS.has(key):
+				push_error("Equipment requirement must reference a primary PAR: " + String(key))
+				return false
+	return true

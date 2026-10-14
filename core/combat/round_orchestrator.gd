@@ -112,12 +112,14 @@ func _contest_definition_power(combatant_id:String,contest:Dictionary)->float:
 	var combatant:=state.get_combatant(combatant_id)
 	if combatant==null:
 		return 0.0
-	var stats:Array=Array(contest.get("stats",["STR","STA"]))
+	var stats:Array=Array(contest.get("stats",["PAR001","PAR006"]))
 	var power:=float(contest.get("flat_power",0.0))
 	for raw_stat in stats:
 		var stat:=String(raw_stat)
-		var fallback:float=float(combatant.stats.get("END",0.0)) if stat=="STA" else 0.0
-		power+=float(combatant.stats.get(stat,fallback))
+		if not combatant.stats.has(stat):
+			push_error("Movement contest missing mandatory parameter: " + stat)
+			return 0.0
+		power+=float(combatant.stats[stat])
 	return power*float(contest.get("multiplier",1.0))
 
 func _movement_contest_power(combatant_id:String,request:Dictionary)->float:

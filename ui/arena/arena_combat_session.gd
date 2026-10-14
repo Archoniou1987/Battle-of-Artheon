@@ -12,17 +12,14 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	state = CombatState.new()
 	var player := CharacterCombatBuilder.build(character, repository)
 	player_id = player.combatant_id
-	var enemy := CombatantState.new(ENEMY_ID, "Тренировочный противник", player.level, 100, 0)
-	# Enemy uses the same equipment adapter as the player.
-	EquipmentBuilder.equip(enemy, {
-		"id": "arena_enemy_sword", "instance_id": "arena_enemy_sword",
-		"slot": "main_hand", "item_type": "weapon",
-		"damage": {"min": 4.0, "max": 7.0, "type": "slashing"}
-	})
-	var enemy_ring := {"id": "arena_enemy_hp_ring", "instance_id": "arena_enemy_hp_ring", "item_type": "ring", "combat_stats": {"max_hp_flat": 1000}}
-	EquipmentBuilder.equip(enemy, enemy_ring)
-	enemy.max_hp += int(enemy_ring["combat_stats"]["max_hp_flat"])
-	enemy.hp = enemy.max_hp
+	var enemy_character := CharacterState.new(ENEMY_ID, "Тренировочный противник", player.level)
+	var enemy_repository := ItemRepository.new()
+	var sword := {"instance_id":"arena_enemy_sword", "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
+	ItemDurabilityService.initialize_item(sword, 100)
+	enemy_repository.add_item(sword)
+	enemy_character.receive_item("arena_enemy_sword", enemy_repository)
+	enemy_character.equip("main_hand", "arena_enemy_sword", enemy_repository)
+	var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":1100,"mana":0})
 	state.add_combatant(player)
 	state.add_combatant(enemy)
 	var group := GroupCombatState.new(state)

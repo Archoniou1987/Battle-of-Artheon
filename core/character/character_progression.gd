@@ -123,6 +123,8 @@ func restore(data: Dictionary) -> bool:
 	if restored_level == MAX_CONFIGURED_LEVEL and restored_xp != 0:
 		return false
 	var keys := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
+	if restored_stats.size() != keys.size():
+		return false
 	var total := restored_points
 	for key in keys:
 		if not restored_stats.has(key) or not _is_whole_number(restored_stats[key]) or int(restored_stats[key]) < 1:

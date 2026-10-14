@@ -87,7 +87,7 @@ var enemy_belt_capacity := 0
 var elixir_global_cooldown := 0
 const RATING_KEYS := ["crit_chance_rating", "anti_crit_rating", "dodge_rating", "anti_dodge_rating", "hit_chance_rating", "manual_block_rating", "shield_auto_block_rating", "block_penetration_rating", "armour_penetration_rating", "counterattack_rating"]
 const RATING_NAMES := {"crit_chance_rating":"Крит", "anti_crit_rating":"Антикрит", "dodge_rating":"Уворот", "anti_dodge_rating":"Антиуворот", "hit_chance_rating":"Точность", "manual_block_rating":"Ручной блок", "shield_auto_block_rating":"Автоблок", "block_penetration_rating":"Пробивание блока", "armour_penetration_rating":"Пробивание брони", "counterattack_rating":"Контрудар"}
-const PRIMARY_NAMES := {"STR":"Сила", "DEX":"Ловкость", "INTU":"Интуиция", "WIS":"Мудрость", "INT":"Интеллект", "END":"Выносливость"}
+const PRIMARY_NAMES := {"PAR001":"Сила", "PAR002":"Ловкость", "PAR003":"Интуиция", "PAR005":"Мудрость", "PAR004":"Интеллект", "PAR006":"Выносливость"}
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -501,7 +501,7 @@ func _show_equipment_details(is_player: bool, slot: String) -> void:
 	item_popup_text.pop()
 	item_popup_text.pop()
 	item_popup_text.add_text("\nУровень: %s   Слот: %s\n" % [str(item.get("item_level", "—")), slot])
-	for field in ["guaranteed_stats", "bonuses", "requirements"]:
+	for field in ["par_stats", "par_bonuses", "requirements"]:
 		var values: Variant = item.get(field, {})
 		if values is Dictionary and not values.is_empty():
 			item_popup_text.push_bold()

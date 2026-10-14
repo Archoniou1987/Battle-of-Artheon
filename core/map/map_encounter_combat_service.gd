@@ -27,6 +27,8 @@ static func begin(encounter:Dictionary,npc_repository:NpcRepository,player:Comba
 		if template==null:
 			return {"ok":false,"reason":"missing_npc_template","npc_instance_id":instance.instance_id}
 		var enemy:=NpcCombatBuilder.build(template)
+		if enemy == null:
+			return {"ok":false,"reason":"invalid_npc_par_contract","npc_instance_id":instance.instance_id}
 		enemy.combatant_id=instance.instance_id
 		enemy.display_name=instance.display_name
 		enemy.level=instance.level

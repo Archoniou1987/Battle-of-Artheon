@@ -16,7 +16,14 @@ static func all(combatant:CombatantState)->Array[Dictionary]:
 		for raw_profile in configured:
 			if not raw_profile is Dictionary:
 				continue
-			result.append(normalize(weapon,Dictionary(raw_profile),weapon_index))
+			var profile := normalize(weapon,Dictionary(raw_profile),weapon_index)
+			if String(profile.id) == "basic":
+				var resolved := ParAttackContract.resolve(combatant, profile)
+				if not bool(resolved.ok):
+					push_error("ABI001 invariant violated: " + String(resolved.reason))
+					return []
+				profile = resolved.profile
+			result.append(profile)
 	return result
 
 static func normalize(weapon:Dictionary,raw_profile:Dictionary,weapon_index:int)->Dictionary:
@@ -58,6 +65,7 @@ static func attack_payload(profile:Dictionary,rolls:Dictionary,zone:String="ches
 		"weapon_index":int(profile.get("weapon_index",0)),
 		"is_weapon_attack":true,
 		"attack_profile_id":String(profile.get("id","basic")),
+		"source_par":String(profile.get("source_par","")),
 		"ability_id":"ABI001" if String(profile.get("id","basic"))=="basic" else "",
 		"hit_index":int(overrides.get("hit_index",0)),
 		"hit_count":maxi(1,int(profile.get("hit_count",1))),

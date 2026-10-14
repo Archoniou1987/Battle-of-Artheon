@@ -27,52 +27,108 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 	if definitions.is_empty():
 		push_error("PAR registry unavailable")
 		return {}
-	var base := {"PAR073": 2.0}
+	var base := {"PAR073": 2.0, "PAR014": 5.0}
 	for index in range(PRIMARY_IDS.size()):
-		base[PRIMARY_IDS[index]] = float(character.progression.base_stats.get(PRIMARY_IDS[index], 0))
+		var primary_id: String = PRIMARY_IDS[index]
+		if not character.progression.base_stats.has(primary_id) or not (character.progression.base_stats[primary_id] is int or character.progression.base_stats[primary_id] is float) or not is_finite(float(character.progression.base_stats[primary_id])):
+			push_error("Missing mandatory primary parameter: " + primary_id)
+			return {}
+		base[primary_id] = float(character.progression.base_stats[primary_id])
+	for key in character.progression.base_stats:
+		if not PRIMARY_IDS.has(key):
+			push_error("Unexpected primary identifier: " + String(key))
+			return {}
 	var equipment := {}
 	var active_weapon_count := 0
 	var attack_ranges := {"PAR050": {}, "PAR051": {}}
-	if repository != null:
+	if repository == null:
+		for id in character.equipment.slots.values():
+			if id != null:
+				push_error("Equipped item requires a repository for canonical PAR calculation")
+				return {}
+	else:
+		for id in character.equipment.slots.values():
+			if id != null and repository.get_item(String(id)).is_empty():
+				push_error("Equipped item cannot be resolved: " + String(id))
+				return {}
 		var active := character.active_equipment_ids(repository)
 		for instance_id in active:
 			var item := repository.get_item(String(instance_id))
 			if item.is_empty():
-				continue
-			# Each active weapon contributes one attack; shields do not.
-			# Deduplicated active IDs prevent two-handed items counting twice.
+				push_error("PAR calculation: active item unavailable: " + String(instance_id))
+				return {}
 			var damage: Variant = item.get("damage", {})
 			if damage is Dictionary and not damage.is_empty():
 				active_weapon_count += 1
-				var target_par := "PAR051" if String(item.get("slot", "")) == "off_hand" else "PAR050"
-				attack_ranges[target_par] = {"min": float(damage.get("min", 0.0)), "max": float(damage.get("max", 0.0)), "type": String(damage.get("type", "blunt"))}
-			_accumulate(equipment, item.get("par_stats", {}), definitions)
-			_accumulate(equipment, item.get("par_bonuses", {}), definitions)
-	if attack_ranges["PAR050"].is_empty():
-		var fist_range := {"min": 2.0, "max": 4.0, "type": "blunt"}
-		if FileAccess.file_exists("res://data/combat/unarmed_attack.json"):
-			var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
-			if parsed is Dictionary:
-				var unarmed: Dictionary = parsed.get("unarmed", {})
-				fist_range = {"min": float(unarmed.get("min_damage", 2)), "max": float(unarmed.get("max_damage", 4)), "type": String(unarmed.get("damage_type", "blunt"))}
+				# Equipment owns placement; a template's preferred slot is not authoritative.
+				var in_main := str(character.equipment.get_equipped_instance_id("main_hand")) == String(instance_id)
+				var in_off := str(character.equipment.get_equipped_instance_id("off_hand")) == String(instance_id)
+				if not in_main and not in_off:
+					push_error("Weapon equipped outside a hand: " + String(instance_id))
+					return {}
+				var target_par := "PAR050" if in_main else "PAR051"
+				if not valid_damage_range(damage):
+					push_error("Invalid mandatory weapon range: " + target_par)
+					return {}
+				attack_ranges[target_par] = damage.duplicate(true)
+				if float(Dictionary(item.get("par_stats", {})).get("PAR057", 0)) != 1.0 or Dictionary(item.get("par_bonuses", {})).has("PAR057"):
+					push_error("Each equipped weapon must contribute exactly PAR057 = 1: " + String(instance_id))
+					return {}
+			elif Dictionary(item.get("par_stats", {})).has("PAR057") or Dictionary(item.get("par_bonuses", {})).has("PAR057"):
+				push_error("Non-weapon cannot contribute PAR057: " + String(instance_id))
+				return {}
+			if not _accumulate(equipment, item.get("par_stats", {}), definitions) or not _accumulate(equipment, item.get("par_bonuses", {}), definitions):
+				return {}
+			# Explicit structural armour data remains supported, accumulated once here.
+			for zone_index in range(EquipmentBuilder.HIT_ZONES.size()):
+				var zone: String = EquipmentBuilder.HIT_ZONES[zone_index]
+				var zone_ids := {"head":"PAR100", "chest":"PAR101", "arms":"PAR102", "waist":"PAR103", "legs":"PAR104"}
+				var armour := float(Dictionary(item.get("armour_by_zone", {})).get(zone, 0)) + float(item.get("armour_all_zones_all_physical", 0))
+				var armour_id: String = zone_ids[zone]
+				equipment[armour_id] = float(equipment.get(armour_id, 0)) + armour
+	if active_weapon_count == 0:
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
+		if not parsed is Dictionary or not parsed.get("unarmed") is Dictionary:
+			push_error("Missing mandatory unarmed attack configuration")
+			return {}
+		var unarmed: Dictionary = parsed["unarmed"]
+		if not unarmed.has("min_damage") or not unarmed.has("max_damage") or not unarmed.has("damage_type"):
+			push_error("Incomplete mandatory unarmed attack configuration")
+			return {}
+		var fist_range := {"min": unarmed["min_damage"], "max": unarmed["max_damage"], "type": unarmed["damage_type"]}
+		if not valid_damage_range(fist_range):
+			push_error("Invalid mandatory unarmed damage range")
+			return {}
 		attack_ranges["PAR050"] = fist_range
-	# Unarmed fallback counts as the sole main-hand attack.
-	# PAR057 is derived from active weapon count, not item bonuses.
+	elif attack_ranges["PAR050"].is_empty():
+		push_error("Weapon only in off hand: main-hand attack contract is undefined")
+		return {}
+	if talent_par.has("PAR057") or effect_par.has("PAR057"):
+		push_error("PAR057 is owned exclusively by equipped weapons/unarmed configuration")
+		return {}
 	base["PAR057"] = 1.0 if active_weapon_count == 0 else 0.0
 	# Primary-derived formulas live here; source_key resolves only exact PAR equivalents.
 	var derived := {}
 	var unmapped := {}
-	if FileAccess.file_exists(DERIVED_CONFIG_PATH):
-		var config: Variant = JSON.parse_string(FileAccess.get_file_as_string(DERIVED_CONFIG_PATH))
-		if config is Dictionary:
-			var formulas: Dictionary = config.get("effects", {})
-			for primary_id in formulas:
-				var modifiers: Variant = formulas[primary_id]
-				if not modifiers is Dictionary:
-					continue
-				var input_value := float(base.get(primary_id, 0.0)) + float(equipment.get(primary_id, 0.0)) + float(talent_par.get(primary_id, 0.0)) + float(effect_par.get(primary_id, 0.0))
-				for output_key in modifiers:
-					derived[output_key] = float(derived.get(output_key, 0.0)) + input_value * float(modifiers[output_key])
+	if not FileAccess.file_exists(DERIVED_CONFIG_PATH):
+		push_error("Missing mandatory PAR derivation config")
+		return {}
+	var config: Variant = JSON.parse_string(FileAccess.get_file_as_string(DERIVED_CONFIG_PATH))
+	if not config is Dictionary or not config.get("effects") is Dictionary:
+		push_error("Invalid mandatory PAR derivation config")
+		return {}
+	var formulas: Dictionary = config["effects"]
+	if formulas.size() != PRIMARY_IDS.size():
+		push_error("Incomplete primary PAR derivation config")
+		return {}
+	for primary_id in formulas:
+		var modifiers: Variant = formulas[primary_id]
+		if not PRIMARY_IDS.has(primary_id) or not modifiers is Dictionary:
+			push_error("Invalid primary PAR derivation identifier: " + String(primary_id))
+			return {}
+		var input_value := float(base[primary_id]) + float(equipment.get(primary_id, 0.0)) + float(talent_par.get(primary_id, 0.0)) + float(effect_par.get(primary_id, 0.0))
+		for output_key in modifiers:
+			derived[output_key] = float(derived.get(output_key, 0.0)) + input_value * float(modifiers[output_key])
 	var source_to_id := {}
 	for par_id in definitions:
 		var source_key := String(definitions[par_id].get("source_key", ""))
@@ -84,11 +140,9 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			base[target_id] = float(base.get(target_id, 0.0)) + float(derived[source_key])
 		else:
 			unmapped[source_key] = derived[source_key]
-	# Do not let arbitrary item bonuses duplicate the weapon-count rule.
-	if active_weapon_count > 0 and int(equipment.get("PAR057", 0)) != active_weapon_count:
-		push_error("Each equipped weapon must contribute PAR057 = 1")
-	if active_weapon_count < 2:
-		attack_ranges["PAR051"] = {}
+	var validated_overlay := {}
+	if not _accumulate(validated_overlay, talent_par, definitions) or not _accumulate(validated_overlay, effect_par, definitions):
+		return {}
 	var totals := {}
 	var breakdown := {}
 	for par_id in definitions:
@@ -102,12 +156,24 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 		totals[par_id] = parts["basic"] + parts["equipment"] + parts["talents"] + parts["effects"]
 	return {"totals": totals, "sources": breakdown, "attack_ranges": attack_ranges, "unmapped_derived": unmapped}
 
-static func _accumulate(target: Dictionary, incoming: Variant, definitions: Dictionary) -> void:
+static func _accumulate(target: Dictionary, incoming: Variant, definitions: Dictionary) -> bool:
 	if not incoming is Dictionary:
-		return
+		push_error("PAR contribution must be a dictionary")
+		return false
 	for raw_id in incoming:
 		var par_id := String(raw_id)
 		if not definitions.has(par_id):
-			push_warning("Unknown PAR ignored: " + par_id)
-			continue
+			push_error("Unknown locked PAR: " + par_id)
+			return false
+		if not (incoming[raw_id] is int or incoming[raw_id] is float) or not is_finite(float(incoming[raw_id])):
+			push_error("Invalid numeric PAR contribution: " + par_id)
+			return false
 		target[par_id] = float(target.get(par_id, 0)) + float(incoming[raw_id])
+	return true
+
+static func valid_damage_range(value: Variant) -> bool:
+	if not value is Dictionary or not value.has("min") or not value.has("max") or not value.has("type"):
+		return false
+	if not (value.min is int or value.min is float) or not (value.max is int or value.max is float):
+		return false
+	return is_finite(float(value.min)) and is_finite(float(value.max)) and float(value.min) >= 0 and float(value.max) >= float(value.min) and EquipmentBuilder.PHYSICAL_TYPES.has(String(value.type))

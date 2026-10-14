@@ -354,8 +354,8 @@ func _seed_inventory_preview() -> void:
 		["Старая руда", "grey", "material", []],
 		["Редкий самоцвет", "orange", "material", []],
 		["Потрёпанная карта", "grey", "quest", []],
-		["Кольцо титана (+25 STR)", "purple", "ring", ["ring1", "ring2"]],
-		["Молот испытания (STR 10)", "blue", "weapon", ["main_hand"]]
+		["Кольцо титана (+25 силы)", "purple", "ring", ["ring1", "ring2"]],
+		["Молот испытания (сила 10)", "blue", "weapon", ["main_hand"]]
 	]
 	for index in range(samples.size()):
 		var sample: Array = samples[index]
@@ -369,9 +369,9 @@ func _seed_inventory_preview() -> void:
 			# Temporary preview icon mapping; production templates will own stable icon_id.
 			"icon_id": "ICON_%04d" % ([0, 1, 14, 2, 16, 17, 18, 19, 24, 27, 40, 48, 50, 51, 29, 41, 56, 61, 63, 60, 52, 3][index] + 1),
 			"equip_slots": sample[3],
-			"requirements": {"STR": 10} if index == 21 else {},
-			"guaranteed_stats": {},
-			"bonuses": {"STR": 25} if index == 20 else {},
+			"requirements": {"PAR001": 10} if index == 21 else {},
+			"par_stats": {},
+			"par_bonuses": {"PAR001": 25} if index == 20 else {},
 			"description": "Тестовый предмет для проверки интерфейса. Не является частью игрового баланса."
 		}
 		ItemDurabilityService.initialize_item(item, 100)
@@ -401,8 +401,8 @@ func _load_saved_progression() -> void:
 	if int(raw.get("schema_version", 0)) != 1:
 		return
 	var data: Variant = raw.get("progression", {})
-	if data is Dictionary:
-		player_character.restore_progression(data)
+	if not data is Dictionary or not player_character.restore_progression(data):
+		push_error("Character progression save rejected: invalid canonical PAR schema")
 
 
 func _save_inventory() -> void:
@@ -457,6 +457,14 @@ func _load_saved_inventory() -> bool:
 		var item := loaded_repository.get_item(String(id))
 		var allowed: Array = item.get("equip_slots", [])
 		var usage: Array = item.get("slot_usage", [occupied[0]])
+		# The same alternate ring-slot contract used by EquipmentService applies on restore.
+		if occupied.size() == 1 and usage.size() == 1:
+			var target: String = occupied[0]
+			var opposite := "ring1" if target == "ring2" else "ring2"
+			if ["ring1", "ring2"].has(target) and allowed.has(opposite) and not allowed.has(target) and usage[0] == opposite:
+				allowed = allowed.duplicate()
+				allowed.append(target)
+				usage = [target]
 		if not allowed.has(occupied[0]) or usage.size() != occupied.size():
 			return false
 		for slot in usage:

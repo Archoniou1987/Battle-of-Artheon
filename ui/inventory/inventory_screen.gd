@@ -342,8 +342,7 @@ func _refresh_combat_stats() -> void:
 		hp_bar.value = 0
 		_set_hp_colour(0.0)
 		return
-	var base := {"stats": character.progression.base_stats.duplicate(true)}
-	var snapshot := CharacterCombatBuilder.build(character, repository, base)
+	var snapshot := CharacterCombatBuilder.build(character, repository)
 	hp_label.text = "HP %d/%d" % [snapshot.hp, snapshot.max_hp]
 	hp_bar.max_value = maxi(1, snapshot.max_hp)
 	hp_bar.value = snapshot.hp

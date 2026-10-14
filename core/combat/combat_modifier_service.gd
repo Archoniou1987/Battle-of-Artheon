@@ -76,6 +76,12 @@ static func damage_reduction(combatant: CombatantState, round_number: int) -> fl
 	return clampf(value(combatant, "damage_reduction", round_number), 0.0, 1.0)
 
 static func manual_block_zone_capacity(combatant: CombatantState) -> int:
+	if combatant.combat_stats.has("par_totals"):
+		var totals: Dictionary = combatant.combat_stats["par_totals"]
+		if not totals.has("PAR073"):
+			push_error("Missing mandatory PAR073")
+			return 0
+		return int(totals["PAR073"])
 	return clampi(int(combatant.combat_stats.get("manual_block_zone_capacity", 1)), 1, 3)
 
 static func manual_block_zones(combatant: CombatantState) -> Array:

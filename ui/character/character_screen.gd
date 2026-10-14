@@ -399,9 +399,9 @@ func _refresh_derived_sections() -> void:
 		return
 	# Only values already defined by CharacterCombatBuilder are displayed.
 	# Other combat formulas will be connected when their data contracts are finalized.
-	var stats := character.progression.base_stats
-	var hp := 100 + int(stats.get("PAR006", 0)) * 10
-	var mana := int(stats.get("PAR005", 0)) * 15
+	var totals: Dictionary = ParCalculationService.calculate(character, item_repository).get("totals", {})
+	var hp := 100 + int(totals["PAR010"])
+	var mana := 30 + int(totals["PAR011"])
 	_add_derived_row(combat_section, "Здоровье (база)", str(hp))
 	_add_derived_row(combat_section, "Мана (база)", str(mana))
 	_add_derived_row(combat_section, "Макс. очки действий (база)", "5")
