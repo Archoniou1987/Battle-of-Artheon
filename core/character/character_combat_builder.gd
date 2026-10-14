@@ -5,13 +5,16 @@ extends RefCounted
 static func build(character:CharacterState, repository:ItemRepository, base:Dictionary = {}) -> CombatantState:
 	# The canonical service owns primary and derived totals. EquipmentBuilder
 	# contributes runtime-only weapon profiles, armour, and on-hit triggers.
-	var primary := character.effective_stats(repository)
+	var par_snapshot := ParCalculationService.calculate(character, repository)
+	var primary: Dictionary = par_snapshot.get("totals", {})
 	var canonical := CharacterStatsService.combat_stats(character, repository)
 	var health := int(base.get("health", 100 + int(canonical.get("max_hp_flat", 0))))
 	var mana_pool := int(base.get("mana", 30 + int(canonical.get("max_mana_flat", 0))))
 	var combatant := CombatantState.new(character.character_id, character.display_name, character.progression.level, health, mana_pool)
 	combatant.stats = primary.duplicate(true)
 	combatant.combat_stats = base.get("combat_stats", {}).duplicate(true)
+	# Stable PAR snapshot for Duel/Pair and combat consumers; no legacy primary keys.
+	combatant.combat_stats["par_totals"] = primary.duplicate(true)
 	# One adjacent manual block zone is the baseline; shields add to it.
 	if not combatant.combat_stats.has("manual_block_zone_capacity"):
 		combatant.combat_stats["manual_block_zone_capacity"] = 1
