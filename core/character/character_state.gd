@@ -167,13 +167,14 @@ func effective_stats(repository: ItemRepository, excluded_id: String = "") -> Di
 	return result
 
 func _add_primary_bonuses(stats: Dictionary, item: Dictionary) -> void:
-	for field in ["guaranteed_stats", "bonuses"]:
+	# Only canonical PAR item bonuses participate in primary-stat requirements.
+	for field in ["par_stats", "par_bonuses"]:
 		var bonuses: Variant = item.get(field, {})
 		if not bonuses is Dictionary:
 			continue
-		for stat in progression.base_stats:
-			if bonuses.has(stat):
-				stats[stat] = int(stats[stat]) + int(bonuses[stat])
+		for par_id in progression.base_stats:
+			if bonuses.has(par_id):
+				stats[par_id] = int(stats[par_id]) + int(bonuses[par_id])
 
 func _requirements_match(item: Dictionary, stats: Dictionary) -> bool:
 	var requirements: Variant = item.get("requirements", {})
