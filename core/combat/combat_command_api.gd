@@ -214,6 +214,19 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 	return {"ok":true,"reason":"queued","event_id":event.event_id}
 
 
+func _abi001_damage_source(combatant:CombatantState,profile:Dictionary)->Dictionary:
+	var weapons:Array=combatant.combat_stats.get("weapon_profiles",[])
+	var index:=int(profile.get("weapon_index",-1))
+	if index<0 or index>=weapons.size():
+		return {"ok":false,"reason":"missing_abi001_weapon_profile"}
+	var source_par:="PAR051" if String(Dictionary(weapons[index]).get("slot",""))=="off_hand" else "PAR050"
+	var ranges:Dictionary=combatant.combat_stats.get("par_attack_ranges",{})
+	var damage_range:Dictionary=ranges.get(source_par,{})
+	if not damage_range.has("min") or not damage_range.has("max") or not damage_range.has("type"):
+		return {"ok":false,"reason":"missing_abi001_damage_source","source_par":source_par}
+	return {"ok":true,"source_par":source_par,"range":damage_range}
+
+
 func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
 	var zone_validation:=_validate_attack_roll_zones(rolls)
 	if not bool(zone_validation.get("ok",false)):
@@ -224,6 +237,13 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		return intent
 	var target_id:=String(intent.get("target_id",""))
 	var profile:Dictionary=intent.get("attack_profile",{})
+	var attacker:=state.get_combatant(source_id)
+	var abi_source:Dictionary={}
+	if String(profile.get("id","basic"))=="basic" and attacker!=null and attacker.combat_stats.has("par_attack_ranges"):
+		abi_source=_abi001_damage_source(attacker,profile)
+		if not bool(abi_source.get("ok",false)):
+			push_error("ABI001 invariant violated: "+String(abi_source.get("reason","")))
+			return abi_source
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	var event_ids:Array[int]=[]
 	# Every constituent hit of one Base Attack shares an AP group. AP is awarded
@@ -241,24 +261,16 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			"hit_index":hit_index,
 			"hit_count":hit_count
 		})
-		# ABI001 reads its damage range from the selected PAR source.
-		var attacker:=state.get_combatant(source_id)
-		if String(payload.get("ability_id",""))=="ABI001" and attacker!=null and attacker.combat_stats.has("par_attack_ranges"):
-			var weapons:Array=attacker.combat_stats.get("weapon_profiles",[])
-			var weapon_index:=int(profile.get("weapon_index",0))
-			var weapon_slot:=String(Dictionary(weapons[weapon_index]).get("slot","")) if weapon_index>=0 and weapon_index<weapons.size() else ""
-			var source_par:="PAR051" if weapon_slot=="off_hand" else "PAR050"
-			var ranges:Dictionary=attacker.combat_stats.get("par_attack_ranges",{})
-			var source_range:Dictionary=ranges.get(source_par,{})
-			if not source_range.is_empty():
-				var bonus:=float(Dictionary(attacker.combat_stats.get("par_totals",{})).get("PAR052",0.0))
-				var low:=float(source_range.get("min",0.0))+bonus
-				var high:=float(source_range.get("max",0.0))+bonus
-				payload["source_par"]=source_par
-				payload["damage_min"]=low
-				payload["damage_max"]=high
-				payload["damage_type"]=String(source_range.get("type","blunt"))
-				payload["raw_damage"]=CombatMath.roll_damage(low,high,damage_roll)
+		if not abi_source.is_empty():
+			var source_range:Dictionary=abi_source["range"]
+			var bonus:=float(Dictionary(attacker.combat_stats.get("par_totals",{})).get("PAR052",0.0))
+			var low:=float(source_range["min"])+bonus
+			var high:=float(source_range["max"])+bonus
+			payload["source_par"]=String(abi_source["source_par"])
+			payload["damage_min"]=low
+			payload["damage_max"]=high
+			payload["damage_type"]=String(source_range["type"])
+			payload["raw_damage"]=CombatMath.roll_damage(low,high,damage_roll)
 		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,payload)
 		state.queue_event(event)
 		event_ids.append(event.event_id)
@@ -354,6 +366,11 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 		var intent:=basic_attack_intent(source_id,String(request.get("attack_profile_id","basic")),int(request.get("weapon_index",-1)))
 		if not bool(intent.get("ok",false)):
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
+		if source.combat_stats.has("par_attack_ranges") and String(request.get("attack_profile_id","basic"))=="basic":
+			var checked:Dictionary=_abi001_damage_source(source,Dictionary(intent.get("attack_profile",{})))
+			if not bool(checked.get("ok",false)):
+				push_error("ABI001 invariant violated: "+String(checked.get("reason","")))
+				return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(checked.get("reason","")),"queued_event_ids":[]}
 	var sequence_event_ids:Array[int]=[]
 	var attack_results:Array[Dictionary]=[]
 	var ap_group_id:=state.next_event_id
