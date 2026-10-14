@@ -19,20 +19,17 @@ static func load_templates() -> Dictionary:
 				result[id] = entry
 	return result
 
-static func _par_keys() -> Dictionary:
-	var keys := {}
+static func _valid_par_ids() -> Dictionary:
+	var ids := {}
 	if not FileAccess.file_exists(PAR_PATH):
-		return keys
+		return ids
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(PAR_PATH))
 	if not raw is Dictionary or not bool(raw.get("locked", false)):
-		return keys
+		return ids
 	for entry in raw.get("parameters", []):
 		if entry is Dictionary:
-			var id := String(entry.get("id", ""))
-			var key := String(entry.get("source_key", ""))
-			if not id.is_empty() and not key.is_empty():
-				keys[id] = key
-	return keys
+			ids[String(entry.get("id", ""))] = true
+	return ids
 
 static func resolve(instance: Dictionary) -> Dictionary:
 	var template_id := String(instance.get("template_id", ""))
@@ -43,31 +40,21 @@ static func resolve(instance: Dictionary) -> Dictionary:
 		push_error("Item template not found: " + template_id)
 		return {}
 	var template: Dictionary = templates[template_id]
-	var keys := _par_keys()
-	var stats := {}
+	var valid_ids := _valid_par_ids()
 	var par_stats: Dictionary = template.get("par_stats", {})
 	for par_id in par_stats:
-		if not keys.has(par_id):
+		if not valid_ids.has(par_id):
 			push_error("Unknown locked PAR: " + String(par_id))
 			return {}
-		stats[String(keys[par_id])] = par_stats[par_id]
 	var resolved := template.duplicate(true)
 	resolved["id"] = template_id
 	resolved["template_id"] = template_id
-	resolved["guaranteed_stats"] = stats
+	resolved["par_stats"] = par_stats.duplicate(true)
 	resolved["requirements"] = template.get("requirements", {}).duplicate(true)
 	resolved["combat_stats"] = template.get("combat_stats", {}).duplicate(true)
-	resolved["bonuses"] = instance.get("bonuses", {}).duplicate(true)
+	resolved["par_bonuses"] = instance.get("par_bonuses", {}).duplicate(true)
 	# Keep only instance-owned data. Template-owned fields cannot be overridden.
 	for field in ["instance_id", "rarity", "quality", "quality_multiplier", "rolled_mods", "origin", "durability_max", "durability_current", "_durability_repair_progress", "owner_id"]:
 		if instance.has(field):
 			resolved[field] = instance[field]
-	if instance.has("rolled_mods"):
-		for mod in instance["rolled_mods"]:
-			if mod is Dictionary:
-				var key := String(mod.get("stat", ""))
-				if keys.has(key):
-					key = String(keys[key])
-				if not key.is_empty():
-					resolved["bonuses"][key] = float(resolved["bonuses"].get(key, 0)) + float(mod.get("value", 0))
 	return resolved
