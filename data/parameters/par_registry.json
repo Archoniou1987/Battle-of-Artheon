@@ -2,7 +2,7 @@
   "NOTICE": "LOCKED PAR REGISTRY. Existing parameter IDs, names, source keys, groups, meanings and values are FIXED. NEVER edit, delete, renumber or repurpose an existing entry. Only APPEND new PAR IDs after explicit approval. This file is the canonical registry for all future PAR000 migrations.",
   "schema_version": 1,
   "locked": true,
-  "source": "Project 25 / PAR — approved snapshot 2026-10-14",
+  "source": "Project 25 / PAR — approved snapshot 2026-10-14; explicit user-approved rating semantics 2026-10-14",
   "policy": {
     "existing_entries": "IMMUTABLE: do not change IDs, definitions, keys, groups, statuses, notes or values",
     "new_entries": "Append-only after explicit user approval; never reuse an existing ID",
@@ -197,11 +197,11 @@
     },
     {
       "id": "PAR035",
-      "name": "Критический урон, %",
-      "source_key": "crit_damage_pct",
+      "name": "Рейтинг критического урона",
+      "source_key": "crit_damage_rating",
       "group": "Попадание / Уворот / Крит",
       "status": "ПРЕДЛОЖЕНО",
-      "notes": "Модификатор к базовым 150%; уточнить additive/multiplicative | Прежний ID: PAR090"
+      "notes": "Числовой рейтинг; преобразование в дополнительный процент критического урона выполняет RatingMatrix по уровню персонажа."
     },
     {
       "id": "PAR050",
@@ -309,11 +309,11 @@
     },
     {
       "id": "PAR075",
-      "name": "Контратака",
-      "source_key": "counterattack",
+      "name": "Рейтинг контратаки",
+      "source_key": "counterattack_rating",
       "group": "Блок / Контратака",
       "status": "ПРЕДЛОЖЕНО",
-      "notes": "Номер требует подтверждения при миграции | Прежний ID: PAR026"
+      "notes": "Числовой рейтинг; RatingMatrix преобразует его в процент вероятности контратаки по уровню персонажа."
     },
     {
       "id": "PAR076",
@@ -613,11 +613,11 @@
     },
     {
       "id": "PAR150",
-      "name": "Общий плоский бонус магического урона",
-      "source_key": "magic_damage_flat",
+      "name": "Рейтинг магического урона",
+      "source_key": "magic_damage_rating",
       "group": "Магический урон / Пробивание",
       "status": "УТОЧНЕНИЕ ПРЕДЛОЖЕНО",
-      "notes": "Предлагаемое значение: +N к магическому damage packet любого элемента; базовый урон ABI/EFF задаётся эффектом. Нужна финальная фиксация области применения | Прежний ID: PAR028"
+      "notes": "Числовой рейтинг; RatingMatrix преобразует его в процент усиления магического урона всех школ. Не плоский урон и не отдельный damage packet."
     },
     {
       "id": "PAR151",
