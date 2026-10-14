@@ -48,6 +48,14 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				attack_ranges[target_par] = {"min": float(damage.get("min", 0.0)), "max": float(damage.get("max", 0.0)), "type": String(damage.get("type", "blunt"))}
 			_accumulate(equipment, item.get("par_stats", {}), definitions)
 			_accumulate(equipment, item.get("par_bonuses", {}), definitions)
+	if attack_ranges["PAR050"].is_empty():
+		var fist_range := {"min": 2.0, "max": 4.0, "type": "blunt"}
+		if FileAccess.file_exists("res://data/combat/unarmed_attack.json"):
+			var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
+			if parsed is Dictionary:
+				var unarmed: Dictionary = parsed.get("unarmed", {})
+				fist_range = {"min": float(unarmed.get("min_damage", 2)), "max": float(unarmed.get("max_damage", 4)), "type": String(unarmed.get("damage_type", "blunt"))}
+		attack_ranges["PAR050"] = fist_range
 	# Unarmed fallback counts as the sole main-hand attack.
 	# PAR057 is derived from active weapon count, not item bonuses.
 	base["PAR057"] = 1.0 if active_weapon_count == 0 else 0.0
