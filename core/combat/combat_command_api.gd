@@ -241,6 +241,21 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			"hit_index":hit_index,
 			"hit_count":hit_count
 		})
+		# ABI001 reads its damage range from the selected PAR source.
+		var attacker:=state.get_combatant(source_id)
+		if String(payload.get("ability_id",""))=="ABI001" and attacker!=null and attacker.combat_stats.has("par_attack_ranges"):
+			var source_par:="PAR051" if int(profile.get("weapon_index",0))==1 else "PAR050"
+			var ranges:Dictionary=attacker.combat_stats.get("par_attack_ranges",{})
+			var source_range:Dictionary=ranges.get(source_par,{})
+			if not source_range.is_empty():
+				var bonus:=float(Dictionary(attacker.combat_stats.get("par_totals",{})).get("PAR052",0.0))
+				var low:=float(source_range.get("min",0.0))+bonus
+				var high:=float(source_range.get("max",0.0))+bonus
+				payload["source_par"]=source_par
+				payload["damage_min"]=low
+				payload["damage_max"]=high
+				payload["damage_type"]=String(source_range.get("type","blunt"))
+				payload["raw_damage"]=CombatMath.roll_damage(low,high,damage_roll)
 		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,payload)
 		state.queue_event(event)
 		event_ids.append(event.event_id)
