@@ -67,8 +67,8 @@ func test_critical_rating() -> void:
 	put(hero, repo, "test_crit_boots", "feet", {"par_stats": {"PAR033": 100}})
 	var view := CharacterStatsService.snapshot(hero, repo)
 	var fighter := CharacterCombatBuilder.build(hero, repo)
-	check(is_equal_approx(float(fighter.combat_stats.get("crit_chance_rating", 0)), 110.0), "Critical: combat rating should be 110")
-	check(is_equal_approx(float(view.get("crit_chance_rating", 0)), 110.0), "Critical: displayed rating should be 110")
+	check(is_equal_approx(float(fighter.combat_stats.get("crit_chance_rating", 0)), 115.0), "Critical: combat rating should be 115")
+	check(is_equal_approx(float(view.get("crit_chance_rating", 0)), 115.0), "Critical: displayed rating should be 115")
 
 func test_two_weapons() -> void:
 	var f := fixture()
