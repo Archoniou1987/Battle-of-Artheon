@@ -166,10 +166,9 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 		if CombatDamagePayload.is_magic_damage_type(damage_type):
 			var caster := state.get_combatant(parent.source_id)
 			if caster != null:
-				var flat_bonus := CombatModifierService.effective_stat(caster, "magic_damage_flat", state.round_number)
 				var bonus_percent := CombatModifierService.effective_percent(caster, "magic_damage_rating", state.round_number)
 				# Magic damage rating and direct percentage bonuses use one overlay.
-				amount = maxf(0.0, amount + flat_bonus) * maxf(0.0, 1.0 + bonus_percent / 100.0)
+				amount = maxf(0.0, amount) * maxf(0.0, 1.0 + bonus_percent / 100.0)
 		amount *= scale
 		if delivery_type in ["MELEE", "PROJECTILE"]:
 			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, CombatDamagePayload.ability_attack_payload(parent, component, amount, scale), parent.event_id)
