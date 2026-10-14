@@ -2,28 +2,28 @@
   "version": 3,
   "notes": "All percentage-derived attributes on Attack/Defense/Magic tabs use level-scaled ratings. Other tab retains direct percentages. ABI/EFF direct percentage points are separate overlays, never stored as ratings.",
   "effects": {
-    "STR": {
+    "PAR001": {
       "physical_damage_flat": 1
     },
-    "DEX": {
+    "PAR002": {
       "dodge_rating": 5,
       "anti_dodge_rating": 5,
       "counterattack_rating": 5
     },
-    "INTU": {
+    "PAR003": {
       "crit_chance_rating": 5,
       "anti_crit_rating": 5,
       "crit_damage_rating": 5
     },
-    "INT": {
+    "PAR004": {
       "magic_hit_rating": 5,
       "magic_crit_rating": 5,
       "magic_damage_rating": 5
     },
-    "WIS": {
+    "PAR005": {
       "max_mana_flat": 10
     },
-    "END": {
+    "PAR006": {
       "max_hp_flat": 20
     }
   },
