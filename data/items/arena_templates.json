@@ -19,7 +19,8 @@
       "weapon_class": "sword",
       "par_stats": {
         "PAR033": 200,
-        "PAR031": 200
+        "PAR031": 200,
+        "PAR057": 1
       }
     },
     {
@@ -39,7 +40,8 @@
       "weapon_class": "dagger",
       "par_stats": {
         "PAR031": 200,
-        "PAR030": 500
+        "PAR030": 500,
+        "PAR057": 1
       }
     },
     {
@@ -85,13 +87,10 @@
       "icon_id": "ICON_0017",
       "par_stats": {
         "PAR070": 400,
-        "PAR073": 1
-      },
-      "armour_by_zone": {
-        "head": 200,
-        "chest": 200
-      },
-      "manual_block_zones_added": 1
+        "PAR073": 1,
+        "PAR100": 200,
+        "PAR101": 200
+      }
     }
   ]
 }
