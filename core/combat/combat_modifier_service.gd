@@ -108,20 +108,19 @@ static func abilities(combatant: CombatantState) -> Array:
 
 static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int) -> float:
 	var key := resist_type.to_lower()
-	if key.is_empty():
+	const ELEMENT_PAR := {"fire":"PAR191", "water":"PAR192", "air":"PAR193", "earth":"PAR194", "dark":"PAR195", "light":"PAR196"}
+	if not ELEMENT_PAR.has(key):
 		return 0.0
-	var canonical_key := key + "_resistance"
-	var legacy_pct_key := key + "_resistance_pct"
-	var raw := 0.0
-	if combatant.combat_stats.has(canonical_key):
-		raw = value(combatant, canonical_key, round_number)
-	elif combatant.combat_stats.has(legacy_pct_key):
-		raw = value(combatant, legacy_pct_key, round_number)
-	else:
-		raw = float(combatant.magic_resists.get(key, 0.0))
-	if raw > 1.0:
-		raw /= 100.0
-	return clampf(raw, 0.0, 1.0)
+	var totals: Variant = combatant.combat_stats.get("par_totals", {})
+	if not totals is Dictionary:
+		push_error("Magic resistance requires canonical PAR totals")
+		return 0.0
+	var rating := float(totals.get("PAR190", 0.0)) + float(totals.get(ELEMENT_PAR[key], 0.0))
+	var percent := RatingMatrix.to_percent(rating, combatant.level)
+	if not is_finite(percent):
+		push_error("Invalid magic resistance rating")
+		return 0.0
+	return clampf(percent / 100.0, 0.0, 1.0)
 
 ## The shared combat/UI read contract. A caller can request any derived stat
 ## without reimplementing the overlay. Raw ratings remain available separately.
