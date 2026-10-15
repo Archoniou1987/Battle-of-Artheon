@@ -298,7 +298,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var armour_penetration_percent:=CombatModifierService.armour_reduction_percent(attacker, state.round_number)
 	var effective_armour := maxf(0.0, base_armour * (1.0 - armour_penetration_percent))
 	var armour_percent := RatingMatrix.to_percent(effective_armour * 10.0, defender.level)
-	var penetration_percent := RatingMatrix.to_percent(maxf(0.0, armour_penetration_flat), attacker.level)
+	var penetration_percent := RatingMatrix.to_percent(maxf(0.0, armour_penetration_flat) * 10.0, attacker.level)
 	var reduction := clampf((armour_percent - penetration_percent) / 100.0, 0.0, 1.0)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
