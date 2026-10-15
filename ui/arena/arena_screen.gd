@@ -729,6 +729,7 @@ func _start_combat_session() -> void:
 	if character == null or repository == null:
 		return
 	combat_session = ArenaCombatSession.new(character, repository)
+	disclosed_enemy_equipment = combat_session.enemy_equipment_display.duplicate(true)
 	set_attack_count(combat_session.player_attack_count())
 	set_defense_capacity(CombatModifierService.manual_block_zone_capacity(combat_session.fighter(true)))
 	set_fighter_header(false, combat_session.fighter(false).display_name, combat_session.fighter(false).level)
