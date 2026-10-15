@@ -62,7 +62,7 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	for hit_index in range(hit_count):
 		var rolls:=_attack_rolls()
-		var damage_roll:=float(rolls.get("damage",rng.randf()))
+		var damage_roll:=float(rolls["damage"]) if rolls.has("damage") else rng.randf()
 		rolls["damage"]=damage_roll
 		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],{
 			"is_extra_attack":extra,
