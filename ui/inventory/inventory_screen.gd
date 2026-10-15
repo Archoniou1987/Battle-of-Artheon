@@ -31,7 +31,7 @@ var discard_ids: Dictionary = {}
 var generator_dialog: AcceptDialog
 var generator_template: OptionButton
 var generator_par: OptionButton
-var generator_amount: SpinBox
+var generator_amount: LineEdit
 var generator_added: Label
 var generator_status: Label
 var generator_bonuses: Dictionary = {}
@@ -560,10 +560,10 @@ func _build_item_generator() -> void:
 	generator_dialog = AcceptDialog.new()
 	generator_dialog.title = "Генератор предметов (тест)"
 	generator_dialog.ok_button_text = "Закрыть"
-	generator_dialog.min_size = Vector2i(330, 430)
+	generator_dialog.min_size = Vector2i(560, 650)
 	add_child(generator_dialog)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(310, 345)
+	scroll.custom_minimum_size = Vector2(520, 550)
 	generator_dialog.add_child(scroll)
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -578,12 +578,10 @@ func _build_item_generator() -> void:
 	content.add_child(par_heading)
 	generator_par = OptionButton.new()
 	content.add_child(generator_par)
-	generator_amount = SpinBox.new()
-	generator_amount.min_value = -100000
-	generator_amount.max_value = 100000
-	generator_amount.step = 1
-	generator_amount.value = 10
-	generator_amount.rounded = true
+	generator_amount = LineEdit.new()
+	generator_amount.text = "10"
+	generator_amount.placeholder_text = "Введите числовой бонус, например 30"
+	generator_amount.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	content.add_child(generator_amount)
 	var add_button := Button.new()
 	add_button.text = "Добавить PAR"
@@ -648,7 +646,14 @@ func _generator_add_par() -> void:
 	if generator_par.selected < 0:
 		return
 	var par_id := String(generator_par.get_selected_metadata())
-	var amount := int(generator_amount.value)
+	var entered := generator_amount.text.strip_edges()
+	if not entered.is_valid_int():
+		generator_status.text = "Введите целое число (например, 30 или -10)."
+		return
+	var amount := int(entered)
+	if amount < -100000 or amount > 100000:
+		generator_status.text = "Допустимый диапазон: -100000 ... 100000."
+		return
 	if amount == 0:
 		generator_status.text = "Укажите ненулевой бонус."
 		return
@@ -664,7 +669,8 @@ func _generator_update_summary() -> void:
 	var ids: Array = generator_bonuses.keys()
 	ids.sort()
 	for par_id in ids:
-		entries.append("%s: %+d" % [par_id, int(generator_bonuses[par_id])])
+		var par_name := String(Dictionary(ParCalculationService.registry().get(par_id, {})).get("name", par_id))
+		entries.append("%s — %s: %+d" % [par_id, par_name, int(generator_bonuses[par_id])])
 	generator_added.text = "Бонусы: " + (", ".join(entries) if not entries.is_empty() else "нет")
 
 
