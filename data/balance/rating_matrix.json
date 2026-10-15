@@ -3,7 +3,7 @@
   "reference_rating": 100,
   "minimum_level": 1,
   "maximum_level": 100,
-  "percent_at_level_1": 20,
-  "percent_at_level_100": 2.5,
+  "percent_at_level_1": 10,
+  "percent_at_level_100": 1,
   "interpolation": "linear"
 }
