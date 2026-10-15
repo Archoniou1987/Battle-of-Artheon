@@ -19,7 +19,17 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	enemy_repository.add_item(sword)
 	enemy_character.receive_item("arena_enemy_sword", enemy_repository)
 	enemy_character.equip("main_hand", "arena_enemy_sword", enemy_repository)
-	var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":1100,"mana":0})
+	for gear in [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield","slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet","slot":"head"}]:
+		var item: Dictionary = ItemTemplateService.resolve(gear)
+		if item.is_empty():
+			push_error("Arena enemy test equipment template missing: " + String(gear["template_id"]))
+			continue
+		ItemDurabilityService.initialize_item(item, 100)
+		enemy_repository.add_item(item)
+		enemy_character.receive_item(String(gear["instance_id"]), enemy_repository)
+		if not enemy_character.equip(String(gear["slot"]), String(gear["instance_id"]), enemy_repository):
+			push_error("Arena enemy failed to equip: " + String(gear["template_id"]))
+	var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":10000,"mana":0})
 	state.add_combatant(player)
 	state.add_combatant(enemy)
 	var group := GroupCombatState.new(state)
