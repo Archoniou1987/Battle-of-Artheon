@@ -177,4 +177,4 @@ static func valid_damage_range(value: Variant) -> bool:
 		return false
 	if not (value.min is int or value.min is float) or not (value.max is int or value.max is float):
 		return false
-	return is_finite(float(value.min)) and is_finite(float(value.max)) and float(value.min) >= 0 and float(value.max) >= float(value.min) and EquipmentBuilder.PHYSICAL_TYPES.has(String(value.type))
+	return is_finite(float(value.min)) and is_finite(float(value.max)) and float(value.min) >= 0 and float(value.max) >= float(value.min) and (EquipmentBuilder.PHYSICAL_TYPES.has(String(value.type)) or CombatDamagePayload.is_magic_damage_type(String(value.type)))
