@@ -205,6 +205,25 @@
       "par_stats": {
         "PAR191": 200
       }
+    },
+    {
+      "id": "audit_fire_staff_100",
+      "name": "Тестовый огненный посох 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "staff",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "fire"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
     }
   ]
 }
