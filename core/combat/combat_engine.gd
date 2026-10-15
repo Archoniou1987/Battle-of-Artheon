@@ -9,17 +9,20 @@ func attack_rolls() -> Dictionary:
 
 func complete_attack_rolls(provided: Dictionary) -> Dictionary:
 	var result := provided.duplicate(true)
-	var defaults := attack_rolls()
-	for key in defaults:
+	for key in ["hit", "magic_hit", "reaction", "dodge", "auto_block", "block_crush", "crit", "counterattack", "on_hit_effect", "manual_block_effect"]:
 		if not result.has(key):
-			result[key] = defaults[key]
+			result[key] = combat_rng.randi_range(1, 100)
+	if not result.has("damage"):
+		result["damage"] = combat_rng.randf()
 	var counter: Dictionary = Dictionary(result.get("counterattack_rolls", {})).duplicate(true)
-	var counter_defaults := attack_rolls()
-	for key in counter_defaults:
+	for key in ["hit", "magic_hit", "reaction", "dodge", "auto_block", "block_crush", "crit", "counterattack", "on_hit_effect", "manual_block_effect"]:
 		if not counter.has(key):
-			counter[key] = counter_defaults[key]
+			counter[key] = combat_rng.randi_range(1, 100)
+	if not counter.has("damage"):
+		counter["damage"] = combat_rng.randf()
 	result["counterattack_rolls"] = counter
 	return result
+
 var physical_balance: Dictionary
 var _balance_valid := true
 var _next_effect_stack_id: int = 1
