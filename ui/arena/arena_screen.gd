@@ -137,9 +137,13 @@ func _ready() -> void:
 	report_button.pressed.connect(_show_par_report)
 	header.add_child(report_button)
 	var level_button := Button.new()
-	level_button.text = "Уровни"
-	level_button.pressed.connect(func() -> void: level_settings_dialog.popup_centered())
+	level_button.text = "Уровень игрока"
+	level_button.pressed.connect(func() -> void: _open_level_settings(true))
 	header.add_child(level_button)
+	var dummy_level_button := Button.new()
+	dummy_level_button.text = "Уровень манекена"
+	dummy_level_button.pressed.connect(func() -> void: _open_level_settings(false))
+	header.add_child(dummy_level_button)
 	_build_level_settings()
 	par_report_dialog = AcceptDialog.new()
 	par_report_dialog.title = "PAR / Combat — 108 параметров"
@@ -200,6 +204,10 @@ func _ready() -> void:
 	_apply_layout()
 	refresh()
 	_start_combat_session()
+
+func _open_level_settings(is_player: bool) -> void:
+	level_settings_dialog.title = "Уровень игрока" if is_player else "Уровень манекена"
+	level_settings_dialog.popup_centered()
 
 func _build_level_settings() -> void:
 	level_settings_dialog = AcceptDialog.new()
