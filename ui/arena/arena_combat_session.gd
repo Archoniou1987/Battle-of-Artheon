@@ -7,6 +7,8 @@ var orchestrator: RoundOrchestrator
 var commands: CombatCommandApi
 var player_id: String
 const ENEMY_ID := "arena_training_enemy"
+# Preview-only loadout overrides selected in the inventory generator.
+static var training_dummy_items: Dictionary = {}
 
 func _init(character: CharacterState, repository: ItemRepository) -> void:
 	state = CombatState.new()
@@ -29,6 +31,19 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 		enemy_character.receive_item(String(gear["instance_id"]), enemy_repository)
 		if not enemy_character.equip(String(gear["slot"]), String(gear["instance_id"]), enemy_repository):
 			push_error("Arena enemy failed to equip: " + String(gear["template_id"]))
+	for slot in training_dummy_items:
+		var instance: Dictionary = Dictionary(training_dummy_items[slot]).duplicate(true)
+		var item: Dictionary = ItemTemplateService.resolve(instance)
+		if item.is_empty():
+			push_error("Invalid training dummy item for slot: " + String(slot))
+			continue
+		var old_id: Variant = enemy_character.equipment.get_equipped_instance_id(String(slot))
+		if old_id != null:
+			enemy_character.unequip(String(slot), enemy_repository)
+		ItemDurabilityService.initialize_item(instance, 100)
+		if enemy_repository.add_item(instance) and enemy_character.receive_item(String(instance["instance_id"]), enemy_repository):
+			if not enemy_character.equip(String(slot), String(instance["instance_id"]), enemy_repository):
+				push_error("Cannot equip training dummy item in: " + String(slot))
 	var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":10000,"mana":0})
 	state.add_combatant(player)
 	state.add_combatant(enemy)
