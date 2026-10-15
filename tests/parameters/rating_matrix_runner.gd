@@ -2,12 +2,12 @@ extends SceneTree
 
 func _initialize() -> void:
 	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(RatingMatrix.CONFIG_PATH))
-	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 1), 20.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 100), 2.5))
-	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 1), 50.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 100), 6.25))
-	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 50), 20.0 - 17.5 * 49.0 / 99.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(-100.0, 1), -20.0)) # No invented universal cap.
+	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 1), 10.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 100), 1.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 1), 25.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 100), 2.5))
+	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 50), 10.0 - 9.0 * 49.0 / 99.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(-100.0, 1), -10.0)) # No invented universal cap.
 	assert(RatingMatrix.to_percent(0, 100) == 0)
 	var old_print := Engine.print_error_messages
 	Engine.print_error_messages = false
