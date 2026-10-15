@@ -2,6 +2,24 @@ class_name CombatEngine
 extends RefCounted
 
 var state: CombatState
+var combat_rng := RandomNumberGenerator.new()
+
+func attack_rolls() -> Dictionary:
+	return {"hit": combat_rng.randi_range(1,100), "magic_hit": combat_rng.randi_range(1,100), "reaction": combat_rng.randi_range(1,100), "dodge": combat_rng.randi_range(1,100), "auto_block": combat_rng.randi_range(1,100), "block_crush": combat_rng.randi_range(1,100), "crit": combat_rng.randi_range(1,100), "counterattack": combat_rng.randi_range(1,100), "on_hit_effect": combat_rng.randi_range(1,100), "manual_block_effect": combat_rng.randi_range(1,100), "damage": combat_rng.randf()}
+
+func complete_attack_rolls(provided: Dictionary) -> Dictionary:
+	var result := provided.duplicate(true)
+	var defaults := attack_rolls()
+	for key in defaults:
+		if not result.has(key):
+			result[key] = defaults[key]
+	var counter: Dictionary = Dictionary(result.get("counterattack_rolls", {})).duplicate(true)
+	var counter_defaults := attack_rolls()
+	for key in counter_defaults:
+		if not counter.has(key):
+			counter[key] = counter_defaults[key]
+	result["counterattack_rolls"] = counter
+	return result
 var physical_balance: Dictionary
 var _balance_valid := true
 var _next_effect_stack_id: int = 1
@@ -429,7 +447,7 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 	if not CombatMath.roll_success(chance, int(rolls.get("counterattack", 100))): return
 	var weapon:=_counterattack_weapon_profile(defender)
 	if weapon.is_empty(): return
-	var counter_rolls:Dictionary=Dictionary(parent.payload.get("counterattack_rolls",{})).duplicate(true)
+	var counter_rolls:Dictionary=Dictionary(rolls.get("counterattack_rolls", parent.payload.get("counterattack_rolls",{}))).duplicate(true)
 	var damage_roll:=float(counter_rolls.get("damage",randf()))
 	counter_rolls["damage"]=damage_roll
 	var payload:=WeaponAttackProfile.attack_payload(weapon,counter_rolls,String(parent.payload.get("counterattack_zone","chest")),{
