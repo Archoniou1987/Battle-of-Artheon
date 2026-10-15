@@ -17,6 +17,26 @@ func _initialize()->void:
 	var simulator:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),7710)
 	simulator.max_rounds=10
 	var result:=simulator.run_duel(fighter.combatant_id,bandit.combatant_id)
+	var attack_outcomes:Dictionary={}
+	var attacks_by_source:Dictionary={}
+	for event in simulator.state.event_log:
+		if event.kind != CombatEvent.Kind.ATTACK:
+			continue
+		var outcome:=String(event.result.get("outcome","missing_outcome"))
+		attack_outcomes[outcome]=int(attack_outcomes.get(outcome,0))+1
+		attacks_by_source[event.source_id]=int(attacks_by_source.get(event.source_id,0))+1
+	print("DAGGER_COMBAT_DIAGNOSTICS="+JSON.stringify({
+		"rounds":result.get("rounds",-1),
+		"first_hp":result.get("first_hp",-1),
+		"second_hp":result.get("second_hp",-1),
+		"outcome":result.get("outcome",""),
+		"attack_outcomes":attack_outcomes,
+		"attacks_by_source":attacks_by_source,
+		"fighter_par":ParCombatContract.validate(fighter),
+		"bandit_par":ParCombatContract.validate(bandit),
+		"fighter_profiles":WeaponAttackProfile.all(fighter),
+		"bandit_profiles":WeaponAttackProfile.all(bandit)
+	}))
 	var service:=LootGroupService.new(7711)
 	var candidates:Array[Dictionary]=service.candidates(bandit.level,"normal",["BANDIT_DAGGER_TEST"],groups,templates,{})
 	var drops:Array[Dictionary]=[]
