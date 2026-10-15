@@ -17,6 +17,7 @@ func _initialize()->void:
 	var simulator:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),7710)
 	simulator.max_rounds=10
 	var result:=simulator.run_duel(fighter.combatant_id,bandit.combatant_id)
+	var attack_details:Array[Dictionary]=[]
 	var attack_outcomes:Dictionary={}
 	var attacks_by_source:Dictionary={}
 	for event in simulator.state.event_log:
@@ -25,12 +26,15 @@ func _initialize()->void:
 		var outcome:=String(event.result.get("outcome","missing_outcome"))
 		attack_outcomes[outcome]=int(attack_outcomes.get(outcome,0))+1
 		attacks_by_source[event.source_id]=int(attacks_by_source.get(event.source_id,0))+1
+		if event.source_id==fighter.combatant_id and attack_details.size()<10:
+			attack_details.append({"outcome":outcome,"hit_chance":event.result.get("hit_chance",-1),"hit_roll":event.result.get("hit_roll",-1),"weapon_skill_hit_penalty":event.result.get("weapon_skill_hit_penalty",-1),"damage":event.result.get("raw_damage",-1)})
 	print("DAGGER_COMBAT_DIAGNOSTICS="+JSON.stringify({
 		"rounds":result.get("rounds",-1),
 		"first_hp":result.get("first_hp",-1),
 		"second_hp":result.get("second_hp",-1),
 		"outcome":result.get("outcome",""),
 		"attack_outcomes":attack_outcomes,
+		"player_attacks":attack_details,
 		"attacks_by_source":attacks_by_source,
 		"fighter_par":ParCombatContract.validate(fighter),
 		"bandit_par":ParCombatContract.validate(bandit),
