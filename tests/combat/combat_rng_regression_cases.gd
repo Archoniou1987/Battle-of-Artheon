@@ -56,6 +56,7 @@ static func _counterattack_contract() -> bool:
 	var defender := TestFixtureLoader.new_combatant("rng_defender", "Defender", 10, 100)
 	state.add_combatant(attacker)
 	state.add_combatant(defender)
+	defender.combat_stats["counterattack_rating_percent"] = 100.0
 	TestFixtureLoader.set_weapon_profiles(defender, [{
 		"damage_min": 10.0, "damage_max": 10.0, "damage_type": "piercing",
 		"attack_profiles": [{"id": "basic", "delivery_type": "MELEE"}]
@@ -74,9 +75,8 @@ static func _counterattack_contract() -> bool:
 		push_error("Counterattack: more than one child event")
 		return false
 	if created == 0:
-		# Fixture may have zero counterattack chance; do not claim a positive test.
-		print("COUNTERATTACK_FIXTURE_NO_CHANCE")
-		return true
+		push_error("Counterattack: guaranteed chance did not create MH event")
+		return false
 	var child: CombatEvent = state.pending_events[0]
 	if not bool(child.payload.get("is_counterattack", false)) or bool(child.payload.get("generates_ap", true)):
 		return false
