@@ -81,11 +81,11 @@ func _run() -> void:
 	assert(screen.character.remove_item("ui_offhand_test"))
 	instance.item_repository.remove_item("ui_offhand_test")
 
-	# RatingMatrix v1: 100 rating = 20% at level 1, 2.5% at level 100.
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 1), 20.0))
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100), 2.5))
-	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30), 3.0 * (20.0 - 17.5 * 29.0 / 99.0)))
-	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0), 12.5))
+	# RatingMatrix v1: 100 rating = 10% at level 1, 1% at level 100.
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 1), 10.0))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100), 1.0))
+	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30), 3.0 * (10.0 - 9.0 * 29.0 / 99.0)))
+	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0), 0.0))
 	assert((screen.detail_values["PAR031"] as Label).text.contains("("))
 	assert((screen.detail_values["PAR033"] as Label).text.contains("%)"))
 
