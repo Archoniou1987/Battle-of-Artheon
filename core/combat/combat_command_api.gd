@@ -252,8 +252,8 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 	# by the engine to the first connected hit in that group, never more than once.
 	var ap_group_id:=int(rolls.get("ap_group_id",state.next_event_id))
 	for hit_index in range(hit_count):
-		var event_rolls:=_basic_attack_hit_rolls(rolls,hit_index)
-		var damage_roll:=float(event_rolls.get("damage",randf()))
+		var event_rolls:=orchestrator.engine.complete_attack_rolls(_basic_attack_hit_rolls(rolls,hit_index))
+		var damage_roll:=float(event_rolls["damage"])
 		event_rolls["damage"]=damage_roll
 		var payload:=WeaponAttackProfile.attack_payload(profile,event_rolls,String(event_rolls.get("zone",requested_zone)),{
 			# AP belongs to the whole Base Attack action. Any connected constituent
