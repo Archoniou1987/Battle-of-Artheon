@@ -30,6 +30,10 @@ func _initialize()->void:
 			attack_details.append({"outcome":outcome,"hit_chance":event.result.get("hit_chance",-1),"hit_roll":event.result.get("hit_roll",-1),"weapon_skill_hit_penalty":event.result.get("weapon_skill_hit_penalty",-1),"damage":event.result.get("raw_damage",-1)})
 	print("DAGGER_COMBAT_DIAGNOSTICS="+JSON.stringify({
 		"rounds":result.get("rounds",-1),
+		"fighter_level":fighter.level,
+		"bandit_level":bandit.level,
+		"base_hit":simulator.engine._hit_chance(fighter.level-bandit.level),
+		"fighter_hit_bonus":CombatModifierService.effective_percent(fighter,"hit_chance_rating",simulator.state.round_number),
 		"first_hp":result.get("first_hp",-1),
 		"second_hp":result.get("second_hp",-1),
 		"outcome":result.get("outcome",""),
