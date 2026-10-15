@@ -451,7 +451,7 @@ func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacke
 	var weapon:=_counterattack_weapon_profile(defender)
 	if weapon.is_empty(): return
 	var counter_rolls:Dictionary=Dictionary(rolls.get("counterattack_rolls", parent.payload.get("counterattack_rolls",{}))).duplicate(true)
-	var damage_roll:=float(counter_rolls.get("damage",randf()))
+	var damage_roll:=float(counter_rolls["damage"]) if counter_rolls.has("damage") else combat_rng.randf()
 	counter_rolls["damage"]=damage_roll
 	var payload:=WeaponAttackProfile.attack_payload(weapon,counter_rolls,String(parent.payload.get("counterattack_zone","chest")),{
 		"damage_multiplier":float(physical_balance.get("counterattack_damage_coefficient",0.8)),
