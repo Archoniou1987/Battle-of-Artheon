@@ -67,6 +67,11 @@ var ap_labels: Dictionary = {}
 var effects_rows: Dictionary = {}
 var selected_ability := ""
 var combat_session: ArenaCombatSession
+var test_player_level := 1
+var test_enemy_level := 1
+var level_settings_dialog: AcceptDialog
+var level_player_value: Label
+var level_enemy_value: Label
 var player_slots: Dictionary = {}
 var enemy_slots: Dictionary = {}
 var hp_label: Label
@@ -131,6 +136,11 @@ func _ready() -> void:
 	report_button.tooltip_text = "Снимок всех PAR персонажа и боевого участника"
 	report_button.pressed.connect(_show_par_report)
 	header.add_child(report_button)
+	var level_button := Button.new()
+	level_button.text = "Уровни"
+	level_button.pressed.connect(func() -> void: level_settings_dialog.popup_centered())
+	header.add_child(level_button)
+	_build_level_settings()
 	par_report_dialog = AcceptDialog.new()
 	par_report_dialog.title = "PAR / Combat — 108 параметров"
 	par_report_dialog.min_size = Vector2i(350, 540)
@@ -190,6 +200,58 @@ func _ready() -> void:
 	_apply_layout()
 	refresh()
 	_start_combat_session()
+
+func _build_level_settings() -> void:
+	level_settings_dialog = AcceptDialog.new()
+	level_settings_dialog.title = "Тестовые уровни Arena"
+	level_settings_dialog.min_size = Vector2i(340, 250)
+	add_child(level_settings_dialog)
+	var content := VBoxContainer.new()
+	level_settings_dialog.add_child(content)
+	for is_player in [true, false]:
+		var row := HBoxContainer.new()
+		content.add_child(row)
+		var name_label := Label.new()
+		name_label.text = "Игрок" if is_player else "Манекен"
+		name_label.custom_minimum_size.x = 100
+		row.add_child(name_label)
+		var minus := Button.new()
+		minus.text = "−10"
+		row.add_child(minus)
+		minus.pressed.connect(_change_test_level.bind(is_player, -10))
+		var minus_one := Button.new()
+		minus_one.text = "−1"
+		row.add_child(minus_one)
+		minus_one.pressed.connect(_change_test_level.bind(is_player, -1))
+		var value_label := Label.new()
+		value_label.text = "1"
+		value_label.custom_minimum_size.x = 34
+		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(value_label)
+		if is_player:
+			level_player_value = value_label
+		else:
+			level_enemy_value = value_label
+		for delta in [1, 10]:
+			var plus := Button.new()
+			plus.text = "+%d" % delta
+			row.add_child(plus)
+			plus.pressed.connect(_change_test_level.bind(is_player, delta))
+	var apply := Button.new()
+	apply.text = "Начать бой с выбранными уровнями"
+	apply.pressed.connect(func() -> void:
+		level_settings_dialog.hide()
+		_start_combat_session()
+	)
+	content.add_child(apply)
+
+func _change_test_level(is_player: bool, delta: int) -> void:
+	if is_player:
+		test_player_level = clampi(test_player_level + delta, 1, 100)
+		level_player_value.text = str(test_player_level)
+	else:
+		test_enemy_level = clampi(test_enemy_level + delta, 1, 100)
+		level_enemy_value.text = str(test_enemy_level)
 
 func _build_square() -> void:
 	arena_background = TextureRect.new()
@@ -730,6 +792,10 @@ func _start_combat_session() -> void:
 	if character == null or repository == null:
 		return
 	combat_session = ArenaCombatSession.new(character, repository)
+	# Test-only level override on combat snapshots; persistent character data is untouched.
+	combat_session.fighter(true).level = test_player_level
+	combat_session.fighter(false).level = test_enemy_level
+	set_fighter_header(true, combat_session.fighter(true).display_name, test_player_level)
 	disclosed_enemy_equipment = combat_session.enemy_equipment_display.duplicate(true)
 	set_attack_count(combat_session.player_attack_count())
 	set_defense_capacity(CombatModifierService.manual_block_zone_capacity(combat_session.fighter(true)))
