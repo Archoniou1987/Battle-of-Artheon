@@ -583,6 +583,23 @@ func _build_item_generator() -> void:
 	generator_amount.placeholder_text = "Введите числовой бонус, например 30"
 	generator_amount.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	content.add_child(generator_amount)
+	# Web/mobile fallback: HTML canvas keyboard focus is unreliable on some browsers.
+	# These buttons always allow numeric entry without the system keyboard.
+	var keypad := GridContainer.new()
+	keypad.columns = 3
+	keypad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(keypad)
+	for key_label in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "−", "0", "⌫"]:
+		var key_button := Button.new()
+		key_button.text = key_label
+		key_button.custom_minimum_size = Vector2(72, 42)
+		key_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		keypad.add_child(key_button)
+		key_button.pressed.connect(_generator_keypad_press.bind(key_label))
+	var reset_button := Button.new()
+	reset_button.text = "Очистить число"
+	reset_button.pressed.connect(func() -> void: generator_amount.text = "")
+	content.add_child(reset_button)
 	var add_button := Button.new()
 	add_button.text = "Добавить PAR"
 	add_button.pressed.connect(_generator_add_par)
@@ -640,6 +657,18 @@ func _open_item_generator() -> void:
 	_generator_update_summary()
 	generator_status.text = "" if not template_ids.is_empty() else "Шаблоны не найдены."
 	generator_dialog.popup_centered()
+
+
+func _generator_keypad_press(key_label: String) -> void:
+	var current := generator_amount.text
+	match key_label:
+		"⌫":
+			generator_amount.text = current.substr(0, maxi(0, current.length() - 1))
+		"−":
+			generator_amount.text = current.substr(1) if current.begins_with("-") else "-" + current
+		_:
+			if current.length() < 7:
+				generator_amount.text = current + key_label
 
 
 func _generator_add_par() -> void:
