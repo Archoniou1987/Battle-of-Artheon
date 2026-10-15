@@ -525,7 +525,8 @@ func _show_equipment_details(is_player: bool, slot: String) -> void:
 			item_popup_text.add_text("\n%s\n" % field)
 			item_popup_text.pop()
 			for key in values:
-				item_popup_text.add_text("%s: %s\n" % [str(key), str(values[key])])
+				var par_name := String(Dictionary(ParCalculationService.registry().get(str(key), {})).get("name", str(key)))
+				item_popup_text.add_text("%s — %s: %s\n" % [str(key), par_name, str(values[key])])
 	var description := String(item.get("description", ""))
 	if not description.is_empty():
 		item_popup_text.add_text("\n" + description)
