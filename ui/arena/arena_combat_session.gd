@@ -99,7 +99,7 @@ func _queue_attacks(id: String, targets: Array[String]) -> Dictionary:
 		var hits: Array[Dictionary] = []
 		for i in range(count):
 			var zone := targets[mini(offset + i, targets.size() - 1)] if not targets.is_empty() else "chest"
-			hits.append({"zone": zone})
+			hits.append({"zone": zone, "hit": randi_range(1, 100), "reaction": randi_range(1, 100), "dodge": randi_range(1, 100), "crit": randi_range(1, 100), "auto_block": randi_range(1, 100), "block_crush": randi_range(1, 100), "counterattack": randi_range(1, 100), "counterattack_rolls": {"hit": randi_range(1, 100), "magic_hit": randi_range(1, 100), "reaction": randi_range(1, 100), "dodge": randi_range(1, 100), "auto_block": randi_range(1, 100), "block_crush": randi_range(1, 100), "crit": randi_range(1, 100), "damage": randf()}, "damage": randf()})
 		offset += count
 		attack["rolls"] = {"zone": String(hits[0].get("zone", "chest")), "hits": hits}
 		attacks.append(attack)
