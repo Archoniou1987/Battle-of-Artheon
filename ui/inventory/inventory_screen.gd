@@ -355,6 +355,12 @@ func _refresh_combat_stats() -> void:
 		_set_hp_colour(0.0)
 		return
 	var snapshot := CharacterCombatBuilder.build(character, repository)
+	if snapshot == null:
+		hp_label.text = "HP —"
+		hp_bar.value = 0
+		_set_hp_colour(0.0)
+		push_error("Inventory combat stats unavailable: invalid character combat snapshot")
+		return
 	hp_label.text = "HP %d/%d" % [snapshot.hp, snapshot.max_hp]
 	hp_bar.max_value = maxi(1, snapshot.max_hp)
 	hp_bar.value = snapshot.hp
