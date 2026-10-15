@@ -601,6 +601,14 @@ func _build_item_generator() -> void:
 	enemy_button.text = "Надеть на противника (манекен)"
 	enemy_button.pressed.connect(_generator_equip_dummy)
 	content.add_child(enemy_button)
+	var clear_dummy_button := Button.new()
+	clear_dummy_button.text = "Снять всё с манекена"
+	clear_dummy_button.pressed.connect(func() -> void:
+		ArenaCombatSession.training_dummy_items.clear()
+		ArenaCombatSession.training_dummy_clear_defaults = true
+		generator_status.text = "Экипировка манекена очищена. Применится при следующем входе на арену."
+	)
+	content.add_child(clear_dummy_button)
 	generator_status = Label.new()
 	generator_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(generator_status)
