@@ -17,7 +17,7 @@ static func evaluate(rating: Variant, level: Variant, config: Variant) -> float:
 	if not config is Dictionary:
 		push_error("RatingMatrix: invalid configuration")
 		return NAN
-	var expected := {"version":1, "reference_rating":100, "minimum_level":1, "maximum_level":100, "percent_at_level_1":20, "percent_at_level_100":2.5}
+	var expected := {"version":1, "reference_rating":100, "minimum_level":1, "maximum_level":100, "percent_at_level_1":10, "percent_at_level_100":1}
 	for key in expected:
 		if not config.has(key) or not _number(config[key]) or float(config[key]) != float(expected[key]):
 			push_error("RatingMatrix: invalid v1 configuration: " + key)
@@ -26,7 +26,7 @@ static func evaluate(rating: Variant, level: Variant, config: Variant) -> float:
 		push_error("RatingMatrix: unsupported interpolation")
 		return NAN
 	var fraction := (float(level) - 1.0) / 99.0
-	return float(rating) / 100.0 * lerpf(20.0, 2.5, fraction)
+	return float(rating) / 100.0 * lerpf(10.0, 1.0, fraction)
 
 static func _number(value: Variant) -> bool:
 	return (value is int or value is float) and is_finite(float(value))
