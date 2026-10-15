@@ -85,7 +85,7 @@ func _run() -> void:
 	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 1), 10.0))
 	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(100.0, 100), 1.0))
 	assert(is_equal_approx(PrimaryStatEffects.rating_to_percent(300.0, 30), 3.0 * (10.0 - 9.0 * 29.0 / 99.0)))
-	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0), 0.0))
+	assert(is_equal_approx(PrimaryStatEffects.effective_chance(300.0, 100, 5.0), 8.0))
 	assert((screen.detail_values["PAR031"] as Label).text.contains("("))
 	assert((screen.detail_values["PAR033"] as Label).text.contains("%)"))
 
