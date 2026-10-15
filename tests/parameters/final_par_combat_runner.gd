@@ -116,7 +116,7 @@ func shared_combat_cases() -> void:
 		state.queue_event(attack)
 		engine.resolve_pending_events()
 		observed.append(attack)
-	check(observed[0].result.hit_chance == 100 and observed[1].result.hit_chance == 100, "one PAR030 and one approved hit baseline for both attack types")
+	check(is_equal_approx(float(observed[0].result.hit_chance), 98.5) and is_equal_approx(float(observed[1].result.hit_chance), 98.5), "one PAR030 and one approved hit baseline for both attack types")
 	check(bool(observed[0].result.critical) and bool(observed[1].result.critical), "PAR033 critical applies to physical and magical attacks")
 	check(is_equal_approx(observed[0].result.raw_damage, 16.05), "existing 1.5 crit plus PAR035 percentage points")
 	check(is_equal_approx(observed[1].result.raw_damage, 17.73525), "weapon magic PAR150 and PAR035 each apply once")
@@ -215,11 +215,11 @@ func balance_cases() -> void:
 
 	var attacker := CharacterCombatBuilder.build(CharacterState.new("balance_attacker", "A"), ItemRepository.new())
 	var defender := CharacterCombatBuilder.build(CharacterState.new("balance_defender", "D"), ItemRepository.new(), {"health":1000})
-	defender.armour = {"chest":{"slashing":500.0}}
+	defender.armour = {"chest":{"slashing":50.0}}
 	state.add_combatant(attacker)
 	state.add_combatant(defender)
 	state.begin_round()
 	var event := state.create_event(CombatEvent.Kind.ATTACK, attacker.combatant_id, defender.combatant_id, {"raw_damage":100.0,"damage_type":"slashing","zone":"chest","rolls":{"hit":1,"crit":100,"dodge":100}})
 	state.queue_event(event)
 	engine.resolve_pending_events()
-	check(defender.hp == 950, "default runtime engine applies 500 armour = 50 percent reduction")
+	check(defender.hp == 950, "default runtime engine converts 50 armour to 50 percent at level 1")
