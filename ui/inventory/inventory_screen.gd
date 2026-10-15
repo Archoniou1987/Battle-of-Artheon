@@ -597,6 +597,10 @@ func _build_item_generator() -> void:
 	create_button.text = "Создать в сумке"
 	create_button.pressed.connect(_generator_create)
 	content.add_child(create_button)
+	var enemy_button := Button.new()
+	enemy_button.text = "Надеть на противника (манекен)"
+	enemy_button.pressed.connect(_generator_equip_dummy)
+	content.add_child(enemy_button)
 	generator_status = Label.new()
 	generator_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(generator_status)
@@ -679,3 +683,32 @@ func _generator_create() -> void:
 		return
 	refresh()
 	generator_status.text = "Создан: %s. Предмет в сумке." % String(Dictionary(templates[template_id]).get("name", template_id))
+
+
+# Preview-only: keep the generated test item in the training dummy loadout.
+func _generator_equip_dummy() -> void:
+	if generator_template.selected < 0:
+		generator_status.text = "Выберите шаблон предмета."
+		return
+	var template_id := String(generator_template.get_selected_metadata())
+	var templates := ItemTemplateService.load_templates()
+	if not templates.has(template_id):
+		generator_status.text = "Шаблон не найден."
+		return
+	var template: Dictionary = templates[template_id]
+	var slots: Array = template.get("equip_slots", [])
+	if slots.is_empty():
+		generator_status.text = "Предмет нельзя экипировать."
+		return
+	var slot := String(slots[0])
+	var instance := {
+		"instance_id": "dummy_%s_%s" % [template_id, str(Time.get_ticks_usec())],
+		"template_id": template_id,
+		"origin": "preview_dummy_generator",
+		"par_bonuses": generator_bonuses.duplicate(true)
+	}
+	if ItemTemplateService.resolve(instance).is_empty():
+		generator_status.text = "Предмет не прошёл проверку шаблона/PAR."
+		return
+	ArenaCombatSession.training_dummy_items[slot] = instance.duplicate(true)
+	generator_status.text = "Манекен: %s → %s. Вступит в силу при следующем входе на арену." % [String(template.get("name", template_id)), String(SLOT_NAMES.get(slot, slot))]
