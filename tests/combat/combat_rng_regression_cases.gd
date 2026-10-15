@@ -32,7 +32,6 @@ static func run() -> bool:
 	var d := CombatEngine.new(CombatState.new())
 	c.combat_rng.seed = 999
 	d.combat_rng.seed = 999
-	var expected := d.combat_rng.randi_range(1, 100)
 	var all_fixed := d.complete_attack_rolls({
 		"hit": 1, "magic_hit": 1, "reaction": 1, "dodge": 1,
 		"auto_block": 1, "block_crush": 1, "crit": 1, "counterattack": 1,
