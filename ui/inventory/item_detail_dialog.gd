@@ -163,7 +163,7 @@ const STAT_NAMES := {
 func _stat_label(key: String) -> String:
 	var definitions := ParCalculationService.registry()
 	if definitions.has(key):
-		return String(definitions[key]["name"])
+		return "%s — %s" % [key, String(definitions[key]["name"]) ]
 	return String(STAT_NAMES.get(key, key.replace("_", " ")))
 
 func _add_separator() -> void:
