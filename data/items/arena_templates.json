@@ -102,6 +102,109 @@
       ],
       "icon_id": "ICON_0051",
       "par_stats": {}
+    },
+    {
+      "id": "audit_axe_100",
+      "name": "Тестовый топор 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "axe",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "chopping"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_sword_100",
+      "name": "Тестовый меч 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "sword",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "slashing"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_dagger_100",
+      "name": "Тестовый кинжал 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "dagger",
+      "icon_id": "ICON_0015",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "piercing"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_hammer_100",
+      "name": "Тестовый молот 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "hammer",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "blunt"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_enemy_shield",
+      "name": "Щит проверки зональной брони",
+      "type": "shield",
+      "equip_slots": [
+        "off_hand"
+      ],
+      "icon_id": "ICON_0017",
+      "par_stats": {
+        "PAR105": 200,
+        "PAR111": 200,
+        "PAR120": 200,
+        "PAR122": 200
+      }
+    },
+    {
+      "id": "audit_enemy_fire_helmet",
+      "name": "Шлем проверки огненного сопротивления",
+      "type": "helmet",
+      "equip_slots": [
+        "head"
+      ],
+      "icon_id": "ICON_0002",
+      "par_stats": {
+        "PAR191": 200
+      }
     }
   ]
 }
