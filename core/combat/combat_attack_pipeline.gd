@@ -5,10 +5,14 @@ const HIT_ZONES := ["head", "chest", "arms", "waist", "legs"]
 var state:CombatState
 var ability_scheduler:AbilityScheduler
 var rng:=RandomNumberGenerator.new()
+var combat_engine: CombatEngine
 
-func _init(combat_state:CombatState,seed_value:int=1)->void:
+func _init(combat_state:CombatState,seed_value:int=1,p_engine:CombatEngine=null)->void:
 	state=combat_state
+	combat_engine=p_engine
 	rng.seed=seed_value
+	if combat_engine!=null:
+		combat_engine.combat_rng.seed=seed_value
 	ability_scheduler=AbilityScheduler.new(AbilityCatalog.load_json("res://data/test/abilities.json"),AbilityCatalog.load_json("res://data/test/ability_loadouts.json"))
 
 func regenerate_mana()->void:
@@ -58,7 +62,7 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	for hit_index in range(hit_count):
 		var rolls:=_attack_rolls()
-		var damage_roll:=rng.randf()
+		var damage_roll:=float(rolls.get("damage",rng.randf()))
 		rolls["damage"]=damage_roll
 		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],{
 			"is_extra_attack":extra,
@@ -93,6 +97,8 @@ func _tempo_allows_attack(tempo:float)->bool:
 	if tempo>=0.0:return true
 	return CombatMath.roll_success(100.0+tempo,_roll())
 func _attack_rolls()->Dictionary:
+	if combat_engine!=null:
+		return combat_engine.complete_attack_rolls({})
 	return {"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"counterattack":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll(),"counterattack_rolls":{"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll()}}
 func _roll()->int:return rng.randi_range(1,100)
 func _both_alive(first_id:String,second_id:String)->bool:return not state.get_combatant(first_id).is_death_finalized() and not state.get_combatant(second_id).is_death_finalized()
