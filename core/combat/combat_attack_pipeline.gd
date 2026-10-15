@@ -13,6 +13,7 @@ func _init(combat_state:CombatState,seed_value:int=1,p_engine:CombatEngine=null)
 	rng.seed=seed_value
 	if combat_engine!=null:
 		combat_engine.combat_rng.seed=seed_value
+		rng=combat_engine.combat_rng
 	ability_scheduler=AbilityScheduler.new(AbilityCatalog.load_json("res://data/test/abilities.json"),AbilityCatalog.load_json("res://data/test/ability_loadouts.json"))
 
 func regenerate_mana()->void:
