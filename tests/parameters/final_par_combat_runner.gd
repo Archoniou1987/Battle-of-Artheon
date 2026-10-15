@@ -92,17 +92,17 @@ func shared_combat_cases() -> void:
 	put(hero, repo, "rating_ring", "ring1", {"combat_stats":{"hit_chance_direct_pct":2},"par_stats":{"PAR030":10,"PAR033":500,"PAR035":100,"PAR075":100,"PAR150":100}})
 	var fighter := CharacterCombatBuilder.build(hero, repo)
 	var view := CharacterStatsService.snapshot(hero, repo)
-	check(view.hit_chance_rating == 15 and is_equal_approx(view.hit_chance_rating_percent, 5), "primary and equipment hit sum before matrix")
-	check(view.crit_damage_rating == 105 and is_equal_approx(view.crit_damage_rating_percent, 21), "PAR035 is a rating")
-	check(view.counterattack_rating == 105 and is_equal_approx(view.counterattack_rating_percent, 21), "PAR075 is a rating, never direct percent")
-	check(view.magic_damage_rating == 105 and is_equal_approx(view.magic_damage_rating_percent, 21), "PAR150 is a rating")
+	check(view.hit_chance_rating == 15 and is_equal_approx(view.hit_chance_rating_percent, 3.5), "primary and equipment hit sum before matrix")
+	check(view.crit_damage_rating == 105 and is_equal_approx(view.crit_damage_rating_percent, 10.5), "PAR035 is a rating")
+	check(view.counterattack_rating == 105 and is_equal_approx(view.counterattack_rating_percent, 10.5), "PAR075 is a rating, never direct percent")
+	check(view.magic_damage_rating == 105 and is_equal_approx(view.magic_damage_rating_percent, 10.5), "PAR150 is a rating")
 	var old_errors := Engine.print_error_messages
 	Engine.print_error_messages = false
 	for invalid in ["bad", null, NAN, INF]:
 		check(CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":invalid}).is_empty(), "reject invalid snapshot overlay before coercion")
 	Engine.print_error_messages = old_errors
 	var direct := CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":7})
-	check(is_equal_approx(direct.magic_damage_rating_percent, 28), "direct percentage is added after conversion")
+	check(is_equal_approx(direct.magic_damage_rating_percent, 17.5), "direct percentage is added after conversion")
 	var target := CharacterCombatBuilder.build(CharacterState.new("target", "Target"), ItemRepository.new(), {"health":2000})
 	var state := CombatState.new()
 	state.add_combatant(fighter)
@@ -118,8 +118,8 @@ func shared_combat_cases() -> void:
 		observed.append(attack)
 	check(observed[0].result.hit_chance == 100 and observed[1].result.hit_chance == 100, "one PAR030 and one approved hit baseline for both attack types")
 	check(bool(observed[0].result.critical) and bool(observed[1].result.critical), "PAR033 critical applies to physical and magical attacks")
-	check(is_equal_approx(observed[0].result.raw_damage, 17.1), "existing 1.5 crit plus PAR035 percentage points")
-	check(is_equal_approx(observed[1].result.raw_damage, 20.691), "weapon magic PAR150 and PAR035 each apply once")
+	check(is_equal_approx(observed[0].result.raw_damage, 16.05), "existing 1.5 crit plus PAR035 percentage points")
+	check(is_equal_approx(observed[1].result.raw_damage, 17.73525), "weapon magic PAR150 and PAR035 each apply once")
 	var action := AbilityRuntime.build_action_event(state, "caster", "target", "AUDIT_PROJECTILE", {"delivery_type":"PROJECTILE","uses_magic_hit":true,"magic_hit_roll":1,"rolls":{"crit":1},"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]})
 	state.queue_event(action)
 	engine.resolve_pending_events()
@@ -130,7 +130,7 @@ func shared_combat_cases() -> void:
 	check(child != null, "ABI projectile creates an attack")
 	if child != null:
 		check(bool(child.payload.uses_magic_hit) and bool(child.payload.hit_already_resolved), "ABI preserves magic routing and does not reroll hit")
-		check(is_equal_approx(child.result.raw_damage, 20.691), "ABI magic percent is not applied twice")
+		check(is_equal_approx(child.result.raw_damage, 17.73525), "ABI magic percent is not applied twice")
 	var zero := engine._make_action_component_event(action, {"kind":"damage","amount":0,"damage_type":"fire"}, "target", 1)
 	check(zero.payload.raw_damage == 0, "PAR150 never creates flat damage from zero")
 	var group := GroupCombatState.new(state)
@@ -178,14 +178,14 @@ func npc_level_cases() -> void:
 	for id in ParCombatContract.RATINGS:
 		totals[id] = 100
 	var npc := NpcState.new({"id":"audit_npc","name":"NPC","level":1,"base":{"health":100,"mana":0,"par_totals":totals,"par_attack_ranges":{"PAR050":{"min":2,"max":4,"type":"blunt"}},"combat_stats":{"weapon_profiles":[{"slot":"main_hand","damage_min":2,"damage_max":4,"damage_type":"blunt"}]}}})
-	check(is_equal_approx(NpcCombatBuilder.build(npc).combat_stats.crit_chance_rating_percent, 20), "NPC template-level rating")
+	check(is_equal_approx(NpcCombatBuilder.build(npc).combat_stats.crit_chance_rating_percent, 10), "NPC template-level rating")
 	var repo := NpcRepository.new()
 	repo.add(npc)
 	var instance := NpcInstance.new("audit_npc_instance", npc)
 	instance.level = 100
 	var player := CharacterCombatBuilder.build(CharacterState.new("npc_test_player", "Player"), ItemRepository.new())
 	var session := MapEncounterCombatService.begin({"ok":true,"npcs":[instance]}, repo, player)
-	check(bool(session.ok) and session.enemy.level == 100 and is_equal_approx(session.enemy.combat_stats.crit_chance_rating_percent, 2.5), "NPC instance level owns its RatingMatrix conversion")
+	check(bool(session.ok) and session.enemy.level == 100 and is_equal_approx(session.enemy.combat_stats.crit_chance_rating_percent, 1), "NPC instance level owns its RatingMatrix conversion")
 
 func stun_cases() -> void:
 	var hero := CharacterState.new("stunned", "Stunned")
