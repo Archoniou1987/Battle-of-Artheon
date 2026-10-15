@@ -9,6 +9,8 @@ var player_id: String
 const ENEMY_ID := "arena_training_enemy"
 # Preview-only loadout overrides selected in the inventory generator.
 static var training_dummy_items: Dictionary = {}
+static var training_dummy_clear_defaults := false
+var enemy_equipment_display: Dictionary = {}
 
 func _init(character: CharacterState, repository: ItemRepository) -> void:
 	state = CombatState.new()
@@ -21,7 +23,8 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	enemy_repository.add_item(sword)
 	enemy_character.receive_item("arena_enemy_sword", enemy_repository)
 	enemy_character.equip("main_hand", "arena_enemy_sword", enemy_repository)
-	for gear in [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield","slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet","slot":"head"}]:
+	var default_gear: Array = [] if training_dummy_clear_defaults else [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield","slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet","slot":"head"}]
+	for gear in default_gear:
 		var item: Dictionary = ItemTemplateService.resolve(gear)
 		if item.is_empty():
 			push_error("Arena enemy test equipment template missing: " + String(gear["template_id"]))
@@ -44,6 +47,10 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 		if enemy_repository.add_item(instance) and enemy_character.receive_item(String(instance["instance_id"]), enemy_repository):
 			if not enemy_character.equip(String(slot), String(instance["instance_id"]), enemy_repository):
 				push_error("Cannot equip training dummy item in: " + String(slot))
+	for slot in enemy_character.equipment.slots:
+		var equipped_id: Variant = enemy_character.equipment.get_equipped_instance_id(String(slot))
+		if equipped_id != null:
+			enemy_equipment_display[String(slot)] = ItemTemplateService.resolve(enemy_repository.get_item(String(equipped_id)))
 	var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":10000,"mana":0})
 	state.add_combatant(player)
 	state.add_combatant(enemy)
