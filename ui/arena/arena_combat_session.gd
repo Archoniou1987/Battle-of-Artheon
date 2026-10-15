@@ -18,11 +18,12 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	player_id = player.combatant_id
 	var enemy_character := CharacterState.new(ENEMY_ID, "Тренировочный противник", player.level)
 	var enemy_repository := ItemRepository.new()
-	var sword := {"instance_id":"arena_enemy_sword", "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
-	ItemDurabilityService.initialize_item(sword, 100)
-	enemy_repository.add_item(sword)
-	enemy_character.receive_item("arena_enemy_sword", enemy_repository)
-	enemy_character.equip("main_hand", "arena_enemy_sword", enemy_repository)
+	if not training_dummy_clear_defaults:
+		var sword := {"instance_id":"arena_enemy_sword", "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
+		ItemDurabilityService.initialize_item(sword, 100)
+		enemy_repository.add_item(sword)
+		enemy_character.receive_item("arena_enemy_sword", enemy_repository)
+		enemy_character.equip("main_hand", "arena_enemy_sword", enemy_repository)
 	var default_gear: Array = [] if training_dummy_clear_defaults else [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield","slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet","slot":"head"}]
 	for gear in default_gear:
 		var item: Dictionary = ItemTemplateService.resolve(gear)
