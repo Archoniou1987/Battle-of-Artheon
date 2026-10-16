@@ -40,7 +40,8 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	if not combatant.combat_stats.has("manual_block_zone_capacity"):
 		combatant.combat_stats["manual_block_zone_capacity"] = int(primary["PAR073"])
 	combatant.armour = base.get("armour", {}).duplicate(true)
-	combatant.tempo = float(base.get("tempo", 0.0))
+	# PAR019 starting pool, PAR020 additive to baseline 100 cap, PAR021 per round.
+	# Initialized after canonical stats merge to avoid legacy equipment overlays.
 	combatant.max_action_points = int(base.get("max_action_points", primary["PAR014"]))
 	for item in equipped_items(character, repository):
 		EquipmentBuilder.equip(combatant, item)
@@ -52,6 +53,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		if key == "weapon_profiles":
 			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
 		combatant.combat_stats[key] = canonical[key]
+	CombatTempoService.initialize(combatant, float(base.get("tempo", primary.get("PAR019", 0.0))), 100.0 + float(primary.get("PAR020", 0.0)), float(primary.get("PAR021", 0.0)))
 	# Canonical attack count and ranges are the only PAR inputs for future ABI001 dispatch.
 	combatant.combat_stats["par_attack_count"] = int(primary["PAR057"])
 	# PAR073 overrides legacy equipment block metadata.
