@@ -81,6 +81,18 @@ static func armour_reduction_percent(combatant: CombatantState, round_number: in
 		value_percent /= 100.0
 	return clampf(value_percent, 0.0, 1.0)
 
+## PAR131–134: percentage penetration of only the matching physical armour type.
+static func typed_armour_penetration_percent(combatant: CombatantState, damage_type: String, round_number: int) -> float:
+	const TYPES := {"piercing": "PAR131", "slashing": "PAR132", "chopping": "PAR133", "blunt": "PAR134"}
+	var key := String(TYPES.get(damage_type.to_lower(), ""))
+	if key.is_empty():
+		return 0.0
+	var totals: Variant = combatant.combat_stats.get("par_totals", {})
+	if not totals is Dictionary:
+		return 0.0
+	var percent := float(totals.get(key, 0.0))
+	return clampf(percent / 100.0, 0.0, 1.0)
+
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
 	# PAR135 is a percentage (e.g. 20 = 20%); runtime overlays retain
 	# their existing fractional damage_reduction contract.
