@@ -320,7 +320,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 		return
 
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
-	var base_armour:=_armour_for(defender, zone, damage_type)
+	# PAR127–130 are global flat armour: identical bonus in all five zones.
+	var base_armour:=_armour_for(defender, zone, damage_type) + CombatModifierService.global_physical_armour(defender, damage_type, state.round_number)
 	var armour_penetration_flat:=CombatModifierService.armour_penetration_flat(attacker, state.round_number)
 	var armour_penetration_percent:=CombatModifierService.armour_reduction_percent(attacker, state.round_number)
 	var typed_armour_penetration_percent:=CombatModifierService.typed_armour_penetration_percent(attacker, damage_type, state.round_number)
