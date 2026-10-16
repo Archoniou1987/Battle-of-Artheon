@@ -8,10 +8,12 @@ const STUN_DEBT_PAYMENT := 100.0
 const IMMUNITY_ROUNDS := 2
 
 static func initialize(combatant: CombatantState, starting_tempo: float, maximum: float, regen: float) -> void:
-	combatant.base_tempo = maxf(0.0, starting_tempo)
 	combatant.max_tempo = maxf(0.0, maximum)
+	# "50% of initial Tempo" uses the actual capped starting pool,
+	# not discarded PAR019 points above the positive PAR020 limit.
+	combatant.base_tempo = clampf(starting_tempo, 0.0, combatant.max_tempo)
 	combatant.tempo_regen = maxf(0.0, regen)
-	combatant.tempo = clampf(combatant.base_tempo, 0.0, combatant.max_tempo)
+	combatant.tempo = combatant.base_tempo
 	combatant.tempo_stun_round = -1
 	combatant.tempo_immunity_until_round = 0
 
