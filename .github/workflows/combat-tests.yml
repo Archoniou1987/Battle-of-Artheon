@@ -44,6 +44,12 @@ jobs:
       - name: Verify live Arena resources and save/restore integration
         run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/ui/arena_resource_persistence_runner.gd
 
+      - name: Verify PAR012 PAR013 PAR017 out-of-combat regeneration
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/out_of_combat_regeneration_runner.gd
+
+      - name: Verify offline regeneration persistence and Arena pause
+        run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/ui/out_of_combat_offline_persistence_runner.gd
+
       - name: Run first tournament
         run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
 
