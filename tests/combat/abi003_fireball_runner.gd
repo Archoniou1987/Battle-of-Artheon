@@ -89,7 +89,7 @@ func _initialize() -> void:
 		var actual_stacks := _burning_stacks(target)
 		var actual_duration := _burning_duration(target)
 		var tick_damage := _round_tick_damage(state, round_number)
-		var round_ok := target.hp == expected_hp[i] and caster.mana == expected_mana[i] and actual_stacks == expected_stacks[i] and actual_duration == expected_duration[i] and tick_damage == expected_tick_damage[i]
+		var round_ok: bool = target.hp == expected_hp[i] and caster.mana == expected_mana[i] and actual_stacks == expected_stacks[i] and actual_duration == expected_duration[i] and tick_damage == expected_tick_damage[i]
 		print("ABI003_ROUND=", round_number, " hp=", target.hp, " mana=", caster.mana, " stacks=", actual_stacks, " shared_duration=", actual_duration, " tick_damage=", tick_damage, " ok=", round_ok)
 		ok = ok and round_ok
 
