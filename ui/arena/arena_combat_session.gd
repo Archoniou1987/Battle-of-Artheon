@@ -113,7 +113,7 @@ func play_round(attacks: Array[String], blocks: Array[String]) -> Dictionary:
 	if orchestrator.battle_outcome() != "ongoing":
 		return {"ok": false, "reason": "battle_finished"}
 	var round := orchestrator.begin_round()
-	if CombatModifierService.effective_tempo(fighter(true), state.round_number) <= -100:
+	if CombatTempoService.is_stunned(fighter(true), state.round_number):
 		commands.clear_manual_block(player_id)
 	else:
 		var block_result := commands.set_manual_block(player_id, blocks)
@@ -122,7 +122,7 @@ func play_round(attacks: Array[String], blocks: Array[String]) -> Dictionary:
 		var player_result := _queue_attacks(player_id, attacks)
 		if not bool(player_result.get("ok", false)):
 			return {"ok": false, "reason": String(player_result.get("reason", "attack_rejected"))}
-	if CombatModifierService.effective_tempo(fighter(false), state.round_number) > -100:
+	if not CombatTempoService.is_stunned(fighter(false), state.round_number):
 		var enemy_result := _queue_attacks(ENEMY_ID, ["chest"])
 		if not bool(enemy_result.get("ok", false)):
 			return {"ok": false, "reason": String(enemy_result.get("reason", "enemy_attack_rejected"))}
