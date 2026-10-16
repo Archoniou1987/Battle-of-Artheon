@@ -92,6 +92,22 @@ func _run() -> void:
 	else:
 		check(loaded.current_hp == expected_hp, "HP persisted across scene restart")
 		check(loaded.current_mana == expected_mana, "mana persisted across scene restart")
+		var foreign := CombatantState.new("foreign", "Foreign", 1, 1, 1)
+		check(not loaded.commit_combat_resources(foreign, restarted.get("item_repository") as ItemRepository), "cannot commit another fighter's resources")
+		check(loaded.current_hp == expected_hp and loaded.current_mana == expected_mana, "invalid combat write-back does not mutate resources")
+		restarted.call("_open_panel", "Арена")
+		await process_frame
+		var training := restarted.get_node_or_null("ArenaScreen") as ArenaScreen
+		if training == null:
+			check(false, "restarted Arena missing")
+		else:
+			loaded.current_hp = 0
+			loaded.current_mana = 0
+			training._refill_training_resources()
+			var max_resources := loaded.resource_snapshot(restarted.get("item_repository") as ItemRepository)
+			check(int(max_resources["hp"]) == int(max_resources["max_hp"]), "explicit training refill restores HP")
+			check(int(max_resources["mana"]) == int(max_resources["max_mana"]), "explicit training refill restores mana")
+			check(training.combat_session.fighter(true).hp == int(max_resources["max_hp"]), "training refill restarts a fresh combat snapshot")
 	restarted.queue_free()
 	await process_frame
 	_remove_save(PROGRESSION_SAVE)
