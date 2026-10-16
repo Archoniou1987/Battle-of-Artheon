@@ -254,6 +254,21 @@ func _build_level_settings() -> void:
 		_start_combat_session()
 	)
 	content.add_child(apply)
+	# This panel is diagnostic only. A defeated character must not be
+	# silently healed on Arena re-entry; explicit refill keeps testing usable.
+	var refill := Button.new()
+	refill.text = "Тест: восстановить HP и ману"
+	refill.tooltip_text = "Только для отладки Arena. Сброс текущих ресурсов и новый поединок."
+	refill.pressed.connect(_refill_training_resources)
+	content.add_child(refill)
+
+func _refill_training_resources() -> void:
+	if character == null or repository == null:
+		return
+	if character.reset_resources_to_full(repository):
+		resources_changed.emit()
+		_start_combat_session()
+		level_settings_dialog.hide()
 
 func _change_test_level(is_player: bool, delta: int) -> void:
 	if is_player:
