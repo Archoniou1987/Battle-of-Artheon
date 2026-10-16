@@ -84,10 +84,6 @@ func _weapon_damage(profile:Dictionary)->float:
 	var minimum:=float(profile.get("damage_min",1.0)); var maximum:=float(profile.get("damage_max",minimum))
 	if maximum<minimum: var swap:=minimum; minimum=maximum; maximum=swap
 	return rng.randf_range(minimum,maximum)
-func _tempo_allows_attack(tempo:float)->bool:
-	if tempo<=-100.0:return false
-	if tempo>=0.0:return true
-	return CombatMath.roll_success(100.0+tempo,_roll())
 func _attack_rolls()->Dictionary:
 	if combat_engine!=null:
 		return combat_engine.complete_attack_rolls({})
