@@ -323,14 +323,16 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var base_armour:=_armour_for(defender, zone, damage_type)
 	var armour_penetration_flat:=CombatModifierService.armour_penetration_flat(attacker, state.round_number)
 	var armour_penetration_percent:=CombatModifierService.armour_reduction_percent(attacker, state.round_number)
-	var effective_armour := maxf(0.0, base_armour * (1.0 - armour_penetration_percent))
+	var typed_armour_penetration_percent:=CombatModifierService.typed_armour_penetration_percent(attacker, damage_type, state.round_number)
+	# PAR126 and PAR131–134 reduce the matching armour sequentially.
+	var effective_armour := maxf(0.0, base_armour * (1.0 - armour_penetration_percent) * (1.0 - typed_armour_penetration_percent))
 	var armour_percent := RatingMatrix.to_percent(effective_armour * 10.0, defender.level)
 	var penetration_percent := RatingMatrix.to_percent(maxf(0.0, armour_penetration_flat) * 10.0, attacker.level)
 	var reduction := clampf((armour_percent - penetration_percent) / 100.0, 0.0, 1.0)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
-	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
+	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 	_gain_basic_attack_ap(attacker, event)
