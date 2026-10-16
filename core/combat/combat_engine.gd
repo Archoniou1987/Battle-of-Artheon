@@ -294,6 +294,12 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus, CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
+	# PAR053–056: physical damage bonus applies only to the matching damage type.
+	# Percent values are stored as percentages (e.g. 30 means +30%).
+	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
+	if physical_type in ["piercing", "slashing", "chopping", "blunt"]:
+		var physical_bonus := CombatModifierService.effective_stat(attacker, "physical_damage_" + physical_type + "_pct", state.round_number)
+		raw_damage *= maxf(0.0, 1.0 + physical_bonus / 100.0)
 	if CombatDamagePayload.is_magic_damage_type(String(event.payload.get("damage_type", ""))) and not bool(event.payload.get("magic_rating_applied", false)):
 		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(attacker, "magic_damage_rating", state.round_number) / 100.0)
 	if is_crit:
