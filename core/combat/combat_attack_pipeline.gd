@@ -19,7 +19,7 @@ func _init(combat_state:CombatState,seed_value:int=1,p_engine:CombatEngine=null)
 func queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
 func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
-	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or not _tempo_allows_attack(CombatModifierService.effective_tempo(attacker, state.round_number)): return
+	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or CombatTempoService.is_stunned(attacker, state.round_number): return
 	var weapon_indices:Array=[]
 	var canonical_profiles:=WeaponAttackProfile.all(attacker)
 	if canonical_profiles.is_empty():
@@ -32,17 +32,13 @@ func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Combat
 			weapon_indices.append(weapon_index)
 	weapon_indices.sort()
 	# One normal Base Attack (all MH/OH and multi-hit constituents) shares one AP group.
-	# Tempo-generated extra attacks remain outside that AP-producing action.
+	# Base attacks are determined by weapons; Tempo grants no additional hits.
 	var ap_group_id:=state.next_event_id
 	for raw_weapon_index in weapon_indices:
 		var weapon_index:=int(raw_weapon_index)
 		if _weapon_attack_available(attacker,weapon_index):
 			for event in _make_basic_attacks(attacker,defender,false,weapon_index,ap_group_id):
 				round.lock_action(event)
-	var current_tempo := CombatModifierService.effective_tempo(attacker, state.round_number)
-	if current_tempo>0.0 and CombatMath.roll_success(minf(current_tempo,100.0),_roll()):
-		for event in _make_basic_attacks(attacker,defender,true,0):
-			round.lock_action(event)
 func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var profile:=_weapon_profile(attacker,weapon_index)
 	if profile.is_empty():
