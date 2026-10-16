@@ -39,9 +39,9 @@ static func advance(character: CharacterState, repository: ItemRepository, elaps
 			character.current_hp = max_hp
 			character.out_combat_hp_fraction = 0.0
 		else:
-			var whole_hp := int(floor(hp_gain))
+			var whole_hp := int(floor(hp_gain + 0.000000001))
 			character.current_hp += whole_hp
-			character.out_combat_hp_fraction = hp_gain - float(whole_hp)
+			character.out_combat_hp_fraction = maxf(0.0, hp_gain - float(whole_hp))
 	else:
 		character.out_combat_hp_fraction = 0.0
 	if character.current_mana < max_mana:
@@ -50,9 +50,9 @@ static func advance(character: CharacterState, repository: ItemRepository, elaps
 			character.current_mana = max_mana
 			character.out_combat_mana_fraction = 0.0
 		else:
-			var whole_mana := int(floor(mana_gain))
+			var whole_mana := int(floor(mana_gain + 0.000000001))
 			character.current_mana += whole_mana
-			character.out_combat_mana_fraction = mana_gain - float(whole_mana)
+			character.out_combat_mana_fraction = maxf(0.0, mana_gain - float(whole_mana))
 	else:
 		character.out_combat_mana_fraction = 0.0
 	return before_hp != character.current_hp or before_mana != character.current_mana or not is_equal_approx(before_hp_fraction, character.out_combat_hp_fraction) or not is_equal_approx(before_mana_fraction, character.out_combat_mana_fraction)
