@@ -41,6 +41,6 @@ static func action_status(combatant: CombatantState, round_number: int) -> Dicti
 	var tempo := CombatModifierService.effective_tempo(combatant, round_number)
 	if not is_finite(tempo):
 		return {"ok":false, "reason":"invalid_tempo"}
-	if tempo <= -100.0:
+	if CombatTempoService.is_stunned(combatant, round_number):
 		return {"ok":false, "reason":"stunned"}
 	return {"ok":true}
