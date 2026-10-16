@@ -77,3 +77,11 @@ Death is finalized only in the life/death phase. After finalization, battle end 
 If all opposing teams are eliminated in the same round, the result is a draw. Lingering EFF does not keep an otherwise finished battle alive.
 
 Kill attribution is not last-hit based. For a target finalized dead, aggregate damage by source in the fatal round; the highest total receives the kill. Exact ties award a kill to every tied source.
+
+## Persistent HP and mana (Arena integration)
+
+- `CharacterState.current_hp` and `current_mana` are the persistent resource values. PAR010/PAR011 and active equipment determine the maximums; equipping never replenishes current resources and unequipping immediately clamps both pools.
+- Combat starts from the current character pools via `CharacterCombatBuilder`. An accepted Arena round writes the finalized HP/mana back through `CharacterState.commit_combat_resources` (checks fighter ownership and unchanged maximums), then the village saves the existing progression file's `resources` field.
+- Reopening Arena and restarting the game preserve those current values. Inventory and Character screens show current/max values. At zero HP, Arena cannot run another round.
+- Training-only recovery is explicit: the Arena level settings panel has a **Test: restore HP and mana** action. This is not a general recovery rule or an automatic heal on victory/defeat.
+- PAR015 (mana/round) and PAR016 (HP/round) apply once at the shared end-round phase. Out-of-combat recovery (PAR012, PAR013, PAR017), mana-cost reduction (PAR018), and AP/Tempo persistence are separate systems pending final mechanics; no timing/cost behavior is inferred here.
