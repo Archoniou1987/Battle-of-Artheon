@@ -24,6 +24,7 @@ func complete_attack_rolls(provided: Dictionary) -> Dictionary:
 	return result
 
 var physical_balance: Dictionary
+var canonical_effects: Dictionary = {}
 var _balance_valid := true
 var _next_effect_stack_id: int = 1
 var group_state:GroupCombatState
@@ -37,6 +38,7 @@ func configure_spatial_context(groups:GroupCombatState,zones:CombatZoneState)->v
 
 func _init(combat_state: CombatState, balance: Dictionary = {}) -> void:
 	state = combat_state
+	canonical_effects = EffectCatalog.load_json()
 	physical_balance = balance.duplicate(true)
 	if balance.is_empty():
 		var file := FileAccess.open("res://data/balance/physical_combat.json", FileAccess.READ)
@@ -182,7 +184,14 @@ func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
 	if not _require_canonical(event, source) or not _require_canonical(event, target):
 		return false
 	var chance := _common_hit_chance(source, target) + float(event.payload.get("magic_hit_modifier",0.0)) + _distance_modifier(event,target_id)
-	return CombatMath.roll_success(clampf(chance,0.0,100.0),int(event.payload.get("magic_hit_roll",1)))
+	# Roll once per cast using the seeded engine RNG, then reuse the result
+	# for every component of the same ability. Explicit rolls remain testable.
+	var magic_roll := int(event.payload.get("magic_hit_roll", 0))
+	if magic_roll < 1 or magic_roll > 100:
+		magic_roll = combat_rng.randi_range(1,100)
+		event.payload["magic_hit_roll"] = magic_roll
+	event.set_result("magic_hit_roll", magic_roll)
+	return CombatMath.roll_success(clampf(chance,0.0,100.0), magic_roll)
 
 func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
 	if target_count <= 0:
@@ -461,7 +470,12 @@ func _active_effect_value(target: CombatantState, field: String) -> float:
 	return CombatModifierService.modifier(target, field, state.round_number)
 
 func _effect_definition(effect_id: String) -> Dictionary:
-	return physical_balance.get("effects", {}).get(effect_id, {})
+	# Explicit combat-fixture definitions override canonical content only in
+	# their injected test balance; ordinary combat uses the EFF catalog.
+	var override: Variant = Dictionary(physical_balance.get("effects", {})).get(effect_id, null)
+	if override is Dictionary:
+		return override
+	return EffectCatalog.definition(canonical_effects, effect_id)
 
 func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacker: CombatantState, rolls: Dictionary) -> void:
 	if bool(parent.payload.get("is_counterattack", false)): return
