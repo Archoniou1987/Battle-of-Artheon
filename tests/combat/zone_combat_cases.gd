@@ -65,11 +65,14 @@ static func _tempo_only_accepts_or_rejects_declared_move()->bool:
 	var zones:CombatZoneState=f["zones"]
 	zones.set_zone("b",CombatZoneState.ZONE_3)
 	var resolver:=CombatMovementResolver.new(zones)
-	var failed:=resolver.navigation_result("a",CombatZoneState.ZONE_1,-50.0,75)
-	if bool(failed["moved"]) or String(failed["reason"])!="tempo_failed" or zones.zone_of("a")!=CombatZoneState.ZONE_2: return false
-	var passed:=resolver.navigation_result("a",CombatZoneState.ZONE_1,-50.0,25)
-	if not bool(passed["moved"]) or int(passed["to_zone"])!=CombatZoneState.ZONE_1: return false
-	if not resolver.apply_result(passed): return false
+	# PAR019–021: negative control debt alone is NOT a movement penalty.
+	# Only an explicitly scheduled stun/movement lock prevents navigation.
+	var allowed:=resolver.navigation_result("a",CombatZoneState.ZONE_1,-500.0,100)
+	if not bool(allowed["moved"]) or int(allowed["to_zone"])!=CombatZoneState.ZONE_1: return false
+	if zones.zone_of("a")!=CombatZoneState.ZONE_2: return false # Planning never moves.
+	var stunned:=resolver.navigation_result("a",CombatZoneState.ZONE_1,-500.0,1,false,true)
+	if bool(stunned["moved"]) or String(stunned["reason"])!="movement_locked": return false
+	if not resolver.apply_result(allowed): return false
 	return zones.zone_of("a")==CombatZoneState.ZONE_1
 
 static func _special_move_can_break_front()->bool:
