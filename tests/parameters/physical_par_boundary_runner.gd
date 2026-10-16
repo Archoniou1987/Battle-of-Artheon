@@ -117,7 +117,9 @@ func penetration_cases() -> void:
 	for type_index in range(4):
 		var damage_type: String = EquipmentBuilder.PHYSICAL_TYPES[type_index]
 		var attacker := all_typed
-		var target := fighter({}, {}, {"head":{damage_type:40.0}})
+		var head_armour := {}
+		head_armour[damage_type] = 40.0
+		var target := fighter({}, {}, {"head":head_armour})
 		var result := strike(attacker, target, damage_type, "head")
 		check(is_equal_approx(float(result.result.get("effective_armour", -1.0)), 40.0 * (1.0 - float(type_index + 1) / 10.0)), "PAR131-134 type: " + damage_type)
 	var full_pen := fighter({"PAR131":100.0})
