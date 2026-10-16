@@ -79,7 +79,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if player_character == null or item_repository == null:
 		return
 	var now_unix := Time.get_unix_time_from_system()
