@@ -13,7 +13,7 @@ static func build(npc:NpcState, combat_level:int=-1)->CombatantState:
 	# Match the character adapter for implemented physical PAR values.
 	# NPC templates are authored directly, without CharacterStatsService.snapshot.
 	var definitions := ParCalculationService.registry()
-	for par_id in ["PAR053", "PAR054", "PAR055", "PAR056", "PAR071", "PAR072", "PAR135"]:
+	for par_id in ["PAR015", "PAR016", "PAR053", "PAR054", "PAR055", "PAR056", "PAR071", "PAR072", "PAR135"]:
 		if not combatant.combat_stats["par_totals"].has(par_id):
 			continue
 		var source_key := String(Dictionary(definitions.get(par_id, {})).get("source_key", ""))
