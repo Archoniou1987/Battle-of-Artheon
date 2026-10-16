@@ -107,7 +107,7 @@
       },
       "manual_block_zones_added": 1,
       "abilities": [
-        "ABI001"
+        "TEST_ABI_FIREBALL"
       ],
       "on_hit_effect": {
         "effect_id": "EFF001",
