@@ -35,6 +35,9 @@ jobs:
           path: combat-regression.log
           if-no-files-found: warn
           retention-days: 1
+      - name: Verify numeric physical PAR boundaries and NPC armour
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/physical_par_boundary_runner.gd
+
       - name: Run first tournament
         run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
 
