@@ -71,7 +71,7 @@
         "crit_chance_rating_percent": 10
       },
       "on_hit_effect": {
-        "effect_id": "EFF003",
+        "effect_id": "TEST_EFF_MADNESS",
         "chance": 10
       },
       "weapon_class": "axe",
