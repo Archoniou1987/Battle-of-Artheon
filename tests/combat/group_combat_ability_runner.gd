@@ -19,10 +19,10 @@ func _initialize()->void:
 	for event in state.event_log:
 		if not event is CombatEvent or event.source_id!=player.combatant_id:
 			continue
-		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI001":
+		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="TEST_ABI_FIREBALL":
 			saw_ability=true
 			valid=valid and event.target_id=="ENEMY"
-		if String(event.payload.get("ability_id",""))=="ABI001" and event.kind in [CombatEvent.Kind.ATTACK,CombatEvent.Kind.DAMAGE]:
+		if String(event.payload.get("ability_id",""))=="TEST_ABI_FIREBALL" and event.kind in [CombatEvent.Kind.ATTACK,CombatEvent.Kind.DAMAGE]:
 			saw_ability_damage=true
 	valid=valid and saw_ability and saw_ability_damage
 	valid=valid and player.mana==10
@@ -53,7 +53,7 @@ func _test_lethal_base_attack_abi_target()->bool:
 	for event in state.event_log:
 		if not event is CombatEvent or event.source_id!=player.combatant_id:
 			continue
-		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI001":
+		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="TEST_ABI_FIREBALL":
 			if event.target_id=="ENEMY_A": ability_on_first=true
 			if event.target_id=="ENEMY_B": ability_on_second=true
 	return ability_on_first and not ability_on_second and state.get_combatant("ENEMY_A").is_death_finalized() and state.get_combatant("ENEMY_B").hp==50 and group.active_opponent(player.combatant_id)=="ENEMY_B"
