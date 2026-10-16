@@ -19,6 +19,8 @@ jobs:
           bash tools/run_godot_check.sh tests/parameters/rating_matrix_runner.gd
           bash tools/run_godot_check.sh tests/parameters/final_par_combat_runner.gd
           bash tools/run_godot_check.sh tests/combat/magic_abi_scaling_runner.gd
+      - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
+        run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
       - name: Run combat tournament with ABI
         run: bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
       - name: Generate and validate 100 items
