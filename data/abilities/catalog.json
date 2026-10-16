@@ -17,7 +17,7 @@
         "resist_type": "fire"
       }
     ],
-    "cooldown_rounds": 0,
-    "mana_cost": 0
+    "cooldown_rounds": 1,
+    "mana_cost": 10
   }
 }
