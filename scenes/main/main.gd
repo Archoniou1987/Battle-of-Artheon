@@ -298,6 +298,7 @@ func _open_arena_screen() -> void:
 	arena_screen.name = "ArenaScreen"
 	add_child(arena_screen)
 	arena_screen.back_requested.connect(func() -> void: arena_screen.visible = false)
+	arena_screen.resources_changed.connect(_save_progression)
 	arena_screen.visible = true
 	arena_screen.refresh()
 
