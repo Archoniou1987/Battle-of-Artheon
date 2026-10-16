@@ -4,6 +4,8 @@ extends Control
 ## Arena UI foundation. Combat commands are deliberately not simulated here.
 signal back_requested
 signal end_turn_requested(attack_targets: Array[String], block_zones: Array[String])
+## Notify the owning scene to save persistent HP/mana after an accepted round.
+signal resources_changed
 
 const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
@@ -821,6 +823,14 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 		_prepend_combat_log("Команда отклонена: %s" % String(result.get("reason", "unknown")))
 		set_combat_ready(true)
 		return
+	# A successful round has already finalized HP and mana. Keep persistent
+	# character resources in step with the live Arena combatant before the
+	# player can exit, reopen inventory, or start another test duel.
+	if character != null and repository != null:
+		if character.commit_combat_resources(combat_session.fighter(true), repository):
+			resources_changed.emit()
+		else:
+			push_error("Arena resource write-back rejected: player snapshot mismatch")
 	_sync_combat_session()
 	var round_lines: Array[String] = ["Раунд %d" % int(result.get("round", 0))]
 	for line in Array(result.get("lines", [])):
