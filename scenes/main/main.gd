@@ -46,6 +46,7 @@ var character_screen: CharacterScreen
 var inventory_screen: InventoryScreen
 var arena_screen: ArenaScreen
 var item_repository: ItemRepository
+var _resources_loaded_from_save := false
 var landscape_nav: HBoxContainer
 
 
@@ -54,6 +55,13 @@ func _ready() -> void:
 	_load_saved_progression()
 	item_repository = ItemRepository.new()
 	var inventory_loaded := _load_saved_inventory()
+	# Legacy saves had no current HP/mana. Migrate once at the restored
+	# equipment maximum, then persist explicit current values.
+	if not _resources_loaded_from_save:
+		if player_character.reset_resources_to_full(item_repository):
+			_save_progression()
+	else:
+		player_character.resource_snapshot(item_repository)
 	_reset_preview_inventory_once()
 	_grant_combat_test_items_once()
 	_build_screen()
@@ -386,7 +394,9 @@ func _save_progression() -> void:
 	if file == null:
 		push_warning("Character progression save failed")
 		return
-	file.store_string(JSON.stringify({"schema_version": 1, "progression": player_character.progression_snapshot()}))
+	if item_repository != null:
+		player_character.resource_snapshot(item_repository)
+	file.store_string(JSON.stringify({"schema_version": 1, "progression": player_character.progression_snapshot(), "resources": player_character.resources_to_dict()}))
 	file.close()
 
 func _load_saved_progression() -> void:
@@ -403,6 +413,12 @@ func _load_saved_progression() -> void:
 	var data: Variant = raw.get("progression", {})
 	if not data is Dictionary or not player_character.restore_progression(data):
 		push_error("Character progression save rejected: invalid canonical PAR schema")
+		return
+	if raw.has("resources"):
+		var resources: Variant = raw.get("resources", {})
+		_resources_loaded_from_save = true
+		if not resources is Dictionary or not player_character.restore_resources(resources):
+			push_error("Character resources rejected: invalid current HP/mana")
 
 
 func _save_inventory() -> void:
@@ -416,6 +432,8 @@ func _save_inventory() -> void:
 	var payload := {"schema_version": 1, "repository": item_repository.to_dict(), "inventory": player_character.inventory.to_dict(), "equipment": player_character.equipment.slots.duplicate(true), "elixirs": quickslots}
 	file.store_string(JSON.stringify(payload))
 	file.close()
+	# Persist resource clamping when equipment lowers a pool's maximum.
+	_save_progression()
 
 func _load_saved_inventory() -> bool:
 	if not FileAccess.file_exists(INVENTORY_SAVE_PATH):
