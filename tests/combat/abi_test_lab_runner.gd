@@ -32,6 +32,19 @@ func _test_physical() -> void:
 	_check(_has_kind(result, "ATTACK") and _has_kind(result, "DAMAGE"),
 		"physical ability uses ATTACK then DAMAGE event chain")
 
+	# Same-level baseline hit is 95%; PAR030 rating 100 adds 10% at level 1.
+	setup = lab.reset({"preset": "LAB_PHYSICAL", "damage": 100,
+		"damage_type": "slashing", "hit_roll": 99, "crit_roll": 100})
+	if bool(setup.get("ok", false)):
+		result = lab.next_round()
+		_check(int(result.get("damage_dealt", -1)) == 0, "hit 99 misses before PAR030 bonus")
+	setup = lab.reset({"preset": "LAB_PHYSICAL", "damage": 100,
+		"damage_type": "slashing", "hit_roll": 99, "crit_roll": 100,
+		"par_values": {"caster:PAR030": 100}})
+	if bool(setup.get("ok", false)):
+		result = lab.next_round()
+		_check(int(result.get("damage_dealt", -1)) == 100, "PAR030 raises hit rating into a hit")
+
 	setup = lab.reset({"preset": "LAB_PHYSICAL", "damage": 100,
 		"damage_type": "slashing", "hit_roll": 1, "crit_roll": 100,
 		"par_values": {"dummy:PAR101": 10}})
@@ -64,6 +77,12 @@ func _test_magic() -> void:
 	_check(int(result.get("damage_dealt", -1)) == 108, "PAR150 + PAR190 magic calculation (108)")
 	_check(_has_kind(result, "ATTACK") and _has_kind(result, "DAMAGE"),
 		"magic projectile uses canonical ATTACK then DAMAGE")
+	setup = lab.reset({"preset": "LAB_MAGIC", "damage": 100,
+		"damage_type": "fire", "hit_roll": 1, "crit_roll": 100,
+		"par_values": {"dummy:PAR135": 25}})
+	if bool(setup.get("ok", false)):
+		result = lab.next_round()
+		_check(int(result.get("damage_dealt", -1)) == 75, "PAR135 reduces final magic damage by 25%")
 	setup = lab.reset({"preset": "LAB_MAGIC", "damage": 100,
 		"damage_type": "fire", "hit_roll": 1, "crit_roll": 100,
 		"par_values": {"dummy:PAR191": 100}})
