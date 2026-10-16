@@ -128,7 +128,8 @@ func _ready() -> void:
 	layout.add_child(log_panel)
 	var log_column := VBoxContainer.new()
 	log_panel.add_child(log_column)
-	var header := HBoxContainer.new()
+	# Wrap controls on narrow portrait screens instead of clipping ABI Lab.
+	var header := HFlowContainer.new()
 	log_column.add_child(header)
 	var back := Button.new()
 	back.text = "← Назад"
