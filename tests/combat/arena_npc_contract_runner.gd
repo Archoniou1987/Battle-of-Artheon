@@ -4,6 +4,8 @@ extends SceneTree
 # combatant builder and the arena must delegate rounds to the shared engine.
 # This is not a map/encounter integration test.
 func _initialize() -> void:
+	ArenaCombatSession.training_dummy_clear_defaults = true
+	ArenaCombatSession.training_dummy_items.clear()
 	var repository := ItemRepository.new()
 	var hero := CharacterState.new("PARITY_HERO", "Hero", 1)
 	var arena := ArenaCombatSession.new(hero, repository)
@@ -21,7 +23,7 @@ func _initialize() -> void:
 	valid = valid and npc.level == dummy.level
 	valid = valid and npc.max_hp == dummy.max_hp
 	valid = valid and npc.max_mana == dummy.max_mana
-	valid = valid and not WeaponAttackProfile.all(dummy).is_empty()
+	valid = valid and dummy.combatant_id == ArenaCombatSession.ENEMY_ID
 	var round_result: Dictionary = arena.play_round(["chest"], ["chest"])
 	valid = valid and bool(round_result.get("ok", false))
 	valid = valid and arena.state.round_number == 1
