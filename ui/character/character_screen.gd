@@ -14,6 +14,7 @@ var character: CharacterState
 var title_label: Label
 var xp_label: Label
 var xp_bar: ProgressBar
+var resource_label: Label
 var points_label: Label
 var stat_values: Dictionary = {}
 var stat_buttons: Dictionary = {}
@@ -164,6 +165,8 @@ func _ready() -> void:
 	xp_empty.set_corner_radius_all(4)
 	xp_bar.add_theme_stylebox_override("background", xp_empty)
 	level_content.add_child(xp_bar)
+	resource_label = _label("", 16, MUTED)
+	level_content.add_child(resource_label)
 	var stats_card := _panel()
 	body.add_child(stats_card)
 	var stats_content := VBoxContainer.new()
@@ -391,6 +394,12 @@ func refresh() -> void:
 	xp_label.text = "Уровень %d   •   Опыт %d / %d" % [progression.level, progression.xp_into_level, required] if required > 0 else "Уровень %d   •   Максимальный уровень текущей таблицы" % progression.level
 	xp_bar.max_value = max(1, required)
 	xp_bar.value = progression.xp_into_level
+	# Show live resources, not only the PAR-derived maximums.
+	var resources := character.resource_snapshot(item_repository)
+	resource_label.text = "HP %d/%d   •   Мана %d/%d" % [
+		int(resources.get("hp", 0)), int(resources.get("max_hp", 0)),
+		int(resources.get("mana", 0)), int(resources.get("max_mana", 0))
+	] if not resources.is_empty() else "HP —   •   Мана —"
 	points_label.text = "Характеристики  •  Свободные очки: %d" % progression.unspent_stat_points
 	var par_snapshot := ParCalculationService.calculate(character, item_repository)
 	var par_totals: Dictionary = par_snapshot.get("totals", {})
