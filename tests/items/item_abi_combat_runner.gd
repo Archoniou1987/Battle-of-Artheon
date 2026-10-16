@@ -3,7 +3,7 @@ extends SceneTree
 func _init() -> void:
 	var repository := ItemRepository.new()
 	var hero := CharacterState.new("ITEM_ABI_HERO", "Item ABI Hero", 50)
-	var sword := {"instance_id":"COMBAT-SWORD-1","equip_slots":["main_hand","off_hand"],"slot_usage":["main_hand"],"abilities":["ABI001"]}
+	var sword := {"instance_id":"COMBAT-SWORD-1","equip_slots":["main_hand","off_hand"],"slot_usage":["main_hand"],"abilities":["TEST_ABI_FIREBALL"]}
 	ItemDurabilityService.initialize_item(sword, 50)
 	repository.add_item(sword)
 	hero.receive_item("COMBAT-SWORD-1", repository)
@@ -28,10 +28,10 @@ func _init() -> void:
 	var abi_casts := 0
 	var abi_damage := 0
 	for event in state.event_log:
-		if event.kind == CombatEvent.Kind.DAMAGE and event.source_id == "ITEM_ABI_HERO" and String(event.payload.get("ability_id", "")) == "ABI001":
+		if event.kind == CombatEvent.Kind.DAMAGE and event.source_id == "ITEM_ABI_HERO" and String(event.payload.get("ability_id", "")) == "TEST_ABI_FIREBALL":
 			abi_casts += 1
 			abi_damage += int(event.result.get("hp_removed", 0))
-	var item_source_ok: bool = active == ["ABI001"]
+	var item_source_ok: bool = active == ["TEST_ABI_FIREBALL"]
 	var mana_spent: bool = int(result.get("first_mana", 25)) < 25
 	var ok: bool = equipped and item_source_ok and abi_casts > 0 and abi_damage > 0 and mana_spent
 	print("ITEM_ABI_COMBAT source=", active, " casts=", abi_casts, " damage=", abi_damage, " final_mana=", result.get("first_mana", -1))
