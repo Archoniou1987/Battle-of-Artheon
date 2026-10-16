@@ -155,6 +155,8 @@ func equip(slot: String, instance_id: String, repository: ItemRepository) -> boo
 	if not EquipmentService.equip_instance(slot, instance_id, inventory, equipment, repository):
 		equipment.slots = original
 		return false
+	# Clamp immediately after a completed equipment mutation; never grant healing.
+	resource_snapshot(repository)
 	return true
 
 func unequip(slot: String, repository: ItemRepository = null) -> Variant:
@@ -167,6 +169,7 @@ func unequip(slot: String, repository: ItemRepository = null) -> Variant:
 	var removed: Variant = equipment.unequip(slot)
 	if removed != null and repository != null:
 		_revalidate_equipment(repository)
+		resource_snapshot(repository)
 	return removed
 
 ## Rebuild activation from base stats. Only already-active items grant bonuses.
