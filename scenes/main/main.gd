@@ -47,6 +47,10 @@ var inventory_screen: InventoryScreen
 var arena_screen: ArenaScreen
 var item_repository: ItemRepository
 var _resources_loaded_from_save := false
+var _regen_saved_unix: float = 0.0
+var _regen_saved_paused := false
+var _regen_clock_unix: float = 0.0
+var _regen_save_accumulator := 0.0
 var landscape_nav: HBoxContainer
 
 
@@ -62,11 +66,46 @@ func _ready() -> void:
 			_save_progression()
 	else:
 		player_character.resource_snapshot(item_repository)
+	# Apply unlimited offline elapsed time only when the previous session
+	# actually ended in a non-combat state.
+	var now_unix := Time.get_unix_time_from_system()
+	if _resources_loaded_from_save and not _regen_saved_paused and _regen_saved_unix > 0.0:
+		OutOfCombatRegenerationService.advance(player_character, item_repository, maxf(0.0, now_unix - _regen_saved_unix))
+	_regen_clock_unix = now_unix
 	_reset_preview_inventory_once()
 	_grant_combat_test_items_once()
+	_save_progression()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
+
+func _process(delta: float) -> void:
+	if player_character == null or item_repository == null:
+		return
+	var now_unix := Time.get_unix_time_from_system()
+	if _regen_clock_unix <= 0.0:
+		_regen_clock_unix = now_unix
+		return
+	if player_character.in_combat:
+		_regen_clock_unix = now_unix
+		return
+	var elapsed := maxf(0.0, now_unix - _regen_clock_unix)
+	if elapsed < 1.0:
+		return
+	_regen_clock_unix = now_unix
+	if OutOfCombatRegenerationService.advance(player_character, item_repository, elapsed):
+		_regen_save_accumulator += elapsed
+		if _regen_save_accumulator >= 5.0:
+			_save_progression()
+			_regen_save_accumulator = 0.0
+		if inventory_screen != null and inventory_screen.visible:
+			inventory_screen._refresh_combat_stats()
+		if character_screen != null and character_screen.visible:
+			character_screen.refresh()
+
+func _exit_tree() -> void:
+	if player_character != null and item_repository != null:
+		_save_progression()
 
 
 # One-time preview migration: clear existing bag, equipment and quick slots.
@@ -291,17 +330,34 @@ func _open_inventory_screen() -> void:
 
 func _open_arena_screen() -> void:
 	# Each entry starts a fresh training duel using the current equipment.
+	# Pause the out-of-combat clock before creating the live combat snapshot.
+	_sync_out_of_combat_before_arena()
+	player_character.in_combat = true
+	_save_progression()
 	if arena_screen != null:
 		remove_child(arena_screen)
 		arena_screen.queue_free()
 	arena_screen = ArenaScreen.new(player_character, item_repository)
 	arena_screen.name = "ArenaScreen"
 	add_child(arena_screen)
-	arena_screen.back_requested.connect(func() -> void: arena_screen.visible = false)
+	arena_screen.back_requested.connect(func() -> void:
+		arena_screen.visible = false
+		player_character.in_combat = false
+		_regen_clock_unix = Time.get_unix_time_from_system()
+		_save_progression()
+	)
 	arena_screen.resources_changed.connect(_save_progression)
 	arena_screen.visible = true
 	arena_screen.refresh()
 
+
+func _sync_out_of_combat_before_arena() -> void:
+	if player_character == null or item_repository == null:
+		return
+	var now_unix := Time.get_unix_time_from_system()
+	if not player_character.in_combat and _regen_clock_unix > 0.0:
+		OutOfCombatRegenerationService.advance(player_character, item_repository, maxf(0.0, now_unix - _regen_clock_unix))
+	_regen_clock_unix = now_unix
 
 func _open_panel(section: String) -> void:
 	if section == "Арена":
@@ -397,7 +453,13 @@ func _save_progression() -> void:
 		return
 	if item_repository != null:
 		player_character.resource_snapshot(item_repository)
-	file.store_string(JSON.stringify({"schema_version": 1, "progression": player_character.progression_snapshot(), "resources": player_character.resources_to_dict()}))
+	file.store_string(JSON.stringify({
+		"schema_version": 1,
+		"progression": player_character.progression_snapshot(),
+		"resources": player_character.resources_to_dict(),
+		"regen_saved_unix": Time.get_unix_time_from_system(),
+		"regen_paused": player_character.in_combat
+	}))
 	file.close()
 
 func _load_saved_progression() -> void:
@@ -420,6 +482,12 @@ func _load_saved_progression() -> void:
 		_resources_loaded_from_save = true
 		if not resources is Dictionary or not player_character.restore_resources(resources):
 			push_error("Character resources rejected: invalid current HP/mana")
+			_resources_loaded_from_save = false
+		else:
+			var raw_timestamp: Variant = raw.get("regen_saved_unix", 0.0)
+			if RatingMatrix._number(raw_timestamp) and is_finite(float(raw_timestamp)) and float(raw_timestamp) >= 0.0:
+				_regen_saved_unix = float(raw_timestamp)
+			_regen_saved_paused = bool(raw.get("regen_paused", false))
 
 
 func _save_inventory() -> void:
