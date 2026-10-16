@@ -77,10 +77,12 @@ func positive_regeneration_cap() -> void:
 	var fighter := actor("cap", 60.0, 100.0, 15.0)
 	var state := CombatState.new()
 	state.add_combatant(fighter)
-	for round_id in range(10):
+	for _round_id in range(10):
 		state.begin_round()
 		CombatTempoService.begin_round(state)
 	check(is_equal_approx(fighter.tempo, 100.0), "PAR021 never exceeds PAR020")
+	var capped := actor("cap_above_base", 200.0, 100.0, 0.0)
+	check(is_equal_approx(capped.base_tempo, 100.0), "initial PAR019 is capped before calculating the 50% rebound")
 	CombatTempoService.apply_control(fighter, 110.0)
 	check(is_equal_approx(fighter.tempo, -10.0), "damage reduces positive Tempo")
 	state.begin_round()
