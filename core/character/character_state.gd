@@ -74,6 +74,22 @@ func resource_snapshot(repository: ItemRepository, par_snapshot: Dictionary = {}
 	current_mana = clampi(current_mana, 0, maximum_mana)
 	return {"hp":current_hp, "max_hp":maximum_hp, "mana":current_mana, "max_mana":maximum_mana}
 
+## Commit an owned runtime combatant's pools into persistent character state.
+## This does not heal on victory, level-up, new Arena sessions or equipment changes.
+## Resource maximums remain authoritative in the current PAR equipment snapshot.
+func commit_combat_resources(combatant: CombatantState, repository: ItemRepository) -> bool:
+	if combatant == null or combatant.combatant_id != character_id:
+		return false
+	var resources := resource_snapshot(repository)
+	if resources.is_empty():
+		return false
+	if combatant.max_hp != int(resources["max_hp"]) or combatant.max_mana != int(resources["max_mana"]):
+		push_warning("Combat resources rejected: maximums differ from the character equipment snapshot")
+		return false
+	current_hp = clampi(combatant.visible_hp(), 0, int(resources["max_hp"]))
+	current_mana = clampi(combatant.mana, 0, int(resources["max_mana"]))
+	return true
+
 func resources_to_dict() -> Dictionary:
 	return {"hp": current_hp, "mana": current_mana}
 
