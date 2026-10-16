@@ -187,7 +187,7 @@ static func _multiple_profiles_require_default(balance:Dictionary)->bool:
 	return false
 static func _abi_v2_schema() -> bool:
 	var definitions:=AbilityCatalog.load_json("res://data/test/abilities.json")
-	var fireball:=AbilityRuntime.normalized_definition("ABI001",AbilityCatalog.definition(definitions,"ABI001"))
+	var fireball:=AbilityRuntime.normalized_definition("TEST_ABI_FIREBALL",AbilityCatalog.definition(definitions,"TEST_ABI_FIREBALL"))
 	var legacy:=AbilityRuntime.normalized_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004"))
 	var charge:=AbilityRuntime.normalized_definition("ABI005",AbilityCatalog.definition(definitions,"ABI005"))
 	var blizzard:=AbilityRuntime.normalized_definition("ABI006",AbilityCatalog.definition(definitions,"ABI006"))
@@ -204,19 +204,19 @@ static func _abi_v2_schema() -> bool:
 
 static func _abi_v2_scheduler_payload() -> bool:
 	var definitions:=AbilityCatalog.load_json("res://data/test/abilities.json")
-	if not AbilityRuntime.validate_definition("ABI001",AbilityCatalog.definition(definitions,"ABI001")).is_empty(): return false
+	if not AbilityRuntime.validate_definition("TEST_ABI_FIREBALL",AbilityCatalog.definition(definitions,"TEST_ABI_FIREBALL")).is_empty(): return false
 	if not AbilityRuntime.validate_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004")).is_empty(): return false
 	if AbilityRuntime.validate_definition("BAD",{"delivery_type":"TELEPORT","target_scope":"SINGLE","components":[]}).is_empty(): return false
 	var source:=TestFixtureLoader.new_combatant("abi_source","ABI Source",10,100)
 	source.mana=100
 	var target:=TestFixtureLoader.new_combatant("abi_target","ABI Target",10,100)
 	var state:=CombatState.new(); state.add_combatant(source); state.add_combatant(target)
-	var scheduler:=AbilityScheduler.new(definitions,{"abi_source":["ABI001"]})
+	var scheduler:=AbilityScheduler.new(definitions,{"abi_source":["TEST_ABI_FIREBALL"]})
 	var events:=scheduler.ready_events(state,"abi_source","abi_target")
 	if events.size()!=1: return false
 	var payload:Dictionary=events[0].payload
 	var components:Array=payload.get("components",[])
-	return String(payload.get("delivery_type",""))=="PROJECTILE" and String(payload.get("target_scope",""))=="SINGLE" and String(payload.get("ability_id",""))=="ABI001" and components.size()==1 and float(components[0].get("amount",0.0))==5.0 and payload.get("target_ids",[]).size()==1 and source.mana==90
+	return String(payload.get("delivery_type",""))=="PROJECTILE" and String(payload.get("target_scope",""))=="SINGLE" and String(payload.get("ability_id",""))=="TEST_ABI_FIREBALL" and components.size()==1 and float(components[0].get("amount",0.0))==5.0 and payload.get("target_ids",[]).size()==1 and source.mana==90
 
 static func _make_state(hp_a: int, hp_b: int, damage_a: float, damage_b: float) -> CombatState:
 	var state := CombatState.new()
