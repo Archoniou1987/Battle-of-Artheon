@@ -9,7 +9,8 @@ func _initialize()->void:
 	var player:=CharacterState.new("PLAYER_DAGGER_TEST","Artheon Hero",70)
 	TestFixtureLoader.equip_character_weapon(player, repository, 40)
 	var fighter:=CharacterCombatBuilder.build(player,repository,{"health":200,"mana":0})
-	var bandit:=TestFixtureLoader.new_combatant("NPC_DAGGER_BANDIT","Unarmed Bandit",70,30,0)
+	var bandit:=TestFixtureLoader.new_combatant("NPC_DAGGER_BANDIT","Unarmed Bandit",player.progression.level,30,0)
+	# Loot scaling uses the NPC level separately from the capped player progression.
 	bandit.combat_stats.merge({"weapon_profiles":[{"damage_min":0.0,"damage_max":0.0,"damage_type":"blunt"}]}, true)
 	var state:=CombatState.new()
 	state.add_combatant(fighter)
@@ -46,7 +47,8 @@ func _initialize()->void:
 		"bandit_profiles":WeaponAttackProfile.all(bandit)
 	}))
 	var service:=LootGroupService.new(7711)
-	var candidates:Array[Dictionary]=service.candidates(bandit.level,"normal",["BANDIT_DAGGER_TEST"],groups,templates,{})
+	var loot_npc_level:=70
+	var candidates:Array[Dictionary]=service.candidates(loot_npc_level,"normal",["BANDIT_DAGGER_TEST"],groups,templates,{})
 	var drops:Array[Dictionary]=[]
 	var pool:=EncounterLootPool.new()
 	if String(result.get("winner_id",""))==fighter.combatant_id and not candidates.is_empty():
@@ -56,7 +58,7 @@ func _initialize()->void:
 		if repository.add_item(item) and pool.add_drop(String(item.get("instance_id","")),bandit.combatant_id):
 			drops.append(item)
 	pool.assign_all(player.character_id)
-	var level_range:=LootLevelProfile.range_for(bandit.level,"normal")
+	var level_range:=LootLevelProfile.range_for(loot_npc_level,"normal")
 	var valid:bool=templates.size()==11 and String(result.get("winner_id",""))==fighter.combatant_id and drops.size()==1
 	valid=valid and player.bag_item_count()==0 and pool.available_for(player.character_id).size()==1
 	if not drops.is_empty():
