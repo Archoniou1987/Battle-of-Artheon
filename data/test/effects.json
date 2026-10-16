@@ -17,7 +17,7 @@
       "amount": 50
     },
     {
-      "id": "EFF003",
+      "id": "TEST_EFF_MADNESS",
       "name": "Madness",
       "kind": "crit_buff",
       "crit_bonus": 25,
