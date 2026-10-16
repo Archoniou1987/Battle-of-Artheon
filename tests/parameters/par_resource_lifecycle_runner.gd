@@ -91,11 +91,13 @@ func round_regeneration() -> void:
 	state.add_combatant(fighter)
 	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state))
 	orchestrator.begin_round()
+	check(fighter.hp == 95 and fighter.mana == 9, "start-round PAR015/016 before actions, PAR013 excluded")
 	orchestrator.end_round()
-	check(fighter.hp == 95 and fighter.mana == 9, "end-round PAR015/016 once, PAR013 excluded")
+	check(fighter.hp == 95 and fighter.mana == 9, "end-round must not regenerate a second time")
 	orchestrator.begin_round()
+	check(fighter.hp == 100 and fighter.mana == 16, "second-round regen already applied at opening")
 	orchestrator.end_round()
-	check(fighter.hp == 100 and fighter.mana == 16, "end-round regen exactly once in second round")
+	check(fighter.hp == 100 and fighter.mana == 16, "no extra regeneration at second-round close")
 	fighter.hp = fighter.max_hp - 1
 	fighter.mana = fighter.max_mana - 1
 	orchestrator.begin_round()
@@ -108,14 +110,16 @@ func round_regeneration() -> void:
 		"start_round":state.round_number + 1,"remaining_rounds":1
 	})
 	orchestrator.begin_round()
+	check(fighter.hp == 98 and fighter.mana == 11, "runtime EFF regenerates at start of active round")
 	orchestrator.end_round()
-	check(fighter.hp == 98 and fighter.mana == 11, "runtime EFF regeneration included once")
+	check(fighter.hp == 98 and fighter.mana == 11, "runtime EFF does not regenerate on round close")
 	orchestrator.begin_round()
 	orchestrator.end_round()
 	check(fighter.hp == 103 and fighter.mana == 18, "expired regen effect does not persist")
 	fighter.hp = -10
 	fighter.mana = 0
 	orchestrator.begin_round()
+	check(fighter.hp == -10 and fighter.mana == 0, "no regeneration for lethally wounded fighter at round opening")
 	var outcome := orchestrator.end_round()
 	check(fighter.hp == -10 and fighter.mana == 0, "passive regen cannot rescue lethal HP")
 	check(fighter.is_death_finalized() and Array(outcome.get("dead_ids", [])).has(fighter.combatant_id), "death finalization unchanged")
@@ -146,7 +150,7 @@ func npc_regeneration() -> void:
 	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state))
 	orchestrator.begin_round()
 	orchestrator.end_round()
-	check(actor.hp == 55 and actor.mana == 7, "NPC restores HP/mana at end of round")
+	check(actor.hp == 55 and actor.mana == 7, "NPC restores HP/mana once per opening round")
 
 func arena_regeneration() -> void:
 	var hero := CharacterState.new("arena_resource_player", "Arena resources")
