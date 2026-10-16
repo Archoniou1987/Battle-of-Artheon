@@ -32,11 +32,7 @@ Direction is relative to the combatant's team flag:
 
 Special movement ABI may bypass the forward-line rule when explicitly defined. Charge is movement only: it has no inherent damage and moves at most one adjacent zone.
 
-Tempo decides whether the declared movement executes; it never substitutes another action or destination.
-- Tempo >= 0: declared Navigation is not penalized by Tempo.
-- -100 < Tempo < 0: success chance is 100 + Tempo percent.
-- Tempo <= -100: movement fails.
-A failed movement still consumes the declared action.
+Accumulated Tempo is not a per-action success roll. Movement is allowed while the character is not in an explicitly scheduled stunned round and has no other movement lock (e.g. root). Negative Tempo is retained for the end-of-round stun threshold, not applied as a random navigation penalty. A failed movement still consumes the declared action.
 
 ## 4. Simultaneous round contract
 
@@ -94,3 +90,13 @@ Kill attribution is not last-hit based. For a target finalized dead, aggregate d
 - An Arena combat session suspends the out-of-combat clock; the saved `regen_paused` flag prevents retroactive out-of-combat recovery if the app quits during combat. On normal exit, the timestamp restarts from exit time.
 - At 0 HP, passive recovery does not revive the character (nor restore mana). Recovery requires an explicit mechanic; the Arena debug refill remains available to testers.
 
+## Tempo PAR019–021: accumulated control and explicit stun
+
+- PAR019 defines the character's starting positive Tempo. Combat stores `base_tempo` separately from mutable `tempo`. The starting value is capped by PAR020.
+- PAR020 is a positive upper cap with canonical baseline **100**, including bonuses from active equipment; negative Tempo has no floor.
+- PAR021 is fixed Tempo regeneration **at the start of every round**, including the stunned round and both immunity rounds. It never increases Tempo beyond PAR020.
+- Incoming control subtracts Tempo once when the effect lands, even while immune. Persistent effect records never repeatedly subtract the same control through overlays.
+- If a living combatant has Tempo ≤ −100 **at the end of a non-immune round**, a stun is scheduled for the **next round**. The trigger pays up to 100 negative Tempo (`min(0, tempo + 100)`) without discarding the remaining debt.
+- The stunned round blocks attacks, ABI, active defences and movement. At the **end** of that stunned round, add `50% × base_tempo` exactly once, capped by PAR020.
+- The **two following complete rounds** are stun-immune. Control continues accumulating and PAR021 still regenerates, but no stun or −100 payment occurs. A new stun can first be scheduled at the end of the next non-immune round.
+- Positive Tempo does **not** grant extra attacks. A low/negative Tempo is not itself a reason to cancel actions until the scheduled stunned round begins. Death is finalized before Tempo stun/rebound processing.
