@@ -14,6 +14,9 @@ var in_combat := false
 ## Equipping +max HP never heals current HP; removing gear only clamps it.
 var current_hp: int = 0
 var current_mana: int = 0
+## Accumulated sub-point regeneration remains stable across ticks and restarts.
+var out_combat_hp_fraction: float = 0.0
+var out_combat_mana_fraction: float = 0.0
 
 ## TRA definitions are supplied by the caller; no example talents are hardcoded.
 ## Only learned trait IDs are persistent. Runtime modifiers are rebuilt for combat.
@@ -91,15 +94,25 @@ func commit_combat_resources(combatant: CombatantState, repository: ItemReposito
 	return true
 
 func resources_to_dict() -> Dictionary:
-	return {"hp": current_hp, "mana": current_mana}
+	return {
+		"hp": current_hp, "mana": current_mana,
+		"hp_fraction": out_combat_hp_fraction,
+		"mana_fraction": out_combat_mana_fraction
+	}
 
-## Validate first; actual caps are applied after inventory/equipment restoration.
+## Legacy resource saves only contain HP/mana; missing fractions are zero.
 func restore_resources(data: Dictionary) -> bool:
 	for key in ["hp", "mana"]:
 		if not data.has(key) or not CharacterProgression._is_whole_number(data[key]) or int(data[key]) < 0:
 			return false
+	for key in ["hp_fraction", "mana_fraction"]:
+		var fraction: Variant = data.get(key, 0.0)
+		if not RatingMatrix._number(fraction) or not is_finite(float(fraction)) or float(fraction) < 0.0 or float(fraction) >= 1.0:
+			return false
 	current_hp = int(data["hp"])
 	current_mana = int(data["mana"])
+	out_combat_hp_fraction = float(data.get("hp_fraction", 0.0))
+	out_combat_mana_fraction = float(data.get("mana_fraction", 0.0))
 	return true
 
 ## Explicit migration/new-character initialization only; not called by equip.
@@ -110,6 +123,8 @@ func reset_resources_to_full(repository: ItemRepository) -> bool:
 	var totals: Dictionary = snapshot["totals"]
 	current_hp = maxi(0, 100 + int(totals["PAR010"]))
 	current_mana = maxi(0, 30 + int(totals["PAR011"]))
+	out_combat_hp_fraction = 0.0
+	out_combat_mana_fraction = 0.0
 	return true
 
 func receive_item(instance_id: String, repository: ItemRepository) -> bool:
