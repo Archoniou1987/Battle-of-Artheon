@@ -76,21 +76,17 @@ static func armour_penetration_flat(combatant: CombatantState, round_number: int
 	return value(combatant, "armour_penetration_flat", round_number)
 
 static func armour_reduction_percent(combatant: CombatantState, round_number: int) -> float:
-	var value_percent := value(combatant, "armour_penetration_percent", round_number)
-	if value_percent > 1.0:
-		value_percent /= 100.0
-	return clampf(value_percent, 0.0, 1.0)
+	# PAR126 is always percentage points: 1 = 1%, not 100%.
+	var percentage_points := value(combatant, "armour_penetration_percent", round_number)
+	return clampf(percentage_points / 100.0, 0.0, 1.0)
 
-## PAR127–130: flat armour against the matching physical type in every hit zone.
+## PAR127–130 base/item values are already in PhysicalArmourService's 5x4
+## matrix. Only live TRA/EFF overlays belong at the hit-resolution boundary.
 static func global_physical_armour(combatant: CombatantState, damage_type: String, round_number: int) -> float:
-	const TYPES := {"piercing": "PAR127", "slashing": "PAR128", "chopping": "PAR129", "blunt": "PAR130"}
-	var key := String(TYPES.get(damage_type.to_lower(), ""))
-	if key.is_empty():
+	var normalized := damage_type.to_lower()
+	if not EquipmentBuilder.PHYSICAL_TYPES.has(normalized):
 		return 0.0
-	var totals: Variant = combatant.combat_stats.get("par_totals", {})
-	if not totals is Dictionary:
-		return 0.0
-	return float(totals.get(key, 0.0))
+	return modifier(combatant, "physical_resist_" + normalized, round_number)
 
 ## PAR131–134: percentage penetration of only the matching physical armour type.
 static func typed_armour_penetration_percent(combatant: CombatantState, damage_type: String, round_number: int) -> float:
@@ -101,7 +97,7 @@ static func typed_armour_penetration_percent(combatant: CombatantState, damage_t
 	var totals: Variant = combatant.combat_stats.get("par_totals", {})
 	if not totals is Dictionary:
 		return 0.0
-	var percent := float(totals.get(key, 0.0))
+	var percent := float(totals.get(key, 0.0)) + modifier(combatant, "armour_pen_" + damage_type.to_lower(), round_number)
 	return clampf(percent / 100.0, 0.0, 1.0)
 
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
