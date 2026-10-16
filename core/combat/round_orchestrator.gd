@@ -183,7 +183,10 @@ func resolve_active_timed_effects() -> Array[int]:
 			var definition:Dictionary=active.get("definition",{})
 			if String(definition.get("kind",""))!="dot":
 				continue
-			var amount:=float(definition.get("damage",0.0))
+			# Shared-duration EFF has one DoT packet per round, multiplied
+			# by the current stack count (independent-stack EFF stay unchanged).
+			var shared_stacks := maxi(1, int(active.get("stacks", 1))) if String(definition.get("stacking", "")) == "shared_duration" else 1
+			var amount:=float(definition.get("damage",0.0)) * float(shared_stacks)
 			if amount<=0.0:
 				continue
 			var event:=state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
