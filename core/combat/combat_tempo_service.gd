@@ -19,7 +19,7 @@ static func is_stunned(combatant: CombatantState, round_number: int) -> bool:
 	return combatant != null and combatant.tempo_stun_round == round_number
 
 static func is_immune(combatant: CombatantState, round_number: int) -> bool:
-	return combatant != null and round_number > combatant.tempo_stun_round and round_number <= combatant.tempo_immunity_until_round
+	return combatant != null and combatant.tempo_immunity_until_round > 0 and round_number > combatant.tempo_stun_round and round_number <= combatant.tempo_immunity_until_round
 
 ## All incoming negative Tempo applies even during stun immunity.
 static func apply_control(combatant: CombatantState, amount: float) -> void:
