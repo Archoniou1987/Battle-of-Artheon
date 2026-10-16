@@ -49,13 +49,14 @@ Round order:
 4. calculate/apply immediate damage;
 5. Movement;
 6. active EFF processing;
-7. life/death finalization;
-8. battle-end check.
+7. PAR015/PAR016 end-round regeneration for combatants with HP > 0;
+8. life/death finalization;
+9. battle-end check.
 
 Immediate ABI damage (for example Frostbolt damage) applies in the casting round.
 A new persistent EFF/status created during that round becomes active from the next round. It cannot cancel an action already valid and declared in the current round.
 
-Internal HP may be negative before finalization. A combatant alive at round start remains round-present and zone-controlling until the life/death phase. Healing before finalization may rescue negative HP.
+Internal HP may be negative before finalization. A combatant alive at round start remains round-present and zone-controlling until the life/death phase. Healing before finalization may rescue negative HP. Passive PAR016 regeneration does not: it only applies while HP > 0 after timed effects. PAR015 restores mana at the same boundary, capped by max mana; PAR013 is not a combat-round regeneration source. Neither pool regenerates more than once per round.
 
 ## 5. EFF and zone effects
 
