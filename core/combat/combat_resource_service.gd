@@ -3,8 +3,9 @@ extends RefCounted
 
 ## Single combat-round regeneration boundary for PAR015/016.
 ## PAR013 is kept separate (non-round regeneration) by design.
-## Called after timed effects and before death finalization exactly once per
-## resolved round, independently of Arena, duel or group simulation.
+## Called once at the opening of each round, before actions are locked and
+## before the start-of-round snapshot. Dead combatants cannot regenerate.
+## Regeneration is passive resource renewal, not healing/resurrection.
 static func apply_round_regeneration(state: CombatState) -> void:
 	for combatant in state.combatants.values():
 		if combatant == null or combatant.is_death_finalized() or combatant.hp <= 0:
