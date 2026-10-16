@@ -16,11 +16,6 @@ func _init(combat_state:CombatState,seed_value:int=1,p_engine:CombatEngine=null)
 		rng=combat_engine.combat_rng
 	ability_scheduler=AbilityScheduler.new(AbilityCatalog.load_json("res://data/test/abilities.json"),AbilityCatalog.load_json("res://data/test/ability_loadouts.json"))
 
-func regenerate_mana()->void:
-	for combatant in state.combatants.values():
-		var regen:=maxi(0,int(CombatModifierService.value(combatant, "mana_regen", state.round_number)))
-		combatant.mana=mini(combatant.max_mana,combatant.mana+regen)
-
 func queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
 func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
