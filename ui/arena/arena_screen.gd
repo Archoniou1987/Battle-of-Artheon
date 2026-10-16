@@ -80,6 +80,7 @@ var hp_label: Label
 var tabs: TabContainer
 var par_report_dialog: AcceptDialog
 var par_report_text: TextEdit
+var abi_lab_dialog: AbiTestLabDialog
 var fighter_popup: AcceptDialog
 var item_popup: AcceptDialog
 var item_popup_text: RichTextLabel
@@ -138,6 +139,11 @@ func _ready() -> void:
 	report_button.tooltip_text = "Снимок всех PAR персонажа и боевого участника"
 	report_button.pressed.connect(_show_par_report)
 	header.add_child(report_button)
+	var abi_lab_button := Button.new()
+	abi_lab_button.text = "ABI Lab"
+	abi_lab_button.tooltip_text = "Изолированная проверка ABI, PAR, урона и эффектов на манекене"
+	abi_lab_button.pressed.connect(_open_abi_test_lab)
+	header.add_child(abi_lab_button)
 	var level_button := Button.new()
 	level_button.text = "Уровень игрока"
 	level_button.pressed.connect(func() -> void: _open_level_settings(true))
@@ -147,6 +153,8 @@ func _ready() -> void:
 	dummy_level_button.pressed.connect(func() -> void: _open_level_settings(false))
 	header.add_child(dummy_level_button)
 	_build_level_settings()
+	abi_lab_dialog = AbiTestLabDialog.new()
+	add_child(abi_lab_dialog)
 	par_report_dialog = AcceptDialog.new()
 	par_report_dialog.title = "PAR / Combat — 108 параметров"
 	par_report_dialog.min_size = Vector2i(350, 540)
@@ -972,3 +980,8 @@ func _show_par_report() -> void:
 	lines.append("Combat contract: " + JSON.stringify(ParCombatContract.validate(fighter)))
 	par_report_text.text = "\n".join(lines)
 	par_report_dialog.popup_centered()
+
+## Development-only dialog. Never acts on the persistent Arena session.
+func _open_abi_test_lab() -> void:
+	if abi_lab_dialog != null:
+		abi_lab_dialog.open_lab()
