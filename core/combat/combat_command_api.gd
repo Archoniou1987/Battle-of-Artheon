@@ -126,7 +126,7 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
-	if CombatModifierService.effective_tempo(combatant, state.round_number) <= -100:
+	if CombatTempoService.is_stunned(combatant, state.round_number):
 		return {"ok":true,"reason":"stunned","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
 	var navigation:Array[int]=[]
 	if zones!=null and orchestrator!=null:
