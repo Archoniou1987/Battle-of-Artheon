@@ -10,6 +10,21 @@ static func build(npc:NpcState, combat_level:int=-1)->CombatantState:
 	combatant.combat_stats=(npc.base.get("combat_stats",{}) as Dictionary).duplicate(true)
 	combatant.combat_stats["par_totals"] = (npc.base.get("par_totals", {}) as Dictionary).duplicate(true)
 	combatant.combat_stats["par_attack_ranges"] = (npc.base.get("par_attack_ranges", {}) as Dictionary).duplicate(true)
+	# Match the character adapter for implemented physical PAR values.
+	# NPC templates are authored directly, without CharacterStatsService.snapshot.
+	var definitions := ParCalculationService.registry()
+	for par_id in ["PAR053", "PAR054", "PAR055", "PAR056", "PAR071", "PAR072", "PAR135"]:
+		if not combatant.combat_stats["par_totals"].has(par_id):
+			continue
+		var source_key := String(Dictionary(definitions.get(par_id, {})).get("source_key", ""))
+		if not source_key.is_empty():
+			combatant.combat_stats[source_key] = float(combatant.combat_stats["par_totals"][par_id])
+	combatant.combat_stats["armour_penetration_flat"] = float(combatant.combat_stats["par_totals"].get("PAR125", 0.0))
+	combatant.combat_stats["armour_penetration_percent"] = float(combatant.combat_stats["par_totals"].get("PAR126", 0.0))
+	combatant.combat_stats["shield_auto_block_direct_pct"] = (
+		float(combatant.combat_stats.get("shield_auto_block_direct_pct", 0.0))
+		+ float(combatant.combat_stats["par_totals"].get("PAR071", 0.0))
+	)
 	for id in ParCombatContract.RATINGS:
 		if not combatant.combat_stats["par_totals"].has(id):
 			push_error("NPC missing canonical rating: " + npc.npc_id + ": " + id)
@@ -23,6 +38,6 @@ static func build(npc:NpcState, combat_level:int=-1)->CombatantState:
 	if not bool(contract.ok):
 		push_error("NPC PAR contract rejected: " + npc.npc_id + ": " + String(contract.reason))
 		return null
-	combatant.armour=(npc.base.get("armour",{}) as Dictionary).duplicate(true)
+	combatant.armour = PhysicalArmourService.assemble(Dictionary(npc.base.get("armour", {})), combatant.combat_stats["par_totals"])
 	combatant.combat_stats["abilities"]=npc.abilities.duplicate(true)
 	return combatant
