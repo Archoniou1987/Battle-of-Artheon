@@ -16,6 +16,7 @@ func _initialize() -> void:
 	immune_accumulation()
 	positive_regeneration_cap()
 	death_prevents_tempo()
+	par_character_and_npc_adapters()
 	no_extra_attack_from_positive_tempo()
 	for failure in failures:
 		push_error("PAR_TEMPO: " + failure)
@@ -117,3 +118,36 @@ func no_extra_attack_from_positive_tempo() -> void:
 		if bool(event.payload.get("is_extra_attack", false)):
 			extras += 1
 	check(round.locked_actions.size() == 1 and extras == 0, "positive Tempo never generates extra base attacks")
+
+func par_character_and_npc_adapters() -> void:
+	var hero := CharacterState.new("tempo_par_hero", "Tempo hero")
+	var repository := ItemRepository.new()
+	var item := {"instance_id":"tempo_par_ring","equip_slots":["ring1"],"slot_usage":["ring1"],"par_stats":{"PAR019":60.0,"PAR020":20.0,"PAR021":10.0}}
+	ItemDurabilityService.initialize_item(item, 100)
+	check(repository.add_item(item) and hero.receive_item("tempo_par_ring", repository) and hero.equip("ring1", "tempo_par_ring", repository), "equip Tempo PAR ring")
+	var par := ParCalculationService.calculate(hero, repository)
+	check(is_equal_approx(float(Dictionary(par.get("totals", {})).get("PAR020", -1)), 120.0), "PAR020 baseline 100 plus equipment bonus")
+	var fighter := CharacterCombatBuilder.build(hero, repository)
+	check(fighter != null, "Tempo CharacterCombatBuilder")
+	if fighter != null:
+		check(is_equal_approx(fighter.base_tempo, 60.0), "PAR019 is initial Tempo")
+		check(is_equal_approx(fighter.max_tempo, 120.0), "PAR020 is runtime positive cap")
+		check(is_equal_approx(fighter.tempo_regen, 10.0), "PAR021 is fixed per-round recovery")
+		check(is_equal_approx(fighter.tempo, 60.0), "starting current Tempo matches PAR019")
+	var npc_totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR019":35.0,"PAR020":140.0,"PAR021":7.0}
+	for par_id in ParCombatContract.RATINGS:
+		npc_totals[par_id] = 0.0
+	var npc := NpcState.new({
+		"id":"tempo_par_npc", "name":"Tempo NPC", "level":1,
+		"base":{
+			"health":100, "mana":40,
+			"par_totals":npc_totals,
+			"par_attack_ranges":{"PAR050":{"min":2.0,"max":4.0,"type":"blunt"}},
+			"combat_stats":{"weapon_profiles":[{"slot":"main_hand","damage_min":2.0,"damage_max":4.0,"damage_type":"blunt"}]}
+		}
+	})
+	var enemy := NpcCombatBuilder.build(npc)
+	check(enemy != null, "Tempo NpcCombatBuilder")
+	if enemy != null:
+		check(is_equal_approx(enemy.base_tempo, 35.0) and is_equal_approx(enemy.tempo, 35.0), "NPC PAR019 initializes current/base Tempo")
+		check(is_equal_approx(enemy.max_tempo, 140.0) and is_equal_approx(enemy.tempo_regen, 7.0), "NPC PAR020/PAR021 parity")
