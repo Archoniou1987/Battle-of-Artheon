@@ -71,7 +71,7 @@ func _resolve_action(event: CombatEvent) -> void:
 		return
 	if not _require_canonical(event, source):
 		return
-	if CombatModifierService.effective_tempo(source, state.round_number) <= -100:
+	if CombatTempoService.is_stunned(source, state.round_number):
 		event.set_result("outcome", "stunned")
 		return
 	var target_ids := _valid_action_targets(event)
@@ -241,7 +241,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 		event.set_result("outcome", "invalid_combatant"); return
 	if not _require_canonical(event, attacker) or not _require_canonical(event, defender):
 		return
-	if CombatModifierService.effective_tempo(attacker, state.round_number) <= -100:
+	if CombatTempoService.is_stunned(attacker, state.round_number):
 		event.set_result("outcome", "stunned")
 		return
 	var rolls: Dictionary = event.payload.get("rolls", {})
@@ -261,7 +261,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("hit_roll",hit_roll)
 	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
-	var active_defence_available := not uses_magic_hit and not _effect_flag(defender, "active_defence_locked") and _active_defence_available(CombatModifierService.effective_tempo(defender, state.round_number), int(rolls.get("reaction", 100)))
+	var active_defence_available := not uses_magic_hit and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
 	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
@@ -396,6 +396,13 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if kind == "heal":
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
 	else:
+		# Tempo control is a one-time accumulated hit, never a repeat overlay.
+		if definition.has("tempo_modifier"):
+			var tempo_delta := float(definition["tempo_modifier"])
+			if tempo_delta < 0.0:
+				CombatTempoService.apply_control(target, -tempo_delta)
+			elif tempo_delta > 0.0:
+				target.tempo = minf(target.max_tempo, target.tempo + tempo_delta)
 		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
 
