@@ -73,7 +73,11 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 		var parts := key.split(":")
 		if parts.size() != 2:
 			return {"ok": false, "reason": "invalid_par_selection", "key": key}
-		var allowed: Array = CASTER_PARS if parts[0] == "caster" else DUMMY_PARS if parts[0] == "dummy" else []
+		var allowed: Array = []
+		if parts[0] == "caster":
+			allowed = CASTER_PARS
+		elif parts[0] == "dummy":
+			allowed = DUMMY_PARS
 		if not allowed.has(parts[1]) or not RatingMatrix._number(par_values[raw_key]):
 			return {"ok": false, "reason": "unsupported_or_invalid_PAR", "key": key}
 
