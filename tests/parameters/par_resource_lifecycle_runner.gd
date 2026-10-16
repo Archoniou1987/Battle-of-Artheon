@@ -54,6 +54,7 @@ func equipment_and_persistence() -> void:
 	hero.current_hp = 4900
 	hero.current_mana = 250
 	check(hero.unequip("ring1", repo) == "resource_ring", "unequip PAR010/011 ring")
+	check(hero.current_hp == initial_hp and hero.current_mana == initial_mana, "resource cap applies immediately on unequip")
 	var without_ring := hero.resource_snapshot(repo)
 	check(int(without_ring.get("hp", -1)) == initial_hp, "HP clamps to lower max after unequip")
 	check(int(without_ring.get("mana", -1)) == initial_mana, "mana clamps to lower max after unequip")
