@@ -39,6 +39,6 @@ static func build(npc:NpcState, combat_level:int=-1)->CombatantState:
 		push_error("NPC PAR contract rejected: " + npc.npc_id + ": " + String(contract.reason))
 		return null
 	combatant.armour = PhysicalArmourService.assemble(Dictionary(npc.base.get("armour", {})), combatant.combat_stats["par_totals"])
-	CombatTempoService.initialize(combatant, float(combatant.combat_stats["par_totals"].get("PAR019", 0.0)), 100.0 + float(combatant.combat_stats["par_totals"].get("PAR020", 0.0)), float(combatant.combat_stats["par_totals"].get("PAR021", 0.0)))
+	CombatTempoService.initialize(combatant, float(combatant.combat_stats["par_totals"].get("PAR019", 0.0)), float(combatant.combat_stats["par_totals"].get("PAR020", 100.0)), float(combatant.combat_stats["par_totals"].get("PAR021", 0.0)))
 	combatant.combat_stats["abilities"]=npc.abilities.duplicate(true)
 	return combatant
