@@ -10,8 +10,8 @@ static func run(balance: Dictionary) -> bool:
 	var locked := _locked_actions_survive_death(balance)
 	print("DUEL_CASE=locked_actions ok=", locked)
 	if not locked: return false
-	var tempo := _tempo_minus_100_cannot_attack(balance)
-	print("DUEL_CASE=tempo_minus_100 ok=", tempo)
+	var tempo := _scheduled_stun_cannot_attack(balance)
+	print("DUEL_CASE=scheduled_stun ok=", tempo)
 	if not tempo: return false
 	var mixed := _mixed_weapons_keep_attack_profiles(balance)
 	print("DUEL_CASE=mixed_weapons ok=", mixed)
@@ -57,6 +57,7 @@ static func _locked_actions_survive_death(balance: Dictionary) -> bool:
 static func _tempo_minus_100_cannot_attack(balance: Dictionary) -> bool:
 	var state := _make_state(30, 30, 10.0, 10.0)
 	state.get_combatant("a").tempo = -100.0
+	state.get_combatant("a").tempo_stun_round = 1
 	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 7)
 	simulator.max_rounds = 1
 	simulator.run_duel("a", "b")
