@@ -95,14 +95,16 @@ func _run() -> void:
 		var foreign := CombatantState.new("foreign", "Foreign", 1, 1, 1)
 		check(not loaded.commit_combat_resources(foreign, restarted.get("item_repository") as ItemRepository), "cannot commit another fighter's resources")
 		check(loaded.current_hp == expected_hp and loaded.current_mana == expected_mana, "invalid combat write-back does not mutate resources")
+		loaded.current_hp = 0
+		loaded.current_mana = 0
 		restarted.call("_open_panel", "Арена")
 		await process_frame
 		var training := restarted.get_node_or_null("ArenaScreen") as ArenaScreen
 		if training == null:
 			check(false, "restarted Arena missing")
 		else:
-			loaded.current_hp = 0
-			loaded.current_mana = 0
+			check(training.round_button.disabled, "Arena does not enable attacks at zero HP")
+			check(String(training.combat_session.play_round(attacks, blocks).get("reason", "")) == "player_has_no_hp", "Arena rejects zero-HP combat turn")
 			training._refill_training_resources()
 			var max_resources := loaded.resource_snapshot(restarted.get("item_repository") as ItemRepository)
 			check(int(max_resources["hp"]) == int(max_resources["max_hp"]), "explicit training refill restores HP")
