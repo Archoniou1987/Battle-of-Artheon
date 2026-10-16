@@ -89,15 +89,10 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		if not found:
 			push_error("Weapon trigger missing its active instance")
 			return null
-	var zone_ids := {"head":"PAR100", "chest":"PAR101", "arms":"PAR102", "waist":"PAR103", "legs":"PAR104"}
-	for zone_index in range(EquipmentBuilder.HIT_ZONES.size()):
-		var zone: String = EquipmentBuilder.HIT_ZONES[zone_index]
-		var values: Dictionary = Dictionary(base.get("armour", {})).get(zone, {}).duplicate(true)
-		for type_index in range(EquipmentBuilder.PHYSICAL_TYPES.size()):
-			var damage_type: String = EquipmentBuilder.PHYSICAL_TYPES[type_index]
-			var typed_id := "PAR%03d" % (105 + zone_index * 4 + type_index)
-			values[damage_type] = float(values.get(damage_type, 0)) + float(primary[zone_ids[zone]]) + float(primary[typed_id])
-		combatant.armour[zone] = values
+	# PhysicalArmourService owns the final 5x4 matrix. Structural item armour
+	# was already canonicalized into PAR100-104, so never add EquipmentBuilder
+	# runtime armour a second time.
+	combatant.armour = PhysicalArmourService.assemble(Dictionary(base.get("armour", {})), primary)
 	# TRA definitions are injected through base for now, independent of test content.
 	var trait_definitions: Dictionary = base.get("trait_definitions", {})
 	combatant.combat_stats["trait_modifiers"] = collect_trait_modifiers(character, trait_definitions)
