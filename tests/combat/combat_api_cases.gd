@@ -7,6 +7,8 @@ static func run()->bool:
 	var enemy:=TestFixtureLoader.new_combatant("enemy","Enemy",9,80)
 	hero.hp=-5
 	hero.tempo=10.0
+	# Current Tempo is the authoritative accumulated pool; no repeated
+	# addition of legacy combat_stats/active EFF Tempo snapshots.
 	hero.combat_stats["tempo"]=5.0
 	hero.combat_stats["damage_reduction"]=0.25
 	hero.combat_stats["par_totals"]["PAR073"]=2
@@ -30,9 +32,10 @@ static func run()->bool:
 	var api:=CombatApi.new(state,group,zones)
 	var hero_view:=api.combatant("hero")
 	if int(hero_view.get("hp",-1))!=0 or int(hero_view.get("hp_internal",0))!=-5: return false
-	if not is_equal_approx(float(hero_view.get("tempo",0.0)),30.0): return false
+	if not is_equal_approx(float(hero_view.get("tempo",0.0)),10.0): return false
 	var combat_stats:Dictionary=hero_view.get("combat_stats",{})
-	if not is_equal_approx(float(combat_stats.get("effective_tempo",0.0)),30.0): return false
+	if not is_equal_approx(float(combat_stats.get("effective_tempo",0.0)),10.0): return false
+	if not is_equal_approx(hero.tempo,10.0): return false
 	if not is_equal_approx(float(combat_stats.get("damage_reduction",0.0)),0.5): return false
 	if Array(hero_view.get("manual_block_zones",[]))!=["head","chest"]: return false
 	if int(hero_view.get("manual_block_zone_capacity",0))!=2: return false
