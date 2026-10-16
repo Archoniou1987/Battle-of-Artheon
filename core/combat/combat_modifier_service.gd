@@ -82,7 +82,11 @@ static func armour_reduction_percent(combatant: CombatantState, round_number: in
 	return clampf(value_percent, 0.0, 1.0)
 
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
-	return clampf(value(combatant, "damage_reduction", round_number), 0.0, 1.0)
+	# PAR135 is a percentage (e.g. 20 = 20%); runtime overlays retain
+	# their existing fractional damage_reduction contract.
+	var par_percent := value(combatant, "damage_reduction_pct", round_number)
+	var runtime_fraction := value(combatant, "damage_reduction", round_number)
+	return clampf(par_percent / 100.0 + runtime_fraction, 0.0, 1.0)
 
 static func manual_block_zone_capacity(combatant: CombatantState) -> int:
 	var totals: Variant = combatant.combat_stats.get("par_totals")
