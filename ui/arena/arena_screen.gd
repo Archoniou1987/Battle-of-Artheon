@@ -639,6 +639,19 @@ func _show_fighter_details(is_player: bool) -> void:
 	for key in RATING_KEYS:
 		if ratings.has(key):
 			lines.append("%s: %s" % [RATING_NAMES[key], str(ratings[key])])
+	if combat_session != null:
+		var fighter := combat_session.fighter(is_player)
+		if fighter != null:
+			lines.append("")
+			lines.append("[b]Tempo PAR019–021[/b]")
+			lines.append("Текущее: %s  •  Базовое: %s" % [str(fighter.tempo), str(fighter.base_tempo)])
+			lines.append("Максимум: %s  •  Восстановление/раунд: %s" % [str(fighter.max_tempo), str(fighter.tempo_regen)])
+			var round_number := combat_session.state.round_number
+			lines.append("Состояние: %s" % ("Оглушён" if CombatTempoService.is_stunned(fighter, round_number) else ("Иммунитет к стану" if CombatTempoService.is_immune(fighter, round_number) else "Обычное")))
+			if fighter.tempo_stun_round > round_number:
+				lines.append("Оглушение назначено на раунд %d" % fighter.tempo_stun_round)
+			elif fighter.tempo_immunity_until_round >= round_number and fighter.tempo_immunity_until_round > 0:
+				lines.append("Иммунитет до конца раунда %d" % fighter.tempo_immunity_until_round)
 	if primary.is_empty() and ratings.is_empty():
 		lines.append("Нет доступных характеристик")
 	fighter_popup_text.text = "\n".join(lines)
