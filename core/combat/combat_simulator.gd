@@ -43,7 +43,6 @@ func _run_round(first_id:String,second_id:String)->void:
 	else:
 		state.begin_round()
 		round=CombatRound.new(state.round_number)
-	attack_pipeline.regenerate_mana()
 	var first:=state.get_combatant(first_id)
 	var second:=state.get_combatant(second_id)
 	attack_pipeline.lock_basic_attack(round,first,second)
