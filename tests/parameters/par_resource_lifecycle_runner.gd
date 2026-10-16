@@ -11,6 +11,7 @@ func check(condition: bool, description: String) -> void:
 func _initialize() -> void:
 	equipment_and_persistence()
 	round_regeneration()
+	npc_regeneration()
 	arena_regeneration()
 	duel_regeneration()
 	group_regeneration()
@@ -117,6 +118,34 @@ func round_regeneration() -> void:
 	var outcome := orchestrator.end_round()
 	check(fighter.hp == -10 and fighter.mana == 0, "passive regen cannot rescue lethal HP")
 	check(fighter.is_death_finalized() and Array(outcome.get("dead_ids", [])).has(fighter.combatant_id), "death finalization unchanged")
+
+func npc_regeneration() -> void:
+	var totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR015":7.0,"PAR016":5.0}
+	for par_id in ParCombatContract.RATINGS:
+		totals[par_id] = 0.0
+	var npc := NpcState.new({
+		"id":"npc_round_regen", "name":"NPC regen", "level":1,
+		"base":{
+			"health":100, "mana":40,
+			"par_totals":totals,
+			"par_attack_ranges":{"PAR050":{"min":2.0,"max":4.0,"type":"blunt"}},
+			"combat_stats":{"weapon_profiles":[{"slot":"main_hand","damage_min":2.0,"damage_max":4.0,"damage_type":"blunt"}]}
+		}
+	})
+	var actor := NpcCombatBuilder.build(npc)
+	check(actor != null, "NPC round regen PAR contract")
+	if actor == null:
+		return
+	check(is_equal_approx(float(actor.combat_stats.get("hp_regen_round", -1)), 5.0), "NPC PAR016 adapter")
+	check(is_equal_approx(float(actor.combat_stats.get("mana_regen_round", -1)), 7.0), "NPC PAR015 adapter")
+	actor.hp = 50
+	actor.mana = 0
+	var state := CombatState.new()
+	state.add_combatant(actor)
+	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state))
+	orchestrator.begin_round()
+	orchestrator.end_round()
+	check(actor.hp == 55 and actor.mana == 7, "NPC restores HP/mana at end of round")
 
 func arena_regeneration() -> void:
 	var hero := CharacterState.new("arena_resource_player", "Arena resources")
