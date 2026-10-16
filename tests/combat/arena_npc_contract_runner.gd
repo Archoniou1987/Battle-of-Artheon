@@ -33,9 +33,18 @@ func _initialize() -> void:
 	npc_session.state.combatants[ArenaCombatSession.ENEMY_ID] = npc
 	arena.engine.combat_rng.seed = 20261016
 	npc_session.engine.combat_rng.seed = 20261016
+	var block_count := CombatModifierService.manual_block_zone_capacity(arena.fighter(true))
+	var block_zones: Array[String] = ["chest"]
+	if block_count == 2:
+		block_zones = ["chest", "arms"]
+	elif block_count == 3:
+		block_zones = ["chest", "arms", "waist"]
+	elif block_count != 1:
+		print("PARITY_UNSUPPORTED_BLOCK_CAPACITY=", block_count)
+		valid = false
 	for round_index in range(2):
-		var a: Dictionary = arena.play_round(["chest"], ["chest"])
-		var b: Dictionary = npc_session.play_round(["chest"], ["chest"])
+		var a: Dictionary = arena.play_round(["chest"], block_zones)
+		var b: Dictionary = npc_session.play_round(["chest"], block_zones)
 		valid = valid and bool(a.get("ok", false)) and bool(b.get("ok", false))
 		if not bool(a.get("ok", false)) or not bool(b.get("ok", false)):
 			print("PARITY_ROUND_REJECTED arena=", a.get("reason", ""), " npc=", b.get("reason", ""))
