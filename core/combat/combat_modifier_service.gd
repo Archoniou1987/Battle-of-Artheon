@@ -81,6 +81,17 @@ static func armour_reduction_percent(combatant: CombatantState, round_number: in
 		value_percent /= 100.0
 	return clampf(value_percent, 0.0, 1.0)
 
+## PAR127–130: flat armour against the matching physical type in every hit zone.
+static func global_physical_armour(combatant: CombatantState, damage_type: String, round_number: int) -> float:
+	const TYPES := {"piercing": "PAR127", "slashing": "PAR128", "chopping": "PAR129", "blunt": "PAR130"}
+	var key := String(TYPES.get(damage_type.to_lower(), ""))
+	if key.is_empty():
+		return 0.0
+	var totals: Variant = combatant.combat_stats.get("par_totals", {})
+	if not totals is Dictionary:
+		return 0.0
+	return float(totals.get(key, 0.0))
+
 ## PAR131–134: percentage penetration of only the matching physical armour type.
 static func typed_armour_penetration_percent(combatant: CombatantState, damage_type: String, round_number: int) -> float:
 	const TYPES := {"piercing": "PAR131", "slashing": "PAR132", "chopping": "PAR133", "blunt": "PAR134"}
