@@ -43,8 +43,8 @@ func _run() -> void:
 	var expected_mana := maxi(0, player.max_mana - 9)
 	player.hp = expected_hp
 	player.mana = expected_mana
-	player.tempo = -1000.0
-	opponent.tempo = -1000.0
+	player.tempo_stun_round = 1
+	opponent.tempo_stun_round = 1
 	var attacks: Array[String] = ["chest"]
 	var blocks: Array[String] = ["chest"]
 	arena._play_combat_round(attacks, blocks)
