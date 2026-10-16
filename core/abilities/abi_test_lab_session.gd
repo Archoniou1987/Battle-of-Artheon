@@ -73,7 +73,7 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 		var parts := key.split(":")
 		if parts.size() != 2:
 			return {"ok": false, "reason": "invalid_par_selection", "key": key}
-		var allowed := CASTER_PARS if parts[0] == "caster" else DUMMY_PARS if parts[0] == "dummy" else []
+		var allowed: Array = CASTER_PARS if parts[0] == "caster" else DUMMY_PARS if parts[0] == "dummy" else []
 		if not allowed.has(parts[1]) or not RatingMatrix._number(par_values[raw_key]):
 			return {"ok": false, "reason": "unsupported_or_invalid_PAR", "key": key}
 
@@ -143,7 +143,7 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 	var report: Array[String] = []
 	for index in range(event_start, state.event_log.size()):
 		var event: CombatEvent = state.event_log[index]
-		var kind := ["ACTION", "ATTACK", "DAMAGE", "EFFECT"][int(event.kind)]
+		var kind: String = String(["ACTION", "ATTACK", "DAMAGE", "EFFECT"][int(event.kind)])
 		var detail := {"id": event.event_id, "parent_id": event.parent_event_id, "kind": kind,
 			"payload": event.payload.duplicate(true), "result": event.result.duplicate(true)}
 		events.append(detail)
