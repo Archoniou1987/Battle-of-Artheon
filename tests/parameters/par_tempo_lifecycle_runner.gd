@@ -38,7 +38,7 @@ func stun_and_debt() -> void:
 	orchestrator.begin_round()
 	check(CombatTempoService.is_stunned(fighter, 2), "stun starts one full next round")
 	check(is_equal_approx(fighter.tempo, -120.0), "PAR021 works even during stun")
-	check(not bool(ParCombatContract.action_status(fighter, 2).get("ok", true)) or CombatTempoService.is_stunned(fighter, 2), "scheduled stun blocks actions")
+	check(CombatTempoService.is_stunned(fighter, 2), "scheduled stun blocks the next round")
 	orchestrator.end_round()
 	check(is_equal_approx(fighter.tempo, -90.0), "50 percent base rebound only at stunned round end")
 	check(fighter.tempo_immunity_until_round == 4, "two immune rounds after stun")
@@ -101,6 +101,19 @@ func death_prevents_tempo() -> void:
 	check(fighter.is_death_finalized() and fighter.tempo_stun_round == -1, "death finalization precedes stun check")
 
 func no_extra_attack_from_positive_tempo() -> void:
-	var fighter := actor("tempo_attacker", 100.0, 100.0, 20.0)
-	check(not CombatTempoService.is_stunned(fighter, 1), "positive Tempo is not stun")
-	check(fighter.tempo == fighter.max_tempo, "positive Tempo remains capped")
+	var attacker := TestFixtureLoader.new_combatant("tempo_attacker", "Tempo attacker", 1, 1000)
+	var defender := TestFixtureLoader.new_combatant("tempo_defender", "Tempo defender", 1, 1000)
+	TestFixtureLoader.set_weapon_profiles(attacker, [{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing"}])
+	CombatTempoService.initialize(attacker, 100.0, 100.0, 20.0)
+	var state := CombatState.new()
+	state.add_combatant(attacker)
+	state.add_combatant(defender)
+	var pipeline := CombatAttackPipeline.new(state, 42)
+	var round := CombatRound.new(1)
+	state.begin_round()
+	pipeline.lock_basic_attack(round, attacker, defender)
+	var extras := 0
+	for event in round.locked_actions:
+		if bool(event.payload.get("is_extra_attack", false)):
+			extras += 1
+	check(round.locked_actions.size() == 1 and extras == 0, "positive Tempo never generates extra base attacks")
