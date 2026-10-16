@@ -50,6 +50,9 @@ jobs:
       - name: Verify offline regeneration persistence and Arena pause
         run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/ui/out_of_combat_offline_persistence_runner.gd
 
+      - name: Verify accumulated Tempo PAR019-021 lifecycle
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/par_tempo_lifecycle_runner.gd
+
       - name: Run first tournament
         run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
 
