@@ -192,11 +192,14 @@ func stun_cases() -> void:
 	var session := ArenaCombatSession.new(hero, ItemRepository.new())
 	var fighter := session.fighter(true)
 	fighter.tempo = -100
+	# A raw negative pool is not an immediate stun. Only scheduled stun blocks actions.
+	fighter.tempo_stun_round = session.state.round_number
 	check(not bool(session.commands.queue_default_weapon_attacks(fighter.combatant_id).ok) and session.state.pending_events.is_empty(), "stun rejects command attacks before queue mutation")
 	var scheduler := AbilityScheduler.new({"STUN_TEST":{"mana_cost":3,"components":[{"kind":"damage","amount":10,"damage_type":"fire"}]}}, {fighter.combatant_id:["STUN_TEST"]})
 	var mana := fighter.mana
 	check(scheduler.cast_event(session.state, fighter.combatant_id, session.ENEMY_ID, "STUN_TEST") == null and fighter.mana == mana, "stun rejects ABI before charging mana")
 	check(scheduler.ready_events(session.state, fighter.combatant_id, session.ENEMY_ID).is_empty(), "stun rejects scheduled ABI")
+	fighter.tempo_stun_round = session.state.round_number + 1
 	var result := session.play_round(["head"], ["head", "chest"])
 	check(bool(result.ok) and session.state.round_number == 1, "stunned arena player can still end the round")
 	var attacks := 0
