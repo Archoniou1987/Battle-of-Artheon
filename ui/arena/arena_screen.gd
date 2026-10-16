@@ -826,8 +826,9 @@ func _start_combat_session() -> void:
 	set_defense_capacity(CombatModifierService.manual_block_zone_capacity(combat_session.fighter(true)))
 	set_fighter_header(false, combat_session.fighter(false).display_name, combat_session.fighter(false).level)
 	_sync_combat_session()
-	log_view.text = "Тренировочный бой начат. Выберите зоны атаки и защиты."
-	set_combat_ready(true)
+	var can_fight := combat_session.fighter(true).hp > 0
+	log_view.text = "Тренировочный бой начат. Выберите зоны атаки и защиты." if can_fight else "HP персонажа равно 0. Для продолжения тестов откройте «Уровень игрока» → «Тест: восстановить HP и ману»."
+	set_combat_ready(can_fight)
 
 func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 	if combat_session == null:
