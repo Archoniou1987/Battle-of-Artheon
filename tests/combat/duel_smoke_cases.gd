@@ -54,7 +54,7 @@ static func _locked_actions_survive_death(balance: Dictionary) -> bool:
 	return not state.get_combatant("a").is_alive() and not state.get_combatant("b").is_alive()
 
 
-static func _tempo_minus_100_cannot_attack(balance: Dictionary) -> bool:
+static func _scheduled_stun_cannot_attack(balance: Dictionary) -> bool:
 	var state := _make_state(30, 30, 10.0, 10.0)
 	state.get_combatant("a").tempo = -100.0
 	state.get_combatant("a").tempo_stun_round = 1
