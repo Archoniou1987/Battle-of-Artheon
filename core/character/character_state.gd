@@ -10,6 +10,11 @@ var inventory: InventoryState
 var equipment: EquipmentState
 var in_combat := false
 
+## Persistent current resources: maximums are derived afresh from PAR010/011.
+## Equipping +max HP never heals current HP; removing gear only clamps it.
+var current_hp: int = 0
+var current_mana: int = 0
+
 ## TRA definitions are supplied by the caller; no example talents are hardcoded.
 ## Only learned trait IDs are persistent. Runtime modifiers are rebuilt for combat.
 var learned_trait_ids: Array[String] = []
@@ -48,6 +53,48 @@ func _init(id: String, name: String, character_level: int = 1) -> void:
 	level = progression.level
 	inventory = InventoryState.new(character_id)
 	equipment = EquipmentState.new()
+	var initial_par := ParCalculationService.calculate(self, null)
+	if initial_par.is_empty():
+		push_error("Character initial resources require canonical PAR010/PAR011")
+	else:
+		var totals: Dictionary = initial_par["totals"]
+		current_hp = maxi(0, 100 + int(totals["PAR010"]))
+		current_mana = maxi(0, 30 + int(totals["PAR011"]))
+
+## The only character-side current/max resource read model.
+## Its optional canonical PAR snapshot avoids repeating calculations in the builder.
+func resource_snapshot(repository: ItemRepository, par_snapshot: Dictionary = {}) -> Dictionary:
+	var snapshot := par_snapshot if not par_snapshot.is_empty() else ParCalculationService.calculate(self, repository)
+	if snapshot.is_empty():
+		return {}
+	var totals: Dictionary = snapshot["totals"]
+	var maximum_hp := maxi(0, 100 + int(totals["PAR010"]))
+	var maximum_mana := maxi(0, 30 + int(totals["PAR011"]))
+	current_hp = clampi(current_hp, 0, maximum_hp)
+	current_mana = clampi(current_mana, 0, maximum_mana)
+	return {"hp":current_hp, "max_hp":maximum_hp, "mana":current_mana, "max_mana":maximum_mana}
+
+func resources_to_dict() -> Dictionary:
+	return {"hp": current_hp, "mana": current_mana}
+
+## Validate first; actual caps are applied after inventory/equipment restoration.
+func restore_resources(data: Dictionary) -> bool:
+	for key in ["hp", "mana"]:
+		if not data.has(key) or not CharacterProgression._is_whole_number(data[key]) or int(data[key]) < 0:
+			return false
+	current_hp = int(data["hp"])
+	current_mana = int(data["mana"])
+	return true
+
+## Explicit migration/new-character initialization only; not called by equip.
+func reset_resources_to_full(repository: ItemRepository) -> bool:
+	var snapshot := ParCalculationService.calculate(self, repository)
+	if snapshot.is_empty():
+		return false
+	var totals: Dictionary = snapshot["totals"]
+	current_hp = maxi(0, 100 + int(totals["PAR010"]))
+	current_mana = maxi(0, 30 + int(totals["PAR011"]))
+	return true
 
 func receive_item(instance_id: String, repository: ItemRepository) -> bool:
 	return inventory.add_instance(instance_id, repository)
