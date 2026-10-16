@@ -31,6 +31,8 @@ jobs:
         run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
       - name: Arena resource persistence and UI smoke test
         run: timeout 120s godot --headless --path . --script res://tests/ui/arena_resource_persistence_runner.gd
+      - name: Offline resource regeneration save migration
+        run: timeout 120s godot --headless --path . --script res://tests/ui/out_of_combat_offline_persistence_runner.gd
       - name: Install virtual display for visual previews
         run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
       - name: Capture Godot UI previews
