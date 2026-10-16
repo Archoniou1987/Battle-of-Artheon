@@ -397,12 +397,15 @@ func _resolve_effect(event: CombatEvent) -> void:
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
 	else:
 		# Tempo control is a one-time accumulated hit, never a repeat overlay.
-		if definition.has("tempo_modifier"):
-			var tempo_delta := float(definition["tempo_modifier"])
-			if tempo_delta < 0.0:
-				CombatTempoService.apply_control(target, -tempo_delta)
-			elif tempo_delta > 0.0:
-				target.tempo = minf(target.max_tempo, target.tempo + tempo_delta)
+		var tempo_delta := float(definition.get("tempo_modifier", 0.0)) + float(definition.get("tempo", 0.0))
+		# Legacy stun/freeze/fear without an explicit magnitude is equivalent
+		# to a -100 control hit; actual stun still starts on the next round.
+		if not definition.has("tempo_modifier") and not definition.has("tempo") and kind in ["stun", "freeze", "fear"]:
+			tempo_delta = -100.0
+		if tempo_delta < 0.0:
+			CombatTempoService.apply_control(target, -tempo_delta)
+		elif tempo_delta > 0.0:
+			target.tempo = minf(target.max_tempo, target.tempo + tempo_delta)
 		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
 
@@ -532,10 +535,6 @@ func _hit_chance(level_difference: int) -> float:
 	var table: Dictionary = physical_balance.get("hit_by_level_difference", {})
 	if table.is_empty(): return 95.0
 	return float(table.get(str(clampi(level_difference, -10, 5)), 95.0))
-func _active_defence_available(tempo: float, roll: int) -> bool:
-	if tempo <= -100.0: return false
-	if tempo >= 0.0: return true
-	return CombatMath.roll_success(100.0 + tempo, roll)
 func _event_uses_physical_block(event: CombatEvent) -> bool:
 	if not event.payload.has("uses_physical_block"):
 		return bool(CombatDamagePayload.defence_flags(String(event.payload.get("damage_type","physical"))).get("uses_physical_block",true))
