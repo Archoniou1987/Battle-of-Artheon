@@ -43,20 +43,20 @@ A failed movement still consumes the declared action.
 The start-of-round snapshot determines what actions/targets are legal. Technical processing order must not create initiative.
 
 Round order:
-1. lock choices from start-of-round state;
-2. Base Attacks;
-3. ABI immediate resolution;
-4. calculate/apply immediate damage;
-5. Movement;
-6. active EFF processing;
-7. PAR015/PAR016 end-round regeneration for combatants with HP > 0;
+1. PAR015/PAR016 regenerate HP/mana for previously alive combatants at round opening;
+2. capture start-of-round snapshot and lock choices;
+3. Base Attacks;
+4. ABI immediate resolution;
+5. calculate/apply immediate damage;
+6. Movement;
+7. active EFF processing;
 8. life/death finalization;
 9. battle-end check.
 
 Immediate ABI damage (for example Frostbolt damage) applies in the casting round.
 A new persistent EFF/status created during that round becomes active from the next round. It cannot cancel an action already valid and declared in the current round.
 
-Internal HP may be negative before finalization. A combatant alive at round start remains round-present and zone-controlling until the life/death phase. Healing before finalization may rescue negative HP. Passive PAR016 regeneration does not: it only applies while HP > 0 after timed effects. PAR015 restores mana at the same boundary, capped by max mana; PAR013 is not a combat-round regeneration source. Neither pool regenerates more than once per round.
+Internal HP may be negative before finalization. A combatant alive at round start remains round-present and zone-controlling until the life/death phase. Healing before finalization may rescue negative HP. Passive PAR016 regeneration does not: it applies only at the next round's opening to combatants still alive from the previous round. PAR015 restores mana at that same opening boundary, capped by max mana; PAR013 is not a combat-round regeneration source. Neither pool regenerates at round end or more than once per round.
 
 ## 5. EFF and zone effects
 
@@ -84,7 +84,7 @@ Kill attribution is not last-hit based. For a target finalized dead, aggregate d
 - Combat starts from the current character pools via `CharacterCombatBuilder`. An accepted Arena round writes the finalized HP/mana back through `CharacterState.commit_combat_resources` (checks fighter ownership and unchanged maximums), then the village saves the existing progression file's `resources` field.
 - Reopening Arena and restarting the game preserve those current values. Inventory and Character screens show current/max values. At zero HP, Arena cannot run another round.
 - Training-only recovery is explicit: the Arena level settings panel has a **Test: restore HP and mana** action. This is not a general recovery rule or an automatic heal on victory/defeat.
-- PAR015 (mana/round) and PAR016 (HP/round) apply once at the shared end-round phase. Mana-cost reduction (PAR018) and AP/Tempo persistence remain separate systems.
+- PAR015 (mana/round) and PAR016 (HP/round) apply once at the shared **begin-round phase**, before action locking. Mana-cost reduction (PAR018) and AP/Tempo persistence remain separate systems.
 
 ## Out-of-combat HP and mana recovery (approved)
 
