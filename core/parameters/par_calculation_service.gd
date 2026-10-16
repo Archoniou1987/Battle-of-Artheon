@@ -30,7 +30,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 	var validated_overlay := {}
 	if not _accumulate(validated_overlay, talent_par, definitions) or not _accumulate(validated_overlay, effect_par, definitions):
 		return {}
-	var base := {"PAR073": 2.0, "PAR014": 5.0}
+	var base := {"PAR073": 2.0, "PAR014": 5.0, "PAR020": 100.0}
 	for index in range(PRIMARY_IDS.size()):
 		var primary_id: String = PRIMARY_IDS[index]
 		if not character.progression.base_stats.has(primary_id) or not (character.progression.base_stats[primary_id] is int or character.progression.base_stats[primary_id] is float) or not is_finite(float(character.progression.base_stats[primary_id])):
