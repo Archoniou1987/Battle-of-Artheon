@@ -56,7 +56,11 @@ func _run() -> void:
 	check(FileAccess.file_exists(PROGRESSION_SAVE), "Arena resource changes saved immediately")
 	if FileAccess.file_exists(PROGRESSION_SAVE):
 		var saved: Variant = JSON.parse_string(FileAccess.get_file_as_string(PROGRESSION_SAVE))
-		check(saved is Dictionary and int(saved.get("resources", {}).get("hp", -1)) == expected_hp and int(saved.get("resources", {}).get("mana", -1)) == expected_mana, "saved JSON has current Arena HP/mana")
+		if saved is Dictionary and saved.get("resources", null) is Dictionary:
+			var stored_resources: Dictionary = saved["resources"]
+			check(int(stored_resources.get("hp", -1)) == expected_hp and int(stored_resources.get("mana", -1)) == expected_mana, "saved JSON has current Arena HP/mana")
+		else:
+			check(false, "saved JSON has valid resources object")
 	village.call("_open_panel", "Инвентарь")
 	await process_frame
 	var inventory := village.get_node_or_null("InventoryScreen") as InventoryScreen
