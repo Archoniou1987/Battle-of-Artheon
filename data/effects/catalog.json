@@ -6,7 +6,7 @@
     "damage": 10,
     "damage_type": "fire",
     "duration_rounds": 3,
-    "stacking": "stack",
+    "stacking": "shared_duration",
     "max_stacks": 3
   }
 }
