@@ -31,6 +31,7 @@ func begin_round() -> CombatRound:
 	# Opening phase: recover only combatants alive from the previous round.
 	# Resource regeneration is not a healing action and cannot revive the dead.
 	CombatResourceService.apply_round_regeneration(state)
+	CombatTempoService.begin_round(state)
 	start_snapshot=_capture_start_snapshot()
 	movement_requests.clear()
 	return CombatRound.new(state.round_number)
@@ -252,6 +253,8 @@ func end_round() -> Dictionary:
 			var killers:=state.fatal_round_killers(combatant.combatant_id)
 			if not killers.is_empty():
 				kill_attribution[combatant.combatant_id]=killers
+	# Death is finalized before threshold checks; dead fighters cannot stun/rebound.
+	CombatTempoService.end_round(state)
 	_tick_effect_durations()
 	return {
 		"dead_ids":finalized_dead_ids.duplicate(),
