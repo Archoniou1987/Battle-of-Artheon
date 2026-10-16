@@ -106,6 +106,10 @@ func _queue_attacks(id: String, targets: Array[String]) -> Dictionary:
 	return commands.queue_weapon_attack_sequence(id, attacks)
 
 func play_round(attacks: Array[String], blocks: Array[String]) -> Dictionary:
+	# A persistent character at 0 HP cannot start acting again merely by
+	# reopening a test duel. A new life/recovery rule must be explicit.
+	if fighter(true).hp <= 0:
+		return {"ok": false, "reason": "player_has_no_hp"}
 	if orchestrator.battle_outcome() != "ongoing":
 		return {"ok": false, "reason": "battle_finished"}
 	var round := orchestrator.begin_round()
