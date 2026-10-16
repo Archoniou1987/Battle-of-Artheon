@@ -289,7 +289,7 @@ func _capture_start_snapshot() -> Dictionary:
 	var snapshot:Dictionary={}
 	for combatant_id in state.combatants.keys():
 		var combatant:CombatantState=state.get_combatant(String(combatant_id))
-		var movement_locked:=_has_active_movement_lock(combatant)
+		var movement_locked := _has_active_movement_lock(combatant) or CombatTempoService.is_stunned(combatant, state.round_number)
 		snapshot[String(combatant_id)]={
 			"hp":combatant.hp,
 			"death_finalized":combatant.is_death_finalized(),
