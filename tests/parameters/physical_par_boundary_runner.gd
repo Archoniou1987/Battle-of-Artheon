@@ -79,7 +79,7 @@ func matrix_cases() -> void:
 		var zone: String = EquipmentBuilder.HIT_ZONES[zone_index]
 		for type_index in range(4):
 			var damage_type: String = EquipmentBuilder.PHYSICAL_TYPES[type_index]
-			var expected := 2.0 + 10.0 + zone_index * 4 + type_index + global_values[type_index]
+			var expected: float = 12.0 + float(zone_index * 4 + type_index) + float(global_values[type_index])
 			check(is_equal_approx(float(full.armour[zone][damage_type]), expected), "general + zoned + global exactly once: " + zone + "." + damage_type)
 	var structural := fighter({}, {"chest":30.0})
 	if structural != null:
