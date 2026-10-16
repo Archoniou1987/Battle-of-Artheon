@@ -31,6 +31,7 @@ jobs:
           mkdir -p test-results/par-audit
           for script in \
             tests/parameters/final_par_combat_runner.gd \
+            tests/parameters/physical_par_boundary_runner.gd \
             tests/combat/magic_abi_scaling_runner.gd \
             tests/parameters/rating_matrix_runner.gd \
             tests/parameters/par_migration_runner.gd \
