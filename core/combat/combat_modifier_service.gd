@@ -156,7 +156,7 @@ static func value(combatant: CombatantState, key: String, round_number: int, def
 	return float(combatant.combat_stats.get(key, default_value)) + modifier(combatant, key, round_number)
 
 static func effective_tempo(combatant: CombatantState, round_number: int) -> float:
-	return combatant.tempo + value(combatant, "tempo", round_number) + modifier(combatant, "tempo_modifier", round_number)
+	return combatant.tempo
 
 ## One traceable read model for a future duel card and combat diagnostics.
 ## Contextual rolls (opponent, hit zone, distance) belong to CombatEngine.
