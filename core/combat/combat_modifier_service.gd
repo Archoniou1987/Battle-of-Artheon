@@ -180,6 +180,9 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:
 	var result: Dictionary = combatant.combat_stats.duplicate(true)
 	for field in trait_modifiers(combatant):
+		# Tempo control is already accumulated in the live pool when applied.
+		if String(field) == "tempo_modifier":
+			continue
 		if not (String(field).ends_with("_flat") or String(field).ends_with("_direct_pct") or String(field).ends_with("_modifier") or String(field) == "damage_reduction"):
 			continue
 		result[field] = float(result.get(field, 0.0)) + float(trait_modifiers(combatant)[field])
@@ -187,6 +190,8 @@ static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary
 		var definition: Dictionary = record.get("definition", {})
 		for key in definition:
 			var field := String(key)
+			if field == "tempo_modifier":
+				continue
 			if not (field.ends_with("_flat") or field.ends_with("_direct_pct") or field.ends_with("_modifier") or field == "damage_reduction"):
 				continue
 			result[field] = float(result.get(field, 0.0)) + float(definition[key])
