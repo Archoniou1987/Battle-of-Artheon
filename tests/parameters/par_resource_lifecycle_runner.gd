@@ -161,8 +161,8 @@ func arena_regeneration() -> void:
 	var enemy := arena.fighter(false)
 	player.hp = 70
 	player.mana = 0
-	player.tempo = -100.0
-	enemy.tempo = -100.0
+	player.tempo_stun_round = 1
+	enemy.tempo_stun_round = 1
 	var result := arena.play_round(["chest"], ["chest", "arms"])
 	check(bool(result.get("ok", false)), "stunned arena round completes")
 	check(player.hp == 76 and player.mana == 4, "Arena applies PAR015/016 once despite stun")
@@ -176,8 +176,8 @@ func duel_regeneration() -> void:
 	one.mana = 0
 	two.hp = 55
 	two.mana = 0
-	one.tempo = -100.0
-	two.tempo = -100.0
+	one.tempo_stun_round = 1
+	two.tempo_stun_round = 1
 	var state := CombatState.new()
 	state.add_combatant(one)
 	state.add_combatant(two)
@@ -197,8 +197,8 @@ func group_regeneration() -> void:
 	one.mana = 0
 	two.hp = 55
 	two.mana = 0
-	one.tempo = -100.0
-	two.tempo = -100.0
+	one.tempo_stun_round = 1
+	two.tempo_stun_round = 1
 	var state := CombatState.new()
 	state.add_combatant(one)
 	state.add_combatant(two)
