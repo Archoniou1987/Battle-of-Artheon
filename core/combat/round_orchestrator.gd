@@ -28,6 +28,9 @@ func _init(combat_state:CombatState, combat_engine:CombatEngine, combat_groups:G
 
 func begin_round() -> CombatRound:
 	state.begin_round()
+	# Opening phase: recover only combatants alive from the previous round.
+	# Resource regeneration is not a healing action and cannot revive the dead.
+	CombatResourceService.apply_round_regeneration(state)
 	start_snapshot=_capture_start_snapshot()
 	movement_requests.clear()
 	return CombatRound.new(state.round_number)
@@ -242,8 +245,6 @@ func end_round() -> Dictionary:
 	var movement_results:=resolve_movement_phase()
 	var effect_event_ids:=resolve_effect_phase()
 	effect_event_ids.append_array(resolve_active_timed_effects())
-	# PAR015/PAR016 belong to the round lifecycle, never individual UI/simulators.
-	CombatResourceService.apply_round_regeneration(state)
 	for combatant in state.combatants.values():
 		if not combatant.is_alive():
 			combatant.death_finalized=true
