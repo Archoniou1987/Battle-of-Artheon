@@ -1,0 +1,12 @@
+{
+  "EFF003": {
+    "id": "EFF003",
+    "name": "Burning",
+    "kind": "dot",
+    "damage": 10,
+    "damage_type": "fire",
+    "duration_rounds": 3,
+    "stacking": "stack",
+    "max_stacks": 3
+  }
+}
