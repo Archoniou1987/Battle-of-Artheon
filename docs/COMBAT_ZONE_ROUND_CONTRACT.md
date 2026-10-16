@@ -84,4 +84,13 @@ Kill attribution is not last-hit based. For a target finalized dead, aggregate d
 - Combat starts from the current character pools via `CharacterCombatBuilder`. An accepted Arena round writes the finalized HP/mana back through `CharacterState.commit_combat_resources` (checks fighter ownership and unchanged maximums), then the village saves the existing progression file's `resources` field.
 - Reopening Arena and restarting the game preserve those current values. Inventory and Character screens show current/max values. At zero HP, Arena cannot run another round.
 - Training-only recovery is explicit: the Arena level settings panel has a **Test: restore HP and mana** action. This is not a general recovery rule or an automatic heal on victory/defeat.
-- PAR015 (mana/round) and PAR016 (HP/round) apply once at the shared end-round phase. Out-of-combat recovery (PAR012, PAR013, PAR017), mana-cost reduction (PAR018), and AP/Tempo persistence are separate systems pending final mechanics; no timing/cost behavior is inferred here.
+- PAR015 (mana/round) and PAR016 (HP/round) apply once at the shared end-round phase. Mana-cost reduction (PAR018) and AP/Tempo persistence remain separate systems.
+
+## Out-of-combat HP and mana recovery (approved)
+
+- PAR012 is **percent of MaxHP per 10 seconds**. PAR017 is **flat HP per 10 seconds**. Both combine additively: `HP per 10 sec = MaxHP * PAR012 / 100 + PAR017`. PAR013 is **flat mana per 10 seconds**. PAR015 and PAR016 continue to apply in combat only, per round.
+- Recovery uses real elapsed seconds and persistent fractional progress, so ten 1-second advances match one 10-second advance. No dependence on render FPS. Both pools are capped by their PAR maximums.
+- At startup, offline elapsed time since `regen_saved_unix` is processed **without a time cap**, after loading the saved equipment. The progression save schema remains v1, adding an optional timestamp and fractional fields. Legacy saves without timestamps cannot retroactively recover unknown time.
+- An Arena combat session suspends the out-of-combat clock; the saved `regen_paused` flag prevents retroactive out-of-combat recovery if the app quits during combat. On normal exit, the timestamp restarts from exit time.
+- At 0 HP, passive recovery does not revive the character (nor restore mana). Recovery requires an explicit mechanic; the Arena debug refill remains available to testers.
+
