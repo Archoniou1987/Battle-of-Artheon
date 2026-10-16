@@ -365,7 +365,7 @@ func _refresh_combat_stats() -> void:
 	hp_bar.max_value = maxi(1, snapshot.max_hp)
 	hp_bar.value = snapshot.hp
 	_set_hp_colour(float(snapshot.hp) / float(maxi(1, snapshot.max_hp)))
-	(stat_rows["Мана"] as Label).text = str(snapshot.max_mana)
+	(stat_rows["Мана"] as Label).text = "%d / %d" % [snapshot.mana, snapshot.max_mana]
 	if not snapshot.armour.is_empty():
 		(stat_rows["Броня по зонам"] as Label).text = str(snapshot.armour)
 
