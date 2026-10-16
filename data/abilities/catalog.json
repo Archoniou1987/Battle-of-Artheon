@@ -1,0 +1,23 @@
+{
+  "ABI003": {
+    "name": "Fireball",
+    "delivery_type": "PROJECTILE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": true,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 100,
+        "damage_type": "fire"
+      },
+      {
+        "kind": "effect",
+        "effect_id": "EFF003",
+        "base_chance": 100,
+        "resist_type": "fire"
+      }
+    ],
+    "cooldown_rounds": 0,
+    "mana_cost": 0
+  }
+}
