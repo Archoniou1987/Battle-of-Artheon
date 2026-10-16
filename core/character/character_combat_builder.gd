@@ -17,9 +17,19 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 	if canonical.is_empty():
 		push_error("Character combat build rejected: invalid RatingMatrix snapshot")
 		return null
-	var health := int(base.get("health", 100 + int(primary["PAR010"])))
-	var mana_pool := int(base.get("mana", 30 + int(primary["PAR011"])))
+	var resources := character.resource_snapshot(repository, par_snapshot)
+	if resources.is_empty():
+		push_error("Character combat build rejected: unavailable current resource snapshot")
+		return null
+	var health := int(base.get("health", resources["max_hp"]))
+	var mana_pool := int(base.get("mana", resources["max_mana"]))
 	var combatant := CombatantState.new(character.character_id, character.display_name, character.progression.level, health, mana_pool)
+	# Explicit base health/mana overrides retain their full-pool test/NPC semantics.
+	# Ordinary gameplay builds preserve current HP/mana through equipment changes.
+	if not base.has("health"):
+		combatant.hp = mini(combatant.max_hp, int(resources["hp"]))
+	if not base.has("mana"):
+		combatant.mana = mini(combatant.max_mana, int(resources["mana"]))
 	combatant.stats = primary.duplicate(true)
 	combatant.combat_stats = base.get("combat_stats", {}).duplicate(true)
 	combatant.combat_stats.erase("weapon_profiles")
