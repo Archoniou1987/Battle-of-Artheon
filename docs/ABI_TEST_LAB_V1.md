@@ -3,6 +3,26 @@
 Development-only, isolated from the persistent player. Accessible from Arena →
 **ABI Lab** in the wrapped header. Godot 4.5.1.
 
+## Mobile UI v1.1 (tabbed)
+
+The old full-height vertically-scrolling dialog made the **Cast** and **Results**
+controls inaccessible on narrow Android screens. The new dialog has three
+tabs: **Способность** (preset, damage, level and rolls), **PAR** (select and
+apply one or more rating/defence overrides) and **Результаты** (live engine
+event log). The action row **Новый тест / Применить ABI / Пропустить**
+is outside the tab scroll containers and remains visible at all times.
+After a cast or skipped round the dialog automatically switches to Results.
+
+For canonical ABI003, the non-editable ability name, FIRE type, 10-mana
+cost and 1-round cooldown are shown in one compact summary rather than
+four inert input rows. Synthetic ABI presets show editable fields.
+The dialog dimensions are bounded by the viewport (92% width, 82% height,
+subject to a 310×340 minimum), on both portrait and landscape.
+
+The expanded UI smoke now checks tab labels and visibility, fixed action
+placement, bounded viewport height, preset switching, automatic navigation
+to Results, and preservation of persistent player resources.
+
 ## Scope and exact boundaries
 
 - Uses **real** `AbilityRuntime`, `AbilityScheduler`, `CombatEngine`,
