@@ -50,7 +50,8 @@ func _run() -> void:
 		check(dialog.pages.get_tab_title(0) == "Способность", "ability tab title")
 		check(dialog.pages.get_tab_title(1) == "PAR", "PAR tab title")
 		check(dialog.pages.get_tab_title(2) == "Результаты", "results tab title")
-		check(dialog.action_toolbar.get_parent() == dialog.pages.get_parent(), "action buttons are siblings of tabs")
+		check(dialog.action_toolbar.get_parent() == dialog.pages.get_parent().get_parent(), "action toolbar in fixed frame outside tab viewport")
+	check(dialog.pages.get_parent().clip_contents, "tab viewport clips overflowing tab contents")
 	check(dialog.reset_button.is_visible_in_tree(), "reset button visible in tree")
 	check(dialog.cast_button.is_visible_in_tree(), "cast button visible in tree")
 	check(dialog.skip_button.is_visible_in_tree(), "skip button visible in tree")
@@ -61,6 +62,7 @@ func _run() -> void:
 	var viewport_height: float = dialog.get_viewport().get_visible_rect().size.y
 	var popup_height: float = float(dialog.size.y)
 	check(popup_height <= viewport_height * 0.98, "popup bounds height=%s viewport=%s" % [str(popup_height), str(viewport_height)])
+	check(float(dialog.pages.size.y) <= popup_height * 0.85, "tab pages fit inside popup: pages=%s popup=%s" % [str(dialog.pages.size.y), str(popup_height)])
 	# Synthetic presets expose editable fields.
 	dialog.preset_select.select(1)
 	dialog._preset_changed(1)
