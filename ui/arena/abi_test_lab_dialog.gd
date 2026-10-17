@@ -58,24 +58,39 @@ func _ready() -> void:
 	min_size = Vector2i(310, 340)
 	get_ok_button().text = "Закрыть"
 
-	# A single fixed-size frame owns tabs and actions. Only tab content scrolls.
+	# AcceptDialog measures its first Control child for its minimum size.
+	# Do NOT add the VBoxContainer directly: TabContainer otherwise propagates
+	# the full height of the long ability form and makes the popup full-screen.
+	# A plain Control host creates a bounded viewport for the flexible layout.
+	var host := Control.new()
+	host.custom_minimum_size = Vector2(300, 310)
+	host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(host)
+
 	var frame := VBoxContainer.new()
-	frame.custom_minimum_size = Vector2(300, 310)
-	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.add_theme_constant_override("separation", 6)
-	add_child(frame)
+	host.add_child(frame)
 
 	status_label = Label.new()
 	status_label.text = "Изолированный тест · HP и мана героя не изменяются"
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	frame.add_child(status_label)
 
+	# A second non-Container boundary prevents any tab's full form height
+	# from enlarging the toolbar's parent. The tab pages scroll internally.
+	var tab_viewport := Control.new()
+	tab_viewport.custom_minimum_size = Vector2(295, 225)
+	tab_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab_viewport.clip_contents = true
+	frame.add_child(tab_viewport)
 	pages = TabContainer.new()
+	tab_viewport.add_child(pages)
+	pages.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pages.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pages.custom_minimum_size = Vector2(295, 225)
-	frame.add_child(pages)
 
 	ability_scroll = ScrollContainer.new()
 	ability_scroll.name = "Способность"
