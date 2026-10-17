@@ -38,6 +38,9 @@ var par_value: SpinBox
 var par_label: Label
 var output: TextEdit
 var par_values: Dictionary = {}
+var round_history: Array[Dictionary] = []
+var copy_log_button: Button
+var export_log_button: Button
 
 var pages: TabContainer
 var ability_scroll: ScrollContainer
@@ -126,10 +129,22 @@ func _ready() -> void:
 	output = TextEdit.new()
 	output.editable = false
 	output.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	output.custom_minimum_size = Vector2(280, 165)
+	output.custom_minimum_size = Vector2(360, 230)
 	output.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	output.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	results_page.add_child(output)
+	var log_actions := HBoxContainer.new()
+	results_page.add_child(log_actions)
+	copy_log_button = Button.new()
+	copy_log_button.text = "Копировать JSON"
+	copy_log_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy_log_button.pressed.connect(_copy_log)
+	log_actions.add_child(copy_log_button)
+	export_log_button = Button.new()
+	export_log_button.text = "Экспорт JSON"
+	export_log_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	export_log_button.pressed.connect(_export_log)
+	log_actions.add_child(export_log_button)
 
 	# This toolbar is a sibling of the tab container, never in its scroll area.
 	action_toolbar = HBoxContainer.new()
@@ -334,6 +349,7 @@ func _settings() -> Dictionary:
 	return result
 
 func _reset_session() -> void:
+	round_history.clear()
 	var candidate := AbiTestLabSession.new()
 	var result: Dictionary = candidate.reset(_settings())
 	if not bool(result.get("ok", false)):
@@ -355,6 +371,7 @@ func _next_round(cast_ability: bool) -> void:
 	if session == null:
 		return
 	var result: Dictionary = session.next_round(cast_ability)
+	round_history.append(result.duplicate(true))
 	pages.current_tab = 2
 	if not bool(result.get("ok", false)):
 		status_label.text = "Тест остановлен: " + String(result.get("reason", "error"))
@@ -379,10 +396,43 @@ func _next_round(cast_ability: bool) -> void:
 	output.text += "\n".join(lines) + "\n"
 	output.set_caret_line(output.get_line_count() - 1)
 
+func _log_json() -> String:
+	var snapshot := {
+		"format": "BOA_ABI_LAB_V1",
+		"settings": _settings(),
+		"rounds": round_history.duplicate(true),
+		"visible_log": output.text,
+		"active_session": session != null
+	}
+	return JSON.stringify(snapshot, "\t")
+
+
+func _copy_log() -> void:
+	DisplayServer.clipboard_set(_log_json())
+	status_label.text = "JSON журнала скопирован"
+
+
+func _export_log() -> void:
+	var json_text := _log_json()
+	if OS.has_feature("web"):
+		# Use a browser Blob to download the complete structured log on mobile.
+		var script := "(function(){const blob=new Blob([%s],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='boa_abi_lab_log.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);})();" % JSON.stringify(json_text)
+		JavaScriptBridge.eval(script)
+		status_label.text = "JSON отправлен на скачивание"
+	else:
+		var file := FileAccess.open("user://boa_abi_lab_log.json", FileAccess.WRITE)
+		if file == null:
+			status_label.text = "Не удалось сохранить JSON"
+			return
+		file.store_string(json_text)
+		file.close()
+		status_label.text = "JSON сохранён: user://boa_abi_lab_log.json"
+
+
 func open_lab() -> void:
 	# Use bounded dimensions so the toolbar and tab bar fit on portrait AND
 	# landscape screens. Tabs own their scrolling; the dialog never needs to.
 	var viewport_size := get_viewport().get_visible_rect().size
-	var preferred_width := mini(590, int(viewport_size.x * 0.92))
-	var preferred_height := mini(640, int(viewport_size.y * 0.82))
+	var preferred_width := mini(900, int(viewport_size.x * 0.96))
+	var preferred_height := mini(760, int(viewport_size.y * 0.88))
 	popup_centered(Vector2i(maxi(310, preferred_width), maxi(340, preferred_height)))
