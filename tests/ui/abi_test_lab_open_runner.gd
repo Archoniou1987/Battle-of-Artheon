@@ -58,11 +58,15 @@ func _run() -> void:
 	check(not dialog.custom_name_row.visible and not dialog.type_row.visible, "canonical name and type hidden")
 	check(not dialog.mana_row.visible and not dialog.cooldown_row.visible, "canonical mana and cooldown hidden")
 	check(dialog.ability_scroll != null and dialog.par_scroll != null, "dedicated tab scroll containers")
-	# Popup is sized against the real viewport, NOT unrelated display-mode defaults.
+	# In headless Godot the native test window can resize to a popup's
+	# minimum size. A 367px viewport and 367px popup are not an overflow.
+	# Guard the actual regression: full form height (~1539px) instead of a
+	# compact shell (roughly 367px), with tabs + action toolbar still visible.
 	var viewport_height: float = dialog.get_viewport().get_visible_rect().size.y
 	var popup_height: float = float(dialog.size.y)
-	check(popup_height <= viewport_height * 0.98, "popup bounds height=%s viewport=%s" % [str(popup_height), str(viewport_height)])
+	check(popup_height <= 700.0, "compact popup height=%s viewport=%s" % [str(popup_height), str(viewport_height)])
 	check(float(dialog.pages.size.y) <= popup_height * 0.85, "tab pages fit inside popup: pages=%s popup=%s" % [str(dialog.pages.size.y), str(popup_height)])
+	check(dialog.action_toolbar.get_global_rect().end.y <= dialog.get_global_rect().end.y + 2.0, "action toolbar remains within popup bounds")
 	# Synthetic presets expose editable fields.
 	dialog.preset_select.select(1)
 	dialog._preset_changed(1)
