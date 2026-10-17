@@ -28,7 +28,6 @@ func run_round() -> Dictionary:
 	if controller.combat_finished():
 		return {"ok":false,"reason":"combat_finished","battle_outcome":"winner:"+controller.winning_team()}
 	var round:=orchestrator.begin_round()
-	attack_pipeline.regenerate_mana()
 	var round_targets:Dictionary={}
 	var actors:Array[String]=[]
 	for raw_id in group.combatant_team.keys():

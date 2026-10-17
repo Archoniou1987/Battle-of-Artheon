@@ -9,182 +9,193 @@ jobs:
       - uses: actions/checkout@v4
       - uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.4.1
+          version: 4.5.1
           use-dotnet: false
           include-templates: false
       - name: Import project
-        run: timeout 120s godot --headless --editor --path . --quit
+        run: bash tools/run_godot_check.sh --import
+      - name: Verify final PAR, RatingMatrix and magic contracts
+        run: |
+          bash tools/run_godot_check.sh tests/parameters/rating_matrix_runner.gd
+          bash tools/run_godot_check.sh tests/parameters/final_par_combat_runner.gd
+          bash tools/run_godot_check.sh tests/combat/magic_abi_scaling_runner.gd
+      - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
+        run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
+      - name: Validate isolated ABI Test Lab physical and magical PAR calculations
+        run: bash tools/run_godot_check.sh tests/combat/abi_test_lab_runner.gd
+      - name: Open ABI Test Lab from Arena and preserve live resources
+        run: bash tools/run_godot_check.sh tests/ui/abi_test_lab_open_runner.gd
       - name: Run combat tournament with ABI
-        run: timeout 120s godot --headless --path . --script res://tests/combat/tournament_runner.gd
+        run: bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
       - name: Generate and validate 100 items
-        run: timeout 120s godot --headless --path . --script res://tests/items/item_generator_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/item_generator_runner.gd
       - name: Equip generated item and run combat
-        run: timeout 120s godot --headless --path . --script res://tests/items/generated_item_combat_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/generated_item_combat_runner.gd
       - name: Reject inventory and equipment exploits
-        run: timeout 120s godot --headless --path . --script res://tests/items/inventory_exploit_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/inventory_exploit_runner.gd
       - name: Validate character ownership chain
-        run: timeout 120s godot --headless --path . --script res://tests/items/character_ownership_chain_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/character_ownership_chain_runner.gd
       - name: Validate item ABI slot chain
-        run: timeout 120s godot --headless --path . --script res://tests/items/item_abi_chain_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/item_abi_chain_runner.gd
       - name: Cast item-provided ABI in combat
-        run: timeout 120s godot --headless --path . --script res://tests/items/item_abi_combat_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/item_abi_combat_runner.gd
       - name: Generate item with EFF001
-        run: timeout 120s godot --headless --path . --script res://tests/items/generated_eff001_item_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/generated_eff001_item_runner.gd
       - name: Apply generated EFF001 in combat
-        run: timeout 120s godot --headless --path . --script res://tests/items/generated_eff001_combat_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/generated_eff001_combat_runner.gd
       - name: Validate EFF stacking and source ownership
-        run: timeout 120s godot --headless --path . --script res://tests/combat/effect_stacking_runner.gd
+        run: bash tools/run_godot_check.sh tests/combat/effect_stacking_runner.gd
       - name: Build two ready characters and fight
-        run: timeout 120s godot --headless --path . --script res://tests/character/character_combat_builder_runner.gd
+        run: bash tools/run_godot_check.sh tests/character/character_combat_builder_runner.gd
       - name: Build ten equipped potential players and stats
-        run: timeout 120s godot --headless --path . --script res://tests/character/ten_player_stats_runner.gd
+        run: bash tools/run_godot_check.sh tests/character/ten_player_stats_runner.gd
       - name: Roll NPC loot into player inventory
-        run: timeout 120s godot --headless --path . --script res://tests/loot/loot_pipeline_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/loot_pipeline_runner.gd
       - name: Award NPC loot after combat victory
-        run: timeout 120s godot --headless --path . --script res://tests/loot/combat_loot_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/combat_loot_runner.gd
       - name: Validate persistent NPC entities
-        run: timeout 120s godot --headless --path . --script res://tests/npc/npc_entity_runner.gd
+        run: bash tools/run_godot_check.sh tests/npc/npc_entity_runner.gd
       - name: Validate scalable loot groups and quest conditions
-        run: timeout 120s godot --headless --path . --script res://tests/loot/loot_group_level_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/loot_group_level_runner.gd
       - name: Fight unarmed bandit and validate scaled dagger drop
-        run: timeout 120s godot --headless --path . --script res://tests/loot/dagger_level_drop_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/dagger_level_drop_runner.gd
       - name: Simulate NPC possessions entering loot roll
-        run: timeout 120s godot --headless --path . --script res://tests/loot/npc_possession_loot_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/npc_possession_loot_runner.gd
       - name: Validate NPC to worn loot condition chain
-        run: timeout 120s godot --headless --path . --script res://tests/loot/npc_worn_loot_chain_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/npc_worn_loot_chain_runner.gd
 
       - name: Open dungeon chest and award loot once
-        run: timeout 120s godot --headless --path . --script res://tests/loot/chest_loot_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/chest_loot_runner.gd
       - name: Validate loot persistence across repository inventory and expedition restart
-        run: timeout 120s godot --headless --path . --script res://tests/loot/loot_persistence_restart_runner.gd
+        run: bash tools/run_godot_check.sh tests/loot/loot_persistence_restart_runner.gd
       - name: Validate item durability lifetime
-        run: timeout 120s godot --headless --path . --script res://tests/items/item_durability_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/item_durability_runner.gd
       - name: Generate crafted and worn loot conditions
-        run: timeout 120s godot --headless --path . --script res://tests/items/item_initial_condition_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/item_initial_condition_runner.gd
       - name: Repair items, treat draws as defeats, and simulate breakage
         run: |
           mkdir -p test-results
-          timeout 120s godot --headless --path . --script res://tests/items/hundred_bot_durability_runner.gd
+          bash tools/run_godot_check.sh tests/items/hundred_bot_durability_runner.gd
       - name: Upload 100-battle durability report
         uses: actions/upload-artifact@v4
         with:
           name: hundred-battle-durability-report
           path: test-results/hundred_bot_durability_report.json
       - name: Apply equipment wear from actual combat defeat
-        run: timeout 120s godot --headless --path . --script res://tests/items/combat_defeat_consequence_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/combat_defeat_consequence_runner.gd
       - name: Damage all equipped items after defeat
-        run: timeout 120s godot --headless --path . --script res://tests/items/defeat_equipment_wear_runner.gd
+        run: bash tools/run_godot_check.sh tests/items/defeat_equipment_wear_runner.gd
 
       - name: Validate grouped NPC combat and loot on hex map
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_map_group_encounter_e2e_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_map_group_encounter_e2e_runner.gd
 
       - name: Validate map coin visibility
-        run: timeout 120s godot --headless --path . --script res://tests/map/debug_map_viewer_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/debug_map_viewer_runner.gd
 
       - name: Validate hex loot expiry
-        run: godot --headless --path . --script res://tests/map/hex_loot_expiry_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_loot_expiry_runner.gd
 
       - name: Validate expedition persistence and square-grid foundation
-        run: timeout 120s godot --headless --path . --script res://tests/map/expedition_foundation_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/expedition_foundation_runner.gd
 
       - name: Validate square map movement and pathfinding
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_movement_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_movement_runner.gd
 
       - name: Validate co-located non-blocking square map entities
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_entity_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_entity_runner.gd
 
       - name: Bridge square map NPC contact into encounter
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_encounter_bridge_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_encounter_bridge_runner.gd
 
       - name: Build grouped square map encounter into combat state
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_group_combat_state_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_group_combat_state_runner.gd
 
       - name: Validate square map group active opponent progression
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_active_opponent_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_active_opponent_runner.gd
 
       - name: Simulate one versus many combat rounds
-        run: timeout 120s godot --headless --path . --script res://tests/combat/group_combat_simulator_runner.gd
+        run: bash tools/run_godot_check.sh tests/combat/group_combat_simulator_runner.gd
 
       - name: Cast ABI during group combat
-        run: timeout 120s godot --headless --path . --script res://tests/combat/group_combat_ability_runner.gd
+        run: bash tools/run_godot_check.sh tests/combat/group_combat_ability_runner.gd
 
       - name: Resolve square map group combat outcome
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_group_combat_outcome_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_group_combat_outcome_runner.gd
 
       - name: Validate square map group encounter end to end
-        run: timeout 120s godot --headless --path . --script res://tests/map/square_map_group_encounter_e2e_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/square_map_group_encounter_e2e_runner.gd
 
       - name: Validate tactical map movement and resource area
-        run: timeout 120s godot --headless --path . --script res://tests/map/tactical_map_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/tactical_map_runner.gd
 
       - name: Validate hex geometry and weighted pathfinding
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_pathfinding_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_pathfinding_runner.gd
 
       - name: Stress test hex movement and pathfinding
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_pathfinding_stress_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_pathfinding_stress_runner.gd
 
       - name: Validate hex exploration persistence
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_exploration_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_exploration_runner.gd
 
       - name: Validate overlapping map areas and transitions
-        run: timeout 120s godot --headless --path . --script res://tests/map/map_areas_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/map_areas_runner.gd
 
       - name: Connect map objects and persistent NPC instances
-        run: timeout 120s godot --headless --path . --script res://tests/map/world_object_interaction_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/world_object_interaction_runner.gd
 
       - name: Start combat from map NPC encounter
-        run: timeout 120s godot --headless --path . --script res://tests/map/map_encounter_combat_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/map_encounter_combat_runner.gd
 
       - name: Resolve map combat victory into death and loot
-        run: timeout 120s godot --headless --path . --script res://tests/map/map_combat_outcome_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/map_combat_outcome_runner.gd
 
       - name: Validate fixed resource definitions and level ranges
-        run: timeout 120s godot --headless --path . --script res://tests/resources/resource_definition_runner.gd
+        run: bash tools/run_godot_check.sh tests/resources/resource_definition_runner.gd
 
       - name: Validate resource source stock yield depletion and recovery
-        run: timeout 120s godot --headless --path . --script res://tests/resources/resource_source_runner.gd
+        run: bash tools/run_godot_check.sh tests/resources/resource_source_runner.gd
 
       - name: Validate tool slot and resource interaction modes
-        run: timeout 120s godot --headless --path . --script res://tests/resources/resource_tool_interaction_runner.gd
+        run: bash tools/run_godot_check.sh tests/resources/resource_tool_interaction_runner.gd
 
       - name: Validate tool-gated resource gathering end to end
-        run: timeout 120s godot --headless --path . --script res://tests/resources/resource_gathering_tool_runner.gd
+        run: bash tools/run_godot_check.sh tests/resources/resource_gathering_tool_runner.gd
 
       - name: Validate Hex Encounter triggers conditions and persistence
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_encounter_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_encounter_runner.gd
 
       - name: Resolve Hex Encounters into world consequences
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_encounter_world_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_encounter_world_runner.gd
 
       - name: Chain Hex Encounters through persistent world flags
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_encounter_chain_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_encounter_chain_runner.gd
 
       - name: Validate universal NPC detection and hex combat joining
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_detection_join_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_npc_detection_join_runner.gd
 
       - name: Validate integrated NPC patrol chase group combat and resume
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_integration_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_npc_integration_runner.gd
 
       - name: Validate NPC map bounds and unreachable routes
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_boundary_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_npc_boundary_runner.gd
 
       - name: Validate group encounter lock and patrol resume
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_group_pause_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_group_pause_runner.gd
 
       - name: Validate NPC chase retry suppression
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_retry_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_npc_retry_runner.gd
 
       - name: Validate NPC aggression latch and freeze edge cases
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_edge_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_npc_edge_runner.gd
 
       - name: Validate bounded NPC pursuit and combat contact
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_npc_chase_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_npc_chase_runner.gd
 
       - name: Validate patrol chase return and route resume
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_patrol_chase_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_patrol_chase_runner.gd
 
       - name: Validate hex patrol movement and combat pause
-        run: timeout 120s godot --headless --path . --script res://tests/map/hex_patrol_state_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/hex_patrol_state_runner.gd
 
       - name: Generate 200 traversable tactical Locations
-        run: timeout 120s godot --headless --path . --script res://tests/map/location_generator_runner.gd
+        run: bash tools/run_godot_check.sh tests/map/location_generator_runner.gd

@@ -13,7 +13,15 @@ var max_mana: int
 var mana: int
 var action_points: int = 0
 var max_action_points: int = 5
+## Current accumulated Tempo; negative control debt has no artificial floor.
 var tempo: float = 0.0
+var base_tempo: float = 0.0
+var max_tempo: float = 100.0
+var tempo_regen: float = 0.0
+## A stun is scheduled for exactly one future round at the end-round threshold.
+var tempo_stun_round: int = -1
+## Inclusive last immune round, after the stunned round; 0 means none.
+var tempo_immunity_until_round: int = 0
 var stats: Dictionary = {}
 var combat_stats: Dictionary = {}
 var armour: Dictionary = {}

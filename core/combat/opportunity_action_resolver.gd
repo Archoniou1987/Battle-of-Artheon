@@ -72,28 +72,11 @@ func base_attack_event(decision:Dictionary,payload:Dictionary):
 		rolls=merged
 	var damage_roll:=float(rolls.get("damage",randf()))
 	rolls["damage"]=damage_roll
-	var damage_min:=float(selected.get("damage_min",0.0))
-	var damage_max:=float(selected.get("damage_max",damage_min))
-	var data:Dictionary={
-		"raw_damage":CombatMath.roll_damage(damage_min,damage_max,damage_roll),
-		"damage_min":damage_min,"damage_max":damage_max,"damage_roll":damage_roll,
-		"damage_type":String(selected.get("damage_type","slashing")),
-		"zone":String(rolls.get("zone",payload.get("zone","chest"))),"rolls":rolls,
+	var data:Dictionary=WeaponAttackProfile.attack_payload(selected,rolls,String(rolls.get("zone",payload.get("zone","chest"))),{
 		"source":"opportunity_base_attack","source_kind":"weapon","opportunity_action":true,
-		"is_weapon_attack":true,"is_extra_attack":true,"generates_ap":false,
-		"weapon_index":int(selected.get("weapon_index",0)),
-		"attack_profile_id":String(selected.get("id","basic")),
-		"hit_index":hit_index,"hit_count":hit_count,
-		"delivery_type":String(selected.get("delivery_type","MELEE")),
-		"min_zone_distance":int(selected.get("min_zone_distance",0)),
-		"max_zone_distance":int(selected.get("max_zone_distance",0)),
-		"two_zone_hit_modifier":float(selected.get("two_zone_hit_modifier",-50.0)),
-		"uses_magic_hit":bool(selected.get("uses_magic_hit",false)),
-		"magic_hit_modifier":float(selected.get("magic_hit_modifier",0.0)),
-		"magic_hit_roll":int(rolls.get("magic_hit",1)),
-		"uses_physical_block":not bool(selected.get("uses_magic_hit",false)),
-		"bypass_physical_mitigation":not String(selected.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
-	}
+		"is_extra_attack":true,"generates_ap":false,
+		"hit_index":hit_index,"hit_count":hit_count
+	})
 	return group.combat_state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,data)
 
 

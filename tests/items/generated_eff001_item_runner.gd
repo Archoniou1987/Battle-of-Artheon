@@ -11,7 +11,7 @@ func _init() -> void:
 	var received: bool = hero.receive_item(String(item.instance_id), repository)
 	var equipped: bool = hero.equip("main_hand", String(item.instance_id), repository)
 	var resolved: Dictionary = ItemResolver.resolve_equipped("main_hand", hero.equipment, repository)
-	var fighter := CombatantState.new("EFF_HERO", "EFF Hero", 50, 100, 0)
+	var fighter := TestFixtureLoader.new_combatant("EFF_HERO", "EFF Hero", 50, 100, 0)
 	EquipmentBuilder.equip(fighter, resolved)
 	var effects: Array = fighter.combat_stats.get("weapon_on_hit_effects", [])
 	var eff_ok: bool = effects.size() == 1 and String((effects[0] as Dictionary).get("effect_id", "")) == "EFF001" and float((effects[0] as Dictionary).get("chance", 0.0)) == 100.0

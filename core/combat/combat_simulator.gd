@@ -16,7 +16,7 @@ func _init(combat_state: CombatState, balance: Dictionary = {}, seed_value: int 
 	state = combat_state
 	engine = CombatEngine.new(state, balance)
 	orchestrator = RoundOrchestrator.new(state, engine)
-	attack_pipeline=CombatAttackPipeline.new(state,seed_value)
+	attack_pipeline=CombatAttackPipeline.new(state,seed_value,engine)
 
 func run_duel(first_id: String, second_id: String) -> Dictionary:
 	while _both_alive(first_id, second_id) and state.round_number < max_rounds: _run_round(first_id, second_id)
@@ -43,7 +43,6 @@ func _run_round(first_id:String,second_id:String)->void:
 	else:
 		state.begin_round()
 		round=CombatRound.new(state.round_number)
-	attack_pipeline.regenerate_mana()
 	var first:=state.get_combatant(first_id)
 	var second:=state.get_combatant(second_id)
 	attack_pipeline.lock_basic_attack(round,first,second)

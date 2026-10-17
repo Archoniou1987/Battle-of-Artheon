@@ -3,10 +3,24 @@ extends RefCounted
 
 static func run()->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",10,100)
-	var enemy:=CombatantState.new("enemy","Enemy",9,80)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",10,100)
+	var enemy:=TestFixtureLoader.new_combatant("enemy","Enemy",9,80)
 	hero.hp=-5
+	hero.tempo=10.0
+	# Current Tempo is the authoritative accumulated pool; no repeated
+	# addition of legacy combat_stats/active EFF Tempo snapshots.
+	hero.combat_stats["tempo"]=5.0
+	hero.combat_stats["damage_reduction"]=0.25
+	hero.combat_stats["par_totals"]["PAR073"]=2
+	hero.combat_stats["manual_block_zones"]=["head","chest"]
+	hero.active_effects.append({
+		"effect_id":"EFF_API",
+		"definition":{"tempo":15.0,"damage_reduction":0.25},
+		"start_round":1,
+		"remaining_rounds":1
+	})
 	state.add_combatant(hero); state.add_combatant(enemy)
+	state.begin_round()
 	var group:=GroupCombatState.new(state)
 	group.add_member("A","hero"); group.add_member("B","enemy")
 	group.set_active_opponent("hero","enemy")
@@ -18,6 +32,13 @@ static func run()->bool:
 	var api:=CombatApi.new(state,group,zones)
 	var hero_view:=api.combatant("hero")
 	if int(hero_view.get("hp",-1))!=0 or int(hero_view.get("hp_internal",0))!=-5: return false
+	if not is_equal_approx(float(hero_view.get("tempo",0.0)),10.0): return false
+	var combat_stats:Dictionary=hero_view.get("combat_stats",{})
+	if not is_equal_approx(float(combat_stats.get("effective_tempo",0.0)),10.0): return false
+	if not is_equal_approx(hero.tempo,10.0): return false
+	if not is_equal_approx(float(combat_stats.get("damage_reduction",0.0)),0.5): return false
+	if Array(hero_view.get("manual_block_zones",[]))!=["head","chest"]: return false
+	if int(hero_view.get("manual_block_zone_capacity",0))!=2: return false
 	if String(hero_view.get("active_opponent_id",""))!="enemy": return false
 	if int(hero_view.get("zone_id",-1))!=CombatZoneState.ZONE_1: return false
 	var targets:=api.target_options("hero")
@@ -27,4 +48,11 @@ static func run()->bool:
 	var event:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"raw_damage":1.0})
 	event.set_result("outcome","miss"); state.record_event(event)
 	var events:=api.recent_events()
-	return events.size()==1 and String(events[0].get("outcome",""))=="miss"
+	if events.size()!=1 or String(events[0].get("outcome",""))!="miss": return false
+	var diagnostic:=api.diagnostics()
+	var diagnostic_events:Array=diagnostic.get("events",[])
+	var diagnostic_combatants:Dictionary=diagnostic.get("combatants",{})
+	if diagnostic_events.size()!=1: return false
+	if not Dictionary(diagnostic_events[0]).has("payload") or not Dictionary(diagnostic_events[0]).has("result"): return false
+	var hero_trace:Dictionary=diagnostic_combatants.get("hero",{})
+	return int(hero_trace.get("hp_internal",0))==-5 and Array(Dictionary(hero_trace.get("combat_stats",{})).get("manual_block_zones",[]))==["head","chest"]

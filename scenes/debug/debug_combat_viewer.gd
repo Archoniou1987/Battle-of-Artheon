@@ -7,7 +7,10 @@ var engine:CombatEngine
 var orchestrator:RoundOrchestrator
 var api:CombatApi
 var commands:CombatCommandApi
-var hero_id:="hero"
+var ability_scheduler:AbilityScheduler
+var hero_id:="player"
+const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
+const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 
 @onready var round_label:Label=$Margin/VBox/Header/Round
 @onready var outcome_label:Label=$Margin/VBox/Header/Outcome
@@ -31,13 +34,12 @@ func _ready()->void:
 
 func _build_debug_combat()->void:
 	state=CombatState.new()
-	var hero:=CombatantState.new(hero_id,"Hero",1,100,30)
-	var enemy:=CombatantState.new("enemy","Training Raider",1,80,0)
-	var enemy_two:=CombatantState.new("enemy_two","Raider Archer",1,65,0)
-	hero.combat_stats["main_hand_damage"]=12.0
-	hero.combat_stats["main_hand_damage_type"]="slashing"
-	enemy.combat_stats["main_hand_damage"]=7.0
-	enemy.combat_stats["main_hand_damage_type"]="blunt"
+	var debug_character := _load_player_character()
+	var player: CharacterState = debug_character["character"]
+	var repository: ItemRepository = debug_character["repository"]
+	var hero := CharacterCombatBuilder.build(player, repository)
+	var enemy := _build_debug_enemy("enemy", "Training Raider", 80, true)
+	var enemy_two := _build_debug_enemy("enemy_two", "Raider Archer", 65, false)
 	state.add_combatant(hero); state.add_combatant(enemy); state.add_combatant(enemy_two)
 	groups=GroupCombatState.new(state)
 	groups.add_member("A",hero_id); groups.add_member("B","enemy"); groups.add_member("B","enemy_two")
@@ -45,10 +47,20 @@ func _build_debug_combat()->void:
 	zones=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone(hero_id,CombatZoneState.ZONE_2); zones.set_zone("enemy",CombatZoneState.ZONE_2); zones.set_zone("enemy_two",CombatZoneState.ZONE_3)
-	engine=CombatEngine.new(state)
+	var ability_definitions := AbilityCatalog.load_json("res://data/test/abilities.json")
+	var assigned: Array = CombatModifierService.abilities(hero)
+	ability_scheduler = AbilityScheduler.new(ability_definitions, {hero_id: assigned.duplicate()})
+	var balance := AbilityCatalog.load_json("res://data/balance/physical_combat.json")
+	var effect_fixture := AbilityCatalog.load_json("res://data/test/effects.json")
+	var effects: Dictionary = {}
+	for entry in effect_fixture.get("effects", []):
+		if entry is Dictionary:
+			effects[String(entry.get("id", ""))] = entry
+	balance["effects"] = effects
+	engine=CombatEngine.new(state, balance)
 	orchestrator=RoundOrchestrator.new(state,engine,groups,zones)
 	api=CombatApi.new(state,groups,zones)
-	commands=CombatCommandApi.new(state,groups,zones,orchestrator)
+	commands=CombatCommandApi.new(state,groups,zones,orchestrator,ability_scheduler)
 	orchestrator.begin_round()
 
 func _refresh()->void:
@@ -65,9 +77,9 @@ func _refresh()->void:
 			cards.append("%s%s\nHP %d/%d" % [unit.name,marker,unit.hp,unit.max_hp])
 		zone_labels[i].text="ZONE %d\n\n%s" % [i+1,"\n\n".join(cards) if not cards.is_empty() else "—"]
 	var hero:=api.combatant(hero_id); var enemy:=api.combatant("enemy")
-	var block_zones:Array=state.get_combatant(hero_id).combat_stats.get("manual_block_zones",[])
-	hero_label.text="HERO  HP %d/%d   Mana %d/%d   Zone %d   Block: %s" % [hero.hp,hero.max_hp,hero.mana,hero.max_mana,hero.zone_id,", ".join(block_zones) if not block_zones.is_empty() else "—"]
-	enemy_label.text="ACTIVE TARGET  %s  HP %d/%d   Zone %d" % [enemy.name,enemy.hp,enemy.max_hp,enemy.zone_id]
+	var block_zones:Array=hero.get("manual_block_zones",[])
+	hero_label.text="HERO  HP %d/%d   Mana %d/%d   Tempo %.1f   Zone %d   Block: %s" % [hero.hp,hero.max_hp,hero.mana,hero.max_mana,float(hero.get("tempo",0.0)),hero.zone_id,", ".join(block_zones) if not block_zones.is_empty() else "—"]
+	enemy_label.text="ACTIVE TARGET  %s  HP %d/%d   Tempo %.1f   Zone %d" % [enemy.name,enemy.hp,enemy.max_hp,float(enemy.get("tempo",0.0)),enemy.zone_id]
 	_rebuild_targets()
 	_rebuild_actions()
 	var lines:Array[String]=[]
@@ -90,10 +102,23 @@ func _rebuild_targets()->void:
 
 func _rebuild_actions()->void:
 	for child in actions.get_children(): child.queue_free()
-	var available:=commands.available_actions(hero_id)
+	var equipped_abilities: Dictionary = {}
+	for ability_id in ability_scheduler.loadouts.get(hero_id, []):
+		var definition := AbilityCatalog.definition(ability_scheduler.definitions, String(ability_id))
+		if not definition.is_empty():
+			equipped_abilities[String(ability_id)] = definition
+	var available:=commands.available_actions(hero_id, equipped_abilities)
 	var attack:=Button.new(); attack.text="Base Attack"; attack.disabled=not bool(available.get("basic_attack",false)); attack.pressed.connect(_attack); actions.add_child(attack)
 	for zone_id in available.get("navigation",[]):
 		var move:=Button.new(); move.text="Move → Z%d" % int(zone_id); move.pressed.connect(_move.bind(int(zone_id))); actions.add_child(move)
+	for ability_id in equipped_abilities:
+		var ability_state: Dictionary = available.get("abilities", {}).get(ability_id, {})
+		var ability_button := Button.new()
+		ability_button.text = String(equipped_abilities[ability_id].get("name", ability_id))
+		var valid_targets: Array = ability_state.get("targets", [])
+		ability_button.disabled = not bool(ability_state.get("available", false)) or not valid_targets.has(groups.active_opponent(hero_id))
+		ability_button.pressed.connect(_cast_ability.bind(String(ability_id)))
+		actions.add_child(ability_button)
 	var end_round:=Button.new(); end_round.text="End Round"; end_round.pressed.connect(_end_round); actions.add_child(end_round)
 
 func _on_target_selected(index:int)->void:
@@ -123,3 +148,58 @@ func _end_round()->void:
 	orchestrator.end_round()
 	if orchestrator.battle_outcome()=="ongoing": orchestrator.begin_round()
 	_refresh()
+
+## The debug encounter consumes the saved player state without mutating it.
+## If there is no save, use a fresh level-1 character with bare fists.
+func _load_player_character() -> Dictionary:
+	var player := CharacterState.new("player", "Герой")
+	var repository := ItemRepository.new()
+	if FileAccess.file_exists(PROGRESSION_SAVE_PATH):
+		var progression_data: Variant = JSON.parse_string(FileAccess.get_file_as_string(PROGRESSION_SAVE_PATH))
+		if progression_data is Dictionary:
+			player.restore_progression(progression_data)
+	if FileAccess.file_exists(INVENTORY_SAVE_PATH):
+		var saved: Variant = JSON.parse_string(FileAccess.get_file_as_string(INVENTORY_SAVE_PATH))
+		if saved is Dictionary and int(saved.get("schema_version", 0)) == 1:
+			var repository_data: Variant = saved.get("repository", {})
+			var inventory_data: Variant = saved.get("inventory", {})
+			var equipment_data: Variant = saved.get("equipment", {})
+			if repository_data is Dictionary and inventory_data is Dictionary and equipment_data is Dictionary:
+				if String(inventory_data.get("owner_id", "")) == player.character_id:
+					var loaded_repository := ItemRepository.from_dict(repository_data)
+					var loaded_inventory := InventoryState.from_dict(inventory_data, loaded_repository)
+					var valid := true
+					for slot in player.equipment.slots:
+						var instance_id: Variant = equipment_data.get(slot, null)
+						if instance_id != null and (not instance_id is String or not loaded_inventory.owns(String(instance_id))):
+							valid = false
+							break
+					if valid:
+						repository = loaded_repository
+						player.inventory = loaded_inventory
+						for slot in player.equipment.slots:
+							player.equipment.slots[slot] = equipment_data.get(slot, null)
+	return {"character": player, "repository": repository}
+
+func _cast_ability(ability_id: String) -> void:
+	var target_id := groups.active_opponent(hero_id)
+	var result := commands.cast_ability(hero_id, target_id, ability_id)
+	if bool(result.get("ok", false)):
+		engine.resolve_pending_events()
+	_refresh()
+
+## Explicit debug fixtures use the same canonical builder as the Arena.
+func _build_debug_enemy(id: String, display_name: String, health: int, armed: bool) -> CombatantState:
+	var character := CharacterState.new(id, display_name)
+	# The former fixture had no primary-stat bonuses: keep its configured damage.
+	for par_id in ParCalculationService.PRIMARY_IDS:
+		character.progression.base_stats[par_id] = 0
+	var repository := ItemRepository.new()
+	if armed:
+		var instance_id := id + "_debug_weapon"
+		var item := {"instance_id":instance_id,"equip_slots":["main_hand"],"slot_usage":["main_hand"],"par_stats":{"PAR057":1},"damage":{"min":7.0,"max":7.0,"type":"blunt"}}
+		ItemDurabilityService.initialize_item(item, 100)
+		repository.add_item(item)
+		character.receive_item(instance_id, repository)
+		character.equip("main_hand", instance_id, repository)
+	return CharacterCombatBuilder.build(character, repository, {"health":health,"mana":0})

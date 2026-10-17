@@ -9,8 +9,8 @@ func _initialize()->void:
 	valid=valid and map.place_entity("PLAYER",Vector2i(4,5))
 	var step:=map.move_entity("PLAYER",Vector2i(5,5))
 	var encounter:=bridge.encounter_at(map,map.entity_positions["PLAYER"])
-	var player:=CombatantState.new("PLAYER","Artheon Hero",5,150,0)
-	player.combat_stats={"main_hand_damage_min":25.0,"main_hand_damage_max":25.0,"main_hand_damage_type":"slashing"}
+	var player:=TestFixtureLoader.new_combatant("PLAYER","Artheon Hero",5,150,0)
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":25.0,"damage_max":25.0,"damage_type":"slashing"}]}, true)
 	var session:=MapEncounterCombatService.begin(encounter,repo,player)
 	valid=valid and bool(step.get("ok",false)) and bool(session.get("ok",false))
 	var enemy:CombatantState=session.get("enemy") as CombatantState
@@ -19,7 +19,7 @@ func _initialize()->void:
 	valid=valid and session.get("npc")==npc
 	var state:CombatState=session.get("state") as CombatState
 	valid=valid and state.get_combatant("WORLD_BANDIT_001")==enemy and state.get_combatant("PLAYER")==player
-	var simulator:=CombatSimulator.new(state,TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),6711)
+	var simulator:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),6711)
 	simulator.max_rounds=20
 	var result:=simulator.run_duel("PLAYER","WORLD_BANDIT_001")
 	valid=valid and String(result.get("winner_id",""))=="PLAYER" and String(result.get("loser_id",""))=="WORLD_BANDIT_001"

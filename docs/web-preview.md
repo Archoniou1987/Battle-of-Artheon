@@ -1,19 +1,46 @@
-# Browser preview and build recovery
+# Battle of Artheon — Godot Web Preview and Vercel publishing
 
-## Primary: GitHub Actions
-Run `Web Preview (Godot)` manually on `feature/equipment-instance-chain`.
-GitHub Pages is **not enabled** for this private repository, so this workflow's Pages deploy step cannot publish as-is.
+The canonical browser preview is hosted at
+[https://battle-of-artheon.vercel.app](https://battle-of-artheon.vercel.app).
+The Vercel project is `battle-of-artheon` (team `dryun87-9174`).
 
-## Portable / backup build (no GitHub Actions)
-Requires Godot **4.5.1** plus matching **Web export templates** installed on any Linux computer/runner.
-From repository root: `bash scripts/build_web.sh`.
-Or: `GODOT_BIN=/path/to/godot OUTPUT_DIR=build/web bash scripts/build_web.sh`.
-The script imports assets, exports the Web preset and verifies `index.html`, `index.wasm`, `index.pck`.
-Upload **the contents of** `build/web/` to a static host such as Vercel; do not upload Godot source as the web root.
-No GitHub Actions minutes are consumed by this route.
+## Publish a tested branch (manual, batched)
 
-## Hosting caveat
-Vercel project `battle-of-artheon` exists, but has no deployment yet. Vercel does not natively build Godot projects. A compiled Web export must be provided to it. Do not point Vercel at raw Godot source and expect a working game.
+1. Finish a group of changes on `feature/character-inventory-ui-v1`.
+2. Run the appropriate Godot CI workflow(s), e.g. `ABI Branch Tests`.
+   **These tests do not update the browser deployment.**
+3. In GitHub Actions, open `Web Preview (Godot)`, choose
+   `feature/character-inventory-ui-v1`, and tick
+   **Publish browser build to Vercel** (`publish_to_vercel = true`).
+   The publishing checkbox defaults to **false** to avoid accidental
+   GitHub Actions/Vercel build costs on every small commit.
+4. The Web Preview workflow imports the Godot 4.5.1 project, runs the
+   smoke tests (including the Arena and ABI Lab dialog smoke tests),
+   creates the actual Web export and publishes **build/web** to Vercel.
+5. Check that the workflow's final `Publish Web build to Vercel` step
+   completed successfully, not merely the Godot/ABI test steps.
+6. Reopen the game at `battle-of-artheon.vercel.app` and confirm the
+   new feature. On mobile browsers, reload the site if an old Web export
+   remains visible in the current tab.
+
+A GitHub commit by itself does **not** publish the Godot build. Vercel
+does not compile Godot source directly for this project: the manual
+GitHub workflow handles the Web export and uploading.
+
+## Portable / backup build
+
+Requires Godot **4.5.1** and matching Web export templates.
+From the repository root run `bash scripts/build_web.sh`.
+Alternatively:
+`GODOT_BIN=/path/to/godot OUTPUT_DIR=build/web bash scripts/build_web.sh`.
+The script imports assets, exports the `Web` preset and verifies
+`index.html`, `index.wasm` and `index.pck`.
+Upload **the contents of** `build/web/` to a static hosting provider,
+not the Godot source tree.
 
 ## Verification
-A passing Godot headless smoke test is not a substitute for browser testing. After publication, open the game on Android Chrome in landscape and test hotspots, footer, panorama dragging, and loading errors.
+
+A green Godot headless test is not a substitute for browser testing.
+After publication, open the game in Android Chrome (portrait and
+landscape), try numeric inputs, verify ABI Lab's tabs and fixed action
+buttons, and examine browser loading errors if assets fail to load.

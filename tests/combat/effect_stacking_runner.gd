@@ -2,9 +2,9 @@ extends SceneTree
 
 func _init() -> void:
 	var state := CombatState.new()
-	var source_a := CombatantState.new("SOURCE_A", "Source A", 50, 100, 0)
-	var source_b := CombatantState.new("SOURCE_B", "Source B", 50, 100, 0)
-	var target := CombatantState.new("TARGET", "Target", 50, 200, 0)
+	var source_a := TestFixtureLoader.new_combatant("SOURCE_A", "Source A", 50, 100, 0)
+	var source_b := TestFixtureLoader.new_combatant("SOURCE_B", "Source B", 50, 100, 0)
+	var target := TestFixtureLoader.new_combatant("TARGET", "Target", 50, 200, 0)
 	state.add_combatant(source_a)
 	state.add_combatant(source_b)
 	state.add_combatant(target)
@@ -12,7 +12,7 @@ func _init() -> void:
 		"EFF001": {"id":"EFF001","name":"Bleeding","kind":"dot","damage":2,"duration_rounds":3,"stacking":"stack","max_stacks":3},
 		"BUFF001": {"id":"BUFF001","name":"Test Buff","kind":"crit_buff","crit_bonus":20.0,"duration_rounds":3,"stacking":"unique","max_stacks":1}
 	}
-	var engine := CombatEngine.new(state, {"effects":effects})
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state), {"effects":effects})
 
 	# One Bleeding debuff may contain several stacks from different sources.
 	for source_id in ["SOURCE_A", "SOURCE_B", "SOURCE_A", "SOURCE_B"]:

@@ -1,7 +1,7 @@
 class_name ItemGenerator
 extends RefCounted
 
-const STAT_POOL := ["STR", "DEX", "INTU", "INT", "WIS", "END"]
+const STAT_POOL := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
 const QUALITY_RULES := {
 	"poor":{"min_mult":0.70,"max_mult":0.80,"mods":0,"mod_min":0,"mod_max":0},
 	"common":{"min_mult":0.95,"max_mult":1.05,"mods":0,"mod_min":0,"mod_max":0},
@@ -14,19 +14,32 @@ func generate(template:Dictionary,quality:String,condition_rule:Dictionary={})->
 	var rule:Dictionary=QUALITY_RULES.get(quality,{})
 	if rule.is_empty():return {}
 	serial+=1; var multiplier:=rng.randf_range(float(rule.min_mult),float(rule.max_mult))
-	var base_stats:Dictionary=template.get("base_stats",{}); var scaled_stats:Dictionary={}
+	var base_stats:Dictionary=template.get("par_stats",{}); var scaled_stats:Dictionary={}
 	for stat in base_stats:scaled_stats[stat]=int(round(float(base_stats[stat])*multiplier))
-	var rolled_mods:Array[Dictionary]=[]; var final_stats:=scaled_stats.duplicate(true)
+	var rolled_mods:Array[Dictionary]=[]
 	for i in range(int(rule.mods)):
 		var stat:=String(STAT_POOL[rng.randi_range(0,STAT_POOL.size()-1)]); var value:=rng.randi_range(int(rule.mod_min),int(rule.mod_max))
-		rolled_mods.append({"stat":stat,"value":value}); final_stats[stat]=int(final_stats.get(stat,0))+value
+		rolled_mods.append({"stat":stat,"value":value})
 	var dmin:=int(round(float(template.get("damage_min",0))*multiplier)); var dmax:=int(round(float(template.get("damage_max",0))*multiplier))
-	var item:Dictionary={"instance_id":"GEN-%06d"%serial,"template_id":String(template.get("id","")),"name":String(template.get("name","")),"item_level":int(template.get("item_level",1)),"quality":quality,"quality_multiplier":multiplier,"equip_slots":template.get("equip_slots",[]).duplicate(true),"slot_usage":template.get("slot_usage",[]).duplicate(true),"damage_min":dmin,"damage_max":dmax,"damage":{"min":dmin,"max":dmax,"type":String(template.get("damage_type","slashing"))} if dmax>0 else {},"base_stats":scaled_stats,"rolled_mods":rolled_mods,"final_stats":final_stats,"manual_block_zones_added":int(template.get("manual_block_zones_added",1)),"combat_stats":template.get("combat_stats",{}).duplicate(true),"armour_all_zones_all_physical":float(template.get("armour_all_zones_all_physical",0.0))}
+	var item:Dictionary={"instance_id":"GEN-%06d"%serial,"generated_from_template":String(template.get("id","")),"name":String(template.get("name","")),"item_level":int(template.get("item_level",1)),"quality":quality,"quality_multiplier":multiplier,"equip_slots":template.get("equip_slots",[]).duplicate(true),"slot_usage":template.get("slot_usage",[]).duplicate(true),"damage_min":dmin,"damage_max":dmax,"damage":{"min":dmin,"max":dmax,"type":String(template.get("damage_type","slashing"))} if dmax>0 else {},"par_stats":scaled_stats,"rolled_mods":rolled_mods,"par_bonuses":_rolled_bonuses(rolled_mods),"manual_block_zones_added":int(template.get("manual_block_zones_added",1)),"combat_stats":template.get("combat_stats",{}).duplicate(true),"armour_all_zones_all_physical":float(template.get("armour_all_zones_all_physical",0.0))}
+	if dmax > 0:
+		item["par_stats"]["PAR057"] = 1
+	item["slot"] = String(template.get("slot", Array(template.get("equip_slots", [""]))[0]))
+	for field in ["type", "item_type", "weapon_class", "requires_off_hand_type", "attack_profiles", "requirements"]:
+		if template.has(field):
+			var value: Variant = template[field]
+			item[field] = value.duplicate(true) if value is Dictionary or value is Array else value
 	if template.has("on_hit_effect"):item["on_hit_effect"]=(template.get("on_hit_effect",{}) as Dictionary).duplicate(true)
 	if template.has("on_manual_block_effect"):item["on_manual_block_effect"]=(template.get("on_manual_block_effect",{}) as Dictionary).duplicate(true)
 	if template.has("abilities"):item["abilities"]=(template.get("abilities",[]) as Array).duplicate(true)
 	_initialize_condition(item,int(template.get("durability_max",50)),condition_rule)
 	return item
+func _rolled_bonuses(mods: Array[Dictionary]) -> Dictionary:
+	var bonuses := {}
+	for mod in mods:
+		bonuses[mod.stat] = int(bonuses.get(mod.stat, 0)) + int(mod.value)
+	return bonuses
+
 func generate_batch(template:Dictionary,count:int)->Array[Dictionary]:
 	var result:Array[Dictionary]=[]; var qualities:=QUALITY_RULES.keys()
 	for i in range(count):result.append(generate(template,String(qualities[rng.randi_range(0,qualities.size()-1)])))

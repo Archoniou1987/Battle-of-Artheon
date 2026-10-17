@@ -1,6 +1,12 @@
 extends Control
 
 const LOCATION_NAME := "Стартовая деревня"
+const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
+const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
+# Temporary browser preview fixture; disable before public gameplay release.
+const ENABLE_INVENTORY_PREVIEW_ITEMS := false
+const INVENTORY_RESET_MARKER_PATH := "user://inventory_reset_empty_v1.marker"
+const TEST_ITEMS_GRANT_MARKER_PATH := "user://combat_test_items_v1_granted.marker"
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const PORTRAIT_NAV_COLUMNS := 3
@@ -10,7 +16,7 @@ const SERVICES := [
 	{"name": "Кузнец", "symbol": "⚒", "position": Vector2(0.18, 0.49)},
 	{"name": "Рынок", "symbol": "◆", "position": Vector2(0.37, 0.54)},
 	{"name": "Главное здание", "symbol": "⌂", "position": Vector2(0.51, 0.40)},
-	{"name": "Тренировочное поле", "symbol": "⚔", "position": Vector2(0.80, 0.53)}
+	{"name": "Арена", "symbol": "⚔", "position": Vector2(0.80, 0.53)}
 ]
 const NAVIGATION := [
 	{"name": "Персонаж", "symbol": "♟"},
@@ -35,13 +41,104 @@ var drag_offset := 0.0
 var service_buttons: Array[Button] = []
 var footer: Control
 var portrait_nav: GridContainer
+var player_character: CharacterState
+var character_screen: CharacterScreen
+var inventory_screen: InventoryScreen
+var arena_screen: ArenaScreen
+var item_repository: ItemRepository
+var _resources_loaded_from_save := false
+var _regen_saved_unix: float = 0.0
+var _regen_saved_paused := false
+var _regen_clock_unix: float = 0.0
+var _regen_save_accumulator := 0.0
 var landscape_nav: HBoxContainer
 
 
 func _ready() -> void:
+	player_character = CharacterState.new("player", "Герой")
+	_load_saved_progression()
+	item_repository = ItemRepository.new()
+	var inventory_loaded := _load_saved_inventory()
+	# Legacy saves had no current HP/mana. Migrate once at the restored
+	# equipment maximum, then persist explicit current values.
+	if not _resources_loaded_from_save:
+		if player_character.reset_resources_to_full(item_repository):
+			_save_progression()
+	else:
+		player_character.resource_snapshot(item_repository)
+	# Apply unlimited offline elapsed time only when the previous session
+	# actually ended in a non-combat state.
+	var now_unix := Time.get_unix_time_from_system()
+	if _resources_loaded_from_save and not _regen_saved_paused and _regen_saved_unix > 0.0:
+		OutOfCombatRegenerationService.advance(player_character, item_repository, maxf(0.0, now_unix - _regen_saved_unix))
+	_regen_clock_unix = now_unix
+	_reset_preview_inventory_once()
+	_grant_combat_test_items_once()
+	_save_progression()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
+
+func _process(_delta: float) -> void:
+	if player_character == null or item_repository == null:
+		return
+	var now_unix := Time.get_unix_time_from_system()
+	if _regen_clock_unix <= 0.0:
+		_regen_clock_unix = now_unix
+		return
+	if player_character.in_combat:
+		_regen_clock_unix = now_unix
+		return
+	var elapsed := maxf(0.0, now_unix - _regen_clock_unix)
+	if elapsed < 1.0:
+		return
+	_regen_clock_unix = now_unix
+	if OutOfCombatRegenerationService.advance(player_character, item_repository, elapsed):
+		_regen_save_accumulator += elapsed
+		if _regen_save_accumulator >= 5.0:
+			_save_progression()
+			_regen_save_accumulator = 0.0
+		if inventory_screen != null and inventory_screen.visible:
+			inventory_screen._refresh_combat_stats()
+		if character_screen != null and character_screen.visible:
+			character_screen.refresh()
+
+func _exit_tree() -> void:
+	if player_character != null and item_repository != null:
+		_save_progression()
+
+
+# One-time preview migration: clear existing bag, equipment and quick slots.
+# The marker prevents wiping items earned after the migration.
+func _reset_preview_inventory_once() -> void:
+	if FileAccess.file_exists(INVENTORY_RESET_MARKER_PATH):
+		return
+	player_character.inventory = InventoryState.new(player_character.character_id)
+	player_character.equipment = EquipmentState.new()
+	item_repository = ItemRepository.new()
+	var marker := FileAccess.open(INVENTORY_RESET_MARKER_PATH, FileAccess.WRITE)
+	if marker == null:
+		push_warning("Inventory reset marker could not be saved")
+		return
+	marker.store_string("reset_v1")
+	marker.close()
+	_save_inventory()
+
+
+# Grant the five genuine test instances once, without auto-equipping.
+# A persistent marker prevents re-creating deleted items on later launches.
+func _grant_combat_test_items_once() -> void:
+	if FileAccess.file_exists(TEST_ITEMS_GRANT_MARKER_PATH):
+		return
+	if not ArenaTestEquipment.seed(player_character, item_repository):
+		return
+	_save_inventory()
+	var marker := FileAccess.open(TEST_ITEMS_GRANT_MARKER_PATH, FileAccess.WRITE)
+	if marker == null:
+		push_warning("Test items grant marker could not be saved")
+		return
+	marker.store_string("granted_v1")
+	marker.close()
 
 
 func _build_screen() -> void:
@@ -206,7 +303,72 @@ func _shift_panorama(value: float) -> void:
 	panorama.position.x = (location_area.size.x - panorama.size.x) * 0.5 + panorama_offset
 
 
+
+func _open_character_screen() -> void:
+	if character_screen == null:
+		character_screen = CharacterScreen.new(player_character)
+		character_screen.item_repository = item_repository
+		character_screen.name = "CharacterScreen"
+		add_child(character_screen)
+		character_screen.stats_committed.connect(_save_progression)
+		character_screen.back_button.pressed.connect(func() -> void: character_screen.visible = false)
+	character_screen.visible = true
+	character_screen.refresh()
+
+
+func _open_inventory_screen() -> void:
+	if inventory_screen == null:
+		inventory_screen = InventoryScreen.new(player_character, item_repository)
+		inventory_screen.name = "InventoryScreen"
+		add_child(inventory_screen)
+		inventory_screen.inventory_changed.connect(_save_inventory)
+		_load_saved_elixirs()
+		inventory_screen.back_button.pressed.connect(func() -> void: inventory_screen.visible = false)
+	inventory_screen.visible = true
+	inventory_screen.refresh()
+
+
+func _open_arena_screen() -> void:
+	# Each entry starts a fresh training duel using the current equipment.
+	# Pause the out-of-combat clock before creating the live combat snapshot.
+	_sync_out_of_combat_before_arena()
+	player_character.in_combat = true
+	_save_progression()
+	if arena_screen != null:
+		remove_child(arena_screen)
+		arena_screen.queue_free()
+	arena_screen = ArenaScreen.new(player_character, item_repository)
+	arena_screen.name = "ArenaScreen"
+	add_child(arena_screen)
+	arena_screen.back_requested.connect(func() -> void:
+		arena_screen.visible = false
+		player_character.in_combat = false
+		_regen_clock_unix = Time.get_unix_time_from_system()
+		_save_progression()
+	)
+	arena_screen.resources_changed.connect(_save_progression)
+	arena_screen.visible = true
+	arena_screen.refresh()
+
+
+func _sync_out_of_combat_before_arena() -> void:
+	if player_character == null or item_repository == null:
+		return
+	var now_unix := Time.get_unix_time_from_system()
+	if not player_character.in_combat and _regen_clock_unix > 0.0:
+		OutOfCombatRegenerationService.advance(player_character, item_repository, maxf(0.0, now_unix - _regen_clock_unix))
+	_regen_clock_unix = now_unix
+
 func _open_panel(section: String) -> void:
+	if section == "Арена":
+		_open_arena_screen()
+		return
+	if section == "Инвентарь":
+		_open_inventory_screen()
+		return
+	if section == "Персонаж":
+		_open_character_screen()
+		return
 	popup_title.text = section
 	popup_description.text = "Раздел будет подключён на следующем этапе."
 	for child in popup_actions.get_children():
@@ -233,3 +395,187 @@ func _label(value: String, font_size: int, tint: Color) -> Label:
 	result.add_theme_font_size_override("font_size", font_size)
 	result.add_theme_color_override("font_color", tint)
 	return result
+
+# Deliberately isolated test data: no drops, prices, or balance rules.
+func _seed_inventory_preview() -> void:
+	var samples := [
+		["Тренировочный меч", "grey", "weapon", ["main_hand"]],
+		["Железный меч", "green", "weapon", ["main_hand"]],
+		["Охотничий кинжал", "blue", "weapon", ["main_hand", "off_hand"]],
+		["Тяжёлый топор", "purple", "weapon", ["main_hand"]],
+		["Деревянный щит", "grey", "shield", ["off_hand"]],
+		["Стальной щит", "green", "shield", ["off_hand"]],
+		["Кожаный шлем", "green", "armour", ["head"]],
+		["Капюшон следопыта", "blue", "armour", ["head"]],
+		["Кожаная куртка", "grey", "armour", ["chest"]],
+		["Кольчуга", "blue", "armour", ["chest"]],
+		["Перчатки охотника", "green", "armour", ["hands"]],
+		["Сапоги путника", "grey", "armour", ["feet"]],
+		["Кольцо меди", "green", "ring", ["ring1", "ring2"]],
+		["Кольцо луны", "purple", "ring", ["ring1", "ring2"]],
+		["Пояс странника", "green", "armour", ["waist"]],
+		["Наручи стража", "blue", "armour", ["wrists"]],
+		["Эликсир здоровья", "green", "consumable", []],
+		["Старая руда", "grey", "material", []],
+		["Редкий самоцвет", "orange", "material", []],
+		["Потрёпанная карта", "grey", "quest", []],
+		["Кольцо титана (+25 силы)", "purple", "ring", ["ring1", "ring2"]],
+		["Молот испытания (сила 10)", "blue", "weapon", ["main_hand"]]
+	]
+	for index in range(samples.size()):
+		var sample: Array = samples[index]
+		var instance_id := "preview_%02d" % (index + 1)
+		var item := {
+			"instance_id": instance_id,
+			"name": String(sample[0]),
+			"rarity": String(sample[1]),
+			"type": String(sample[2]),
+			"item_level": 1,
+			# Temporary preview icon mapping; production templates will own stable icon_id.
+			"icon_id": "ICON_%04d" % ([0, 1, 14, 2, 16, 17, 18, 19, 24, 27, 40, 48, 50, 51, 29, 41, 56, 61, 63, 60, 52, 3][index] + 1),
+			"equip_slots": sample[3],
+			"requirements": {"PAR001": 10} if index == 21 else {},
+			"par_stats": {},
+			"par_bonuses": {"PAR001": 25} if index == 20 else {},
+			"description": "Тестовый предмет для проверки интерфейса. Не является частью игрового баланса."
+		}
+		ItemDurabilityService.initialize_item(item, 100)
+		if item_repository.add_item(item):
+			player_character.inventory.add_instance(instance_id, item_repository)
+
+
+func _save_progression() -> void:
+	if player_character == null:
+		return
+	var file := FileAccess.open(PROGRESSION_SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("Character progression save failed")
+		return
+	if item_repository != null:
+		player_character.resource_snapshot(item_repository)
+	file.store_string(JSON.stringify({
+		"schema_version": 1,
+		"progression": player_character.progression_snapshot(),
+		"resources": player_character.resources_to_dict(),
+		"regen_saved_unix": Time.get_unix_time_from_system(),
+		"regen_paused": player_character.in_combat
+	}))
+	file.close()
+
+func _load_saved_progression() -> void:
+	if not FileAccess.file_exists(PROGRESSION_SAVE_PATH):
+		return
+	var file := FileAccess.open(PROGRESSION_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var raw: Variant = JSON.parse_string(file.get_as_text())
+	if not raw is Dictionary:
+		return
+	if int(raw.get("schema_version", 0)) != 1:
+		return
+	var data: Variant = raw.get("progression", {})
+	if not data is Dictionary or not player_character.restore_progression(data):
+		push_error("Character progression save rejected: invalid canonical PAR schema")
+		return
+	if raw.has("resources"):
+		var resources: Variant = raw.get("resources", {})
+		_resources_loaded_from_save = true
+		if not resources is Dictionary or not player_character.restore_resources(resources):
+			push_error("Character resources rejected: invalid current HP/mana")
+			_resources_loaded_from_save = false
+		else:
+			var raw_timestamp: Variant = raw.get("regen_saved_unix", 0.0)
+			if RatingMatrix._number(raw_timestamp) and is_finite(float(raw_timestamp)) and float(raw_timestamp) >= 0.0:
+				_regen_saved_unix = float(raw_timestamp)
+			_regen_saved_paused = bool(raw.get("regen_paused", false))
+
+
+func _save_inventory() -> void:
+	if player_character == null or item_repository == null:
+		return
+	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("Inventory save failed")
+		return
+	var quickslots: Array = inventory_screen.elixir_assignments.duplicate() if inventory_screen != null else ["", "", "", ""]
+	var payload := {"schema_version": 1, "repository": item_repository.to_dict(), "inventory": player_character.inventory.to_dict(), "equipment": player_character.equipment.slots.duplicate(true), "elixirs": quickslots}
+	file.store_string(JSON.stringify(payload))
+	file.close()
+	# Persist resource clamping when equipment lowers a pool's maximum.
+	_save_progression()
+
+func _load_saved_inventory() -> bool:
+	if not FileAccess.file_exists(INVENTORY_SAVE_PATH):
+		return false
+	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return false
+	var raw: Variant = JSON.parse_string(file.get_as_text())
+	if not raw is Dictionary or int(raw.get("schema_version", 0)) != 1:
+		return false
+	var repository_data: Variant = raw.get("repository", {})
+	var inventory_data: Variant = raw.get("inventory", {})
+	var slots_data: Variant = raw.get("equipment", {})
+	if not repository_data is Dictionary or not inventory_data is Dictionary or not slots_data is Dictionary:
+		return false
+	if String(inventory_data.get("owner_id", "")) != player_character.character_id:
+		return false
+	var loaded_repository := ItemRepository.from_dict(repository_data)
+	var loaded_inventory := InventoryState.from_dict(inventory_data, loaded_repository)
+	var ids: Variant = inventory_data.get("instance_ids", [])
+	if not ids is Array or loaded_inventory.size() != ids.size():
+		return false
+	var loaded_equipment := EquipmentState.new()
+	for slot in loaded_equipment.slots:
+		var id: Variant = slots_data.get(slot, null)
+		if id != null and (not id is String or not loaded_inventory.owns(String(id))):
+			return false
+		loaded_equipment.slots[slot] = id
+	for key in slots_data:
+		if not loaded_equipment.slots.has(key):
+			return false
+	for id in loaded_inventory.instance_ids():
+		var occupied: Array = []
+		for slot in loaded_equipment.slots:
+			if loaded_equipment.slots[slot] == id:
+				occupied.append(slot)
+		if occupied.is_empty():
+			continue
+		var item := loaded_repository.get_item(String(id))
+		var allowed: Array = item.get("equip_slots", [])
+		var usage: Array = item.get("slot_usage", [occupied[0]])
+		# The same alternate ring-slot contract used by EquipmentService applies on restore.
+		if occupied.size() == 1 and usage.size() == 1:
+			var target: String = occupied[0]
+			var opposite := "ring1" if target == "ring2" else "ring2"
+			if ["ring1", "ring2"].has(target) and allowed.has(opposite) and not allowed.has(target) and usage[0] == opposite:
+				allowed = allowed.duplicate()
+				allowed.append(target)
+				usage = [target]
+		if not allowed.has(occupied[0]) or usage.size() != occupied.size():
+			return false
+		for slot in usage:
+			if not occupied.has(slot):
+				return false
+	item_repository = loaded_repository
+	player_character.inventory = loaded_inventory
+	player_character.equipment = loaded_equipment
+	return true
+
+
+func _load_saved_elixirs() -> void:
+	if inventory_screen == null or not FileAccess.file_exists(INVENTORY_SAVE_PATH):
+		return
+	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var raw: Variant = JSON.parse_string(file.get_as_text())
+	if not raw is Dictionary:
+		return
+	var elixirs: Variant = raw.get("elixirs", [])
+	if not elixirs is Array or elixirs.size() != 4:
+		return
+	for i in range(4):
+		var id: Variant = elixirs[i]
+		if id is String and (id.is_empty() or player_character.inventory.owns(id)):
+			inventory_screen.elixir_assignments[i] = id

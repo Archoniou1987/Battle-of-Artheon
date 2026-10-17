@@ -12,18 +12,21 @@ jobs:
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.4.1
+          version: 4.5.1
           use-dotnet: false
           include-templates: false
       - name: Import project and register script classes
-        run: timeout --signal=KILL 90s godot --headless --editor --path . --quit
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
       - name: Validate combat debug scene
-        run: timeout --signal=KILL 30s godot --headless --path . res://scenes/debug/debug_combat_viewer.tscn --quit-after 2
+        run: GODOT_TEST_TIMEOUT=30 bash tools/run_godot_check.sh --scene res://scenes/debug/debug_combat_viewer.tscn
+
+      - name: Validate canonical debug combat interactions
+        run: GODOT_TEST_TIMEOUT=30 bash tools/run_godot_check.sh tests/ui/debug_combat_scene_runner.gd
 
       - name: Run combat regression gate
         run: |
           set -o pipefail
-          timeout --signal=KILL 45s stdbuf -oL -eL godot --headless --path . --script res://tests/combat/combat_regression_runner.gd 2>&1 | tee combat-regression.log
+          GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/combat_regression_runner.gd 2>&1 | tee combat-regression.log
       - name: Upload combat regression diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -32,5 +35,26 @@ jobs:
           path: combat-regression.log
           if-no-files-found: warn
           retention-days: 1
+      - name: Verify numeric physical PAR boundaries and NPC armour
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/physical_par_boundary_runner.gd
+
+      - name: Verify PAR010 and round resource regeneration
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/par_resource_lifecycle_runner.gd
+
+      - name: Verify live Arena resources and save/restore integration
+        run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/ui/arena_resource_persistence_runner.gd
+
+      - name: Verify PAR012 PAR013 PAR017 out-of-combat regeneration
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/out_of_combat_regeneration_runner.gd
+
+      - name: Verify offline regeneration persistence and Arena pause
+        run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/ui/out_of_combat_offline_persistence_runner.gd
+
+      - name: Verify accumulated Tempo PAR019-021 lifecycle
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/parameters/par_tempo_lifecycle_runner.gd
+
       - name: Run first tournament
-        run: timeout --signal=KILL 45s godot --headless --path . --script res://tests/combat/tournament_runner.gd
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
+
+      - name: Verify arena and NPC combat contract
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/arena_npc_contract_runner.gd

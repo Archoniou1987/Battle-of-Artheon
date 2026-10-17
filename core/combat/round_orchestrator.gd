@@ -28,6 +28,10 @@ func _init(combat_state:CombatState, combat_engine:CombatEngine, combat_groups:G
 
 func begin_round() -> CombatRound:
 	state.begin_round()
+	# Opening phase: recover only combatants alive from the previous round.
+	# Resource regeneration is not a healing action and cannot revive the dead.
+	CombatResourceService.apply_round_regeneration(state)
+	CombatTempoService.begin_round(state)
 	start_snapshot=_capture_start_snapshot()
 	movement_requests.clear()
 	return CombatRound.new(state.round_number)
@@ -112,12 +116,14 @@ func _contest_definition_power(combatant_id:String,contest:Dictionary)->float:
 	var combatant:=state.get_combatant(combatant_id)
 	if combatant==null:
 		return 0.0
-	var stats:Array=Array(contest.get("stats",["STR","STA"]))
+	var stats:Array=Array(contest.get("stats",["PAR001","PAR006"]))
 	var power:=float(contest.get("flat_power",0.0))
 	for raw_stat in stats:
 		var stat:=String(raw_stat)
-		var fallback:float=float(combatant.stats.get("END",0.0)) if stat=="STA" else 0.0
-		power+=float(combatant.stats.get(stat,fallback))
+		if not combatant.stats.has(stat):
+			push_error("Movement contest missing mandatory parameter: " + stat)
+			return 0.0
+		power+=float(combatant.stats[stat])
 	return power*float(contest.get("multiplier",1.0))
 
 func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
@@ -177,7 +183,10 @@ func resolve_active_timed_effects() -> Array[int]:
 			var definition:Dictionary=active.get("definition",{})
 			if String(definition.get("kind",""))!="dot":
 				continue
-			var amount:=float(definition.get("damage",0.0))
+			# Shared-duration EFF has one DoT packet per round, multiplied
+			# by the current stack count (independent-stack EFF stay unchanged).
+			var shared_stacks := maxi(1, int(active.get("stacks", 1))) if String(definition.get("stacking", "")) == "shared_duration" else 1
+			var amount:=float(definition.get("damage",0.0)) * float(shared_stacks)
 			if amount<=0.0:
 				continue
 			var event:=state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
@@ -247,6 +256,8 @@ func end_round() -> Dictionary:
 			var killers:=state.fatal_round_killers(combatant.combatant_id)
 			if not killers.is_empty():
 				kill_attribution[combatant.combatant_id]=killers
+	# Death is finalized before threshold checks; dead fighters cannot stun/rebound.
+	CombatTempoService.end_round(state)
 	_tick_effect_durations()
 	return {
 		"dead_ids":finalized_dead_ids.duplicate(),
@@ -281,11 +292,11 @@ func _capture_start_snapshot() -> Dictionary:
 	var snapshot:Dictionary={}
 	for combatant_id in state.combatants.keys():
 		var combatant:CombatantState=state.get_combatant(String(combatant_id))
-		var movement_locked:=_has_active_movement_lock(combatant)
+		var movement_locked := _has_active_movement_lock(combatant) or CombatTempoService.is_stunned(combatant, state.round_number)
 		snapshot[String(combatant_id)]={
 			"hp":combatant.hp,
 			"death_finalized":combatant.is_death_finalized(),
-			"tempo":combatant.tempo,
+			"tempo":CombatModifierService.effective_tempo(combatant, state.round_number),
 			"movement_locked":movement_locked,
 			"zone":zone_state.zone_of(String(combatant_id)) if zone_state!=null else -1
 		}

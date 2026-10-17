@@ -1,5 +1,5 @@
 {
-  "ABI001": {
+  "TEST_ABI_FIREBALL": {
     "name": "Fireball",
     "delivery_type": "PROJECTILE",
     "target_scope": "SINGLE",
@@ -27,7 +27,7 @@
     "cooldown_rounds": 2,
     "mana_cost": 7
   },
-  "ABI003": {
+  "TEST_ABI_LIGHTNING": {
     "name": "Lightning",
     "delivery_type": "DIRECT",
     "target_scope": "SINGLE",
