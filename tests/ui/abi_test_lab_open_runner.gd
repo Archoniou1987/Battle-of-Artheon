@@ -66,7 +66,7 @@ func _run() -> void:
 	var popup_height: float = float(dialog.size.y)
 	check(popup_height <= 700.0, "compact popup height=%s viewport=%s" % [str(popup_height), str(viewport_height)])
 	check(float(dialog.pages.size.y) <= popup_height * 0.85, "tab pages fit inside popup: pages=%s popup=%s" % [str(dialog.pages.size.y), str(popup_height)])
-	check(dialog.action_toolbar.get_global_rect().end.y <= dialog.get_global_rect().end.y + 2.0, "action toolbar remains within popup bounds")
+	check(dialog.action_toolbar.get_global_rect().end.y <= float(dialog.position.y + dialog.size.y) + 2.0, "action toolbar remains within popup bounds")
 	# Synthetic presets expose editable fields.
 	dialog.preset_select.select(1)
 	dialog._preset_changed(1)
