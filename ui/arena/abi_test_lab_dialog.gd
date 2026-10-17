@@ -430,9 +430,10 @@ func _export_log() -> void:
 
 
 func open_lab() -> void:
-	# Use bounded dimensions so the toolbar and tab bar fit on portrait AND
-	# landscape screens. Tabs own their scrolling; the dialog never needs to.
-	var viewport_size := get_viewport().get_visible_rect().size
+	# Window.get_viewport() refers to this popup's OWN viewport (initially ~367px),
+	# not the game's root viewport. Use root dimensions to avoid a permanently
+	# tiny dialog on mobile. Tabs scroll; the toolbar stays fixed.
+	var viewport_size := get_tree().root.get_visible_rect().size
 	var preferred_width := mini(900, int(viewport_size.x * 0.96))
 	var preferred_height := mini(760, int(viewport_size.y * 0.88))
 	popup_centered(Vector2i(maxi(310, preferred_width), maxi(340, preferred_height)))
