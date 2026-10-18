@@ -103,7 +103,10 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	var dummy := TestFixtureLoader.new_combatant(DUMMY_ID, "Манекен", dummy_level, 10000, 0)
 	var ally := TestFixtureLoader.new_combatant(ALLY_ID, "Союзник", caster_level, 10000, 0)
 	if preset == "ABI004":
-		var starting_hp := clampi(int(settings.get("initial_hp", 5000)), 1, 10000)
+		var target_max_hp := clampi(int(settings.get("target_max_hp", 10000)), 1, 100000)
+		var starting_hp := clampi(int(settings.get("initial_hp", 5000)), 1, target_max_hp)
+		caster.max_hp = target_max_hp
+		ally.max_hp = target_max_hp
 		caster.hp = starting_hp
 		ally.hp = starting_hp
 	state.add_combatant(caster)
@@ -175,7 +178,7 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		"ok": true, "round": state.round_number, "cast_status": cast_status,
 		"ability_id": active_id, "ability_event_id": ability_event_id,
 		"mana_before": mana_before, "mana_after": caster.mana,
-		"hp_before": hp_before, "hp_after": target.visible_hp(),
+		"hp_before": hp_before, "hp_after": target.visible_hp(), "max_hp": target.max_hp,
 		"target_id":target_id, "target_name":target.display_name,
 		"damage_dealt": hp_before - target.visible_hp(),
 		"healing_done": target.visible_hp() - hp_before, "effects": effects,
