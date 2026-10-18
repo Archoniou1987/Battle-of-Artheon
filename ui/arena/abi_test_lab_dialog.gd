@@ -31,6 +31,9 @@ const TYPE_NAMES := {
 var session: AbiTestLabSession
 var preset_select: OptionButton
 var type_select: OptionButton
+var target_select: OptionButton
+var target_row: HBoxContainer
+var initial_hp_row: HBoxContainer
 var custom_name: LineEdit
 var fields: Dictionary = {}
 var par_select: OptionButton
@@ -158,7 +161,7 @@ func _ready() -> void:
 
 func _build_ability_page(page: VBoxContainer) -> void:
 	preset_select = OptionButton.new()
-	for id in ["ABI003", "LAB_PHYSICAL", "LAB_MAGIC"]:
+	for id in ["ABI003", "ABI004", "LAB_PHYSICAL", "LAB_MAGIC"]:
 		preset_select.add_item("%s — %s" % [id, String(AbiTestLabSession.PRESETS[id])])
 		preset_select.set_item_metadata(preset_select.item_count - 1, id)
 	_add_full_row(page, "Способность", preset_select)
@@ -178,6 +181,10 @@ func _build_ability_page(page: VBoxContainer) -> void:
 	type_row = _add_compact_row(page, "Тип урона", type_select)
 	type_select.item_selected.connect(_mark_dirty)
 
+	target_select = OptionButton.new()
+	target_row = _add_compact_row(page, "Цель", target_select)
+	target_select.item_selected.connect(_mark_dirty)
+	initial_hp_row = _add_spin(page, "HP до лечения", "initial_hp", 5000, 1, 10000)
 	_add_spin(page, "Базовый урон", "damage", 100, 0, 100000)
 	mana_row = _add_spin(page, "Мана (тест)", "mana_cost", 0, 0, 1000)
 	cooldown_row = _add_spin(page, "КД (тест)", "cooldown_rounds", 0, 0, 20)
@@ -287,8 +294,19 @@ func _selected_type() -> String:
 
 func _preset_changed(_index: int) -> void:
 	var preset := _preset_id()
-	var locked := preset == "ABI003"
+	var locked := preset in ["ABI003", "ABI004"]
 	locked_details.visible = locked
+	locked_details.text = "Healing · 100 HP сразу · EFF004 HoT 10 HP × 3 раунда · 10 маны · КД 1" if preset == "ABI004" else "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
+	target_row.visible = preset == "ABI004"
+	initial_hp_row.visible = preset == "ABI004"
+	target_select.clear()
+	if preset == "ABI004":
+		for pair in [["ally", "Союзник"], ["caster", "На себя"]]:
+			target_select.add_item(String(pair[1]))
+			target_select.set_item_metadata(target_select.item_count - 1, pair[0])
+	else:
+		target_select.add_item("Манекен")
+		target_select.set_item_metadata(0, "dummy")
 	custom_name_row.visible = not locked
 	type_row.visible = not locked
 	mana_row.visible = not locked
@@ -343,6 +361,7 @@ func _update_par_label() -> void:
 
 func _settings() -> Dictionary:
 	var result := {"preset": _preset_id(), "damage_type": _selected_type(),
+		"target": String(target_select.get_item_metadata(target_select.selected)),
 		"name": custom_name.text, "par_values": par_values.duplicate(true)}
 	for key in fields:
 		result[key] = int((fields[key] as SpinBox).value)
@@ -359,7 +378,7 @@ func _reset_session() -> void:
 		pages.current_tab = 2
 		return
 	session = candidate
-	status_label.text = "Раунд 0 · манекен 10000 HP · тестовая мана 500"
+	status_label.text = "Раунд 0 · цель %s · тестовая мана 500" % String(_settings().get("target", "dummy"))
 	output.text = "ABI Test Lab запущен\n" + JSON.stringify(result) + "\n"
 	output.text += "Исходы и формулы — из CombatEngine. Броски заданы для диагностики.\n"
 	output.text += "PAR018 и незавершённые магические PAR недоступны.\n"
@@ -377,15 +396,15 @@ func _next_round(cast_ability: bool) -> void:
 		status_label.text = "Тест остановлен: " + String(result.get("reason", "error"))
 		output.text += "\nОТКАЗ: " + JSON.stringify(result)
 		return
-	status_label.text = "Раунд %d · манекен %d HP · мана %d · урон %d" % [
-		int(result["round"]), int(result["hp_after"]),
-		int(result["mana_after"]), int(result["damage_dealt"])]
+	status_label.text = "Раунд %d · %s %d HP · мана %d · ΔHP %+d" % [
+		int(result["round"]), String(result.get("target_name", "Цель")), int(result["hp_after"]),
+		int(result["mana_after"]), int(result["hp_after"]) - int(result["hp_before"])]
 	var lines: Array[String] = []
 	lines.append("\n──── Раунд %d ────" % int(result["round"]))
 	lines.append("ABI: %s | %s" % [String(result["ability_id"]), String(result["cast_status"])])
-	lines.append("Мана: %d → %d | HP манекена: %d → %d | урон: %d" % [
-		int(result["mana_before"]), int(result["mana_after"]),
-		int(result["hp_before"]), int(result["hp_after"]), int(result["damage_dealt"])])
+	lines.append("Мана: %d → %d | HP %s: %d → %d | ΔHP: %+d" % [
+		int(result["mana_before"]), int(result["mana_after"]), String(result.get("target_name", "цели")),
+		int(result["hp_before"]), int(result["hp_after"]), int(result["hp_after"]) - int(result["hp_before"])])
 	for raw_effect in result["effects"]:
 		var eff: Dictionary = raw_effect
 		lines.append("%s: %d стак(ов), общий таймер %d" % [
