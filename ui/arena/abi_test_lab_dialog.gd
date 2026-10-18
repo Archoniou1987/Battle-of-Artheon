@@ -36,6 +36,10 @@ var target_row: HBoxContainer
 var initial_hp_row: HBoxContainer
 var max_hp_row: HBoxContainer
 var amount_row: HBoxContainer
+var numeric_popup: ConfirmationDialog
+var numeric_display: LineEdit
+var numeric_target: SpinBox
+var numeric_buffer: String = ""
 var custom_name: LineEdit
 var fields: Dictionary = {}
 var par_select: OptionButton
@@ -110,6 +114,7 @@ func _ready() -> void:
 	ability_page.add_theme_constant_override("separation", 5)
 	ability_scroll.add_child(ability_page)
 	_build_ability_page(ability_page)
+	_build_numeric_keypad()
 
 	par_scroll = ScrollContainer.new()
 	par_scroll.name = "PAR"
@@ -270,11 +275,74 @@ func _add_spin(host: VBoxContainer, title_text: String, key: String, value: int,
 	spin.editable = true
 	spin.get_line_edit().virtual_keyboard_enabled = true
 	spin.get_line_edit().context_menu_enabled = true
+	spin.get_line_edit().gui_input.connect(_numeric_field_input.bind(spin))
 	spin.custom_minimum_size.x = 95
 	fields[key] = spin
 	var row := _add_compact_row(host, title_text, spin)
 	spin.value_changed.connect(_mark_dirty)
 	return row
+
+
+func _build_numeric_keypad() -> void:
+	numeric_popup = ConfirmationDialog.new()
+	numeric_popup.title = "Ввод числа"
+	numeric_popup.min_size = Vector2i(260, 300)
+	numeric_popup.get_ok_button().text = "Применить"
+	numeric_popup.get_cancel_button().text = "Отмена"
+	add_child(numeric_popup)
+	var layout := VBoxContainer.new()
+	numeric_popup.add_child(layout)
+	numeric_display = LineEdit.new()
+	numeric_display.editable = false
+	numeric_display.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	numeric_display.add_theme_font_size_override("font_size", 24)
+	layout.add_child(numeric_display)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	layout.add_child(grid)
+	for key in ["1","2","3","4","5","6","7","8","9","C","0","⌫"]:
+		var button := Button.new()
+		button.text = key
+		button.custom_minimum_size = Vector2(70, 48)
+		button.pressed.connect(_numeric_key_pressed.bind(key))
+		grid.add_child(button)
+	numeric_popup.confirmed.connect(_numeric_confirmed)
+	numeric_popup.canceled.connect(_numeric_cancelled)
+
+func _numeric_field_input(event: InputEvent, spin: SpinBox) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_open_numeric_keypad.call_deferred(spin)
+	elif event is InputEventScreenTouch and event.pressed:
+		_open_numeric_keypad.call_deferred(spin)
+
+func _open_numeric_keypad(spin: SpinBox) -> void:
+	if numeric_popup.visible:
+		return
+	numeric_target = spin
+	numeric_buffer = str(int(spin.value))
+	numeric_display.text = numeric_buffer
+	numeric_popup.popup_centered(Vector2i(270, 360))
+
+func _numeric_key_pressed(key: String) -> void:
+	match key:
+		"C":
+			numeric_buffer = ""
+		"⌫":
+			numeric_buffer = numeric_buffer.substr(0, maxi(0, numeric_buffer.length() - 1))
+		_:
+			if numeric_buffer.length() < 9:
+				numeric_buffer = key if numeric_buffer == "0" else numeric_buffer + key
+	numeric_display.text = numeric_buffer
+
+func _numeric_confirmed() -> void:
+	if numeric_target == null or numeric_buffer.is_empty():
+		return
+	var number := int(numeric_buffer)
+	numeric_target.value = clampf(float(number), numeric_target.min_value, numeric_target.max_value)
+	numeric_target = null
+
+func _numeric_cancelled() -> void:
+	numeric_target = null
 
 func _add_action(caption: String, callback: Callable) -> Button:
 	var button := Button.new()
