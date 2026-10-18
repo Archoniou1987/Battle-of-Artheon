@@ -36,6 +36,10 @@ var target_row: HBoxContainer
 var initial_hp_row: HBoxContainer
 var max_hp_row: HBoxContainer
 var amount_row: HBoxContainer
+var injection_row: HBoxContainer
+var hits_row: HBoxContainer
+var order_row: HBoxContainer
+var order_select: OptionButton
 var numeric_popup: ConfirmationDialog
 var numeric_display: LineEdit
 var numeric_target: SpinBox
@@ -193,6 +197,15 @@ func _build_ability_page(page: VBoxContainer) -> void:
 	target_select.item_selected.connect(_mark_dirty)
 	max_hp_row = _add_spin(page, "MaxHP цели", "target_max_hp", 10000, 1, 100000)
 	initial_hp_row = _add_spin(page, "CurrentHP цели", "initial_hp", 5000, 1, 100000)
+	injection_row = _add_spin(page, "Урон за удар", "incoming_damage", 0, 0, 100000)
+	hits_row = _add_spin(page, "Число ударов", "incoming_hits", 1, 1, 2)
+	order_select = OptionButton.new()
+	order_select.add_item("Урон → лечение")
+	order_select.set_item_metadata(0, "damage_first")
+	order_select.add_item("Лечение → урон")
+	order_select.set_item_metadata(1, "heal_first")
+	order_row = _add_compact_row(page, "Порядок", order_select)
+	order_select.item_selected.connect(_mark_dirty)
 	amount_row = _add_spin(page, "Базовый урон", "damage", 100, 0, 100000)
 	mana_row = _add_spin(page, "Мана (тест)", "mana_cost", 0, 0, 1000)
 	cooldown_row = _add_spin(page, "КД (тест)", "cooldown_rounds", 0, 0, 20)
@@ -374,6 +387,9 @@ func _preset_changed(_index: int) -> void:
 	target_row.visible = preset == "ABI004"
 	initial_hp_row.visible = preset == "ABI004"
 	max_hp_row.visible = preset == "ABI004"
+	injection_row.visible = preset == "ABI004"
+	hits_row.visible = preset == "ABI004"
+	order_row.visible = preset == "ABI004"
 	(amount_row.get_child(0) as Label).text = "Прямое лечение" if preset == "ABI004" else "Базовый урон"
 	target_select.clear()
 	if preset == "ABI004":
@@ -438,7 +454,8 @@ func _update_par_label() -> void:
 func _settings() -> Dictionary:
 	var result := {"preset": _preset_id(), "damage_type": _selected_type(),
 		"target": String(target_select.get_item_metadata(target_select.selected)),
-		"name": custom_name.text, "par_values": par_values.duplicate(true)}
+		"name": custom_name.text, "par_values": par_values.duplicate(true),
+		"event_order": String(order_select.get_item_metadata(order_select.selected))}
 	for key in fields:
 		result[key] = int((fields[key] as SpinBox).value)
 	return result
@@ -481,6 +498,10 @@ func _next_round(cast_ability: bool) -> void:
 	lines.append("Мана: %d → %d | HP %s: %d → %d/%d | ΔHP: %+d" % [
 		int(result["mana_before"]), int(result["mana_after"]), String(result.get("target_name", "цели")),
 		int(result["hp_before"]), int(result["hp_after"]), int(result.get("max_hp", 10000)), int(result["hp_after"]) - int(result["hp_before"])])
+	if int(result.get("incoming_damage_per_hit", 0)) > 0:
+		lines.append("Входящий урон: %d × %d | порядок: %s | One Shot: %s | смерть: %s" % [
+			int(result["incoming_damage_per_hit"]), int(result["incoming_hits"]),
+			String(result["event_order"]), str(result["one_shot_kill"]), str(result["death_finalized"])])
 	for raw_effect in result["effects"]:
 		var eff: Dictionary = raw_effect
 		lines.append("%s: %d стак(ов), общий таймер %d" % [
