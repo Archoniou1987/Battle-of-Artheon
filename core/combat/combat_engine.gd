@@ -393,7 +393,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 		return
 	var base_chance := clampf(float(event.payload.get("base_chance", 100.0)), 0.0, 100.0)
 	var resist_type := String(event.payload.get("resist_type", ""))
-	var resist := CombatModifierService.magic_resist(target, resist_type, state.round_number)
+	var resist := 0.0 if effect_kind == "hot" else CombatModifierService.magic_resist(target, resist_type, state.round_number)
 	var effective_chance := base_chance * (1.0 - resist)
 	event.set_result("base_chance", base_chance)
 	event.set_result("resist", resist)
