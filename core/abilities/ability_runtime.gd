@@ -60,6 +60,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"two_zone_hit_modifier": normalized["two_zone_hit_modifier"],
 		"uses_magic_hit": normalized["uses_magic_hit"],
 		"magic_hit_modifier": normalized["magic_hit_modifier"],
+		"target_team": String(definition.get("target_team", "")),
 		"engagement": normalized["engagement"],
 		"rolls": definition.get("rolls", {}).duplicate(true) if definition.get("rolls", {}) is Dictionary else {},
 		# Zero requests a seeded roll from CombatEngine; explicit 1..100 is a test override.
