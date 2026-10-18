@@ -34,6 +34,7 @@ var type_select: OptionButton
 var target_select: OptionButton
 var target_row: HBoxContainer
 var initial_hp_row: HBoxContainer
+var max_hp_row: HBoxContainer
 var amount_row: HBoxContainer
 var custom_name: LineEdit
 var fields: Dictionary = {}
@@ -185,7 +186,8 @@ func _build_ability_page(page: VBoxContainer) -> void:
 	target_select = OptionButton.new()
 	target_row = _add_compact_row(page, "Цель", target_select)
 	target_select.item_selected.connect(_mark_dirty)
-	initial_hp_row = _add_spin(page, "HP до лечения", "initial_hp", 5000, 1, 10000)
+	max_hp_row = _add_spin(page, "MaxHP цели", "target_max_hp", 10000, 1, 100000)
+	initial_hp_row = _add_spin(page, "CurrentHP цели", "initial_hp", 5000, 1, 100000)
 	amount_row = _add_spin(page, "Базовый урон", "damage", 100, 0, 100000)
 	mana_row = _add_spin(page, "Мана (тест)", "mana_cost", 0, 0, 1000)
 	cooldown_row = _add_spin(page, "КД (тест)", "cooldown_rounds", 0, 0, 20)
@@ -265,6 +267,9 @@ func _add_spin(host: VBoxContainer, title_text: String, key: String, value: int,
 	spin.step = 1
 	spin.value = value
 	spin.select_all_on_focus = true
+	spin.editable = true
+	spin.get_line_edit().virtual_keyboard_enabled = true
+	spin.get_line_edit().context_menu_enabled = true
 	spin.custom_minimum_size.x = 95
 	fields[key] = spin
 	var row := _add_compact_row(host, title_text, spin)
@@ -300,6 +305,7 @@ func _preset_changed(_index: int) -> void:
 	locked_details.text = "Healing · прямое HP настраивается · EFF004 HoT +10 HP/стак · 10 маны · КД 1" if preset == "ABI004" else "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
 	target_row.visible = preset == "ABI004"
 	initial_hp_row.visible = preset == "ABI004"
+	max_hp_row.visible = preset == "ABI004"
 	(amount_row.get_child(0) as Label).text = "Прямое лечение" if preset == "ABI004" else "Базовый урон"
 	target_select.clear()
 	if preset == "ABI004":
@@ -398,15 +404,15 @@ func _next_round(cast_ability: bool) -> void:
 		status_label.text = "Тест остановлен: " + String(result.get("reason", "error"))
 		output.text += "\nОТКАЗ: " + JSON.stringify(result)
 		return
-	status_label.text = "Раунд %d · %s %d HP · мана %d · ΔHP %+d" % [
-		int(result["round"]), String(result.get("target_name", "Цель")), int(result["hp_after"]),
+	status_label.text = "Раунд %d · %s %d/%d HP · мана %d · ΔHP %+d" % [
+		int(result["round"]), String(result.get("target_name", "Цель")), int(result["hp_after"]), int(result.get("max_hp", 10000)),
 		int(result["mana_after"]), int(result["hp_after"]) - int(result["hp_before"])]
 	var lines: Array[String] = []
 	lines.append("\n──── Раунд %d ────" % int(result["round"]))
 	lines.append("ABI: %s | %s" % [String(result["ability_id"]), String(result["cast_status"])])
-	lines.append("Мана: %d → %d | HP %s: %d → %d | ΔHP: %+d" % [
+	lines.append("Мана: %d → %d | HP %s: %d → %d/%d | ΔHP: %+d" % [
 		int(result["mana_before"]), int(result["mana_after"]), String(result.get("target_name", "цели")),
-		int(result["hp_before"]), int(result["hp_after"]), int(result["hp_after"]) - int(result["hp_before"])])
+		int(result["hp_before"]), int(result["hp_after"]), int(result.get("max_hp", 10000)), int(result["hp_after"]) - int(result["hp_before"])])
 	for raw_effect in result["effects"]:
 		var eff: Dictionary = raw_effect
 		lines.append("%s: %d стак(ов), общий таймер %d" % [
