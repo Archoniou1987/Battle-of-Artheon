@@ -181,19 +181,21 @@ func resolve_active_timed_effects() -> Array[int]:
 			if state.round_number<int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0))<=0:
 				continue
 			var definition:Dictionary=active.get("definition",{})
-			if String(definition.get("kind",""))!="dot":
+			if not String(definition.get("kind","")) in ["dot", "hot"]:
 				continue
 			# Shared-duration EFF has one DoT packet per round, multiplied
 			# by the current stack count (independent-stack EFF stay unchanged).
 			var shared_stacks := int(active.get("active_stacks", active.get("stacks", 1))) if String(definition.get("stacking", "")) == "shared_duration" else 1
-			var amount:=float(definition.get("damage",0.0)) * float(shared_stacks)
+			var is_hot := String(definition.get("kind", "")) == "hot"
+			var amount:=float(definition.get("healing",0.0) if is_hot else definition.get("damage",0.0)) * float(shared_stacks)
 			var source := state.get_combatant(String(active.get("source_id", "")))
-			if source != null and CombatDamagePayload.is_magic_damage_type(String(definition.get("damage_type", ""))):
+			if not is_hot and source != null and CombatDamagePayload.is_magic_damage_type(String(definition.get("damage_type", ""))):
 				# The source's current PAR150 is applied once, on each DoT tick.
 				amount *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(source, "magic_damage_rating", state.round_number) / 100.0)
 			if amount<=0.0:
 				continue
-			var event:=state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
+			var event:=state.create_event(CombatEvent.Kind.EFFECT if is_hot else CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
+				"inline_heal":CombatMath.final_damage_floor(amount) if is_hot else null,
 				"amount":amount,
 				"raw_damage":amount,
 				"damage_type":String(definition.get("damage_type","physical")),
@@ -254,12 +256,14 @@ func end_round() -> Dictionary:
 	var effect_event_ids:=resolve_effect_phase()
 	effect_event_ids.append_array(resolve_active_timed_effects())
 	for combatant in state.combatants.values():
-		if not combatant.is_alive():
+		if combatant.one_shot_kill or not combatant.is_alive():
 			combatant.death_finalized=true
 			finalized_dead_ids.append(combatant.combatant_id)
 			var killers:=state.fatal_round_killers(combatant.combatant_id)
 			if not killers.is_empty():
 				kill_attribution[combatant.combatant_id]=killers
+		else:
+			combatant.hp = mini(combatant.hp, combatant.max_hp)
 	# Death is finalized before threshold checks; dead fighters cannot stun/rebound.
 	CombatTempoService.end_round(state)
 	_tick_effect_durations()
