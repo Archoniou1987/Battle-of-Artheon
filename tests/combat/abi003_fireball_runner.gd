@@ -53,11 +53,11 @@ func _initialize() -> void:
 	# Casts on 1/3/5/7; attempts on 2/4/6/8 must fail due to cooldown.
 	# Round 7 applies at the 3-stack cap and still REFRESHES the shared timer.
 	var cast_rounds := [1, 3, 5, 7]
-	var expected_hp := [900, 890, 780, 760, 640, 610, 480, 450, 420, 420]
-	var expected_mana := [90, 90, 80, 80, 70, 70, 60, 60, 60, 60]
-	var expected_stacks := [1, 1, 2, 2, 3, 3, 3, 3, 3, 0]
-	var expected_duration := [3, 2, 3, 2, 3, 2, 3, 2, 1, 0]
-	var expected_tick_damage := [0, 10, 10, 20, 20, 30, 30, 30, 30, 0]
+	var expected_hp := [900, 890, 780, 760, 640, 610, 480, 450, 420, 390, 390]
+	var expected_mana := [90, 90, 80, 80, 70, 70, 60, 60, 60, 60, 60]
+	var expected_stacks := [1, 1, 2, 2, 3, 3, 3, 3, 3, 0, 0]
+	var expected_duration := [3, 2, 3, 2, 3, 2, 3, 2, 1, 0, 0]
+	var expected_tick_damage := [0, 10, 10, 20, 20, 30, 30, 30, 30, 30, 0]
 	for i in range(expected_hp.size()):
 		var round_number := i + 1
 		orchestrator.begin_round()
