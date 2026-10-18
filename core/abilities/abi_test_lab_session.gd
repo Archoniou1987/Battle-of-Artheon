@@ -5,10 +5,11 @@ extends RefCounted
 ## lifecycle but NEVER reads or commits persistent CharacterState resources.
 const CASTER_ID := "abi_lab_caster"
 const DUMMY_ID := "abi_lab_dummy"
+const ALLY_ID := "abi_lab_ally"
 const CASTER_PARS := ["PAR030", "PAR033", "PAR035", "PAR125", "PAR126", "PAR150"]
 const DUMMY_PARS := ["PAR034", "PAR101", "PAR135", "PAR190", "PAR191", "PAR192", "PAR193", "PAR194", "PAR195", "PAR196"]
 const DAMAGE_TYPES := ["slashing", "piercing", "chopping", "blunt", "fire", "water", "air", "earth", "dark", "light"]
-const PRESETS := {"ABI003": "Fireball + EFF003", "LAB_PHYSICAL": "Физическая ABI", "LAB_MAGIC": "Магическая ABI"}
+const PRESETS := {"ABI003": "Fireball + EFF003", "ABI004": "Healing + EFF004", "LAB_PHYSICAL": "Физическая ABI", "LAB_MAGIC": "Магическая ABI"}
 
 var state: CombatState
 var engine: CombatEngine
@@ -37,10 +38,10 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	var caster_level := clampi(int(settings.get("caster_level", 1)), 1, 100)
 	var dummy_level := clampi(int(settings.get("dummy_level", 1)), 1, 100)
 	var ability_def: Dictionary = {}
-	if preset == "ABI003":
-		ability_def = AbilityCatalog.definition(AbilityCatalog.load_json("res://data/abilities/catalog.json"), "ABI003").duplicate(true)
+	if preset in ["ABI003", "ABI004"]:
+		ability_def = AbilityCatalog.definition(AbilityCatalog.load_json("res://data/abilities/catalog.json"), preset).duplicate(true)
 		if ability_def.is_empty():
-			return {"ok": false, "reason": "missing_ABI003"}
+			return {"ok": false, "reason": "missing_" + preset}
 	else:
 		ability_def = {
 			"name": String(settings.get("name", "Test ability")),
@@ -60,7 +61,7 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	var primary_damage: Dictionary = Dictionary(components[0]).duplicate(true)
 	primary_damage["amount"] = float(raw_damage)
 	# Fireball retains its canonical FIRE type and burning EFF003 when edited.
-	if preset != "ABI003":
+	if not preset in ["ABI003", "ABI004"]:
 		primary_damage["damage_type"] = damage_type
 	components[0] = primary_damage
 	ability_def["components"] = components
@@ -92,12 +93,22 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	config = settings.duplicate(true)
 	config["preset"] = preset
 	config["damage"] = float(raw_damage)
-	config["damage_type"] = "fire" if preset == "ABI003" else damage_type
+	config["damage_type"] = "fire" if preset == "ABI003" else ("healing" if preset == "ABI004" else damage_type)
+	var target_choice := String(settings.get("target", "ally" if preset == "ABI004" else "dummy"))
+	if not target_choice in ["caster", "ally", "dummy"] or (preset == "ABI004" and target_choice == "dummy") or (preset != "ABI004" and target_choice != "dummy"):
+		return {"ok": false, "reason": "invalid_target_selection"}
+	config["target"] = target_choice
 	state = CombatState.new()
 	var caster := TestFixtureLoader.new_combatant(CASTER_ID, "ABI Lab", caster_level, 10000, 500)
 	var dummy := TestFixtureLoader.new_combatant(DUMMY_ID, "Манекен", dummy_level, 10000, 0)
+	var ally := TestFixtureLoader.new_combatant(ALLY_ID, "Союзник", caster_level, 10000, 0)
+	if preset == "ABI004":
+		var starting_hp := clampi(int(settings.get("initial_hp", 5000)), 1, 10000)
+		caster.hp = starting_hp
+		ally.hp = starting_hp
 	state.add_combatant(caster)
 	state.add_combatant(dummy)
+	state.add_combatant(ally)
 	for raw_key in par_values:
 		var parts := String(raw_key).split(":")
 		var combatant := caster if parts[0] == "caster" else dummy
@@ -120,7 +131,10 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		return {"ok": false, "reason": "lab_battle_finished"}
 	var caster := state.get_combatant(CASTER_ID)
 	var dummy := state.get_combatant(DUMMY_ID)
-	var hp_before := dummy.visible_hp()
+	var selected_target := String(config.get("target", "dummy"))
+	var target_id := CASTER_ID if selected_target == "caster" else (ALLY_ID if selected_target == "ally" else DUMMY_ID)
+	var target := state.get_combatant(target_id)
+	var hp_before := target.visible_hp()
 	var mana_before := caster.mana
 	var event_start := state.event_log.size()
 	orchestrator.begin_round()
@@ -134,7 +148,7 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		elif caster.mana < int(definition.get("mana_cost", 0)):
 			cast_status = "insufficient_mana"
 		else:
-			var event := scheduler.cast_event(state, CASTER_ID, DUMMY_ID, active_id)
+			var event := scheduler.cast_event(state, CASTER_ID, target_id, active_id)
 			if event == null:
 				cast_status = "rejected"
 			else:
@@ -153,7 +167,7 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		events.append(detail)
 		report.append(_event_description(event, kind))
 	var effects: Array[Dictionary] = []
-	for active in dummy.active_effects:
+	for active in target.active_effects:
 		effects.append({"effect_id": String(active.get("effect_id", "")),
 			"stacks": int(active.get("stacks", 1)),
 			"remaining_rounds": int(active.get("remaining_rounds", 0))})
@@ -161,8 +175,10 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		"ok": true, "round": state.round_number, "cast_status": cast_status,
 		"ability_id": active_id, "ability_event_id": ability_event_id,
 		"mana_before": mana_before, "mana_after": caster.mana,
-		"hp_before": hp_before, "hp_after": dummy.visible_hp(),
-		"damage_dealt": hp_before - dummy.visible_hp(), "effects": effects,
+		"hp_before": hp_before, "hp_after": target.visible_hp(),
+		"target_id":target_id, "target_name":target.display_name,
+		"damage_dealt": hp_before - target.visible_hp(),
+		"healing_done": target.visible_hp() - hp_before, "effects": effects,
 		"events": events, "report": report,
 		"battle_outcome": String(summary.get("battle_outcome", "ongoing"))
 	}
@@ -206,5 +222,5 @@ static func _event_description(event: CombatEvent, kind: String) -> String:
 			return "EFF #%d: %s | applied=%s | chance %.1f%% | %s" % [
 				event.event_id, String(result.get("effect_id", payload.get("effect_id", ""))),
 				str(result.get("resolved", false)), float(result.get("effective_chance", 100.0)),
-				String(result.get("outcome", "applied"))]
+				String(result.get("outcome", "applied"))] + (" | healed %d" % int(result.get("healed", 0)) if result.has("healed") else "")
 	return kind
