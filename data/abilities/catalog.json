@@ -19,5 +19,25 @@
     ],
     "cooldown_rounds": 1,
     "mana_cost": 10
+  },
+  "ABI004": {
+    "name": "Healing",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "heal",
+        "amount": 100
+      },
+      {
+        "kind": "effect",
+        "effect_id": "EFF004",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 10
   }
 }
