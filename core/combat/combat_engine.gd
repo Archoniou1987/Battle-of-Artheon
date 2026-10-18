@@ -449,20 +449,22 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 	var max_stacks := maxi(1, int(definition.get("max_stacks", 1)))
 	var matching:Array = []
 	for active in target.active_effects:
-		if String(active.get("effect_id", "")) == effect_id: matching.append(active)
-	# One record per target: stacks share their three-round expiry.
-	# Each reapplication adds at most one stack and refreshes ONE duration;
-	# when capped, a new successful application still refreshes the duration.
-	# Do not update start_round on refresh: existing DoT must tick this round.
+		if String(active.get("effect_id", "")) == effect_id and (stacking != "shared_duration" or String(active.get("source_id", "")) == event.source_id): matching.append(active)
+	# Shared-duration DoT is per effect and caster. New stacks join the tick
+	# starting NEXT round; only previously active stacks deal damage this round.
+	# Refresh counts three future ticks, including when already at stack cap.
 	if stacking == "shared_duration":
 		if matching.is_empty():
 			var shared_record := _make_effect_record(effect_id, definition, event)
 			shared_record["stacks"] = 1
+			shared_record["active_stacks"] = 0
 			target.active_effects.append(shared_record)
 		else:
 			var shared: Dictionary = matching[0]
 			shared["stacks"] = mini(max_stacks, maxi(1, int(shared.get("stacks", 1))) + 1)
-			shared["remaining_rounds"] = maxi(1, int(definition.get("duration_rounds", 1)))
+			# End-of-round expiry decrements records already active this round.
+			var ticks := maxi(1, int(definition.get("duration_rounds", 1)))
+			shared["remaining_rounds"] = ticks + (1 if state.round_number >= int(shared.get("start_round", 999999)) else 0)
 		return
 	var record := _make_effect_record(effect_id, definition, event)
 	if stacking == "stack":
