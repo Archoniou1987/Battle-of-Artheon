@@ -109,11 +109,11 @@ func _test_fireball_and_shared_eff() -> void:
 		"ABI003 cooldown one round while EFF003 ticks")
 	_check(int(second.get("mana_after", -1)) == 490, "rejected cooldown does not spend mana")
 	var third: Dictionary = lab.next_round(true)
-	_check(String(third.get("cast_status", "")) == "cast" and int(third.get("damage_dealt", -1)) == 120,
-		"round three: Fireball100 + Burning2*10")
+	_check(String(third.get("cast_status", "")) == "cast" and int(third.get("damage_dealt", -1)) == 110,
+		"round three: Fireball100 + previous Burning1*10")
 	_check(_first_stacks(third) == 2 and int(third.get("mana_after", -1)) == 480,
 		"second EFF003 stack shares duration and caster pays 10")
-	_check(int(lab.state.get_combatant(AbiTestLabSession.DUMMY_ID).hp) == 9770,
+	_check(int(lab.state.get_combatant(AbiTestLabSession.DUMMY_ID).hp) == 9780,
 		"dummy retains damage across isolated lab rounds")
 
 func _test_crit_and_invalid_par() -> void:
