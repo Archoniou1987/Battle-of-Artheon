@@ -9,6 +9,8 @@ var level: int
 var max_hp: int
 var hp: int
 var death_finalized: bool = false
+## Fatal single post-mitigation hit, resolved at the end of the round.
+var one_shot_kill: bool = false
 var max_mana: int
 var mana: int
 var action_points: int = 0
@@ -75,6 +77,8 @@ func is_death_finalized() -> bool:
 func apply_damage(amount: int) -> int:
 	var applied := maxi(0, amount)
 	hp -= applied
+	if applied >= max_hp and max_hp > 0:
+		one_shot_kill = true
 	return applied
 
 
@@ -82,7 +86,7 @@ func restore_hp(amount: int) -> int:
 	if death_finalized:
 		return 0
 	var before := hp
-	hp = mini(max_hp, hp + maxi(0, amount))
+	hp += maxi(0, amount)
 	return hp - before
 
 
