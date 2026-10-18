@@ -139,8 +139,13 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 	var target := state.get_combatant(target_id)
 	var hp_before := target.visible_hp()
 	var mana_before := caster.mana
+	var incoming_damage := clampi(int(config.get("incoming_damage", 0)), 0, 100000)
+	var incoming_hits := clampi(int(config.get("incoming_hits", 1)), 1, 2)
+	var damage_first := String(config.get("event_order", "damage_first")) == "damage_first"
 	var event_start := state.event_log.size()
 	orchestrator.begin_round()
+	if damage_first:
+		_inject_damage(target_id, incoming_damage, incoming_hits)
 	var cast_status := "skip"
 	var ability_event_id := -1
 	if cast_ability:
@@ -159,6 +164,8 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 				ability_event_id = event.event_id
 				state.queue_event(event)
 				engine.resolve_pending_events()
+	if not damage_first:
+		_inject_damage(target_id, incoming_damage, incoming_hits)
 	var summary: Dictionary = orchestrator.end_round()
 	var events: Array[Dictionary] = []
 	var report: Array[String] = []
@@ -183,8 +190,22 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		"damage_dealt": hp_before - target.visible_hp(),
 		"healing_done": target.visible_hp() - hp_before, "effects": effects,
 		"events": events, "report": report,
-		"battle_outcome": String(summary.get("battle_outcome", "ongoing"))
+		"battle_outcome": String(summary.get("battle_outcome", "ongoing")),
+		"incoming_damage_per_hit": incoming_damage, "incoming_hits": incoming_hits,
+		"event_order": String(config.get("event_order", "damage_first")),
+		"one_shot_kill": target.one_shot_kill, "death_finalized": target.is_death_finalized()
 	}
+
+func _inject_damage(target_id: String, amount: int, hits: int) -> void:
+	if amount <= 0:
+		return
+	for index in range(hits):
+		var event := state.create_event(CombatEvent.Kind.DAMAGE, DUMMY_ID, target_id, {
+			"amount": float(amount), "damage_type": "physical",
+			"source_type": "abi_lab_injection", "hit_number": index + 1
+		})
+		state.queue_event(event)
+	engine.resolve_pending_events()
 
 func _set_par(combatant: CombatantState, id: String, value: float) -> bool:
 	if not is_finite(value) or value < 0.0 or value > 100000.0:
