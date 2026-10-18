@@ -10,6 +10,8 @@ func _initialize() -> void:
 	_test_crit_and_invalid_par()
 	_test_magic_dot_scaling_and_rounding()
 	_test_two_dot_casters()
+	_test_healing_and_hot()
+	_test_hp_one_shot_and_round_cap()
 	for error in errors:
 		push_error("ABI_TEST_LAB_FAIL: " + error)
 	print("ABI_TEST_LAB_TEST=", "PASS" if errors.is_empty() else "FAIL", " failures=", errors.size())
@@ -201,4 +203,74 @@ static func _first_stacks(result: Dictionary) -> int:
 		var effect: Dictionary = raw_effect
 		if String(effect.get("effect_id", "")) == "EFF003":
 			return int(effect.get("stacks", 0))
+	return 0
+
+func _test_healing_and_hot() -> void:
+	var lab := AbiTestLabSession.new()
+	var setup := lab.reset({"preset":"ABI004", "damage":100, "target":"ally", "initial_hp":5000})
+	_check(bool(setup.get("ok", false)), "ABI004 allied healing setup accepted")
+	if not bool(setup.get("ok", false)):
+		return
+	var first := lab.next_round(true)
+	_check(String(first.get("target_id","")) == AbiTestLabSession.ALLY_ID, "ABI004 explicitly targets ally")
+	_check(int(first.get("healing_done",-1)) == 100 and int(first.get("mana_after",-1)) == 490, "direct heal restores 100 and consumes 10 mana")
+	_check(_first_effect_stacks(first, "EFF004") == 1, "EFF004 first HoT stack")
+	var second := lab.next_round(true)
+	_check(String(second.get("cast_status","")) == "cooldown" and int(second.get("healing_done",-1)) == 10, "HoT tick during cooldown")
+	var third := lab.next_round(true)
+	_check(int(third.get("healing_done",-1)) == 110 and _first_effect_stacks(third,"EFF004") == 2, "new HoT stack waits until next round")
+	var fourth := lab.next_round(false)
+	_check(int(fourth.get("healing_done",-1)) == 20, "two HoT stacks tick together")
+	var fifth := lab.next_round(true)
+	_check(int(fifth.get("healing_done",-1)) == 120 and _first_effect_stacks(fifth,"EFF004") == 3, "third stack starts next round")
+	var sixth := lab.next_round(false)
+	_check(int(sixth.get("healing_done",-1)) == 30, "three HoT stacks heal 30 per round")
+	var seventh := lab.next_round(false)
+	var eighth := lab.next_round(false)
+	var ninth := lab.next_round(false)
+	_check(int(seventh.get("healing_done",-1)) == 30 and int(eighth.get("healing_done",-1)) == 30 and int(ninth.get("healing_done",-1)) == 0, "HoT expires after 3 future ticks")
+	setup = lab.reset({"preset":"ABI004", "damage":100, "target":"caster", "initial_hp":5000})
+	_check(bool(setup.get("ok",false)), "self heal setup accepted")
+	if bool(setup.get("ok",false)):
+		var self_result := lab.next_round(true)
+		_check(String(self_result.get("target_id","")) == AbiTestLabSession.CASTER_ID and int(self_result.get("healing_done",-1)) == 100, "explicit self target heals caster")
+	setup = lab.reset({"preset":"ABI004", "target":"dummy"})
+	_check(not bool(setup.get("ok",true)), "ABI004 enemy targeting rejected")
+
+func _test_hp_one_shot_and_round_cap() -> void:
+	var state := CombatState.new()
+	var attacker := TestFixtureLoader.new_combatant("enemy","Enemy",1,100,0)
+	var target := TestFixtureLoader.new_combatant("ally","Ally",1,100,0)
+	state.add_combatant(attacker)
+	state.add_combatant(target)
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state))
+	var rounds := RoundOrchestrator.new(state,engine)
+	rounds.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.EFFECT,"ally","ally",{"inline_heal":150}))
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"enemy","ally",{"amount":99.0,"damage_type":"fire"}))
+	_check(target.hp == 151 and not target.one_shot_kill, "provisional HP may exceed max inside round")
+	rounds.end_round()
+	_check(target.hp == 100 and not target.death_finalized, "end round caps surplus HP, survives 99 hit")
+	rounds.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.EFFECT,"ally","ally",{"inline_heal":150}))
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"enemy","ally",{"amount":100.0,"damage_type":"fire"}))
+	rounds.end_round()
+	_check(target.death_finalized and target.one_shot_kill, "100 damage at 100 max HP is one shot despite prior healing")
+	var another := TestFixtureLoader.new_combatant("another","Another",1,100,0)
+	var second_state := CombatState.new()
+	second_state.add_combatant(another)
+	var second_engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(second_state))
+	var second_rounds := RoundOrchestrator.new(second_state, second_engine)
+	second_rounds.begin_round()
+	second_engine.resolve_event(second_state.create_event(CombatEvent.Kind.DAMAGE,"another","another",{"amount":70.0,"damage_type":"fire"}))
+	second_engine.resolve_event(second_state.create_event(CombatEvent.Kind.DAMAGE,"another","another",{"amount":70.0,"damage_type":"fire"}))
+	second_engine.resolve_event(second_state.create_event(CombatEvent.Kind.EFFECT,"another","another",{"inline_heal":100}))
+	second_rounds.end_round()
+	_check(another.hp == 60 and not another.death_finalized, "two non-one-shot 70 hits plus 100 heal survive at 60")
+
+static func _first_effect_stacks(result: Dictionary, effect_id: String) -> int:
+	for raw_effect in Array(result.get("effects", [])):
+		var eff: Dictionary = raw_effect
+		if String(eff.get("effect_id","")) == effect_id:
+			return int(eff.get("stacks",0))
 	return 0
