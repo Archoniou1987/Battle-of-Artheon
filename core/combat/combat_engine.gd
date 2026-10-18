@@ -157,9 +157,11 @@ func _action_is_support(event:CombatEvent)->bool:
 		var kind:=String(raw_component.get("kind",""))
 		if kind=="heal":
 			has_support=true
+		elif kind=="effect" and String(event.payload.get("target_team",""))=="ALLY":
+			has_support=true
 		elif kind in ["damage","effect"]:
 			has_offense=true
-	return has_support and not has_offense
+	return String(event.payload.get("target_team",""))=="ALLY" or (has_support and not has_offense)
 
 func _distance_modifier(event:CombatEvent,target_id:String)->float:
 	if zone_state==null:
