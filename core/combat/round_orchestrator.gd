@@ -185,8 +185,12 @@ func resolve_active_timed_effects() -> Array[int]:
 				continue
 			# Shared-duration EFF has one DoT packet per round, multiplied
 			# by the current stack count (independent-stack EFF stay unchanged).
-			var shared_stacks := maxi(1, int(active.get("stacks", 1))) if String(definition.get("stacking", "")) == "shared_duration" else 1
+			var shared_stacks := int(active.get("active_stacks", active.get("stacks", 1))) if String(definition.get("stacking", "")) == "shared_duration" else 1
 			var amount:=float(definition.get("damage",0.0)) * float(shared_stacks)
+			var source := state.get_combatant(String(active.get("source_id", "")))
+			if source != null and CombatDamagePayload.is_magic_damage_type(String(definition.get("damage_type", ""))):
+				# The source's current PAR150 is applied once, on each DoT tick.
+				amount *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(source, "magic_damage_rating", state.round_number) / 100.0)
 			if amount<=0.0:
 				continue
 			var event:=state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
@@ -345,6 +349,9 @@ func _tick_effect_durations() -> void:
 		for active in combatant.active_effects:
 			if state.round_number>=int(active.get("start_round",999999)):
 				active["remaining_rounds"]=int(active.get("remaining_rounds",0))-1
+			if String(Dictionary(active.get("definition", {})).get("stacking", "")) == "shared_duration":
+				# Promote newly applied stacks only AFTER this round's DoT phase.
+				active["active_stacks"] = int(active.get("stacks", 1))
 		var kept:Array[Dictionary]=[]
 		for active in combatant.active_effects:
 			if int(active.get("remaining_rounds",0))>0:
