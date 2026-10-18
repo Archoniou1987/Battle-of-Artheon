@@ -68,13 +68,25 @@ func _run() -> void:
 	check(float(dialog.pages.size.y) <= popup_height * 0.85, "tab pages fit inside popup: pages=%s popup=%s" % [str(dialog.pages.size.y), str(popup_height)])
 	check(dialog.action_toolbar.get_global_rect().end.y <= float(dialog.position.y + dialog.size.y) + 2.0, "action toolbar remains within popup bounds")
 	# Synthetic presets expose editable fields.
-	dialog.preset_select.select(1)
-	dialog._preset_changed(1)
+	var physical_index := _preset_index(dialog, "LAB_PHYSICAL")
+	check(physical_index >= 0, "physical preset remains available")
+	if physical_index >= 0:
+		dialog.preset_select.select(physical_index)
+		dialog._preset_changed(physical_index)
 	check(dialog.custom_name_row.visible and dialog.type_row.visible, "synthetic name and damage type visible")
 	check(dialog.mana_row.visible and dialog.cooldown_row.visible, "synthetic mana and cooldown visible")
 	check(dialog.type_select.item_count == 4, "physical ABI has exactly four types, got %d" % dialog.type_select.item_count)
-	dialog.preset_select.select(0)
-	dialog._preset_changed(0)
+	var healing_index := _preset_index(dialog, "ABI004")
+	check(healing_index >= 0, "ABI004 healing preset available")
+	if healing_index >= 0:
+		dialog.preset_select.select(healing_index)
+		dialog._preset_changed(healing_index)
+		check(dialog.target_row.visible and dialog.initial_hp_row.visible, "healing target and initial HP are visible")
+		check(dialog.target_select.item_count == 2, "healing offers exactly ally and self")
+		check(not dialog.custom_name_row.visible and not dialog.type_row.visible, "healing uses canonical locked fields")
+	var fireball_index := _preset_index(dialog, "ABI003")
+	dialog.preset_select.select(fireball_index)
+	dialog._preset_changed(fireball_index)
 	dialog._reset_session()
 	check(dialog.pages.current_tab == 0, "new test starts on ability tab")
 	dialog._next_round(true)
@@ -90,3 +102,9 @@ func _run() -> void:
 	check(arena.combat_session.state.round_number == 0, "live Arena round remains zero")
 	print("ABI_LAB_UI_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=", failures.size())
 	quit(0 if failures.is_empty() else 1)
+
+static func _preset_index(dialog: AbiTestLabDialog, id: String) -> int:
+	for i in range(dialog.preset_select.item_count):
+		if String(dialog.preset_select.get_item_metadata(i)) == id:
+			return i
+	return -1
