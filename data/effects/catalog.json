@@ -8,5 +8,14 @@
     "duration_rounds": 3,
     "stacking": "shared_duration",
     "max_stacks": 3
+  },
+  "EFF004": {
+    "id": "EFF004",
+    "name": "Regeneration",
+    "kind": "hot",
+    "healing": 10,
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3
   }
 }
