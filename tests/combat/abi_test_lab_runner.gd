@@ -8,6 +8,8 @@ func _initialize() -> void:
 	_test_magic()
 	_test_fireball_and_shared_eff()
 	_test_crit_and_invalid_par()
+	_test_magic_dot_scaling_and_rounding()
+	_test_two_dot_casters()
 	for error in errors:
 		push_error("ABI_TEST_LAB_FAIL: " + error)
 	print("ABI_TEST_LAB_TEST=", "PASS" if errors.is_empty() else "FAIL", " failures=", errors.size())
@@ -115,6 +117,64 @@ func _test_fireball_and_shared_eff() -> void:
 		"second EFF003 stack shares duration and caster pays 10")
 	_check(int(lab.state.get_combatant(AbiTestLabSession.DUMMY_ID).hp) == 9780,
 		"dummy retains damage across isolated lab rounds")
+
+func _test_magic_dot_scaling_and_rounding() -> void:
+	var lab := AbiTestLabSession.new()
+	var setup := lab.reset({"preset":"ABI003", "damage":100, "hit_roll":1, "crit_roll":100,
+		"par_values":{"caster:PAR150":130}})
+	_check(bool(setup.get("ok", false)), "magic scaling setup")
+	if not bool(setup.get("ok", false)):
+		return
+	var first := lab.next_round(true)
+	_check(int(first.get("damage_dealt",-1)) == 113, "PAR150 130: exact 113 damage, no float loss")
+	var second := lab.next_round(false)
+	_check(int(second.get("damage_dealt",-1)) == 11, "PAR150 130: 10*1.13 DoT floors to 11")
+	var third := lab.next_round(true)
+	_check(int(third.get("damage_dealt",-1)) == 124, "new stack waits; 113 Fireball + 11 prior DoT")
+	var fourth := lab.next_round(false)
+	_check(int(fourth.get("damage_dealt",-1)) == 22, "two stacks scale 20*1.13 -> 22")
+	var fifth := lab.next_round(false)
+	_check(int(fifth.get("damage_dealt",-1)) == 22, "refreshed tick 2")
+	var sixth := lab.next_round(false)
+	_check(int(sixth.get("damage_dealt",-1)) == 22, "refreshed tick 3")
+	var seventh := lab.next_round(false)
+	_check(int(seventh.get("damage_dealt",-1)) == 0, "no DoT after third future tick")
+	# Defender resistance applies to each scaled tick.
+	setup = lab.reset({"preset":"ABI003", "damage":100, "hit_roll":1, "crit_roll":100,
+		"par_values":{"caster:PAR150":200, "dummy:PAR190":200}})
+	if bool(setup.get("ok",false)):
+		first = lab.next_round(true)
+		second = lab.next_round(false)
+		_check(int(first.get("damage_dealt",-1)) == 96, "magic resistance on PAR150 boosted Fireball")
+		_check(int(second.get("damage_dealt",-1)) == 9, "20% resistance on boosted 12 DoT -> floor 9")
+
+func _test_two_dot_casters() -> void:
+	var state := CombatState.new()
+	var source_a := TestFixtureLoader.new_combatant("caster_a","A",1,100,0)
+	var source_b := TestFixtureLoader.new_combatant("caster_b","B",1,100,0)
+	var target := TestFixtureLoader.new_combatant("target","Target",1,1000,0)
+	source_a.combat_stats["magic_damage_rating_percent"] = 20.0
+	source_b.combat_stats["magic_damage_rating_percent"] = 50.0
+	state.add_combatant(source_a)
+	state.add_combatant(source_b)
+	state.add_combatant(target)
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state))
+	var orchestrator := RoundOrchestrator.new(state,engine)
+	orchestrator.begin_round()
+	for caster_id in ["caster_a","caster_b"]:
+		engine.resolve_event(state.create_event(CombatEvent.Kind.EFFECT,caster_id,"target",
+			{"effect_id":"EFF003","base_chance":100.0,"effect_roll":1,"resist_type":"fire"}))
+	_check(target.active_effects.size() == 2, "same EFF from different casters creates separate records")
+	orchestrator.end_round()
+	_check(target.hp == 1000, "new source DoT stacks never tick on application round")
+	orchestrator.begin_round()
+	orchestrator.end_round()
+	_check(target.hp == 973, "independent PAR150: caster A 12 + caster B 15 = 27")
+	# Changing one caster's rating affects only their next tick.
+	source_a.combat_stats["magic_damage_rating_percent"] = 0.0
+	orchestrator.begin_round()
+	orchestrator.end_round()
+	_check(target.hp == 948, "dynamic ratings: A 10 + B 15 = 25")
 
 func _test_crit_and_invalid_par() -> void:
 	var lab := AbiTestLabSession.new()
