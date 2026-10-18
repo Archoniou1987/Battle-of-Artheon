@@ -34,6 +34,7 @@ var type_select: OptionButton
 var target_select: OptionButton
 var target_row: HBoxContainer
 var initial_hp_row: HBoxContainer
+var amount_row: HBoxContainer
 var custom_name: LineEdit
 var fields: Dictionary = {}
 var par_select: OptionButton
@@ -185,7 +186,7 @@ func _build_ability_page(page: VBoxContainer) -> void:
 	target_row = _add_compact_row(page, "Цель", target_select)
 	target_select.item_selected.connect(_mark_dirty)
 	initial_hp_row = _add_spin(page, "HP до лечения", "initial_hp", 5000, 1, 10000)
-	_add_spin(page, "Базовый урон", "damage", 100, 0, 100000)
+	amount_row = _add_spin(page, "Базовый урон", "damage", 100, 0, 100000)
 	mana_row = _add_spin(page, "Мана (тест)", "mana_cost", 0, 0, 1000)
 	cooldown_row = _add_spin(page, "КД (тест)", "cooldown_rounds", 0, 0, 20)
 	_add_spin(page, "Уровень игрока", "caster_level", 1, 1, 100)
@@ -296,9 +297,10 @@ func _preset_changed(_index: int) -> void:
 	var preset := _preset_id()
 	var locked := preset in ["ABI003", "ABI004"]
 	locked_details.visible = locked
-	locked_details.text = "Healing · 100 HP сразу · EFF004 HoT 10 HP × 3 раунда · 10 маны · КД 1" if preset == "ABI004" else "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
+	locked_details.text = "Healing · прямое HP настраивается · EFF004 HoT +10 HP/стак · 10 маны · КД 1" if preset == "ABI004" else "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
 	target_row.visible = preset == "ABI004"
 	initial_hp_row.visible = preset == "ABI004"
+	(amount_row.get_child(0) as Label).text = "Прямое лечение" if preset == "ABI004" else "Базовый урон"
 	target_select.clear()
 	if preset == "ABI004":
 		for pair in [["ally", "Союзник"], ["caster", "На себя"]]:
