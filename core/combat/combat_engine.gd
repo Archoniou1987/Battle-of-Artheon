@@ -71,6 +71,9 @@ func _resolve_action(event: CombatEvent) -> void:
 	if source == null:
 		event.set_result("outcome", "invalid_combatant")
 		return
+	if source.is_death_finalized():
+		event.set_result("outcome", "source_dead")
+		return
 	if not _require_canonical(event, source):
 		return
 	if CombatTempoService.is_stunned(source, state.round_number):
@@ -250,6 +253,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var defender := state.get_combatant(event.target_id)
 	if attacker == null or defender == null:
 		event.set_result("outcome", "invalid_combatant"); return
+	if attacker.is_death_finalized() or defender.is_death_finalized():
+		event.set_result("outcome", "source_dead" if attacker.is_death_finalized() else "target_dead")
+		return
 	if not _require_canonical(event, attacker) or not _require_canonical(event, defender):
 		return
 	if CombatTempoService.is_stunned(attacker, state.round_number):
@@ -352,6 +358,13 @@ func _resolve_attack(event: CombatEvent) -> void:
 func _resolve_damage(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
 	if target == null: event.set_result("error", "target_not_found"); return
+	# Negative provisional HP is allowed until end_round; finalized death is not.
+	if target.is_death_finalized():
+		event.set_result("outcome", "target_dead")
+		event.set_result("connected", false)
+		event.set_result("final_damage", 0)
+		event.set_result("hp_removed", 0)
+		return
 	var amount := float(event.payload.get("amount", 0.0))
 	var damage_type := String(event.payload.get("damage_type", ""))
 	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number)
@@ -374,8 +387,10 @@ func _resolve_damage(event: CombatEvent) -> void:
 
 func _resolve_effect(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
-	if target==null:
+	if target==null or target.is_death_finalized():
 		event.set_result("resolved",false)
+		if target!=null:
+			event.set_result("outcome", "target_dead")
 		return
 	if event.payload.has("inline_heal"):
 		var healed:=target.restore_hp(int(event.payload.get("inline_heal",0)))
