@@ -12,7 +12,7 @@ static func validate(combatant: CombatantState) -> Dictionary:
 		if not totals.has(id) or not (totals[id] is int or totals[id] is float) or not is_finite(float(totals[id])):
 			return {"ok": false, "reason": "missing_or_invalid_" + id}
 	var capacity := float(totals["PAR073"])
-	if capacity != floor(capacity) or capacity < 0 or capacity > 5:
+	if capacity != floor(capacity) or capacity < 0 or capacity > 4:
 		return {"ok": false, "reason": "invalid_PAR073"}
 	var count := float(totals["PAR057"])
 	if count != 1.0 and count != 2.0:
