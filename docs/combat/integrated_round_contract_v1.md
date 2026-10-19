@@ -28,33 +28,38 @@ individual rules must not be marked implemented without code + CI evidence.
 - EFF are stateful, autonomous effects and consume NO active ABI budget when ticking,
   stacking, expiring or resolving their ongoing effects.
 
-## Ability timing
-All choices are locked before any combat event resolves.
-- Early, before physical damage: pure buffs, pure debuffs, cleansing/dispelling.
-  Cleansing is a support-style action, but may remove **beneficial enemy buffs** as
-  well as harmful effects on allies; targeting must be explicit.
-- Shared combat resolution: physical MH/OH attacks, damaging ABI, control ABI and
-  healing ABI are peer actions in the SAME round. There is NO rule that all
-  physical strikes must complete before damaging/healing ABI. A deterministic
-  internal event traversal must NOT grant a combat advantage purely by traversal order.
-  Healing is not an early preparatory buff. It contributes to the round's HP
-  outcome alongside damage; deferred death is checked only at end of round.
-- HP damage/healing accounting must be order-independent: compute individual
-  post-mitigation hit results and healing contributions, then reconcile the
-  provisional net HP for the round (and clamp displayed/final surviving HP as
-  appropriate). In particular, a healing amount must not be discarded merely
-  because the current provisional HP temporarily exceeds MaxHP before subsequent
-  hits. A single lethal one-shot hit >= MaxHP remains fatal even if net HP > 0.
-  EFF tick lifecycle retains its own semantics and runs before death finalization.
-- Mixed ABI containing damage or control belongs to the shared combat resolution
-  **as a whole**. Never peel an early debuff component out of a damaging/control ABI.
-  Round-preparation debuffs and buffs are the sole exception to simultaneous
-  damage/healing calculation; do not turn ordinary ABI damage or healing into
-  mandatory subphases.
-- Do not infer timing from ABI name or merely from whether it produces an EFF.
-  A dedicated categorical definition/contract must be validated by the runtime.
-- Persistent EFF ticks run according to their own end-round lifecycle; character
-  death is finalized afterward. Previously finalized corpses cannot act or heal.
+## Hand-authored ABI application timing (2026-10-19 decision)
+The ability designer controls **one hidden field**, not automatic role/EFF inference:
+
+```json
+"application_timing": "immediate"
+```
+
+Allowed values:
+- `immediate` — execute the ABI in the current round's sealed resolution,
+  before ordinary weapon attacks. Its stat EFF can influence this round's
+  weapon calculations. Direct ABI damage and healing contribute to the same
+  provisional HP total as physical damage; final HP/death is decided at
+  end_round. This is **not** an action on clicking the button.
+- `next_round` — commit the cast and pay mana/start cooldown/use this
+  round's one-ABI allowance, but activate the **whole ability** once in the
+  following round. If its caster is finalized dead or its target invalid at
+  activation, the normal combat resolution rejects it; the paid cast is not
+  refunded or retried.
+
+No automatic inference from `combat_role`, EFF `kind`, DoT/HoT, stun or
+whether a component deals damage. Mixed abilities inherit one timing as a
+whole. Legacy/test fixture definitions without this field default to
+`immediate`, but hand-authored production ABI declare it explicitly.
+
+EFF durations/stacks retain their separate periodic tick contracts:
+shared-duration DoT/HoT does not tick on application, and keeps its full
+future tick count even if the ABI itself was immediate. A delayed ability's
+EFF is applied only when the delayed ABI resolves.
+
+Other boundaries stay unchanged: choices are sealed before resolution,
+ordinary hits/ABI/HP healing all count within one round, one-shot overrides
+net healing, and death finalization runs after EFF.
 
 ## Implementation status (2026-10-19)
 - CONFIRMED in ABI Branch Tests #39267341295 on commit `a9beb86`:
@@ -70,12 +75,11 @@ All choices are locked before any combat event resolves.
 - Implemented: early buffs/debuffs/cleansing and shared resolution of damage,
   healing and control. A pure prep ABI applies an EFF from the current round,
   whereas ordinary EFF retain their own start/tick lifecycle.
-- NEW safeguard (PENDING CI): early eligibility validates EFF definitions,
-  not merely `combat_role`. Only pure, known, non-control
-  `buff`/`debuff`/`shield` effects of matching polarity may start early;
-  DoT, HoT, stun, Tempo control, movement control and unknown EFF must remain
-  in shared COMBAT. The development test injects exactly the EFF catalog used
-  by CombatEngine; production uses the canonical EFF catalog.
+- NEW hand-authored timing (PENDING CI): `application_timing` replaces
+  all previous EFF/role timing checks; only two enum values are validated.
+  A next-round ABI is stored as a sealed intent and activated once next
+  round without paying mana twice. New tests cover immediate defence,
+  delayed healing/damage, cooldown payment and death cancellation.
 - Implemented: native `cleanse` ABI removes active EFF of declared polarity.
   Explicit `target_team: "ALLY"|"ENEMY"` and
   `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`
@@ -91,10 +95,10 @@ All choices are locked before any combat event resolves.
 2. OH does not increase the available active ABI list; armour ABI remain usable.
 3. 1–4 arbitrary non-adjacent blocks work in live Arena and shared Combat.
 4. Changing selections after End Round cannot change that round's results.
-5. Mixed damaging/control ABI do not execute in early phase.
-6. Buff/debuff/dispel apply before combat calculation; damage/heal/control/physical
-   are peer round actions, not sequential priority classes. Verify both
-   damage-before-heal and heal-before-damage yield the same final HP, including
-   overheal near MaxHP and negative provisional HP, except the one-shot override.
+5. A mixed ABI has one explicit timing; no type-based early-phase guessing.
+6. Immediate ABI is processed in the sealed current round before weapon
+   attacks; next-round ABI fires exactly once next round. HP damage/healing
+   must have the same final net outcome regardless of processing order,
+   including overheal and negative provisional HP, except one-shot.
 7. EFF stacking/expiry and deferred death/one-shot rules remain intact.
 8. Dead, stunned, invalid and duplicate casts cannot consume an ABI slot, mana or cooldown.
