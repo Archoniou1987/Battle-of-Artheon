@@ -76,20 +76,27 @@ damage results, regardless of the ABI timing setting.
 - Implemented: two phase slots for the manually set ABI timing;
   `instant` enters this round's opening phase and `standard` enters this
   round's shared combat phase. EFF retain separate start/tick semantics.
-- NEW manual timing (PENDING CI): `application_timing` is either
-  `instant` (beginning of current round) or `standard` (shared calculation
-  at end of this same round). There is no scheduled future-round ABI.
-  Targeted tests cover same-round execution, early defence, concurrent
-  healing/damage and deferred death finalization.
+- VERIFIED in ABI Branch Tests #39319522076, commit `ce997b4`:
+  `application_timing` uses only `instant` (beginning of current round)
+  and `standard` (same-round shared calculation). Both player and NPC
+  passed targeted instant-vs-standard Arena tests. There is no scheduled ABI.
+- NEW REGRESSION COVERAGE (PENDING CI): `round_effect_death_regression_runner.gd`
+  checks damage/inline healing/HoT order, one-shot with healing, DoT and
+  HoT tick order, lethal one-shot DoT, cleanse of shared stacked DoT,
+  skipping not-yet-active EFF, and finalized death exactly once.
+  Test suite is included in the existing manual ABI Branch Tests workflow.
 - Implemented: native `cleanse` ABI removes active EFF of declared polarity.
   Explicit `target_team: "ALLY"|"ENEMY"` and
   `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`
   specify the target and how many effect records to remove.
-- Remaining limitations: no interactive ally-target picker for larger groups,
-  no finalized player-facing ABI artwork, and no comprehensive guarantee
-  that *every* concurrent secondary interaction (such as cleanse vs.
-  simultaneous re-buff) is independent of internal event traversal order.
-  These require separate E2E acceptance rather than inferred CI success.
+- Remaining limitations: no interactive ally-target picker for larger groups
+  or finalized player-facing ABI artwork. Same-round **instant cleanse**
+  followed by a **standard re-buff** is verified; however, two opposing
+  `instant` ABIs affecting the same EFF still process in sealed insertion
+  order. Whether a newly cast instant buff can be removed by an opposing
+  instant cleanse needs an explicit gameplay tie-break rule before accepting
+  this edge case as order-independent. Do not invent one in the engine.
+  Test suite coverage must not be misrepresented as a proof for that case.
 
 ## Required E2E checks before acceptance
 1. Two daggers yield 2 physical attacks + at most 1 ABI in a single round.
