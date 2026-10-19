@@ -48,6 +48,14 @@ static func run()->bool:
 	if String(ranged_event.result.get("hit_system",""))!="magic": return false
 	if String(ranged_event.result.get("outcome",""))!="connected": return false
 	enemy.combat_stats["dodge_rating_percent"]=0.0
+	# Support ABI can select self or ally, never an enemy.
+	var support_definition:Dictionary={"target_team":"ALLY","delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"components":[{"kind":"heal","amount":5.0}]}
+	if not bool(api.ability_intent("hero","hero",support_definition).get("ok",false)): return false
+	if bool(api.ability_intent("hero","enemy",support_definition).get("ok",true)): return false
+	# Enemy dispel uses enemy targeting, not ally targeting.
+	var hostile_dispel:Dictionary={"combat_role":"CLEANSE","target_team":"ENEMY","delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"components":[{"kind":"cleanse","dispel_polarity":"BUFF"}]}
+	if not bool(api.ability_intent("hero","enemy",hostile_dispel).get("ok",false)): return false
+	if bool(api.ability_intent("hero","hero",hostile_dispel).get("ok",true)): return false
 	var zone_cast:=api.cast_zone_ability("hero",CombatZoneState.ZONE_2,"ZONE")
 	if not bool(zone_cast.get("ok",false)) or int(zone_cast.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
 	var zone_event:CombatEvent=state.pending_events.back()
