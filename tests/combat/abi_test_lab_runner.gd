@@ -12,6 +12,8 @@ func _initialize() -> void:
 	_test_two_dot_casters()
 	_test_healing_and_hot()
 	_test_hp_one_shot_and_round_cap()
+	_test_finalized_death_boundaries()
+	_test_lab_lifecycle_and_event_totals()
 	for error in errors:
 		push_error("ABI_TEST_LAB_FAIL: " + error)
 	print("ABI_TEST_LAB_TEST=", "PASS" if errors.is_empty() else "FAIL", " failures=", errors.size())
@@ -267,6 +269,77 @@ func _test_hp_one_shot_and_round_cap() -> void:
 	second_engine.resolve_event(second_state.create_event(CombatEvent.Kind.EFFECT,"another","another",{"inline_heal":100}))
 	second_rounds.end_round()
 	_check(another.hp == 60 and not another.death_finalized, "two non-one-shot 70 hits plus 100 heal survive at 60")
+
+func _test_finalized_death_boundaries() -> void:
+	var state := CombatState.new()
+	var healer := TestFixtureLoader.new_combatant("healer", "Healer", 1, 100, 50)
+	var target := TestFixtureLoader.new_combatant("target", "Target", 1, 100, 50)
+	state.add_combatant(healer)
+	state.add_combatant(target)
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state))
+	var rounds := RoundOrchestrator.new(state, engine)
+	rounds.begin_round()
+	# Provisional negative HP is still healable before death finalization.
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE, "healer", "target", {"amount":70.0, "damage_type":"physical"}))
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE, "healer", "target", {"amount":70.0, "damage_type":"physical"}))
+	engine.resolve_event(state.create_event(CombatEvent.Kind.EFFECT, "healer", "target", {"inline_heal":100}))
+	_check(target.hp == 60 and not target.is_death_finalized(), "two hits and same-round heal rescue provisional death")
+	rounds.end_round()
+	_check(target.hp == 60 and not target.is_death_finalized(), "rescued target survives end round")
+	rounds.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE, "healer", "target", {"amount":70.0, "damage_type":"physical"}))
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE, "healer", "target", {"amount":70.0, "damage_type":"physical"}))
+	var lethal_summary := rounds.end_round()
+	_check(target.is_death_finalized() and target.hp == -80 and Array(lethal_summary.get("dead_ids",[])).has("target"), "target dies at end round without one-shot")
+	var hp_after_death := target.hp
+	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, "healer", "target", {"amount":70.0, "damage_type":"physical"})
+	engine.resolve_event(damage_event)
+	var heal_event := state.create_event(CombatEvent.Kind.EFFECT, "healer", "target", {"inline_heal":100})
+	engine.resolve_event(heal_event)
+	var attack_event := state.create_event(CombatEvent.Kind.ATTACK, "healer", "target", {"raw_damage":10.0, "damage_type":"slashing", "zone":"chest"})
+	engine.resolve_event(attack_event)
+	_check(target.hp == hp_after_death and int(damage_event.result.get("hp_removed",-1)) == 0 and String(damage_event.result.get("outcome","")) == "target_dead", "finalized target ignores later damage")
+	_check(not bool(heal_event.result.get("resolved",true)) and String(heal_event.result.get("outcome","")) == "target_dead", "finalized target ignores later healing")
+	_check(String(attack_event.result.get("outcome","")) == "target_dead", "attack ignores finalized defender")
+	var dead_action := state.create_event(CombatEvent.Kind.ACTION, "target", "healer", {"components":[{"kind":"heal", "amount":10.0}], "target_team":"ALLY"})
+	engine.resolve_event(dead_action)
+	_check(String(dead_action.result.get("outcome","")) == "source_dead", "dead caster cannot create direct ACTION children")
+	var mana_before := target.mana
+	var definitions := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	var scheduler := AbilityScheduler.new({"ABI004":definitions.get("ABI004",{})}, {"target":["ABI004"]})
+	_check(scheduler.cast_event(state,"target","healer","ABI004") == null and target.mana == mana_before, "dead caster cannot spend mana or start ABI")
+	_check(target.apply_damage(10) == 0 and target.hp == hp_after_death and not target.spend_mana(10), "defensive combatant API protects finalized death")
+	rounds.begin_round()
+	var repeat_summary := rounds.end_round()
+	_check(not Array(repeat_summary.get("dead_ids",[])).has("target"), "death is only finalized/reported once")
+
+func _test_lab_lifecycle_and_event_totals() -> void:
+	var lab := AbiTestLabSession.new()
+	var setup := lab.reset({"preset":"ABI004", "target":"ally", "initial_hp":100, "target_max_hp":100,
+		"damage":100, "incoming_damage":70, "incoming_hits":2, "event_order":"damage_first"})
+	_check(bool(setup.get("ok",false)), "lab multi-hit healing scenario initialized")
+	if not bool(setup.get("ok",false)):
+		return
+	var saved := lab.next_round()
+	_check(int(saved.get("hp_after",-1)) == 60 and not bool(saved.get("lab_finished",true)), "lab heals from provisional negative HP before round end")
+	_check(int(saved.get("damage_dealt",-1)) == 140 and int(saved.get("healing_done",-1)) == 100, "lab reports actual hit damage and healing separately")
+	setup = lab.reset({"preset":"ABI004", "target":"ally", "initial_hp":100, "target_max_hp":100,
+		"damage":20, "incoming_damage":70, "incoming_hits":2, "event_order":"heal_first"})
+	if bool(setup.get("ok",false)):
+		var death := lab.next_round()
+		_check(bool(death.get("death_finalized",false)) and not bool(death.get("one_shot_kill",true)), "two non-one-shot hits kill ally at end of round")
+		_check(String(death.get("lab_outcome","")) == "target_dead" and bool(death.get("lab_finished",false)), "lab reports target death without claiming a team battle result")
+		var mana_after := lab.state.get_combatant(AbiTestLabSession.CASTER_ID).mana
+		var logged := lab.state.event_log.size()
+		var blocked := lab.next_round()
+		_check(not bool(blocked.get("ok",true)) and String(blocked.get("reason","")) == "lab_battle_finished", "lab rejects subsequent rounds after selected target death")
+		_check(lab.state.round_number == 1 and lab.state.event_log.size() == logged and lab.state.get_combatant(AbiTestLabSession.CASTER_ID).mana == mana_after, "blocked lab round has no events or mana loss")
+	setup = lab.reset({"preset":"ABI004", "target":"caster", "initial_hp":100, "target_max_hp":100,
+		"damage":150, "incoming_damage":100, "incoming_hits":1, "event_order":"damage_first"})
+	if bool(setup.get("ok",false)):
+		var self_death := lab.next_round()
+		_check(bool(self_death.get("one_shot_kill",false)) and bool(self_death.get("death_finalized",false)), "player self-heal cannot defeat one-shot rule")
+		_check(int(self_death.get("hp_after",-1)) == 0 and bool(self_death.get("lab_finished",false)), "self death ends lab scenario and displays zero HP")
 
 static func _first_effect_stacks(result: Dictionary, effect_id: String) -> int:
 	for raw_effect in Array(result.get("effects", [])):
