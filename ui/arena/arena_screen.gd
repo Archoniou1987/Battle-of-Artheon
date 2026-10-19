@@ -974,15 +974,15 @@ func _refresh_effect_display() -> void:
 	if combat_session==null:
 		return
 	for is_player in [true,false]:
-		var fighter_key:="player_" if is_player else "enemy_"
-		for row_type in ["Баффы","Дебаффы"]:
-			var key:=fighter_key+row_type
+		var fighter_key: String = "player_" if is_player else "enemy_"
+		for row_type in ["Баффы", "Дебаффы"]:
+			var key: String = fighter_key + String(row_type)
 			var row:=effects_rows.get(key) as HBoxContainer
 			if row==null:
 				continue
-			var effects:=_effect_entries(is_player,row_type)
-			row.visible=not effects.is_empty()
-			var visible_count:=mini(5,effects.size())
+			var effects: Array = _effect_entries(is_player, String(row_type))
+			row.visible = not effects.is_empty()
+			var visible_count: int = mini(5, effects.size())
 			for index in range(row.get_child_count()):
 				var button:=row.get_child(index) as Button
 				if button==null:
@@ -990,7 +990,7 @@ func _refresh_effect_display() -> void:
 				button.visible=index<visible_count
 				if index>=visible_count:
 					continue
-				var extra:=effects.size()-4 if effects.size()>5 and index==4 else 0
+				var extra: int = effects.size()-4 if effects.size()>5 and index==4 else 0
 				if extra>0:
 					button.text="+%d" % extra
 					button.tooltip_text="Ещё %d эффект(ов) — нажмите для списка" % extra
