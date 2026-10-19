@@ -11,6 +11,7 @@ func _init() -> void:
 		{"id":"damage_heal_hot_order", "ok":_test_damage_heal_hot_order()},
 		{"id":"one_shot_heal_hot", "ok":_test_one_shot_heal_hot()},
 		{"id":"dot_hot_order", "ok":_test_dot_hot_order()},
+		{"id":"dot_one_shot_with_hot", "ok":_test_dot_one_shot_with_hot()},
 		{"id":"cleanse_prevents_dot_tick", "ok":_test_cleanse_prevents_dot_tick()},
 		{"id":"cleanse_skips_future_effect", "ok":_test_cleanse_skips_future_effect()},
 		{"id":"death_finalized_once", "ok":_test_death_finalized_once()}
@@ -145,6 +146,37 @@ func _test_dot_hot_order() -> bool:
 		print("ROUND_DOT_HOT_FAIL=",first)
 		return false
 	return first==second and int(first["dot"])==1 and int(first["hot"])==1
+
+func _test_dot_one_shot_with_hot() -> bool:
+	# A fatal single periodic packet >= MaxHP is still a one-shot even if
+	# another EFF heals that character in the same end-of-round phase.
+	for dot_first in [true,false]:
+		var scene:=_fixture()
+		var state:CombatState=scene["state"]
+		var target:CombatantState=scene["target"]
+		var orchestrator:RoundOrchestrator=scene["orchestrator"]
+		target.hp=40
+		var lethal_dot:=_dot_definition()
+		lethal_dot["damage"]=100
+		var powerful_hot:=_hot_definition()
+		powerful_hot["healing"]=80
+		if dot_first:
+			_add_timed(target,DOT_ID,lethal_dot,"attacker")
+			_add_timed(target,HOT_ID,powerful_hot,"target")
+		else:
+			_add_timed(target,HOT_ID,powerful_hot,"target")
+			_add_timed(target,DOT_ID,lethal_dot,"attacker")
+		var combat_round:=orchestrator.begin_round()
+		orchestrator.resolve_locked_actions(combat_round)
+		var summary:Dictionary=orchestrator.end_round()
+		if target.hp!=20 or not target.is_death_finalized() or not target.one_shot_kill:
+			print("ROUND_DOT_ONE_SHOT_FAIL dot_first=",dot_first," hp=",target.hp)
+			return false
+		if Array(summary.get("dead_ids",[]))!=["target"] or target.visible_hp()!=0:
+			return false
+		if _count_tick(state,CombatEvent.Kind.DAMAGE,DOT_ID,1)!=1 or _count_tick(state,CombatEvent.Kind.EFFECT,HOT_ID,1)!=1:
+			return false
+	return true
 
 func _cleanse_case(timing:String) -> bool:
 	var scene:=_fixture()
