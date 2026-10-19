@@ -141,8 +141,9 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 			cooldown_ready=AbilityRuntime.can_use(ability_id,cooldowns,state.round_number)
 		var mana_cost:=int(definition.get("mana_cost",0))
 		var resource_ready:=combatant.mana>=mana_cost
+		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number)
 		abilities[ability_id]={
-			"available":cooldown_ready and resource_ready and not targets.is_empty(),
+			"available":cooldown_ready and resource_ready and round_budget_ready and not targets.is_empty(),
 			"targets":targets,
 			"cooldown_ready":cooldown_ready,
 			"resource_ready":resource_ready,
