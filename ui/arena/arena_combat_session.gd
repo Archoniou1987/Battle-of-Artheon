@@ -84,6 +84,42 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 func fighter(is_player: bool) -> CombatantState:
 	return state.get_combatant(player_id if is_player else ENEMY_ID)
 
+## View-only EFF snapshot. Pending effects remain visible with a pending flag;
+## their own start_round and ticking rules are never changed by the UI.
+func effect_view(is_player: bool) -> Dictionary:
+	var beneficial: Array[Dictionary] = []
+	var harmful: Array[Dictionary] = []
+	var combatant := fighter(is_player)
+	if combatant == null:
+		return {"buffs":beneficial,"debuffs":harmful}
+	for record in combatant.active_effects:
+		if not record is Dictionary or int(record.get("remaining_rounds",0))<=0:
+			continue
+		var definition:Dictionary=Dictionary(record.get("definition",{}))
+		var polarity:=EffectPolarity.of(definition)
+		if polarity.is_empty():
+			continue
+		var effect_id:=String(record.get("effect_id",""))
+		var effect_name:=String(definition.get("name",effect_id))
+		var kind:=String(definition.get("kind","")).to_lower()
+		var stacks:=maxi(1,int(record.get("stacks",1)))
+		var remaining:=int(record.get("remaining_rounds",0))
+		var pending:=int(record.get("start_round",state.round_number))>state.round_number
+		var entry:Dictionary={
+			"id":effect_id,
+			"name":effect_name,
+			"kind":kind,
+			"stacks":stacks,
+			"remaining_rounds":remaining,
+			"pending":pending,
+			"source_id":String(record.get("source_id",""))
+		}
+		if polarity=="BUFF":
+			beneficial.append(entry)
+		else:
+			harmful.append(entry)
+	return {"buffs":beneficial,"debuffs":harmful}
+
 func player_attack_count() -> int:
 	var sequence: Dictionary = commands.default_weapon_attack_sequence(player_id)
 	var count := 0
