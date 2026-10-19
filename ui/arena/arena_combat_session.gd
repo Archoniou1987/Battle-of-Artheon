@@ -139,7 +139,7 @@ func player_ability_options() -> Array[Dictionary]:
 	for raw_id in player_ability_slots:
 		var ability_id := "" if raw_id == null else String(raw_id)
 		var definition := AbilityCatalog.definition(ability_scheduler.definitions, ability_id)
-		var available := not definition.is_empty() and player != null and player.hp > 0 and not player.is_death_finalized()
+		var available := not definition.is_empty() and player != null and player.hp > 0 and not player.is_death_finalized() and orchestrator.battle_outcome()=="ongoing"
 		available = available and not CombatTempoService.is_stunned(player,ready_round)
 		available = available and ability_scheduler.can_cast_this_round(player_id,ready_round)
 		available = available and AbilityRuntime.can_use(ability_id,cooldowns,ready_round)
