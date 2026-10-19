@@ -23,7 +23,7 @@ func _init() -> void:
 	player.mana = 100
 	npc.max_mana = 100
 	npc.mana = 100
-	player.hp = maxi(1,player.max_hp / 2)
+	player.hp = maxi(1, int(floor(float(player.max_hp) / 2.0)))
 	npc.hp = npc.max_hp - 150
 	# The NPC's scheduler intentionally uses a fixture-assigned ability. No
 	# separate NPC combat logic may be used for the automatic cast.
