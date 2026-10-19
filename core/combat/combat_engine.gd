@@ -549,10 +549,13 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 			# visible shared EFF. Keep the single logical record/timer, but
 			# do not reveal the stack count or refreshed timer mid-round.
 			var surprise_addition: bool = bool(event.payload.get("preparation_effect",false)) and bool(shared.get("revealed",true)) and state.round_number>=int(shared.get("start_round",999999))
-			if surprise_addition and next_stacks>previous_stacks:
+			if surprise_addition:
 				if not shared.has("visible_remaining_rounds"):
 					shared["visible_remaining_rounds"]=int(shared.get("remaining_rounds",0))
-				shared["undisclosed_stacks"]=int(shared.get("undisclosed_stacks",0))+(next_stacks-previous_stacks)
+				# A cast at the stack cap still refreshes the timer invisibly,
+				# but does not manufacture a new protected stack.
+				if next_stacks>previous_stacks:
+					shared["undisclosed_stacks"]=int(shared.get("undisclosed_stacks",0))+(next_stacks-previous_stacks)
 			shared["stacks"]=next_stacks
 			# End-of-round expiry decrements records already active this round.
 			var ticks := maxi(1, int(definition.get("duration_rounds", 1)))
