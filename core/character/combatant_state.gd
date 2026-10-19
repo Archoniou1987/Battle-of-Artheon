@@ -68,7 +68,7 @@ func _init(id: String, name: String, character_level: int, health: int, mana_poo
 
 
 func is_alive() -> bool:
-	return hp > 0
+	return not death_finalized and hp > 0
 
 func is_death_finalized() -> bool:
 	return death_finalized
@@ -94,7 +94,8 @@ func restore_hp(amount: int) -> int:
 
 
 func visible_hp() -> int:
-	return clampi(hp, 0, max_hp)
+	# One-shot can finalize death even when provisional HP remains positive.
+	return 0 if death_finalized else clampi(hp, 0, max_hp)
 
 
 func spend_mana(amount: int) -> bool:
