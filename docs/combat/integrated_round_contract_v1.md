@@ -62,6 +62,26 @@ Autonomous EFF ticks retain their own start, stacking and end-round rules.
 A newly inflicted periodic effect does not retroactively change earlier
 damage results, regardless of the ABI timing setting.
 
+### Instant effect surprise / disclosure rule (2026-10-19)
+An `instant` ABI may apply a BUFF or DEBUFF in the opening phase. That
+new effect modifies this round's combat calculations immediately, but is
+**not visible to either fighter until end_round**. Dispel/cleanse in that
+same round cannot remove this undisclosed EFF, even if the other instant
+ABI is processed later. It becomes visible at the end-round boundary,
+and is first eligible for cleanse in **the following round**.
+
+The runtime must keep separate:
+- `start_round` — when stat/control modifiers actually become active;
+- `revealed` — whether EFF UI is permitted to show the effect;
+- `dispel_available_round` — earliest round in which cleanse can remove it.
+
+`end_round` marks surviving hidden effects as revealed after periodic
+effects and death finalization. This does **not** change actual activation
+or EFF durations. Already-known effects from previous rounds remain
+eligible for cleansing this round. Ordinary standard-phase EFF have
+their existing next-round activation and visibility lifecycle.
+This is a rule about EFF visibility, NOT a next-round ABI cast.
+
 ## Implementation status (2026-10-19)
 - CONFIRMED in ABI Branch Tests #39267341295 on commit `a9beb86`:
   player/NPC simultaneous healing and ordinary attacks, subsequent DoT/HoT
@@ -89,14 +109,16 @@ damage results, regardless of the ABI timing setting.
   Explicit `target_team: "ALLY"|"ENEMY"` and
   `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`
   specify the target and how many effect records to remove.
+- NEW surprise-EFF contract (PENDING CI): a fresh instant-applied BUFF
+  or DEBUFF is active this round, concealed in EFF displays until end_round,
+  and immune to same-round dispelling regardless of instant action order.
+  A revealed earlier-round effect is still removable. CI scenarios test
+  both instant orders with existing ArenaCombatSession and ensure next-round
+  cleanse becomes possible. Existing same-effect shared-duration stack
+  refresh may require separate per-stack disclosure semantics.
 - Remaining limitations: no interactive ally-target picker for larger groups
-  or finalized player-facing ABI artwork. Same-round **instant cleanse**
-  followed by a **standard re-buff** is verified; however, two opposing
-  `instant` ABIs affecting the same EFF still process in sealed insertion
-  order. Whether a newly cast instant buff can be removed by an opposing
-  instant cleanse needs an explicit gameplay tie-break rule before accepting
-  this edge case as order-independent. Do not invent one in the engine.
-  Test suite coverage must not be misrepresented as a proof for that case.
+  or finalized player-facing ABI artwork. Do not infer success of unexecuted
+  regression tests from earlier successful CI runs.
 
 ## Required E2E checks before acceptance
 1. Two daggers yield 2 physical attacks + at most 1 ABI in a single round.
