@@ -471,6 +471,8 @@ func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 		# Legacy active records use start_round as their cleanse boundary.
 		if state.round_number < int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0)) <= 0:
 			continue
+		if not bool(active.get("revealed",true)):
+			continue
 		if state.round_number < int(active.get("dispel_available_round",active.get("start_round",999999))):
 			continue
 		var definition:Dictionary=Dictionary(active.get("definition",{}))
