@@ -56,26 +56,35 @@ All choices are locked before any combat event resolves.
 - Persistent EFF ticks run according to their own end-round lifecycle; character
   death is finalized afterward. Previously finalized corpses cannot act or heal.
 
-## Current implementation status at contract creation
-- Existing CombatSimulator and GroupCombatSimulator support physical attacks plus
-  a separate ABI phase, but do NOT yet implement this full locked plan and timing.
-- Arena ABI buttons and ability selection are not yet wired to its Combat session.
-- Core scheduler should enforce the shared one-ABI-per-round cap and equipment
-  loadouts MH-only; targeted tests must verify this.
-- IMPLEMENTED (pending GitHub CI): the canonical `cleanse` ABI component removes
-  matching beneficial/harmful EFF records, including their current stacks.
-  Use `combat_role: "CLEANSE"`, explicit `target_team: "ALLY"|"ENEMY"`,
-  and component `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`.
-  Ally/enemy target validation runs in the Command API and in group-aware CombatEngine.
-- IMPLEMENTED (pending GitHub CI): `combat_role: "BUFF"|"DEBUFF"|"CLEANSE"`
-  on a pure effect/cleanse ABI executes it in the preparation phase; mixed damage,
-  healing or control resolves in the shared phase instead.
-- Arena ABI controls, full submission locking and player-controlled ABI targeting are
-  NOT yet connected to the real Arena session; these are the next integration stage.
-- Current event processing is sequential for internal bookkeeping; it preserves
-  damage/healing HP commutativity with a final HP cap, but complete event-order
-  invariance of every secondary interaction (e.g. concurrent dispel/rebuff) remains
-  an explicit future integration check.
+## Implementation status (2026-10-19)
+- CONFIRMED in ABI Branch Tests #39267341295 on commit `a9beb86`:
+  player/NPC simultaneous healing and ordinary attacks, subsequent DoT/HoT
+  lifecycle, live Arena ABI selection, cooldown enforcement, MH-only equipment
+  ABI availability, EFF visuals and resolved combat journal.
+- CONFIRMED in Combat Tests #39254568436 on commit `8be7ea6`:
+  integrated Arena MH/OH strikes and one selected ABI. Later ABI workflow
+  also executes Arena integration regressions.
+- Implemented: sealed Arena inputs, 1 active ABI per actor/round, independent
+  physical attacks, support-target routing for current 1v1 Arena, and
+  end-round death finalization.
+- Implemented: early buffs/debuffs/cleansing and shared resolution of damage,
+  healing and control. A pure prep ABI applies an EFF from the current round,
+  whereas ordinary EFF retain their own start/tick lifecycle.
+- NEW safeguard (PENDING CI): early eligibility validates EFF definitions,
+  not merely `combat_role`. Only pure, known, non-control
+  `buff`/`debuff`/`shield` effects of matching polarity may start early;
+  DoT, HoT, stun, Tempo control, movement control and unknown EFF must remain
+  in shared COMBAT. The development test injects exactly the EFF catalog used
+  by CombatEngine; production uses the canonical EFF catalog.
+- Implemented: native `cleanse` ABI removes active EFF of declared polarity.
+  Explicit `target_team: "ALLY"|"ENEMY"` and
+  `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`
+  specify the target and how many effect records to remove.
+- Remaining limitations: no interactive ally-target picker for larger groups,
+  no finalized player-facing ABI artwork, and no comprehensive guarantee
+  that *every* concurrent secondary interaction (such as cleanse vs.
+  simultaneous re-buff) is independent of internal event traversal order.
+  These require separate E2E acceptance rather than inferred CI success.
 
 ## Required E2E checks before acceptance
 1. Two daggers yield 2 physical attacks + at most 1 ABI in a single round.
