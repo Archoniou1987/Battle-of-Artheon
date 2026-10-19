@@ -30,6 +30,9 @@ func _init() -> void:
 	if options.is_empty() or not bool(options[0].get("available",false)):
 		_finish(false,"mh_abi_available")
 		return
+	if String(options[0].get("target_id","")) != ArenaCombatSession.ENEMY_ID or String(options[0].get("target_label","")) != "Противник":
+		_finish(false,"mh_abi_enemy_target")
+		return
 	var block_count:=CombatModifierService.manual_block_zone_capacity(actor)
 	var candidate_blocks:Array[String]=["chest","arms","waist","legs"]
 	var blocks:Array[String]=[]
@@ -67,7 +70,26 @@ func _init() -> void:
 	if bool(duplicate.get("ok",true)) or session.state.round_number!=after_round or actor.mana!=after_mana:
 		_finish(false,"cooldown_rejects_before_round")
 		return
-	_finish(true,"two_weapon_strikes_plus_one_abi")
+	# Actual EFF records become view-only buff/debuff entries, including stacks
+	# and newly applied effects which only start ticking next round.
+	var target:=session.fighter(false)
+	target.active_effects.append({"effect_id":"EFF_UI_HOT","definition":{"kind":"hot","name":"Regeneration"},"stacks":2,"remaining_rounds":3,"start_round":session.state.round_number+1,"source_id":session.player_id})
+	target.active_effects.append({"effect_id":"EFF_UI_ROOT","definition":{"kind":"root","name":"Root"},"remaining_rounds":2,"start_round":session.state.round_number,"source_id":session.player_id})
+	var view:=session.effect_view(false)
+	var found_buff:=false
+	var found_debuff:=false
+	for raw in Array(view.get("buffs",[])):
+		var effect:Dictionary=raw
+		if String(effect.get("id",""))=="EFF_UI_HOT":
+			found_buff=int(effect.get("stacks",0))==2 and bool(effect.get("pending",false))
+	for raw in Array(view.get("debuffs",[])):
+		var effect:Dictionary=raw
+		if String(effect.get("id",""))=="EFF_UI_ROOT":
+			found_debuff=not bool(effect.get("pending",true))
+	if not found_buff or not found_debuff:
+		_finish(false,"live_effect_snapshot")
+		return
+	_finish(true,"two_weapon_strikes_plus_one_abi_and_EFF_view")
 
 func _finish(passed:bool,detail:String)->void:
 	print("ARENA_ABILITY_INTEGRATION_TEST=", "PASS" if passed else "FAIL", " detail=",detail)
