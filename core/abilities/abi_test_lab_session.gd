@@ -130,7 +130,9 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 func next_round(cast_ability: bool = true) -> Dictionary:
 	if state == null or scheduler == null or orchestrator == null:
 		return {"ok": false, "reason": "lab_not_initialized"}
-	if state.get_combatant(DUMMY_ID).is_death_finalized() or state.get_combatant(CASTER_ID).is_death_finalized():
+	var selected_id := String(config.get("target", "dummy"))
+	var selected_combatant_id := CASTER_ID if selected_id == "caster" else (ALLY_ID if selected_id == "ally" else DUMMY_ID)
+	if state.get_combatant(selected_combatant_id).is_death_finalized() or state.get_combatant(CASTER_ID).is_death_finalized():
 		return {"ok": false, "reason": "lab_battle_finished"}
 	var caster := state.get_combatant(CASTER_ID)
 	var dummy := state.get_combatant(DUMMY_ID)
@@ -176,6 +178,14 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 			"payload": event.payload.duplicate(true), "result": event.result.duplicate(true)}
 		events.append(detail)
 		report.append(_event_description(event, kind))
+	var actual_damage := 0
+	var actual_healing := 0
+	for detail in events:
+		var result_data: Dictionary = detail["result"]
+		if String(detail["kind"]) == "DAMAGE":
+			actual_damage += int(result_data.get("hp_removed", 0))
+		elif String(detail["kind"]) == "EFFECT":
+			actual_healing += int(result_data.get("healed", 0))
 	var effects: Array[Dictionary] = []
 	for active in target.active_effects:
 		effects.append({"effect_id": String(active.get("effect_id", "")),
@@ -185,12 +195,12 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		"ok": true, "round": state.round_number, "cast_status": cast_status,
 		"ability_id": active_id, "ability_event_id": ability_event_id,
 		"mana_before": mana_before, "mana_after": caster.mana,
-		"hp_before": hp_before, "hp_after": target.visible_hp(), "max_hp": target.max_hp,
+		"hp_before": hp_before, "hp_after": (0 if target.is_death_finalized() else target.visible_hp()), "max_hp": target.max_hp,
 		"target_id":target_id, "target_name":target.display_name,
-		"damage_dealt": hp_before - target.visible_hp(),
-		"healing_done": target.visible_hp() - hp_before, "effects": effects,
+		"damage_dealt": actual_damage,
+		"healing_done": actual_healing, "effects": effects,
 		"events": events, "report": report,
-		"battle_outcome": String(summary.get("battle_outcome", "ongoing")),
+		"battle_outcome": ("target_dead" if target.is_death_finalized() else String(summary.get("battle_outcome", "ongoing"))),
 		"incoming_damage_per_hit": incoming_damage, "incoming_hits": incoming_hits,
 		"event_order": String(config.get("event_order", "damage_first")),
 		"one_shot_kill": target.one_shot_kill, "death_finalized": target.is_death_finalized()
