@@ -25,6 +25,9 @@ func _init() -> void:
 			var result: bool = _test_shared_surprise_cleanse(kind,cast_first)
 			print("INSTANT_SURPRISE_SHARED_CLEANSE=",kind," cast_first=",cast_first," ", "PASS" if result else "FAIL")
 			success = success and result
+		var standard_cleanse: bool = _test_shared_surprise_cleanse(kind,true,"standard")
+		print("INSTANT_SURPRISE_SHARED_STANDARD_CLEANSE=",kind," ", "PASS" if standard_cleanse else "FAIL")
+		success = success and standard_cleanse
 		var disclosure: bool = _test_shared_stack_disclosure(kind)
 		print("INSTANT_SURPRISE_SHARED_DISCLOSURE=",kind," ", "PASS" if disclosure else "FAIL")
 		success = success and disclosure
@@ -57,12 +60,12 @@ func _cast(session:ArenaCombatSession,kind:String) -> CombatEvent:
 	}
 	return AbilityRuntime.build_action_event(session.state,caster_id,target_id,"ABI_SURPRISE_CAST",definition)
 
-func _cleanse(session:ArenaCombatSession,kind:String) -> CombatEvent:
+func _cleanse(session:ArenaCombatSession,kind:String,timing:String="instant") -> CombatEvent:
 	var is_buff: bool = kind=="buff"
 	var cleanser: String = ArenaCombatSession.ENEMY_ID
 	var target_id: String = session.player_id if is_buff else ArenaCombatSession.ENEMY_ID
 	var definition:Dictionary={
-		"application_timing":"instant",
+		"application_timing":timing,
 		"target_team":"ENEMY" if is_buff else "ALLY",
 		"components":[{"kind":"cleanse","dispel_polarity":"BUFF" if is_buff else "DEBUFF","max_effects":3}]
 	}
@@ -179,12 +182,12 @@ func _shared_cast(session:ArenaCombatSession,kind:String) -> CombatEvent:
 	}
 	return AbilityRuntime.build_action_event(session.state,session.player_id,_target(session,kind).combatant_id,"ABI_SHARED_SURPRISE",definition)
 
-func _test_shared_surprise_cleanse(kind:String,cast_first:bool) -> bool:
+func _test_shared_surprise_cleanse(kind:String,cast_first:bool,cleanse_timing:String="instant") -> bool:
 	var session:=_shared_setup(kind)
 	var target:=_target(session,kind)
 	var round:=session.orchestrator.begin_round()
 	var cast:=_shared_cast(session,kind)
-	var cleanse:=_cleanse(session,kind)
+	var cleanse:=_cleanse(session,kind,cleanse_timing)
 	if cast_first:
 		round.lock_action(cast)
 		round.lock_action(cleanse)
