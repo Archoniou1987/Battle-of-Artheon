@@ -75,7 +75,7 @@ func _run_prep_case(timing: String) -> int:
 func _test_delayed_ability_once() -> bool:
 	var state := CombatState.new()
 	var caster := TestFixtureLoader.new_combatant("caster","Caster",5,100)
-	var target := TestFixtureLoader.new_combatant("target","Target",5,100)
+	var target := TestFixtureLoader.new_combatant("target","Target",5,100,50)
 	target.hp=50
 	state.add_combatant(caster)
 	state.add_combatant(target)
@@ -85,17 +85,23 @@ func _test_delayed_ability_once() -> bool:
 	var ability:Dictionary={
 		"application_timing":"next_round",
 		"target_team":"ALLY",
+		"mana_cost":10,
+		"cooldown_rounds":1,
 		"components":[{"kind":"heal","amount":30}]
 	}
-	first.lock_action(AbilityRuntime.build_action_event(state,"target","target","ABI_DELAYED_HEAL",ability))
+	var scheduler:=AbilityScheduler.new({"ABI_DELAYED_HEAL":ability},{"target":["ABI_DELAYED_HEAL"]})
+	var cast:=scheduler.cast_event(state,"target","target","ABI_DELAYED_HEAL")
+	if cast==null or target.mana!=40:
+		return false
+	first.lock_action(cast)
 	orchestrator.resolve_locked_actions(first)
-	if target.hp!=50 or state.scheduled_abi_intents.size()!=1:
+	if target.hp!=50 or target.mana!=40 or state.scheduled_abi_intents.size()!=1:
 		return false
 	orchestrator.end_round()
 	var second := orchestrator.begin_round()
 	second.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"caster","target",{"amount":20.0,"damage_type":"physical"}))
 	orchestrator.resolve_locked_actions(second)
-	if target.hp!=60 or not state.scheduled_abi_intents.is_empty():
+	if target.hp!=60 or target.mana!=40 or not state.scheduled_abi_intents.is_empty():
 		return false
 	orchestrator.end_round()
 	var third := orchestrator.begin_round()
