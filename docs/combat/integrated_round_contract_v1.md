@@ -113,25 +113,23 @@ This is a rule about EFF visibility, NOT a next-round ABI cast.
   `application_timing` uses only `instant` (beginning of current round)
   and `standard` (same-round shared calculation). Both player and NPC
   passed targeted instant-vs-standard Arena tests. There is no scheduled ABI.
-- NEW REGRESSION COVERAGE (PENDING CI): `round_effect_death_regression_runner.gd`
-  checks damage/inline healing/HoT order, one-shot with healing, DoT and
-  HoT tick order, lethal one-shot DoT, cleanse of shared stacked DoT,
-  skipping not-yet-active EFF, and finalized death exactly once.
-  Test suite is included in the existing manual ABI Branch Tests workflow.
+- VERIFIED in ABI Branch Tests #39323312783, commit `df11dd0`:
+  `round_effect_death_regression_runner.gd` passed damage/inline healing/HoT
+  ordering, one-shot with healing, DoT and HoT tick order, lethal one-shot
+  DoT, cleanse of stacked DoT, pending EFF boundaries and finalizing death
+  exactly once. Reconfirmed in #39325895165 on commit `0fff461`.
 - Implemented: native `cleanse` ABI removes active EFF of declared polarity.
   Explicit `target_team: "ALLY"|"ENEMY"` and
   `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`
   specify the target and how many effect records to remove.
-- NEW surprise-EFF contract (PENDING CI): a fresh instant-applied BUFF
-  or DEBUFF is active this round, concealed in EFF displays until end_round,
-  and immune to same-round dispelling regardless of instant action order.
-  A revealed earlier-round effect is still removable. CI scenarios test
-  both instant orders with existing ArenaCombatSession and ensure next-round
-  cleanse becomes possible. NEW shared-duration surprise-stack coverage
-  (PENDING CI): revealed and concealed stacks are tracked within the same
-  EFF record, only known stacks can be cleansed, and new stack count/duration
-  is withheld from Arena until end_round. Stack-cap refresh is checked
-  separately and never creates a hidden phantom stack.
+- VERIFIED in ABI Branch Tests #39323312783 and #39325895165:
+  surprise instant BUFF/DEBUFF are mechanically active but concealed until
+  end_round and unavailable for same-round cleansing in either action order.
+  Next-round cleanse succeeds. #39325895165 on commit `0fff461` also
+  confirmed existing visible vs new concealed `shared_duration` stacks,
+  both `instant` and `standard` cleanse boundaries, disclosure of newly
+  gained stack count and refreshed timer, and stack-cap refresh without
+  creating a phantom protected stack.
 - Remaining limitations: no interactive ally-target picker for larger groups
   or finalized player-facing ABI artwork. Do not infer success of unexecuted
   regression tests from earlier successful CI runs.
