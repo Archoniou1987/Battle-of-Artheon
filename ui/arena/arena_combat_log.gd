@@ -134,6 +134,7 @@ static func _attack_outcome(outcome: String) -> String:
 static func _ability_outcome(outcome: String) -> String:
 	match outcome:
 		"dispatched": return "без изменения HP или EFF"
+		"scheduled_next_round": return "отложено до следующего раунда"
 		"magic_miss": return "промах"
 		"stunned": return "оглушён"
 		"source_dead": return "применение отменено: персонаж мёртв"
