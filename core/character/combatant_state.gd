@@ -75,6 +75,9 @@ func is_death_finalized() -> bool:
 
 
 func apply_damage(amount: int) -> int:
+	# A finalized death is irreversible within this combat (no resurrection ABI).
+	if death_finalized:
+		return 0
 	var applied := maxi(0, amount)
 	hp -= applied
 	if applied >= max_hp and max_hp > 0:
@@ -95,6 +98,8 @@ func visible_hp() -> int:
 
 
 func spend_mana(amount: int) -> bool:
+	if death_finalized:
+		return false
 	var cost := maxi(0, amount)
 	if mana < cost:
 		return false
