@@ -10,6 +10,7 @@ static func run(balance:Dictionary) -> bool:
 		"heal_rescue":_pending_death_can_be_healed(balance),
 		"heal_insufficient":_insufficient_heal_still_dies(balance),
 		"finalized_no_heal":_finalized_death_cannot_be_healed(balance),
+		"group_healer_survives":_group_healer_outlives_ally(balance),
 		"persistent_aoe":_persistent_aoe_ticks(balance),
 		"zone_aoe":_zone_aoe_follows_occupants_after_movement(balance),
 		"deferred_death":_deferred_damage_finalizes_death(balance),
@@ -106,6 +107,37 @@ static func _finalized_death_cannot_be_healed(balance:Dictionary)->bool:
 	orchestrator.begin_round(); orchestrator.end_round()
 	var healed:=hero.restore_hp(100)
 	return healed==0 and hero.hp==-5 and hero.is_death_finalized()
+
+static func _group_healer_outlives_ally(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	var healer:=TestFixtureLoader.new_combatant("healer","Healer",1,100,50)
+	healer.hp=50
+	var friend:=TestFixtureLoader.new_combatant("friend","Friend",1,100,0)
+	var enemy:=TestFixtureLoader.new_combatant("enemy","Enemy",1,100,0)
+	state.add_combatant(healer)
+	state.add_combatant(friend)
+	state.add_combatant(enemy)
+	var groups:=GroupCombatState.new(state)
+	groups.add_member("players","healer")
+	groups.add_member("players","friend")
+	groups.add_member("enemies","enemy")
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine,groups)
+	orchestrator.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"enemy","friend",{"amount":120.0,"damage_type":"physical"}))
+	var summary:=orchestrator.end_round()
+	if not friend.is_death_finalized() or String(summary.get("battle_outcome",""))!="ongoing":
+		return false
+	# The healer remains able to act in subsequent rounds; a dead teammate
+	# does not imply defeat while both opposing teams have living members.
+	orchestrator.begin_round()
+	var heal:=state.create_event(CombatEvent.Kind.ACTION,"healer","healer",{
+		"target_team":"ALLY", "components":[{"kind":"heal","amount":10.0}]
+	})
+	engine.resolve_event(heal)
+	engine.resolve_pending_events()
+	var second:=orchestrator.end_round()
+	return String(heal.result.get("outcome",""))=="dispatched" and healer.hp==60 and String(second.get("battle_outcome",""))=="ongoing"
 
 static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	var state:=CombatState.new()
