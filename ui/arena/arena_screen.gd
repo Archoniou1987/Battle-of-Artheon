@@ -942,6 +942,88 @@ func _prepend_combat_log(entry: String) -> void:
 	log_view.scroll_to_line(0)
 
 
+## Compact two-row EFF view. Five cells per row; last cell becomes +N when
+## there are more than five active/pending effects. Tap for details on mobile.
+func _effect_entries(is_player:bool,row_type:String) -> Array:
+	if combat_session == null:
+		return []
+	var snapshot:=combat_session.effect_view(is_player)
+	return Array(snapshot.get("buffs" if row_type=="Баффы" else "debuffs",[]))
+
+func _effect_symbol(kind:String) -> String:
+	match kind:
+		"dot", "poison", "bleed": return "!"
+		"hot", "regen", "regeneration": return "+"
+		"shield", "buff": return "↑"
+		"stun", "freeze", "fear", "root": return "×"
+		"slow", "debuff": return "↓"
+	return "•"
+
+func _effect_description(effect:Dictionary) -> String:
+	var label:=String(effect.get("name",effect.get("id","EFF")))
+	var remaining:=int(effect.get("remaining_rounds",0))
+	var stacks:=int(effect.get("stacks",1))
+	var result:="%s (%s) — %d раунд(ов)" % [label,String(effect.get("id","")),remaining]
+	if stacks>1:
+		result+=" ×%d" % stacks
+	if bool(effect.get("pending",false)):
+		result+=" — вступит в следующем раунде"
+	return result
+
+func _refresh_effect_display() -> void:
+	if combat_session==null:
+		return
+	for is_player in [true,false]:
+		var fighter_key:="player_" if is_player else "enemy_"
+		for row_type in ["Баффы","Дебаффы"]:
+			var key:=fighter_key+row_type
+			var row:=effects_rows.get(key) as HBoxContainer
+			if row==null:
+				continue
+			var effects:=_effect_entries(is_player,row_type)
+			row.visible=not effects.is_empty()
+			var visible_count:=mini(5,effects.size())
+			for index in range(row.get_child_count()):
+				var button:=row.get_child(index) as Button
+				if button==null:
+					continue
+				button.visible=index<visible_count
+				if index>=visible_count:
+					continue
+				var extra:=effects.size()-4 if effects.size()>5 and index==4 else 0
+				if extra>0:
+					button.text="+%d" % extra
+					button.tooltip_text="Ещё %d эффект(ов) — нажмите для списка" % extra
+				else:
+					var entry:Dictionary=effects[index]
+					button.text=_effect_symbol(String(entry.get("kind","")))
+					button.tooltip_text=_effect_description(entry)
+				button.modulate=Color("#9ebfdb") if row_type=="Баффы" else Color("#e0a3a3")
+			var detail:=effect_detail_labels.get(key) as Label
+			if detail!=null:
+				if effects.is_empty():
+					detail.text="Нет активных эффектов"
+				else:
+					var all_lines:PackedStringArray=[]
+					for item in effects:
+						all_lines.append(_effect_description(Dictionary(item)))
+					detail.text="\n".join(all_lines)
+
+func _show_effect_detail(is_player:bool,row_type:String,index:int) -> void:
+	var effects:=_effect_entries(is_player,row_type)
+	if index>=effects.size() and not (effects.size()>5 and index==4):
+		return
+	var lines:PackedStringArray=[]
+	if effects.size()>5 and index==4:
+		for i in range(4,effects.size()):
+			lines.append(_effect_description(Dictionary(effects[i])))
+	else:
+		lines.append(_effect_description(Dictionary(effects[index])))
+	item_popup.title=("%s — %s" % ["Игрок" if is_player else "Противник",row_type])
+	item_popup_text.clear()
+	item_popup_text.add_text("\n".join(lines))
+	item_popup.popup_centered()
+
 func _sync_combat_session() -> void:
 	if combat_session == null:
 		return
