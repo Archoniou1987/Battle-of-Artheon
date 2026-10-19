@@ -9,9 +9,10 @@ individual rules must not be marked implemented without code + CI evidence.
   single ABI are locked; the other actor's intentions must not alter the submission.
 - No damage is calculated from the submitted plan before the round resolution starts.
 - Submission is validated before changing HP/mana, starting cooldowns, or advancing a round.
-- Players never choose ordering inside the simultaneous resolution phase. Pre-resolution
-  buff/debuff/cleanse is a special exception; physical attacks, damage ABI, control
-  and healing are peer actions resolved from the same sealed round intent.
+- Players never choose ordering inside a phase. An ABI's manually chosen
+  `instant` mode is resolved before the standard calculation, independent
+  of whether the ABI buffs, debuffs, heals, cleanses or deals damage.
+  `standard` ABI share the current round's ordinary damage/healing phase.
 
 ## Action budget
 - Ordinary physical attacks: 1–2 per round, determined by equipped MH/OH profiles (PAR057).
@@ -72,9 +73,9 @@ damage results, regardless of the ABI timing setting.
 - Implemented: sealed Arena inputs, 1 active ABI per actor/round, independent
   physical attacks, support-target routing for current 1v1 Arena, and
   end-round death finalization.
-- Implemented: early buffs/debuffs/cleansing and shared resolution of damage,
-  healing and control. A pure prep ABI applies an EFF from the current round,
-  whereas ordinary EFF retain their own start/tick lifecycle.
+- Implemented: two phase slots for the manually set ABI timing;
+  `instant` enters this round's opening phase and `standard` enters this
+  round's shared combat phase. EFF retain separate start/tick semantics.
 - NEW manual timing (PENDING CI): `application_timing` is either
   `instant` (beginning of current round) or `standard` (shared calculation
   at end of this same round). There is no scheduled future-round ABI.
