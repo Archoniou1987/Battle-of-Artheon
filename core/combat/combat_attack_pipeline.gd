@@ -16,6 +16,11 @@ func _init(combat_state:CombatState,seed_value:int=1,p_engine:CombatEngine=null)
 		rng=combat_engine.combat_rng
 	ability_scheduler=AbilityScheduler.new(AbilityCatalog.load_json("res://data/test/abilities.json"),AbilityCatalog.load_json("res://data/test/ability_loadouts.json"))
 
+## Add the chosen automatic ABI to the same sealed round plan as weapon strikes.
+func lock_ready_abilities(round:CombatRound,source:CombatantState,target:CombatantState)->void:
+	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id):
+		round.lock_action(event)
+
 func queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
 func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
