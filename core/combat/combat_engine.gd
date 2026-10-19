@@ -258,7 +258,7 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 			"ability_id": String(parent.payload.get("ability_id", "")),
 			"delivery_type": delivery_type,
 			"aoe_scale": scale,
-			"preparation_effect": String(parent.payload.get("resolution_phase", "COMBAT")) == "PREPARATION"
+			"preparation_effect": String(parent.payload.get("application_timing", "immediate")) == "immediate"
 		}, parent.event_id)
 	return null
 
@@ -517,6 +517,10 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 			var shared_record := _make_effect_record(effect_id, definition, event)
 			shared_record["stacks"] = 1
 			shared_record["active_stacks"] = 0
+			# Shared DoT/HoT never tick on application. If immediate ABI adds
+			# the record this round, preserve all future periodic ticks.
+			if state.round_number >= int(shared_record.get("start_round",999999)):
+				shared_record["remaining_rounds"] = int(shared_record["remaining_rounds"]) + 1
 			target.active_effects.append(shared_record)
 		else:
 			var shared: Dictionary = matching[0]
