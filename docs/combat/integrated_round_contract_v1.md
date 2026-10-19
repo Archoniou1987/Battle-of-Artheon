@@ -62,8 +62,20 @@ All choices are locked before any combat event resolves.
 - Arena ABI buttons and ability selection are not yet wired to its Combat session.
 - Core scheduler should enforce the shared one-ABI-per-round cap and equipment
   loadouts MH-only; targeted tests must verify this.
-- Cleansing/dispelling still requires a canonical runtime component and explicit
-  ally/enemy target authorization; do not fake it by using the current effect payload.
+- IMPLEMENTED (pending GitHub CI): the canonical `cleanse` ABI component removes
+  matching beneficial/harmful EFF records, including their current stacks.
+  Use `combat_role: "CLEANSE"`, explicit `target_team: "ALLY"|"ENEMY"`,
+  and component `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`.
+  Ally/enemy target validation runs in the Command API and in group-aware CombatEngine.
+- IMPLEMENTED (pending GitHub CI): `combat_role: "BUFF"|"DEBUFF"|"CLEANSE"`
+  on a pure effect/cleanse ABI executes it in the preparation phase; mixed damage,
+  healing or control resolves in the shared phase instead.
+- Arena ABI controls, full submission locking and player-controlled ABI targeting are
+  NOT yet connected to the real Arena session; these are the next integration stage.
+- Current event processing is sequential for internal bookkeeping; it preserves
+  damage/healing HP commutativity with a final HP cap, but complete event-order
+  invariance of every secondary interaction (e.g. concurrent dispel/rebuff) remains
+  an explicit future integration check.
 
 ## Required E2E checks before acceptance
 1. Two daggers yield 2 physical attacks + at most 1 ABI in a single round.
