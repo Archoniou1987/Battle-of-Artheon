@@ -336,6 +336,16 @@ func _test_lab_lifecycle_and_event_totals() -> void:
 		var blocked := lab.next_round()
 		_check(not bool(blocked.get("ok",true)) and String(blocked.get("reason","")) == "lab_battle_finished", "lab rejects subsequent rounds after selected target death")
 		_check(lab.state.round_number == 1 and lab.state.event_log.size() == logged and lab.state.get_combatant(AbiTestLabSession.CASTER_ID).mana == mana_after, "blocked lab round has no events or mana loss")
+	setup = lab.reset({"preset":"ABI004", "target":"ally", "initial_hp":100, "target_max_hp":100,
+		"damage":125, "incoming_damage":70, "incoming_hits":2, "event_order":"heal_first"})
+	if bool(setup.get("ok", false)):
+		var rescued := lab.next_round()
+		_check(int(rescued.get("hp_after",-1)) == 85 and not bool(rescued.get("lab_finished",true)), "125 heal then two 70 hits leaves 85 HP in round one")
+		var lethal := lab.next_round()
+		_check(int(lethal.get("hp_after",-1)) == 0 and bool(lethal.get("death_finalized",false)) and not bool(lethal.get("one_shot_kill",true)), "round two HoT cannot rescue 85-70-70+10")
+		var mana_after_death := lab.state.get_combatant(AbiTestLabSession.CASTER_ID).mana
+		var rejected := lab.next_round()
+		_check(not bool(rejected.get("ok",true)) and lab.state.round_number == 2 and lab.state.get_combatant(AbiTestLabSession.CASTER_ID).mana == mana_after_death, "round three forbidden without mana cost")
 	setup = lab.reset({"preset":"ABI004", "target":"caster", "initial_hp":100, "target_max_hp":100,
 		"damage":150, "incoming_damage":100, "incoming_hits":1, "event_order":"damage_first"})
 	if bool(setup.get("ok",false)):
