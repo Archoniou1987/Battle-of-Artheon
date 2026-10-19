@@ -465,6 +465,9 @@ func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 	for active in target.active_effects.duplicate():
 		if removed.size()>=limit:
 			break
+		# Cleansing affects currently active EFF, not future delayed effects.
+		if state.round_number < int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0)) <= 0:
+			continue
 		var definition:Dictionary=Dictionary(active.get("definition",{}))
 		var category:=String(definition.get("dispel_polarity","")).to_upper()
 		if category.is_empty():
