@@ -469,12 +469,7 @@ func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 		if state.round_number < int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0)) <= 0:
 			continue
 		var definition:Dictionary=Dictionary(active.get("definition",{}))
-		var category:=String(definition.get("dispel_polarity","")).to_upper()
-		if category.is_empty():
-			match String(definition.get("kind","")).to_lower():
-				"hot","buff","shield": category="BUFF"
-				"dot","debuff","stun","freeze","fear": category="DEBUFF"
-		if category!=polarity:
+		if EffectPolarity.of(definition)!=polarity:
 			continue
 		removed.append(String(active.get("effect_id","")))
 		target.active_effects.erase(active)
