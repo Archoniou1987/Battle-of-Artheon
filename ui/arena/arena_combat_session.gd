@@ -171,20 +171,63 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		return {"ok": false, "reason": "player_has_no_hp"}
 	if orchestrator.battle_outcome() != "ongoing":
 		return {"ok": false, "reason": "battle_finished"}
+	# Preflight the complete submission before begin_round changes resources,
+	# Tempo or the round number. Failed ABI/block/attack does not consume a turn.
+	var next_round := state.round_number + 1
+	var player_stunned := CombatTempoService.is_stunned(fighter(true),next_round)
+	var enemy_stunned := CombatTempoService.is_stunned(fighter(false),next_round)
+	if not player_stunned:
+		var expected_blocks:=CombatModifierService.manual_block_zone_capacity(fighter(true))
+		var unique_blocks:Array[String]=[]
+		for body_zone in blocks:
+			if not CombatCommandApi.BODY_ZONES.has(body_zone) or unique_blocks.has(body_zone):
+				return {"ok":false,"reason":"invalid_block_zone"}
+			unique_blocks.append(body_zone)
+		if expected_blocks<1 or expected_blocks>4 or unique_blocks.size()!=expected_blocks:
+			return {"ok":false,"reason":"invalid_block_zone_count"}
+		var player_plan:=_prepare_attacks(player_id,attacks)
+		if not bool(player_plan.get("ok",false)):
+			return {"ok":false,"reason":String(player_plan.get("reason","attack_rejected"))}
+		for requested_zone in attacks:
+			if not CombatCommandApi.BODY_ZONES.has(requested_zone):
+				return {"ok":false,"reason":"invalid_attack_zone"}
+		var player_abi_check:=_validate_ability(player_id,ability_id,next_round)
+		if not bool(player_abi_check.get("ok",false)):
+			return player_abi_check
+	if not enemy_stunned:
+		var enemy_plan:=_prepare_attacks(ENEMY_ID,["chest"])
+		if not bool(enemy_plan.get("ok",false)):
+			return {"ok":false,"reason":String(enemy_plan.get("reason","enemy_attack_rejected"))}
+	# All inputs are snapshotted before any engine event is resolved. No subsequent
+	# UI selection can change this round's pending physical/ABI actions.
 	var round := orchestrator.begin_round()
-	if CombatTempoService.is_stunned(fighter(true), state.round_number):
+	if player_stunned:
 		commands.clear_manual_block(player_id)
 	else:
-		var block_result := commands.set_manual_block(player_id, blocks)
-		if not bool(block_result.get("ok", false)):
-			return {"ok": false, "reason": String(block_result.get("reason", "invalid_block"))}
-		var player_result := _queue_attacks(player_id, attacks)
-		if not bool(player_result.get("ok", false)):
-			return {"ok": false, "reason": String(player_result.get("reason", "attack_rejected"))}
-	if not CombatTempoService.is_stunned(fighter(false), state.round_number):
+		var block_result := commands.set_manual_block(player_id, blocks.duplicate())
+		if not bool(block_result.get("ok",false)):
+			return {"ok":false,"reason":String(block_result.get("reason","invalid_block"))}
+		var player_result := _queue_attacks(player_id,attacks.duplicate())
+		if not bool(player_result.get("ok",false)):
+			return {"ok":false,"reason":String(player_result.get("reason","attack_rejected"))}
+		if not ability_id.is_empty():
+			var definition:=AbilityCatalog.definition(ability_scheduler.definitions,ability_id)
+			var target_id:=_ability_target(player_id,definition)
+			var ability_result:=commands.cast_ability(player_id,target_id,ability_id)
+			if not bool(ability_result.get("ok",false)):
+				return {"ok":false,"reason":String(ability_result.get("reason","ability_rejected"))}
+	if not enemy_stunned:
 		var enemy_result := _queue_attacks(ENEMY_ID, ["chest"])
 		if not bool(enemy_result.get("ok", false)):
 			return {"ok": false, "reason": String(enemy_result.get("reason", "enemy_attack_rejected"))}
+		# NPC uses the same one-ABI limit and canonical equipped loadout.
+		for enemy_ability in ability_scheduler.ready_events(state,ENEMY_ID,player_id):
+			state.queue_event(enemy_ability)
+	# Commands queue immutable events. Transfer them into the shared round;
+	# preparation ABI are sorted into the early phase by CombatRound.
+	for event in state.pending_events:
+		round.lock_action(event)
+	state.pending_events.clear()
 	orchestrator.resolve_locked_actions(round)
 	var outcome: Dictionary = orchestrator.end_round()
 	var lines: Array[String] = []
