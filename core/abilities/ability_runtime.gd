@@ -60,7 +60,7 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 		if kind=="cleanse" and not ["BUFF","DEBUFF"].has(String(raw_component.get("dispel_polarity","")).to_upper()): errors.append("invalid_dispel_polarity")
 		if kind=="damage" and float(raw_component.get("amount",-1.0))<0.0: errors.append("invalid_damage_amount")
 		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
-	if String(normalized.get("combat_role","")).to_upper()=="CLEANSE" and String(normalized.get("target_team","")).to_upper() not in ["ALLY","ENEMY"]:
+	if String(normalized.get("combat_role","")).to_upper()=="CLEANSE" and not ["ALLY","ENEMY"].has(String(normalized.get("target_team","")).to_upper()):
 		errors.append("cleanse_target_team_required")
 	return errors
 
