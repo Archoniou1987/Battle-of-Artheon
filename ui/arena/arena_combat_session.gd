@@ -107,8 +107,10 @@ func effect_view(is_player: bool) -> Dictionary:
 		var effect_id:=String(record.get("effect_id",""))
 		var effect_name:=String(definition.get("name",effect_id))
 		var kind:=String(definition.get("kind","")).to_lower()
-		var stacks:=maxi(1,int(record.get("stacks",1)))
-		var remaining:=int(record.get("remaining_rounds",0))
+		# Preserve the last disclosed shared-EFF stack count/duration
+		# until this round ends. The hidden increment already acts internally.
+		var stacks:=maxi(1,int(record.get("stacks",1))-maxi(0,int(record.get("undisclosed_stacks",0))))
+		var remaining:=int(record.get("visible_remaining_rounds",record.get("remaining_rounds",0)))
 		var pending:=int(record.get("start_round",state.round_number))>state.round_number
 		var entry:Dictionary={
 			"id":effect_id,
