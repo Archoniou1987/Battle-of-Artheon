@@ -7,6 +7,20 @@ static func can_use(ability_id: String, cooldowns: Dictionary, round_number: int
 static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_number: int, cooldown_rounds: int) -> void:
 	cooldowns[ability_id] = round_number + cooldown_rounds + 1
 
+## Only explicitly designated pure support/debuff ABI get an early phase.
+## Damage, healing, control and mixed ABI all remain in shared combat resolution.
+static func resolution_phase(definition: Dictionary) -> String:
+	var role := String(definition.get("combat_role", "")).to_upper()
+	if not ["BUFF", "DEBUFF", "CLEANSE"].has(role):
+		return "COMBAT"
+	var components: Array = definition.get("components", [])
+	if components.is_empty():
+		return "COMBAT"
+	for raw in components:
+		if not raw is Dictionary or not ["effect", "cleanse"].has(String(raw.get("kind", ""))):
+			return "COMBAT"
+	return "PREPARATION"
+
 static func normalized_definition(ability_id: String, definition: Dictionary) -> Dictionary:
 	var normalized := definition.duplicate(true)
 	normalized["ability_id"] = ability_id
@@ -52,6 +66,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 	return state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
 		"ability_id": ability_id,
 		"source_kind": "ability",
+		"resolution_phase": resolution_phase(normalized),
 		"delivery_type": normalized["delivery_type"],
 		"target_scope": normalized["target_scope"],
 		"duration_rounds": normalized["duration_rounds"],
