@@ -47,13 +47,12 @@ func _run_round(first_id:String,second_id:String)->void:
 	var second:=state.get_combatant(second_id)
 	attack_pipeline.lock_basic_attack(round,first,second)
 	attack_pipeline.lock_basic_attack(round,second,first)
-	orchestrator.resolve_locked_actions(round)
-	# ABI is the second immediate phase. Start-of-round participants may finish
-	# their established actions even when Base Attack has driven HP below zero.
+	# Lock ABI and physical attacks before any damage is resolved. Only explicit
+	# preparation ABI execute ahead of the shared damage/healing calculation.
 	if first!=null and second!=null and not first.is_death_finalized() and not second.is_death_finalized():
-		attack_pipeline.queue_ready_abilities(first,second)
-		attack_pipeline.queue_ready_abilities(second,first)
-		engine.resolve_pending_events()
+		attack_pipeline.lock_ready_abilities(round,first,second)
+		attack_pipeline.lock_ready_abilities(round,second,first)
+	orchestrator.resolve_locked_actions(round)
 	orchestrator.end_round()
 
 
