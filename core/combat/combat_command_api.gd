@@ -84,7 +84,7 @@ func ability_intent(source_id:String,target_id:String,definition:Dictionary)->Di
 	var status := ParCombatContract.action_status(combatant, state.round_number)
 	if not bool(status.ok):
 		return status
-	if not action_policy.valid_targets(source_id,definition).has(target_id):
+	if not action_policy.valid_ability_targets(source_id,definition).has(target_id):
 		return {"ok":false,"reason":"target_out_of_reach"}
 	return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id}
 
@@ -134,7 +134,7 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 	for raw_id in ability_definitions.keys():
 		var ability_id:=String(raw_id)
 		var definition:Dictionary=ability_definitions[raw_id]
-		var targets:=action_policy.valid_targets(source_id,definition)
+		var targets:=action_policy.valid_ability_targets(source_id,definition)
 		var cooldown_ready:=true
 		if ability_scheduler!=null:
 			var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
