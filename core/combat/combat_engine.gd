@@ -452,7 +452,8 @@ func _resolve_effect(event: CombatEvent) -> void:
 		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
 
-## Remove matching beneficial/harmful EFF records, including all their stacks.
+## Cleanse only revealed EFF stacks. A shared-duration record may retain
+## an undisclosed instant addition while its previously known stacks vanish.
 ## Unknown polarity cannot be dispelled accidentally; content may declare it.
 func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 	var polarity:=String(event.payload.get("dispel_polarity","")).to_upper()
