@@ -365,6 +365,10 @@ func _reveal_instant_effects() -> void:
 		for active in combatant.active_effects:
 			if not bool(active.get("revealed",true)):
 				active["revealed"] = true
+			# Newly gained instant stacks and timer refreshes were concealed
+			# during this round. Disclose the aggregate only at round end.
+			active.erase("undisclosed_stacks")
+			active.erase("visible_remaining_rounds")
 
 func _tick_effect_durations() -> void:
 	for combatant in state.combatants.values():
