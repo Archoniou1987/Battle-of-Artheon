@@ -75,10 +75,10 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 		player_ability_slots.append_array(Array(equipment_slots.get(group_name, [])))
 	# Only the canonical live ABI catalog is executable in Arena. Development
 	# fixture IDs are never silently substituted for production definitions.
-	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/abilities/catalog.json"), {
-		player_id: Array(player.combat_stats.get("abilities", [])).duplicate(),
-		ENEMY_ID: Array(enemy.combat_stats.get("abilities", [])).duplicate()
-	})
+	var combat_ability_loadouts: Dictionary = {}
+	combat_ability_loadouts[player_id] = Array(player.combat_stats.get("abilities", [])).duplicate()
+	combat_ability_loadouts[ENEMY_ID] = Array(enemy.combat_stats.get("abilities", [])).duplicate()
+	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/abilities/catalog.json"), combat_ability_loadouts)
 	commands = CombatCommandApi.new(state, group, zones, orchestrator, ability_scheduler)
 
 func fighter(is_player: bool) -> CombatantState:
