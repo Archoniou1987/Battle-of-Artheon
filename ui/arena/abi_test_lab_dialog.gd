@@ -533,7 +533,8 @@ func _log_json() -> String:
 		"settings": _settings(),
 		"rounds": round_history.duplicate(true),
 		"visible_log": output.text,
-		"active_session": session != null
+		"active_session": session != null and not session.is_finished(),
+		"lab_finished": session != null and session.is_finished()
 	}
 	return JSON.stringify(snapshot, "\t")
 
