@@ -101,7 +101,7 @@ func _resolve_action(event: CombatEvent) -> void:
 			continue
 		var component:Dictionary = raw_component
 		var kind := String(component.get("kind", ""))
-		if not ["damage","effect","heal"].has(kind):
+		if not ["damage","effect","heal","cleanse"].has(kind):
 			unsupported_components.append(kind if not kind.is_empty() else "unknown")
 			continue
 		var scale := _aoe_component_scale(component, target_ids.size())
@@ -162,6 +162,11 @@ func _action_is_support(event:CombatEvent)->bool:
 			has_support=true
 		elif kind=="effect" and String(event.payload.get("target_team",""))=="ALLY":
 			has_support=true
+		elif kind=="cleanse":
+			if String(event.payload.get("target_team","")).to_upper()=="ALLY":
+				has_support=true
+			else:
+				has_offense=true
 		elif kind in ["damage","effect"]:
 			has_offense=true
 	return String(event.payload.get("target_team",""))=="ALLY" or (has_support and not has_offense)
@@ -234,6 +239,14 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 		var direct_payload := CombatDamagePayload.direct_damage_payload(parent, damage_type, amount, "ability")
 		direct_payload["aoe_scale"] = scale
 		return state.create_event(CombatEvent.Kind.DAMAGE, parent.source_id, target_id, direct_payload, parent.event_id)
+	if kind == "cleanse":
+		return state.create_event(CombatEvent.Kind.EFFECT,parent.source_id,target_id,{
+			"dispel_polarity":String(component.get("dispel_polarity","")).to_upper(),
+			"max_effects":maxi(1,int(component.get("max_effects",1))),
+			"source_type":"ability",
+			"ability_id":String(parent.payload.get("ability_id","")),
+			"delivery_type":delivery_type
+		},parent.event_id)
 	if kind == "effect":
 		return state.create_event(CombatEvent.Kind.EFFECT, parent.source_id, target_id, {
 			"effect_id": String(component.get("effect_id", "")),
@@ -393,6 +406,9 @@ func _resolve_effect(event: CombatEvent) -> void:
 		if target!=null:
 			event.set_result("outcome", "target_dead")
 		return
+	if event.payload.has("dispel_polarity"):
+		_resolve_dispel(event,target)
+		return
 	if event.payload.has("inline_heal"):
 		var healed:=target.restore_hp(int(event.payload.get("inline_heal",0)))
 		event.set_result("healed",healed)
@@ -435,6 +451,33 @@ func _resolve_effect(event: CombatEvent) -> void:
 			target.tempo = minf(target.max_tempo, target.tempo + tempo_delta)
 		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
+
+## Remove matching beneficial/harmful EFF records, including all their stacks.
+## Unknown polarity cannot be dispelled accidentally; content may declare it.
+func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
+	var polarity:=String(event.payload.get("dispel_polarity","")).to_upper()
+	if not ["BUFF","DEBUFF"].has(polarity):
+		event.set_result("resolved",false)
+		event.set_result("outcome","invalid_dispel_polarity")
+		return
+	var limit:=maxi(1,int(event.payload.get("max_effects",1)))
+	var removed:Array[String]=[]
+	for active in target.active_effects.duplicate():
+		if removed.size()>=limit:
+			break
+		var definition:Dictionary=Dictionary(active.get("definition",{}))
+		var category:=String(definition.get("dispel_polarity","")).to_upper()
+		if category.is_empty():
+			match String(definition.get("kind","")).to_lower():
+				"hot","buff","shield": category="BUFF"
+				"dot","debuff","stun","freeze","fear": category="DEBUFF"
+		if category!=polarity:
+			continue
+		removed.append(String(active.get("effect_id","")))
+		target.active_effects.erase(active)
+	event.set_result("resolved",not removed.is_empty())
+	event.set_result("removed_effect_ids",removed)
+	event.set_result("removed_count",removed.size())
 
 func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defender: CombatantState, rolls: Dictionary) -> void:
 	var effects:Array=CombatModifierService.weapon_on_hit_effects(attacker)
