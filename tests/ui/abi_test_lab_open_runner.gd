@@ -120,7 +120,7 @@ func _run() -> void:
 		var recorded := dialog.round_history.size()
 		dialog._next_round(true) # programmatic bypass must still be harmless
 		check(dialog.session.state.round_number == completed_rounds and dialog.round_history.size() == recorded, "finished lab cannot advance or append rounds")
-		var export_snapshot := JSON.parse_string(dialog._log_json())
+		var export_snapshot: Variant = JSON.parse_string(dialog._log_json())
 		check(export_snapshot is Dictionary and bool(export_snapshot.get("lab_finished", false)) and not bool(export_snapshot.get("active_session", true)), "export marks finished lab inactive")
 	print("ABI_LAB_UI_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=", failures.size())
 	quit(0 if failures.is_empty() else 1)
