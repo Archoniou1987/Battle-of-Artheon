@@ -7,47 +7,16 @@ static func can_use(ability_id: String, cooldowns: Dictionary, round_number: int
 static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_number: int, cooldown_rounds: int) -> void:
 	cooldowns[ability_id] = round_number + cooldown_rounds + 1
 
-## Only purely preparatory stat changes and dispels are early.
-## Combat role alone is NOT trusted: a disguised DoT, HoT, stun or control
-## effect is still resolved with ordinary attacks, healing and control.
-## Test fixtures may supply the same EFF dictionary that CombatEngine uses.
-static func resolution_phase(definition: Dictionary, effect_definitions: Dictionary = {}) -> String:
-	var role: String = String(definition.get("combat_role", "")).to_upper()
-	if not ["BUFF", "DEBUFF", "CLEANSE"].has(role):
-		return "COMBAT"
-	var components: Array = definition.get("components", [])
-	if components.is_empty():
-		return "COMBAT"
-	var effects: Dictionary = effect_definitions if not effect_definitions.is_empty() else EffectCatalog.load_json()
-	for raw in components:
-		if not raw is Dictionary:
-			return "COMBAT"
-		var component: Dictionary = raw
-		var kind: String = String(component.get("kind", ""))
-		if kind == "cleanse":
-			if not ["BUFF", "DEBUFF"].has(String(component.get("dispel_polarity", "")).to_upper()):
-				return "COMBAT"
-			continue
-		if kind != "effect":
-			return "COMBAT"
-		var effect_id: String = String(component.get("effect_id", ""))
-		var effect: Dictionary = EffectCatalog.definition(effects, effect_id)
-		# An unknown EFF cannot be certified as safe for preparation.
-		if effect.is_empty():
-			return "COMBAT"
-		var effect_kind: String = String(effect.get("kind", "")).to_lower()
-		if not ["buff", "debuff", "shield"].has(effect_kind):
-			return "COMBAT"
-		# Explicit or embedded control is never an early surprise modifier.
-		if effect.has("tempo_modifier") or effect.has("tempo") or bool(effect.get("movement_locked", false)):
-			return "COMBAT"
-		if EffectPolarity.of(effect) != role:
-			return "COMBAT"
-	return "PREPARATION"
+## Hand-authored ABI timing. This is a design choice, not inferred from
+## BUFF/DEBUFF/DoT/HoT/control components or the ability name.
+## Missing timing on legacy fixtures means the current round.
+static func application_timing(definition: Dictionary) -> String:
+	return String(definition.get("application_timing", "immediate")).to_lower()
 
 static func normalized_definition(ability_id: String, definition: Dictionary) -> Dictionary:
 	var normalized := definition.duplicate(true)
 	normalized["ability_id"] = ability_id
+	normalized["application_timing"] = application_timing(definition)
 	normalized["delivery_type"] = String(definition.get("delivery_type", "DIRECT")).to_upper()
 	normalized["target_scope"] = String(definition.get("target_scope", "SINGLE")).to_upper()
 	normalized["duration_rounds"] = maxi(0, int(definition.get("duration_rounds", 0)))
@@ -71,6 +40,7 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 	var errors:Array[String]=[]
 	var normalized:=normalized_definition(ability_id,definition)
 	if ability_id.is_empty(): errors.append("ability_id_required")
+	if not ["immediate","next_round"].has(application_timing(definition)): errors.append("invalid_application_timing")
 	if not ["MELEE","PROJECTILE","DIRECT","AREA","CHAIN"].has(String(normalized.get("delivery_type",""))): errors.append("invalid_delivery_type")
 	if not ["SINGLE","ALL_MELEE","ALL_RANGED","ALL_ENEMIES","RANDOM_N","TARGET_ADJACENT"].has(String(normalized.get("target_scope",""))): errors.append("invalid_target_scope")
 	var components:Array=normalized.get("components",[])
@@ -88,12 +58,12 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 		errors.append("cleanse_target_team_required")
 	return errors
 
-static func build_action_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary, effect_definitions: Dictionary = {}) -> CombatEvent:
+static func build_action_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
 	var normalized := normalized_definition(ability_id, definition)
 	return state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
 		"ability_id": ability_id,
 		"source_kind": "ability",
-		"resolution_phase": resolution_phase(normalized, effect_definitions),
+		"application_timing": normalized["application_timing"],
 		"delivery_type": normalized["delivery_type"],
 		"target_scope": normalized["target_scope"],
 		"duration_rounds": normalized["duration_rounds"],
