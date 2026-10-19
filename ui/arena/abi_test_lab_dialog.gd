@@ -425,6 +425,7 @@ func _mark_dirty(_value: Variant = null) -> void:
 	session = null
 	if status_label != null:
 		status_label.text = "Параметры изменены · следующий запуск начнёт новый тест"
+	_set_round_controls_enabled(true)
 	if output != null:
 		output.text = "Настройки изменены. Примените ABI или нажмите «Новый тест»."
 
@@ -460,17 +461,25 @@ func _settings() -> Dictionary:
 		result[key] = int((fields[key] as SpinBox).value)
 	return result
 
+func _set_round_controls_enabled(enabled: bool) -> void:
+	if cast_button != null:
+		cast_button.disabled = not enabled
+	if skip_button != null:
+		skip_button.disabled = not enabled
+
 func _reset_session() -> void:
 	round_history.clear()
 	var candidate := AbiTestLabSession.new()
 	var result: Dictionary = candidate.reset(_settings())
 	if not bool(result.get("ok", false)):
 		session = null
+		_set_round_controls_enabled(false)
 		status_label.text = "Ошибка настройки лаборатории"
 		output.text = "ABI LAB ERROR: " + JSON.stringify(result)
 		pages.current_tab = 2
 		return
 	session = candidate
+	_set_round_controls_enabled(true)
 	status_label.text = "Раунд 0 · цель %s · тестовая мана 500" % String(_settings().get("target", "dummy"))
 	output.text = "ABI Test Lab запущен\n" + JSON.stringify(result) + "\n"
 	output.text += "Исходы и формулы — из CombatEngine. Броски заданы для диагностики.\n"
@@ -483,12 +492,14 @@ func _next_round(cast_ability: bool) -> void:
 	if session == null:
 		return
 	var result: Dictionary = session.next_round(cast_ability)
-	round_history.append(result.duplicate(true))
 	pages.current_tab = 2
 	if not bool(result.get("ok", false)):
 		status_label.text = "Тест остановлен: " + String(result.get("reason", "error"))
 		output.text += "\nОТКАЗ: " + JSON.stringify(result)
+		if bool(result.get("lab_finished", false)):
+			_set_round_controls_enabled(false)
 		return
+	round_history.append(result.duplicate(true))
 	status_label.text = "Раунд %d · %s %d/%d HP · мана %d · ΔHP %+d" % [
 		int(result["round"]), String(result.get("target_name", "Цель")), int(result["hp_after"]), int(result.get("max_hp", 10000)),
 		int(result["mana_after"]), int(result["hp_after"]) - int(result["hp_before"])]
@@ -509,6 +520,10 @@ func _next_round(cast_ability: bool) -> void:
 			int(eff.get("remaining_rounds", 0))])
 	for line in result["report"]:
 		lines.append(String(line))
+	if bool(result.get("lab_finished", false)):
+		lines.append("Тест завершён: %s. Для нового сценария нажмите «Новый тест»." % String(result.get("lab_outcome", "finished")))
+		status_label.text = "Тест завершён · %s" % String(result.get("lab_outcome", "finished"))
+		_set_round_controls_enabled(false)
 	output.text += "\n".join(lines) + "\n"
 	output.set_caret_line(output.get_line_count() - 1)
 
