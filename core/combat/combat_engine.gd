@@ -465,8 +465,13 @@ func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 	for active in target.active_effects.duplicate():
 		if removed.size()>=limit:
 			break
-		# Cleansing affects currently active EFF, not future delayed effects.
+		# A newly applied instant ABI EFF is active but remains unknown
+		# until round end. No cleanse can remove it before the NEXT round,
+		# regardless of the order of instant casts in this same round.
+		# Legacy active records use start_round as their cleanse boundary.
 		if state.round_number < int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0)) <= 0:
+			continue
+		if state.round_number < int(active.get("dispel_available_round",active.get("start_round",999999))):
 			continue
 		var definition:Dictionary=Dictionary(active.get("definition",{}))
 		if EffectPolarity.of(definition)!=polarity:
@@ -541,7 +546,21 @@ func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEven
 	var stack_id := "%s:%d" % [effect_id, _next_effect_stack_id]
 	_next_effect_stack_id += 1
 	var starts_now := bool(event.payload.get("preparation_effect",false))
-	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number if starts_now else state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
+	var start_round: int = state.round_number if starts_now else state.round_number + 1
+	return {
+		"effect_id":effect_id,
+		"definition":definition.duplicate(true),
+		"source_id":event.source_id,
+		"source_type":String(event.payload.get("source_type","unknown")),
+		"source_instance_id":String(event.payload.get("source_instance_id","")),
+		"stack_id":stack_id,
+		"start_round":start_round,
+		"remaining_rounds":int(definition.get("duration_rounds",1)),
+		# Active immediately, but hidden and uncleanseable until the
+		# end-of-round reveal. Actual removal can begin NEXT round.
+		"revealed":not starts_now,
+		"dispel_available_round":state.round_number + 1 if starts_now else start_round
+	}
 
 func _effect_flag(target: CombatantState, field: String) -> bool:
 	return CombatModifierService.flag(target, field, state.round_number)
