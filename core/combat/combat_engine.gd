@@ -479,6 +479,18 @@ func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 		if EffectPolarity.of(definition)!=polarity:
 			continue
 		removed.append(String(active.get("effect_id","")))
+		# One shared-duration record may contain old revealed stacks plus
+		# newly applied hidden instant stacks. Cleanse can take the known
+		# portion, but the unseen addition must survive until next round.
+		var hidden_stacks: int = maxi(0,int(active.get("undisclosed_stacks",0)))
+		var total_stacks: int = maxi(1,int(active.get("stacks",1)))
+		if String(definition.get("stacking",""))=="shared_duration" and hidden_stacks>0 and total_stacks>hidden_stacks:
+			active["stacks"]=hidden_stacks
+			active["active_stacks"]=0 # Known stacks were removed before the EFF tick.
+			active["revealed"]=false
+			active["dispel_available_round"]=state.round_number+1
+			active.erase("visible_remaining_rounds")
+			continue
 		target.active_effects.erase(active)
 	event.set_result("resolved",not removed.is_empty())
 	event.set_result("removed_effect_ids",removed)
@@ -531,7 +543,17 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 			target.active_effects.append(shared_record)
 		else:
 			var shared: Dictionary = matching[0]
-			shared["stacks"] = mini(max_stacks, maxi(1, int(shared.get("stacks", 1))) + 1)
+			var previous_stacks: int = maxi(1,int(shared.get("stacks",1)))
+			var next_stacks: int = mini(max_stacks,previous_stacks+1)
+			# An instant cast can add an undisclosed stack to a pre-existing,
+			# visible shared EFF. Keep the single logical record/timer, but
+			# do not reveal the stack count or refreshed timer mid-round.
+			var surprise_addition: bool = bool(event.payload.get("preparation_effect",false)) and bool(shared.get("revealed",true)) and state.round_number>=int(shared.get("start_round",999999))
+			if surprise_addition and next_stacks>previous_stacks:
+				if not shared.has("visible_remaining_rounds"):
+					shared["visible_remaining_rounds"]=int(shared.get("remaining_rounds",0))
+				shared["undisclosed_stacks"]=int(shared.get("undisclosed_stacks",0))+(next_stacks-previous_stacks)
+			shared["stacks"]=next_stacks
 			# End-of-round expiry decrements records already active this round.
 			var ticks := maxi(1, int(definition.get("duration_rounds", 1)))
 			shared["remaining_rounds"] = ticks + (1 if state.round_number >= int(shared.get("start_round", 999999)) else 0)
