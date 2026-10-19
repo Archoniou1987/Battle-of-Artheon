@@ -275,6 +275,10 @@ func end_round() -> Dictionary:
 	# Death is finalized before threshold checks; dead fighters cannot stun/rebound.
 	CombatTempoService.end_round(state)
 	_tick_effect_durations()
+	# Instant ABI effects were mechanically active throughout this round;
+	# only now can observers see them. Cleanse remains unavailable until
+	# next round via dispel_available_round, never through display state.
+	_reveal_instant_effects()
 	return {
 		"dead_ids":finalized_dead_ids.duplicate(),
 		"kill_attribution":kill_attribution,
@@ -355,6 +359,12 @@ func _deferred_valid(record:Dictionary) -> bool:
 	if bool(record.get("require_target_alive",true)) and (target==null or target.is_death_finalized()):
 		return false
 	return true
+
+func _reveal_instant_effects() -> void:
+	for combatant in state.combatants.values():
+		for active in combatant.active_effects:
+			if not bool(active.get("revealed",true)):
+				active["revealed"] = true
 
 func _tick_effect_durations() -> void:
 	for combatant in state.combatants.values():
