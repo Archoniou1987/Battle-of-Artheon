@@ -9,23 +9,16 @@ const PREPARATION_EFF_FIXTURES = {
 	"EFF_PREP_DISGUISED_CONTROL": {"kind":"debuff", "duration_rounds":2, "tempo_modifier":-100}
 }
 
-## Locked simultaneous intents: only designated preparation ABI precede combat math.
-## Damage and healing share the same provisional HP pool; one-shot wins at end.
+## Every ABI applies in the currently locked round:
+## instant at its beginning, standard with its ordinary shared calculation.
+## HP remains provisional until end_round and EFF has its own lifecycle.
 func _init() -> void:
-	var ok := _test_preparation_effect() and _test_application_timing() and _test_delayed_ability_once() and _test_delayed_damage_cancelled_on_death() and _test_heal_damage_commute() and _test_cleansing_targets()
+	var ok := _test_timing_setting() and _test_early_defence() and _test_both_abi_same_round() and _test_no_action_canceled_by_provisional_death() and _test_heal_damage_commute() and _test_cleansing_targets()
 	print("INTEGRATED_ROUND_PHASES_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
 
-func _test_preparation_effect() -> bool:
-	var immediate_hp: int = _run_prep_case("immediate")
-	var next_round_hp: int = _run_prep_case("next_round")
-	var ok: bool = immediate_hp==80 and next_round_hp==60
-	if not ok:
-		print("ABI_TIMING_PREP_FAIL immediate=",immediate_hp," deferred=",next_round_hp)
-	return ok
-
-## No EFF/category inspection: one explicit setting governs the whole ABI.
-func _test_application_timing() -> bool:
+## The setting is authored on the ABI as a whole, regardless of components.
+func _test_timing_setting() -> bool:
 	var components: Array[Dictionary] = [
 		{"kind":"heal","amount":50},
 		{"kind":"damage","amount":20,"damage_type":"fire"},
@@ -33,126 +26,111 @@ func _test_application_timing() -> bool:
 		{"kind":"effect","effect_id":"EFF_PREP_STUN"},
 		{"kind":"cleanse","dispel_polarity":"BUFF"}
 	]
-	for part in components:
-		var now: Dictionary = {"application_timing":"immediate","components":[part]}
-		var later: Dictionary = {"application_timing":"next_round","components":[part]}
-		if AbilityRuntime.application_timing(now)!="immediate" or AbilityRuntime.application_timing(later)!="next_round":
-			return false
-		if not AbilityRuntime.validate_definition("ABI_NOW",now).is_empty():
-			return false
-		if not AbilityRuntime.validate_definition("ABI_LATER",later).is_empty():
-			return false
-	var mixed:Dictionary={"application_timing":"next_round","components":[components[0],components[2]]}
-	if AbilityRuntime.application_timing(mixed)!="next_round":
+	for component in components:
+		for timing in ["instant","standard"]:
+			var definition:Dictionary={
+				"application_timing":timing,
+				"target_team":"ENEMY",
+				"components":[component]
+			}
+			if AbilityRuntime.application_timing(definition)!=timing:
+				return false
+			if not AbilityRuntime.validate_definition("ABI_TIMING_TEST",definition).is_empty():
+				return false
+	var mixed:Dictionary={"application_timing":"instant","components":[components[0],components[2]]}
+	if AbilityRuntime.application_timing(mixed)!="instant":
 		return false
-	var invalid:Dictionary={"application_timing":"when_crit","components":[components[0]]}
-	if not AbilityRuntime.validate_definition("ABI_INVALID",invalid).has("invalid_application_timing"):
-		return false
-	return AbilityRuntime.application_timing({"components":[components[0]]})=="immediate"
+	for invalid_timing in ["next_round","immediate","when_crit"]:
+		var invalid:Dictionary={"application_timing":invalid_timing,"components":[components[0]]}
+		if not AbilityRuntime.validate_definition("ABI_INVALID_TIMING",invalid).has("invalid_application_timing"):
+			return false
+	return AbilityRuntime.application_timing({"components":[components[0]]})=="standard"
 
-func _run_prep_case(timing: String) -> int:
-	var state := CombatState.new()
-	var attacker := TestFixtureLoader.new_combatant("attacker","Attacker",5,100)
-	var target := TestFixtureLoader.new_combatant("target","Target",5,100)
+func _test_early_defence() -> bool:
+	var early_hp: int = _run_defence_case("instant")
+	var standard_hp: int = _run_defence_case("standard")
+	if early_hp!=80 or standard_hp!=60:
+		print("ABI_TIMING_PHASE_FAIL instant=",early_hp," standard=",standard_hp)
+		return false
+	return true
+
+func _run_defence_case(timing:String) -> int:
+	var state:=CombatState.new()
+	var attacker:=TestFixtureLoader.new_combatant("attacker","Attacker",5,100)
+	var target:=TestFixtureLoader.new_combatant("target","Target",5,100)
 	state.add_combatant(attacker)
 	state.add_combatant(target)
 	state.begin_round()
-	var engine := CombatEngine.new(state, {"effects":PREPARATION_EFF_FIXTURES})
-	var round := CombatRound.new(state.round_number)
-	var definition := {
+	var engine:=CombatEngine.new(state,{"effects":PREPARATION_EFF_FIXTURES})
+	var round:=CombatRound.new(state.round_number)
+	var definition:Dictionary={
 		"application_timing":timing,
 		"target_team":"ALLY",
 		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST","base_chance":100}]
 	}
-	var buff := AbilityRuntime.build_action_event(state,"target","target","ABI_PREP_TEST",definition)
+	# Lock the attack FIRST; an instant defence must still resolve before it.
 	round.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"attacker","target",{"amount":40.0,"damage_type":"physical"}))
-	round.lock_action(buff)
+	round.lock_action(AbilityRuntime.build_action_event(state,"target","target","ABI_DEFENCE",definition))
 	round.resolve(engine)
-	# The immediate defensive EFF must protect this round even when locked
-	# after the incoming damage. NEXT_ROUND cannot affect this round's damage.
 	return target.hp
 
-func _test_delayed_ability_once() -> bool:
-	var state := CombatState.new()
-	var caster := TestFixtureLoader.new_combatant("caster","Caster",5,100)
-	var target := TestFixtureLoader.new_combatant("target","Target",5,100,50)
-	target.hp=50
-	state.add_combatant(caster)
+func _test_both_abi_same_round() -> bool:
+	# Two actors' standard ABI both resolve in the current round, with no
+	# queue for the next round and no double payment.
+	var state:=CombatState.new()
+	var actor:=TestFixtureLoader.new_combatant("actor","Actor",5,100,50)
+	var target:=TestFixtureLoader.new_combatant("target","Target",5,100,50)
+	target.hp=60
+	state.add_combatant(actor)
 	state.add_combatant(target)
-	var engine := CombatEngine.new(state)
-	var orchestrator := RoundOrchestrator.new(state,engine)
-	var first := orchestrator.begin_round()
-	var ability:Dictionary={
-		"application_timing":"next_round",
-		"target_team":"ALLY",
-		"mana_cost":10,
-		"cooldown_rounds":1,
-		"components":[{"kind":"heal","amount":30}]
+	var engine:=CombatEngine.new(state)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	var round:=orchestrator.begin_round()
+	var definitions:Dictionary={
+		"ABI_STANDARD_HIT":{"application_timing":"standard","components":[{"kind":"damage","amount":20,"damage_type":"physical"}],"mana_cost":10},
+		"ABI_STANDARD_HEAL":{"application_timing":"standard","target_team":"ALLY","components":[{"kind":"heal","amount":30}],"mana_cost":10}
 	}
-	var scheduler:=AbilityScheduler.new({"ABI_DELAYED_HEAL":ability},{"target":["ABI_DELAYED_HEAL"]})
-	var cast:=scheduler.cast_event(state,"target","target","ABI_DELAYED_HEAL")
-	if cast==null or target.mana!=40:
+	var scheduler:=AbilityScheduler.new(definitions,{"actor":["ABI_STANDARD_HIT"],"target":["ABI_STANDARD_HEAL"]})
+	var hit:=scheduler.cast_event(state,"actor","target","ABI_STANDARD_HIT")
+	var heal:=scheduler.cast_event(state,"target","target","ABI_STANDARD_HEAL")
+	if hit==null or heal==null or actor.mana!=40 or target.mana!=40:
 		return false
-	first.lock_action(cast)
-	orchestrator.resolve_locked_actions(first)
-	if target.hp!=50 or target.mana!=40 or state.scheduled_abi_intents.size()!=1:
-		return false
-	orchestrator.end_round()
-	var second := orchestrator.begin_round()
-	second.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"caster","target",{"amount":20.0,"damage_type":"physical"}))
-	orchestrator.resolve_locked_actions(second)
-	if target.hp!=60 or target.mana!=40 or not state.scheduled_abi_intents.is_empty():
+	round.lock_action(hit)
+	round.lock_action(heal)
+	orchestrator.resolve_locked_actions(round)
+	# No HP clamping until end of round; both abilities already ran.
+	if target.hp!=70 or state.round_number!=1:
 		return false
 	orchestrator.end_round()
-	var third := orchestrator.begin_round()
-	orchestrator.resolve_locked_actions(third)
-	orchestrator.end_round()
-	var original_actions:=0
-	var executed_actions:=0
+	var action_count:=0
 	for event in state.event_log:
-		if String(event.payload.get("ability_id",""))=="ABI_DELAYED_HEAL" and event.kind==CombatEvent.Kind.ACTION:
-			if String(event.result.get("outcome",""))=="scheduled_next_round":
-				original_actions+=1
-			elif int(event.payload.get("scheduled_from_round",-1))==1:
-				executed_actions+=1
-	return original_actions==1 and executed_actions==1 and target.hp==60
+		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) in ["ABI_STANDARD_HIT","ABI_STANDARD_HEAL"]:
+			if int(event.payload.get("round",-1))!=1:
+				return false
+			action_count+=1
+	return action_count==2 and target.hp==70 and actor.mana==40 and target.mana==40
 
-## A delayed offensive ABI resolves exactly once next round. If its caster
-## died in the declared round, the action is canceled by ordinary death rules.
-func _test_delayed_damage_cancelled_on_death() -> bool:
-	for kill_caster in [false, true]:
-		var state:=CombatState.new()
-		var actor:=TestFixtureLoader.new_combatant("actor","Actor",5,100)
-		var victim:=TestFixtureLoader.new_combatant("victim","Victim",5,100)
-		state.add_combatant(actor)
-		state.add_combatant(victim)
-		var engine:=CombatEngine.new(state)
-		var orchestrator:=RoundOrchestrator.new(state,engine)
-		var round_one:=orchestrator.begin_round()
-		var delayed:Dictionary={"application_timing":"next_round","components":[{"kind":"damage","amount":25.0,"damage_type":"physical"}]}
-		round_one.lock_action(AbilityRuntime.build_action_event(state,"actor","victim","ABI_DELAYED_STRIKE",delayed))
-		if kill_caster:
-			round_one.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"victim","actor",{"amount":100.0,"damage_type":"physical"}))
-		orchestrator.resolve_locked_actions(round_one)
-		if victim.hp!=100:
-			return false
-		orchestrator.end_round()
-		if actor.is_death_finalized()!=kill_caster:
-			return false
-		var round_two:=orchestrator.begin_round()
-		orchestrator.resolve_locked_actions(round_two)
-		orchestrator.end_round()
-		if victim.hp!=(100 if kill_caster else 75):
-			return false
-		var fired:=0
-		for event in state.event_log:
-			if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI_DELAYED_STRIKE" and int(event.payload.get("scheduled_from_round",-1))==1:
-				fired+=1
-				if kill_caster and String(event.result.get("outcome",""))!="source_dead":
-					return false
-		if fired!=1:
-			return false
-	return true
+func _test_no_action_canceled_by_provisional_death() -> bool:
+	# Both participants start their standard ABI in this round. A provisional
+	# negative HP does not cancel the already locked action of the other actor.
+	var state:=CombatState.new()
+	var actor:=TestFixtureLoader.new_combatant("actor","Actor",5,100)
+	var victim:=TestFixtureLoader.new_combatant("victim","Victim",5,100)
+	actor.hp=10
+	victim.hp=10
+	state.add_combatant(actor)
+	state.add_combatant(victim)
+	var engine:=CombatEngine.new(state)
+	var orchestrator:=RoundOrchestrator.new(state,engine)
+	var round:=orchestrator.begin_round()
+	var standard:Dictionary={"application_timing":"standard","components":[{"kind":"damage","amount":20,"damage_type":"physical"}]}
+	round.lock_action(AbilityRuntime.build_action_event(state,"actor","victim","ABI_ACTOR",standard))
+	round.lock_action(AbilityRuntime.build_action_event(state,"victim","actor","ABI_VICTIM",standard))
+	orchestrator.resolve_locked_actions(round)
+	if actor.hp!=-10 or victim.hp!=-10 or actor.is_death_finalized() or victim.is_death_finalized():
+		return false
+	orchestrator.end_round()
+	return actor.is_death_finalized() and victim.is_death_finalized()
 
 func _test_heal_damage_commute() -> bool:
 	var a := _resolve_hp_case(false,false,false)
@@ -226,7 +204,7 @@ func _cleanse_case(enemy_buff: bool) -> bool:
 	var round := orchestrator.begin_round()
 	var polarity := "BUFF" if enemy_buff else "DEBUFF"
 	var team := "ENEMY" if enemy_buff else "ALLY"
-	var ability_definition := {"combat_role":"CLEANSE","target_team":team,"components":[{"kind":"cleanse","dispel_polarity":polarity,"max_effects":1}]}
+	var ability_definition := {"application_timing":"instant","combat_role":"CLEANSE","target_team":team,"components":[{"kind":"cleanse","dispel_polarity":polarity,"max_effects":1}]}
 	if not AbilityRuntime.validate_definition("ABI_CLEANSE",ability_definition).is_empty():
 		return false
 	var cast := AbilityRuntime.build_action_event(state,"source",target.combatant_id,"ABI_CLEANSE",ability_definition)
