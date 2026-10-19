@@ -27,7 +27,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		var ability_id := String(raw_id)
 		if not AbilityRuntime.can_use(ability_id, cooldowns, state.round_number): continue
 		var definition := AbilityCatalog.definition(definitions, ability_id)
-		if definition.is_empty() or not ["immediate","next_round"].has(AbilityRuntime.application_timing(definition)): continue
+		if definition.is_empty() or not ["instant","standard"].has(AbilityRuntime.application_timing(definition)): continue
 		# A self-support cast must not be redirected onto the active enemy.
 		var effective_target_id := source_id if String(definition.get("target_team","")).to_upper()=="ALLY" else target_id
 		var effective_target := state.get_combatant(effective_target_id)
@@ -50,7 +50,7 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 		return null
 	var definition:=AbilityCatalog.definition(definitions,ability_id)
 	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
-	if definition.is_empty() or not ["immediate","next_round"].has(AbilityRuntime.application_timing(definition)) or not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
+	if definition.is_empty() or not ["instant","standard"].has(AbilityRuntime.application_timing(definition)) or not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
 		return null
 	var mana_cost:=int(definition.get("mana_cost",0))
 	if source.mana<mana_cost or not source.spend_mana(mana_cost):
@@ -75,7 +75,7 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	if not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
 		return null
 	var definition:=AbilityCatalog.definition(definitions,ability_id)
-	if definition.is_empty() or not ["immediate","next_round"].has(AbilityRuntime.application_timing(definition)):
+	if definition.is_empty() or not ["instant","standard"].has(AbilityRuntime.application_timing(definition)):
 		return null
 	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
 	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
