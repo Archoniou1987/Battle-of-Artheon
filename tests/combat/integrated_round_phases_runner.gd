@@ -1,9 +1,18 @@
 extends SceneTree
 
+const PREPARATION_EFF_FIXTURES: Dictionary = {
+	"EFF_PREP_TEST": {"kind":"buff", "duration_rounds":2, "damage_reduction":0.5},
+	"EFF_PREP_DEBUFF": {"kind":"debuff", "duration_rounds":2, "damage_reduction":-0.15},
+	"EFF_PREP_DOT": {"kind":"dot", "duration_rounds":2, "damage":8, "damage_type":"fire"},
+	"EFF_PREP_HOT": {"kind":"hot", "duration_rounds":2, "healing":8},
+	"EFF_PREP_STUN": {"kind":"stun", "duration_rounds":2},
+	"EFF_PREP_DISGUISED_CONTROL": {"kind":"debuff", "duration_rounds":2, "tempo_modifier":-100}
+}
+
 ## Locked simultaneous intents: only designated preparation ABI precede combat math.
 ## Damage and healing share the same provisional HP pool; one-shot wins at end.
 func _init() -> void:
-	var ok := _test_preparation_effect() and _test_heal_damage_commute() and _test_cleansing_targets()
+	var ok := _test_preparation_effect() and _test_phase_safety() and _test_heal_damage_commute() and _test_cleansing_targets()
 	print("INTEGRATED_ROUND_PHASES_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
 
@@ -11,21 +20,54 @@ func _test_preparation_effect() -> bool:
 	var damage_after_prep := _run_prep_case(true)
 	var damage_without_prep := _run_prep_case(false)
 	var pure_preparation := AbilityRuntime.resolution_phase({
-		"combat_role":"DEBUFF",
+		"combat_role":"BUFF",
 		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST"}]
-	}) == "PREPARATION"
+	}, PREPARATION_EFF_FIXTURES) == "PREPARATION"
 	var mixed_stays_combat := AbilityRuntime.resolution_phase({
-		"combat_role":"DEBUFF",
+		"combat_role":"BUFF",
 		"components":[{"kind":"damage","amount":2.0,"damage_type":"fire"},{"kind":"effect","effect_id":"EFF_PREP_TEST"}]
-	}) == "COMBAT"
+	}, PREPARATION_EFF_FIXTURES) == "COMBAT"
 	var control_stays_combat := AbilityRuntime.resolution_phase({
 		"combat_role":"CONTROL",
 		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST"}]
-	}) == "COMBAT"
+	}, PREPARATION_EFF_FIXTURES) == "COMBAT"
 	var ok := damage_after_prep == 80 and damage_without_prep == 60 and pure_preparation and mixed_stays_combat and control_stays_combat
 	if not ok:
 		print("PREPARATION_PHASE_FAIL with_prep_hp=",damage_after_prep," without_prep_hp=",damage_without_prep)
 	return ok
+
+## Early phase is only for pure stat buffs/debuffs and dispelling.
+## A role label cannot smuggle a DoT, HoT or stun into this phase.
+func _test_phase_safety() -> bool:
+	var cases: Array[Dictionary] = [
+		{"role":"DEBUFF","effect":"EFF_PREP_DEBUFF","expected":"PREPARATION"},
+		{"role":"DEBUFF","effect":"EFF_PREP_DOT","expected":"COMBAT"},
+		{"role":"BUFF","effect":"EFF_PREP_HOT","expected":"COMBAT"},
+		{"role":"DEBUFF","effect":"EFF_PREP_STUN","expected":"COMBAT"},
+		{"role":"DEBUFF","effect":"EFF_PREP_DISGUISED_CONTROL","expected":"COMBAT"},
+		{"role":"DEBUFF","effect":"EFF_MISSING","expected":"COMBAT"},
+		{"role":"DEBUFF","effect":"EFF_PREP_TEST","expected":"COMBAT"}
+	]
+	for item in cases:
+		var definition: Dictionary = {
+			"combat_role":String(item["role"]),
+			"components":[{"kind":"effect","effect_id":String(item["effect"])}]
+		}
+		var actual: String = AbilityRuntime.resolution_phase(definition,PREPARATION_EFF_FIXTURES)
+		if actual != String(item["expected"]):
+			print("PREPARATION_SAFETY_FAIL effect=",item["effect"]," actual=",actual)
+			return false
+	var cleanse: Dictionary = {
+		"combat_role":"CLEANSE",
+		"target_team":"ENEMY",
+		"components":[{"kind":"cleanse","dispel_polarity":"BUFF"}]
+	}
+	var dangerous_mixed: Dictionary = {
+		"combat_role":"CLEANSE",
+		"target_team":"ENEMY",
+		"components":[{"kind":"cleanse","dispel_polarity":"BUFF"},{"kind":"damage","amount":5.0,"damage_type":"fire"}]
+	}
+	return AbilityRuntime.resolution_phase(cleanse,PREPARATION_EFF_FIXTURES)=="PREPARATION" and AbilityRuntime.resolution_phase(dangerous_mixed,PREPARATION_EFF_FIXTURES)=="COMBAT"
 
 func _run_prep_case(is_preparation: bool) -> int:
 	var state := CombatState.new()
@@ -34,16 +76,14 @@ func _run_prep_case(is_preparation: bool) -> int:
 	state.add_combatant(attacker)
 	state.add_combatant(target)
 	state.begin_round()
-	var engine := CombatEngine.new(state,{"effects":{
-		"EFF_PREP_TEST":{"kind":"buff","duration_rounds":2,"damage_reduction":0.5}
-	}})
+	var engine := CombatEngine.new(state, {"effects":PREPARATION_EFF_FIXTURES})
 	var round := CombatRound.new(state.round_number)
 	var definition := {
 		"combat_role":"BUFF" if is_preparation else "CONTROL",
 		"target_team":"ALLY",
 		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST","base_chance":100}]
 	}
-	var buff := AbilityRuntime.build_action_event(state,"target","target","ABI_PREP_TEST",definition)
+	var buff := AbilityRuntime.build_action_event(state,"target","target","ABI_PREP_TEST",definition,PREPARATION_EFF_FIXTURES)
 	round.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"attacker","target",{"amount":40.0,"damage_type":"physical"}))
 	round.lock_action(buff) # Locking order does not override phase classification.
 	round.resolve(engine)
