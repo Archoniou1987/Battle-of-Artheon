@@ -177,6 +177,9 @@ func register_persistent_action(source_id:String, target_ids:Array[String], payl
 func resolve_active_timed_effects() -> Array[int]:
 	var event_ids:Array[int]=[]
 	for combatant in state.combatants.values():
+		# Timed effects remain eligible during the lethal round, not after it.
+		if combatant.is_death_finalized():
+			continue
 		for active in combatant.active_effects:
 			if state.round_number<int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0))<=0:
 				continue
@@ -256,6 +259,9 @@ func end_round() -> Dictionary:
 	var effect_event_ids:=resolve_effect_phase()
 	effect_event_ids.append_array(resolve_active_timed_effects())
 	for combatant in state.combatants.values():
+		# Existing corpses must not be reported as newly killed every round.
+		if combatant.is_death_finalized():
+			continue
 		if combatant.one_shot_kill or not combatant.is_alive():
 			combatant.death_finalized=true
 			finalized_dead_ids.append(combatant.combatant_id)
