@@ -77,8 +77,14 @@ static func run()->bool:
 	if bool(Dictionary(ability_views.get("EXPENSIVE",{})).get("resource_ready",true)): return false
 	if bool(Dictionary(ability_views.get("COOLDOWN",{})).get("cooldown_ready",true)): return false
 	hero.combat_stats["par_totals"]["PAR073"]=2
-	if bool(api.set_manual_block("hero",["head","arms"]).get("ok",true)): return false
+	if not bool(api.set_manual_block("hero",["head","arms"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms"]: return false
 	if not bool(api.set_manual_block("hero",["chest","arms"]).get("ok",false)): return false
+	if bool(api.set_manual_block("hero",["head"]).get("ok",true)): return false
+	hero.combat_stats["par_totals"]["PAR073"]=4
+	if not bool(api.set_manual_block("hero",["head","arms","waist","legs"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms","waist","legs"]: return false
+	hero.combat_stats["par_totals"]["PAR073"]=2
 	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
 	if hero.combat_stats.has("manual_block_zones"): return false
