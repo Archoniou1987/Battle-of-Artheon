@@ -36,5 +36,29 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: independent block zone selection")
 		quit(1)
 		return
+	if arena.ability_buttons.size() != 5:
+		push_error("ARENA_OPEN_SMOKE=FAIL: expected exactly five ABI controls")
+		quit(1)
+		return
+	# Use a canonical definition for UI selection; no fake combat damage.
+	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id] = ["ABI003"]
+	arena.combat_session.player_ability_slots[0] = "ABI003"
+	arena.combat_session.fighter(true).max_mana = 100
+	arena.combat_session.fighter(true).mana = 100
+	arena._refresh_ability_buttons()
+	if arena.ability_buttons[0].disabled:
+		push_error("ARENA_OPEN_SMOKE=FAIL: equipped ABI remains disabled")
+		quit(1)
+		return
+	arena._select_ability(0)
+	if arena.selected_ability != "ABI003":
+		push_error("ARENA_OPEN_SMOKE=FAIL: ABI selection does not reach Arena")
+		quit(1)
+		return
+	arena._select_ability(0)
+	if not arena.selected_ability.is_empty():
+		push_error("ARENA_OPEN_SMOKE=FAIL: second tap did not deselect ABI")
+		quit(1)
+		return
 	print("ARENA_OPEN_SMOKE=PASS")
 	quit(0)
