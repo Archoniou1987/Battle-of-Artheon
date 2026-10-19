@@ -97,8 +97,12 @@ static func run()->bool:
 	hero.combat_stats["par_totals"]["PAR073"]=4
 	if not bool(api.set_manual_block("hero",["head","arms","waist","legs"]).get("ok",false)): return false
 	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms","waist","legs"]: return false
+	# Changing a synthetic PAR073 fixture value does not silently mutate the
+	# player's explicitly selected defense; the next submission revalidates it.
 	hero.combat_stats["par_totals"]["PAR073"]=2
-	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms","waist","legs"]: return false
+	if not bool(api.set_manual_block("hero",["chest","legs"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["chest","legs"]: return false
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
 	if hero.combat_stats.has("manual_block_zones"): return false
 	var before_ranged_mana:=hero.mana
