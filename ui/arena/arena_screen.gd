@@ -886,6 +886,7 @@ func _build_resource_display(is_player: bool) -> void:
 func _start_combat_session() -> void:
 	if character == null or repository == null:
 		return
+	selected_ability = ""
 	combat_session = ArenaCombatSession.new(character, repository)
 	# Test-only level override on combat snapshots; persistent character data is untouched.
 	combat_session.fighter(true).level = test_player_level
