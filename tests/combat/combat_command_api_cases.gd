@@ -53,6 +53,11 @@ static func run()->bool:
 	var zone_event:CombatEvent=state.pending_events.back()
 	if int(zone_event.payload.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
 	if hero.mana!=9: return false
+	# A zone ABI and a direct ABI cannot be used in the same round.
+	if bool(api.cast_ability("hero","enemy","RANGED").get("ok",true)): return false
+	if hero.mana!=9 or scheduler.cooldowns_by_combatant.get("hero",{}).has("RANGED"): return false
+	orchestrator.end_round()
+	orchestrator.begin_round()
 	if not bool(api.ability_intent("hero","enemy",{"min_zone_distance":0,"max_zone_distance":1}).get("ok",false)): return false
 	var actions:=api.available_actions("hero",{
 		"RANGED":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":5},
@@ -88,9 +93,10 @@ static func run()->bool:
 	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
 	if hero.combat_stats.has("manual_block_zones"): return false
+	var before_ranged_mana:=hero.mana
 	var cast_result:=api.cast_ability("hero","enemy","RANGED")
 	if not bool(cast_result.get("ok",false)): return false
-	if hero.mana!=4: return false
+	if hero.mana!=before_ranged_mana-5: return false
 	engine.resolve_pending_events()
 	if enemy.hp!=83: return false
 	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
