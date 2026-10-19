@@ -49,6 +49,17 @@ func _init() -> void:
 	if not bool(result.get("ok",false)):
 		_finish(false,"round_rejected_"+String(result.get("reason","")))
 		return
+	var named_abi_lines: int = 0
+	var weapon_lines: int = 0
+	for raw_line in Array(result.get("lines", [])):
+		var line: String = String(raw_line)
+		if line.contains("ABI «Fireball»"):
+			named_abi_lines += 1
+		if line.contains("атакует"):
+			weapon_lines += 1
+	if named_abi_lines != 1 or weapon_lines < 2:
+		_finish(false,"round_journal_abi_"+str(named_abi_lines)+"_physical_"+str(weapon_lines))
+		return
 	var physical:=0
 	var casts:=0
 	var weapons:Array[int]=[]
