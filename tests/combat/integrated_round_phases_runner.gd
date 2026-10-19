@@ -12,7 +12,7 @@ const PREPARATION_EFF_FIXTURES = {
 ## Locked simultaneous intents: only designated preparation ABI precede combat math.
 ## Damage and healing share the same provisional HP pool; one-shot wins at end.
 func _init() -> void:
-	var ok := _test_preparation_effect() and _test_application_timing() and _test_delayed_ability_once() and _test_heal_damage_commute() and _test_cleansing_targets()
+	var ok := _test_preparation_effect() and _test_application_timing() and _test_delayed_ability_once() and _test_delayed_damage_cancelled_on_death() and _test_heal_damage_commute() and _test_cleansing_targets()
 	print("INTEGRATED_ROUND_PHASES_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
 
@@ -116,6 +116,43 @@ func _test_delayed_ability_once() -> bool:
 			elif int(event.payload.get("scheduled_from_round",-1))==1:
 				executed_actions+=1
 	return original_actions==1 and executed_actions==1 and target.hp==60
+
+## A delayed offensive ABI resolves exactly once next round. If its caster
+## died in the declared round, the action is canceled by ordinary death rules.
+func _test_delayed_damage_cancelled_on_death() -> bool:
+	for kill_caster in [false, true]:
+		var state:=CombatState.new()
+		var actor:=TestFixtureLoader.new_combatant("actor","Actor",5,100)
+		var victim:=TestFixtureLoader.new_combatant("victim","Victim",5,100)
+		state.add_combatant(actor)
+		state.add_combatant(victim)
+		var engine:=CombatEngine.new(state)
+		var orchestrator:=RoundOrchestrator.new(state,engine)
+		var round_one:=orchestrator.begin_round()
+		var delayed:Dictionary={"application_timing":"next_round","components":[{"kind":"damage","amount":25.0,"damage_type":"physical"}]}
+		round_one.lock_action(AbilityRuntime.build_action_event(state,"actor","victim","ABI_DELAYED_STRIKE",delayed))
+		if kill_caster:
+			round_one.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"victim","actor",{"amount":100.0,"damage_type":"physical"}))
+		orchestrator.resolve_locked_actions(round_one)
+		if victim.hp!=100:
+			return false
+		orchestrator.end_round()
+		if actor.is_death_finalized()!=kill_caster:
+			return false
+		var round_two:=orchestrator.begin_round()
+		orchestrator.resolve_locked_actions(round_two)
+		orchestrator.end_round()
+		if victim.hp!=(100 if kill_caster else 75):
+			return false
+		var fired:=0
+		for event in state.event_log:
+			if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI_DELAYED_STRIKE" and int(event.payload.get("scheduled_from_round",-1))==1:
+				fired+=1
+				if kill_caster and String(event.result.get("outcome",""))!="source_dead":
+					return false
+		if fired!=1:
+			return false
+	return true
 
 func _test_heal_damage_commute() -> bool:
 	var a := _resolve_hp_case(false,false,false)
