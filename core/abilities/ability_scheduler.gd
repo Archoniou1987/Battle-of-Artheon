@@ -69,6 +69,9 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	return event
 
 func _source_ready(source: CombatantState, round_number: int) -> bool:
+	# HP <= 0 during the current round is provisional, but finalized death is not.
+	if source.is_death_finalized():
+		return false
 	var status := ParCombatContract.action_status(source, round_number)
 	if not bool(status.ok) and String(status.reason) != "stunned":
 		push_error("ABI PAR invariant violated: " + String(status.reason))
