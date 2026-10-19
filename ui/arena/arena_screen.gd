@@ -52,9 +52,8 @@ var arena_background: TextureRect
 var log_view: RichTextLabel
 var round_button: Button
 var round_button_art: TextureRect
-var defense_zone := "chest"
+var defense_zones: Array[String] = ["chest"]
 var defense_capacity := 1
-var defense_start := 1
 var attack_zones: Array[String] = []
 var attack_count := 2
 var defense_buttons: Array[Button] = []
@@ -669,8 +668,14 @@ func _show_fighter_details(is_player: bool) -> void:
 func _select_zone(is_player: bool, zone: String) -> void:
 	var index := ZONES.find(zone)
 	if is_player:
-		defense_start = mini(index, ZONES.size() - defense_capacity)
-		defense_zone = ZONES[defense_start]
+		# Each protected zone is individually chosen; non-adjacent combinations work.
+		if defense_zones.has(zone):
+			if defense_zones.size() > 1:
+				defense_zones.erase(zone)
+		elif defense_zones.size() < defense_capacity:
+			defense_zones.append(zone)
+		else:
+			defense_zones[defense_zones.size() - 1] = zone
 	else:
 		if attack_zones.has(zone):
 			attack_zones.erase(zone)
@@ -682,8 +687,15 @@ func _select_zone(is_player: bool, zone: String) -> void:
 	_update_zone_buttons()
 
 func set_defense_capacity(capacity: int) -> void:
-	defense_capacity = clampi(capacity, 1, 3)
-	defense_start = mini(defense_start, ZONES.size() - defense_capacity)
+	defense_capacity = clampi(capacity, 1, 4)
+	while defense_zones.size() > defense_capacity:
+		defense_zones.pop_back()
+	# Preserve the familiar ready-to-fight default while allowing any zone combination.
+	for zone in ["chest", "arms", "waist", "legs", "head"]:
+		if defense_zones.size() >= defense_capacity:
+			break
+		if not defense_zones.has(zone):
+			defense_zones.append(zone)
 	_update_zone_buttons()
 
 func set_attack_count(count: int) -> void:
@@ -715,13 +727,13 @@ func selected_attack_targets() -> Array[String]:
 
 func selected_block_zones() -> Array[String]:
 	var result: Array[String] = []
-	for i in range(defense_start, defense_start + defense_capacity):
-		result.append(ZONES[i])
+	for zone in defense_zones:
+		result.append(zone)
 	return result
 
 func _update_zone_buttons() -> void:
 	for i in range(defense_buttons.size()):
-		var chosen := i >= defense_start and i < defense_start + defense_capacity
+		var chosen := defense_zones.has(ZONES[i])
 		defense_buttons[i].set_pressed_no_signal(chosen)
 		defense_buttons[i].modulate = Color.WHITE
 		var outline := defense_buttons[i].get_node_or_null("SelectionOutline")
