@@ -4,6 +4,14 @@ extends RefCounted
 var definitions: Dictionary
 var loadouts: Dictionary
 var cooldowns_by_combatant: Dictionary = {}
+## One active ABI per combatant per round across all cast entry points.
+var cast_round_by_combatant: Dictionary = {}
+
+func can_cast_this_round(source_id: String, round_number: int) -> bool:
+	return int(cast_round_by_combatant.get(source_id, -1)) != round_number
+
+func _record_cast(source_id: String, round_number: int) -> void:
+	cast_round_by_combatant[source_id] = round_number
 
 func _init(ability_definitions: Dictionary = {}, ability_loadouts: Dictionary = {}) -> void:
 	definitions = ability_definitions
@@ -14,7 +22,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 	var cooldowns: Dictionary = cooldowns_by_combatant.get(source_id, {})
 	var source := state.get_combatant(source_id)
 	if source == null: return events
-	if not _source_ready(source, state.round_number): return events
+	if not _source_ready(source, state.round_number) or not can_cast_this_round(source_id, state.round_number): return events
 	# A finalized corpse is never a valid direct target; do not charge mana
 	# or start cooldown for events that would be rejected by CombatEngine.
 	if not target_id.is_empty():
@@ -31,6 +39,8 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		if not source.spend_mana(mana_cost): continue
 		events.append(AbilityRuntime.build_action_event(state, source_id, target_id, ability_id, definition))
 		AbilityRuntime.start_cooldown(ability_id, cooldowns, state.round_number, int(definition.get("cooldown_rounds", 0)))
+		_record_cast(source_id, state.round_number)
+		break # The automatic policy picks at most one ready ABI.
 	cooldowns_by_combatant[source_id] = cooldowns
 	return events
 
@@ -38,7 +48,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 
 func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
-	if source==null or not _source_ready(source, state.round_number) or not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
+	if source==null or not _source_ready(source, state.round_number) or not can_cast_this_round(source_id,state.round_number) or not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
 		return null
 	var definition:=AbilityCatalog.definition(definitions,ability_id)
 	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
@@ -52,11 +62,12 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 	var event:=AbilityRuntime.build_action_event(state,source_id,"",ability_id,cast_definition)
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
+	_record_cast(source_id,state.round_number)
 	return event
 
 func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
-	if source==null or not _source_ready(source, state.round_number):
+	if source==null or not _source_ready(source, state.round_number) or not can_cast_this_round(source_id,state.round_number):
 		return null
 	# Check target finalization before spending mana or starting cooldown.
 	# Provisional HP <= 0 is still legal until the round's death phase.
@@ -77,6 +88,7 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	var event:=AbilityRuntime.build_action_event(state,source_id,target_id,ability_id,definition)
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
+	_record_cast(source_id,state.round_number)
 	return event
 
 func _source_ready(source: CombatantState, round_number: int) -> bool:
