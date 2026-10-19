@@ -19,7 +19,7 @@
     ],
     "cooldown_rounds": 1,
     "mana_cost": 10,
-    "application_timing": "immediate"
+    "application_timing": "standard"
   },
   "ABI004": {
     "name": "Healing",
@@ -40,6 +40,6 @@
     ],
     "cooldown_rounds": 1,
     "mana_cost": 10,
-    "application_timing": "immediate"
+    "application_timing": "standard"
   }
 }
