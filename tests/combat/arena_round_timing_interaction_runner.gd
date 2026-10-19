@@ -112,11 +112,13 @@ func _test_player_instant_npc_standard() -> bool:
 	var options := session.player_ability_options()
 	if not bool(options[0].get("available",false)):
 		return false
+	var original_reduction: float = CombatModifierService.damage_reduction(session.fighter(true),1)
 	if not _run(session,EARLY_GUARD):
 		return false
 	var reduction := _ability_damage_reduction(session,ArenaCombatSession.ENEMY_ID)
-	if reduction < 0.49 or reduction > 0.51:
-		print("ARENA_TIMING_PLAYER_GUARD_REDUCTION=",reduction)
+	var expected_reduction: float = minf(1.0,original_reduction+0.5)
+	if not is_equal_approx(reduction,expected_reduction):
+		print("ARENA_TIMING_PLAYER_GUARD_REDUCTION=",reduction," expected=",expected_reduction)
 		return false
 	if not _casts_in_first_round(session,EARLY_GUARD,STANDARD_HIT):
 		return false
@@ -128,11 +130,13 @@ func _test_npc_instant_player_standard() -> bool:
 	definitions[STANDARD_HIT] = _hit()
 	definitions[EARLY_GUARD] = _guard("instant")
 	_configure(session, STANDARD_HIT, EARLY_GUARD, definitions)
+	var original_reduction: float = CombatModifierService.damage_reduction(session.fighter(false),1)
 	if not _run(session,STANDARD_HIT):
 		return false
 	var reduction := _ability_damage_reduction(session,session.player_id)
-	if reduction < 0.49 or reduction > 0.51:
-		print("ARENA_TIMING_NPC_GUARD_REDUCTION=",reduction)
+	var expected_reduction: float = minf(1.0,original_reduction+0.5)
+	if not is_equal_approx(reduction,expected_reduction):
+		print("ARENA_TIMING_NPC_GUARD_REDUCTION=",reduction," expected=",expected_reduction)
 		return false
 	if not _casts_in_first_round(session,STANDARD_HIT,EARLY_GUARD):
 		return false
