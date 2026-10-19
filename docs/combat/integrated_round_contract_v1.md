@@ -9,7 +9,9 @@ individual rules must not be marked implemented without code + CI evidence.
   single ABI are locked; the other actor's intentions must not alter the submission.
 - No damage is calculated from the submitted plan before the round resolution starts.
 - Submission is validated before changing HP/mana, starting cooldowns, or advancing a round.
-- Execution phase order is fixed; the player does not choose the order of attacks and ABI.
+- Players never choose ordering inside the simultaneous resolution phase. Pre-resolution
+  buff/debuff/cleanse is a special exception; physical attacks, damage ABI, control
+  and healing are peer actions resolved from the same sealed round intent.
 
 ## Action budget
 - Ordinary physical attacks: 1–2 per round, determined by equipped MH/OH profiles (PAR057).
@@ -31,11 +33,24 @@ All choices are locked before any combat event resolves.
 - Early, before physical damage: pure buffs, pure debuffs, cleansing/dispelling.
   Cleansing is a support-style action, but may remove **beneficial enemy buffs** as
   well as harmful effects on allies; targeting must be explicit.
-- Late, following physical attacks: direct damage, control and healing ABI.
-  Healing remains subject to deferred death at end of round and the one-hit
-  one-shot death contract.
-- Mixed ABI containing damage or control is late **as a whole**. Never peel an
-  early debuff component out of a late damaging ABI.
+- Shared combat resolution: physical MH/OH attacks, damaging ABI, control ABI and
+  healing ABI are peer actions in the SAME round. There is NO rule that all
+  physical strikes must complete before damaging/healing ABI. A deterministic
+  internal event traversal must NOT grant a combat advantage purely by traversal order.
+  Healing is not an early preparatory buff. It contributes to the round's HP
+  outcome alongside damage; deferred death is checked only at end of round.
+- HP damage/healing accounting must be order-independent: compute individual
+  post-mitigation hit results and healing contributions, then reconcile the
+  provisional net HP for the round (and clamp displayed/final surviving HP as
+  appropriate). In particular, a healing amount must not be discarded merely
+  because the current provisional HP temporarily exceeds MaxHP before subsequent
+  hits. A single lethal one-shot hit >= MaxHP remains fatal even if net HP > 0.
+  EFF tick lifecycle retains its own semantics and runs before death finalization.
+- Mixed ABI containing damage or control belongs to the shared combat resolution
+  **as a whole**. Never peel an early debuff component out of a damaging/control ABI.
+  Round-preparation debuffs and buffs are the sole exception to simultaneous
+  damage/healing calculation; do not turn ordinary ABI damage or healing into
+  mandatory subphases.
 - Do not infer timing from ABI name or merely from whether it produces an EFF.
   A dedicated categorical definition/contract must be validated by the runtime.
 - Persistent EFF ticks run according to their own end-round lifecycle; character
@@ -56,6 +71,9 @@ All choices are locked before any combat event resolves.
 3. 1–4 arbitrary non-adjacent blocks work in live Arena and shared Combat.
 4. Changing selections after End Round cannot change that round's results.
 5. Mixed damaging/control ABI do not execute in early phase.
-6. Buff/debuff/dispel precede physical damage; heal happens in late phase.
+6. Buff/debuff/dispel apply before combat calculation; damage/heal/control/physical
+   are peer round actions, not sequential priority classes. Verify both
+   damage-before-heal and heal-before-damage yield the same final HP, including
+   overheal near MaxHP and negative provisional HP, except the one-shot override.
 7. EFF stacking/expiry and deferred death/one-shot rules remain intact.
 8. Dead, stunned, invalid and duplicate casts cannot consume an ABI slot, mana or cooldown.
