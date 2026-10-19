@@ -1,6 +1,6 @@
 extends SceneTree
 
-const PREPARATION_EFF_FIXTURES: Dictionary = {
+const PREPARATION_EFF_FIXTURES = {
 	"EFF_PREP_TEST": {"kind":"buff", "duration_rounds":2, "damage_reduction":0.5},
 	"EFF_PREP_DEBUFF": {"kind":"debuff", "duration_rounds":2, "damage_reduction":-0.15},
 	"EFF_PREP_DOT": {"kind":"dot", "duration_rounds":2, "damage":8, "damage_type":"fire"},
@@ -67,7 +67,17 @@ func _test_phase_safety() -> bool:
 		"target_team":"ENEMY",
 		"components":[{"kind":"cleanse","dispel_polarity":"BUFF"},{"kind":"damage","amount":5.0,"damage_type":"fire"}]
 	}
-	return AbilityRuntime.resolution_phase(cleanse,PREPARATION_EFF_FIXTURES)=="PREPARATION" and AbilityRuntime.resolution_phase(dangerous_mixed,PREPARATION_EFF_FIXTURES)=="COMBAT"
+	# Real canonical catalog must enforce the same constraints without
+	# development-only effect metadata being supplied by the caller.
+	var mislabeled_dot: Dictionary = {
+		"combat_role":"DEBUFF",
+		"components":[{"kind":"effect","effect_id":"EFF003"}]
+	}
+	var mislabeled_hot: Dictionary = {
+		"combat_role":"BUFF",
+		"components":[{"kind":"effect","effect_id":"EFF004"}]
+	}
+	return AbilityRuntime.resolution_phase(cleanse,PREPARATION_EFF_FIXTURES)=="PREPARATION" and AbilityRuntime.resolution_phase(dangerous_mixed,PREPARATION_EFF_FIXTURES)=="COMBAT" and AbilityRuntime.resolution_phase(mislabeled_dot)=="COMBAT" and AbilityRuntime.resolution_phase(mislabeled_hot)=="COMBAT"
 
 func _run_prep_case(is_preparation: bool) -> int:
 	var state := CombatState.new()
