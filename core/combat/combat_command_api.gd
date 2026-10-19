@@ -103,15 +103,11 @@ func set_manual_block(source_id:String,body_zones:Array[String])->Dictionary:
 	if normalized.is_empty():
 		return {"ok":false,"reason":"invalid_block_zone"}
 	var block_zone_count:=CombatModifierService.manual_block_zone_capacity(combatant)
+	if block_zone_count < 1 or block_zone_count > 4:
+		return {"ok":false,"reason":"invalid_block_capacity","required_zone_count":block_zone_count}
 	if normalized.size()!=block_zone_count:
 		return {"ok":false,"reason":"invalid_block_zone_count","required_zone_count":block_zone_count}
-	var indices:Array[int]=[]
-	for body_zone in normalized:
-		indices.append(["head","chest","arms","waist","legs"].find(body_zone))
-	indices.sort()
-	for i in range(1,indices.size()):
-		if indices[i]!=indices[i-1]+1:
-			return {"ok":false,"reason":"non_contiguous_block_zones"}
+	# Arbitrary body zones are legal; equipment capacity is the only layout limit.
 	combatant.combat_stats["manual_block_zones"]=normalized
 	return {"ok":true,"reason":"ok","zones":normalized,"zone_count":block_zone_count}
 
