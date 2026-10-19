@@ -67,6 +67,7 @@ var ap_segments: Dictionary = {}
 var ap_labels: Dictionary = {}
 var effects_rows: Dictionary = {}
 var selected_ability := ""
+var ability_buttons: Array[Button] = []
 var combat_session: ArenaCombatSession
 var test_player_level := 1
 var test_enemy_level := 1
@@ -314,8 +315,10 @@ func _build_square() -> void:
 				button.add_theme_stylebox_override(state, abi_style)
 		button.tooltip_text = "Активная способность %d" % (index + 1)
 		button.toggle_mode = true
-		button.disabled = true # UI only until CombatCommandApi integration.
+		button.disabled = true # Enabled only for a canonical equipped ABI.
+		button.pressed.connect(_select_ability.bind(index))
 		abilities.add_child(button)
+		ability_buttons.append(button)
 	_build_resource_display(true)
 	_build_resource_display(false)
 	round_button = Button.new()
@@ -704,6 +707,39 @@ func set_attack_count(count: int) -> void:
 		attack_zones.pop_back()
 	_update_zone_buttons()
 
+func _select_ability(index: int) -> void:
+	if combat_session == null or index < 0 or index >= ability_buttons.size():
+		return
+	var options:=combat_session.player_ability_options()
+	if index >= options.size():
+		return
+	var option:Dictionary=options[index]
+	if not bool(option.get("available",false)):
+		return
+	var ability_id:=String(option.get("id",""))
+	selected_ability = "" if selected_ability==ability_id else ability_id
+	_refresh_ability_buttons()
+
+func _refresh_ability_buttons() -> void:
+	if combat_session == null:
+		return
+	var options:=combat_session.player_ability_options()
+	var selected_still_valid:=false
+	for index in range(ability_buttons.size()):
+		var button:=ability_buttons[index]
+		var option:Dictionary=options[index] if index<options.size() else {}
+		var ability_id:=String(option.get("id",""))
+		var available:=bool(option.get("available",false))
+		if selected_ability==ability_id and available and not ability_id.is_empty():
+			selected_still_valid=true
+		button.disabled=not available
+		button.text=ability_id if not ability_id.is_empty() else ""
+		button.add_theme_font_size_override("font_size",8)
+		button.tooltip_text=("%s | %s | Mana %d" % [ability_id,String(option.get("name",ability_id)),int(option.get("mana_cost",0))]) if bool(option.get("defined",false)) else ("ABI не определена в основном каталоге: " + ability_id if not ability_id.is_empty() else "Пустой слот ABI")
+		button.set_pressed_no_signal(available and selected_ability==ability_id)
+	if not selected_still_valid:
+		selected_ability=""
+
 func set_combat_ready(ready: bool) -> void:
 	if round_button != null:
 		round_button.disabled = not ready
@@ -868,7 +904,8 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 	if combat_session == null:
 		return
 	set_combat_ready(false)
-	var result: Dictionary = combat_session.play_round(targets, blocks)
+	var locked_ability_id:=selected_ability
+	var result: Dictionary = combat_session.play_round(targets, blocks, locked_ability_id)
 	if not bool(result.get("ok", false)):
 		_prepend_combat_log("Команда отклонена: %s" % String(result.get("reason", "unknown")))
 		set_combat_ready(true)
@@ -881,6 +918,7 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 			resources_changed.emit()
 		else:
 			push_error("Arena resource write-back rejected: player snapshot mismatch")
+	selected_ability=""
 	_sync_combat_session()
 	var round_lines: Array[String] = ["Раунд %d" % int(result.get("round", 0))]
 	for line in Array(result.get("lines", [])):
@@ -908,6 +946,7 @@ func _sync_combat_session() -> void:
 	set_fighter_hp(false, enemy.visible_hp(), enemy.max_hp)
 	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
 	set_fighter_resources(false, enemy.mana, enemy.max_mana, enemy.action_points, enemy.max_action_points)
+	_refresh_ability_buttons()
 
 func refresh() -> void:
 	for slot in player_slots:
