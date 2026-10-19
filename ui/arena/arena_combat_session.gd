@@ -238,6 +238,14 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		if event.kind == CombatEvent.Kind.DAMAGE and event.parent_event_id >= 0:
 			damage_by_attack[event.parent_event_id] = int(event.result.get("hp_removed", 0))
 	for event in state.event_log:
+		if int(event.payload.get("round",-1))!=state.round_number or event.kind!=CombatEvent.Kind.ACTION:
+			continue
+		if String(event.payload.get("source_kind",""))!="ability":
+			continue
+		var ability_name:=String(AbilityCatalog.definition(ability_scheduler.definitions,String(event.payload.get("ability_id",""))).get("name",event.payload.get("ability_id","")))
+		var user_name:="Игрок" if event.source_id==player_id else "Противник"
+		lines.append("%s использует ABI «%s»: %s" % [user_name,ability_name,String(event.result.get("outcome",""))])
+	for event in state.event_log:
 		if int(event.payload.get("round", -1)) != state.round_number or event.kind != CombatEvent.Kind.ATTACK:
 			continue
 		var actor := "Игрок" if event.source_id == player_id else "Противник"
