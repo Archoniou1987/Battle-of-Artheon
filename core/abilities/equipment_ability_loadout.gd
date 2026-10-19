@@ -1,7 +1,8 @@
 class_name EquipmentAbilityLoadout
 extends RefCounted
 
-const WEAPON_SLOTS := ["main_hand", "off_hand"]
+## Off-hand weapons contribute physical attacks and hit effects, NEVER active weapon ABI.
+const WEAPON_SLOTS := ["main_hand"]
 const MAX_WEAPON_ABILITIES := 3
 
 ## Builds five ABI slots from actual equipped item instances:
