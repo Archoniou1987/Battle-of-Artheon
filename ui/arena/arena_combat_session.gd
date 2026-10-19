@@ -84,8 +84,9 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 func fighter(is_player: bool) -> CombatantState:
 	return state.get_combatant(player_id if is_player else ENEMY_ID)
 
-## View-only EFF snapshot. Pending effects remain visible with a pending flag;
-## their own start_round and ticking rules are never changed by the UI.
+## View-only EFF snapshot. Newly applied instant ABI EFF stay hidden
+## until end_round reveals them; this does NOT change active modifiers.
+## Standard pending EFF keep their existing pending visual treatment.
 func effect_view(is_player: bool) -> Dictionary:
 	var beneficial: Array[Dictionary] = []
 	var harmful: Array[Dictionary] = []
@@ -94,6 +95,10 @@ func effect_view(is_player: bool) -> Dictionary:
 		return {"buffs":beneficial,"debuffs":harmful}
 	for record in combatant.active_effects:
 		if not record is Dictionary or int(record.get("remaining_rounds",0))<=0:
+			continue
+		# Surprise effects apply mechanically, but do not leak through the
+		# opponent (or owner) effect panel before end_round.
+		if not bool(record.get("revealed",true)):
 			continue
 		var definition:Dictionary=Dictionary(record.get("definition",{}))
 		var polarity:=EffectPolarity.of(definition)
