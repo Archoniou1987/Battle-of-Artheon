@@ -12,6 +12,7 @@ func _init() -> void:
 		{"id":"one_shot_heal_hot", "ok":_test_one_shot_heal_hot()},
 		{"id":"dot_hot_order", "ok":_test_dot_hot_order()},
 		{"id":"cleanse_prevents_dot_tick", "ok":_test_cleanse_prevents_dot_tick()},
+		{"id":"cleanse_skips_future_effect", "ok":_test_cleanse_skips_future_effect()},
 		{"id":"death_finalized_once", "ok":_test_death_finalized_once()}
 	]
 	var all_pass := true
@@ -152,6 +153,10 @@ func _cleanse_case(timing:String) -> bool:
 	var orchestrator:RoundOrchestrator=scene["orchestrator"]
 	target.hp=45
 	_add_timed(target,DOT_ID,_dot_definition(),"attacker")
+	# One logical shared-duration DOT with three stacks must be removed as
+	# one EFF record by cleanse; none of its stacks can tick afterward.
+	target.active_effects[0]["stacks"] = 3
+	target.active_effects[0]["active_stacks"] = 3
 	var combat_round:=orchestrator.begin_round()
 	var cleanse:=AbilityRuntime.build_action_event(state,"target","target","ABI_CLEANSE_DOT",{
 		"application_timing":timing,
@@ -170,6 +175,33 @@ func _cleanse_case(timing:String) -> bool:
 
 func _test_cleanse_prevents_dot_tick() -> bool:
 	return _cleanse_case("instant") and _cleanse_case("standard")
+
+func _test_cleanse_skips_future_effect() -> bool:
+	var scene:=_fixture()
+	var state:CombatState=scene["state"]
+	var target:CombatantState=scene["target"]
+	var orchestrator:RoundOrchestrator=scene["orchestrator"]
+	target.hp=70
+	_add_timed(target,DOT_ID,_dot_definition(),"attacker",2)
+	var first:=orchestrator.begin_round()
+	var cleanse:=AbilityRuntime.build_action_event(state,"target","target","ABI_CLEANSE_PENDING",{
+		"application_timing":"instant",
+		"target_team":"ALLY",
+		"components":[{"kind":"cleanse","dispel_polarity":"DEBUFF","max_effects":1}]
+	})
+	first.lock_action(cleanse)
+	orchestrator.resolve_locked_actions(first)
+	var removed:=0
+	for event in state.event_log:
+		if event.kind==CombatEvent.Kind.EFFECT and event.parent_event_id==cleanse.event_id:
+			removed=int(event.result.get("removed_count",0))
+	orchestrator.end_round()
+	if removed!=0 or target.hp!=70 or target.active_effects.size()!=1:
+		return false
+	var second:=orchestrator.begin_round()
+	orchestrator.resolve_locked_actions(second)
+	orchestrator.end_round()
+	return target.hp==40 and _count_tick(state,CombatEvent.Kind.DAMAGE,DOT_ID,1)==0 and _count_tick(state,CombatEvent.Kind.DAMAGE,DOT_ID,2)==1
 
 func _test_death_finalized_once() -> bool:
 	var scene:=_fixture()
