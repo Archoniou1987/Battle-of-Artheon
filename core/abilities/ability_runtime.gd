@@ -7,11 +7,11 @@ static func can_use(ability_id: String, cooldowns: Dictionary, round_number: int
 static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_number: int, cooldown_rounds: int) -> void:
 	cooldowns[ability_id] = round_number + cooldown_rounds + 1
 
-## Hand-authored ABI timing. This is a design choice, not inferred from
-## BUFF/DEBUFF/DoT/HoT/control components or the ability name.
-## Missing timing on legacy fixtures means the current round.
+## Hand-authored ABI timing: both settings resolve in the SAME round.
+## "instant" executes before the shared calculations; "standard" is part
+## of the normal end-of-round combat calculation. Never infer from EFF type.
 static func application_timing(definition: Dictionary) -> String:
-	return String(definition.get("application_timing", "immediate")).to_lower()
+	return String(definition.get("application_timing", "standard")).to_lower()
 
 static func normalized_definition(ability_id: String, definition: Dictionary) -> Dictionary:
 	var normalized := definition.duplicate(true)
@@ -40,7 +40,7 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 	var errors:Array[String]=[]
 	var normalized:=normalized_definition(ability_id,definition)
 	if ability_id.is_empty(): errors.append("ability_id_required")
-	if not ["immediate","next_round"].has(application_timing(definition)): errors.append("invalid_application_timing")
+	if not ["instant","standard"].has(application_timing(definition)): errors.append("invalid_application_timing")
 	if not ["MELEE","PROJECTILE","DIRECT","AREA","CHAIN"].has(String(normalized.get("delivery_type",""))): errors.append("invalid_delivery_type")
 	if not ["SINGLE","ALL_MELEE","ALL_RANGED","ALL_ENEMIES","RANDOM_N","TARGET_ADJACENT"].has(String(normalized.get("target_scope",""))): errors.append("invalid_target_scope")
 	var components:Array=normalized.get("components",[])
