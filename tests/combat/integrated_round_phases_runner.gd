@@ -12,74 +12,45 @@ const PREPARATION_EFF_FIXTURES = {
 ## Locked simultaneous intents: only designated preparation ABI precede combat math.
 ## Damage and healing share the same provisional HP pool; one-shot wins at end.
 func _init() -> void:
-	var ok := _test_preparation_effect() and _test_phase_safety() and _test_heal_damage_commute() and _test_cleansing_targets()
+	var ok := _test_preparation_effect() and _test_application_timing() and _test_delayed_ability_once() and _test_heal_damage_commute() and _test_cleansing_targets()
 	print("INTEGRATED_ROUND_PHASES_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
 
 func _test_preparation_effect() -> bool:
-	var damage_after_prep := _run_prep_case(true)
-	var damage_without_prep := _run_prep_case(false)
-	var pure_preparation := AbilityRuntime.resolution_phase({
-		"combat_role":"BUFF",
-		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST"}]
-	}, PREPARATION_EFF_FIXTURES) == "PREPARATION"
-	var mixed_stays_combat := AbilityRuntime.resolution_phase({
-		"combat_role":"BUFF",
-		"components":[{"kind":"damage","amount":2.0,"damage_type":"fire"},{"kind":"effect","effect_id":"EFF_PREP_TEST"}]
-	}, PREPARATION_EFF_FIXTURES) == "COMBAT"
-	var control_stays_combat := AbilityRuntime.resolution_phase({
-		"combat_role":"CONTROL",
-		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST"}]
-	}, PREPARATION_EFF_FIXTURES) == "COMBAT"
-	var ok := damage_after_prep == 80 and damage_without_prep == 60 and pure_preparation and mixed_stays_combat and control_stays_combat
+	var immediate_hp: int = _run_prep_case("immediate")
+	var next_round_hp: int = _run_prep_case("next_round")
+	var ok: bool = immediate_hp==80 and next_round_hp==60
 	if not ok:
-		print("PREPARATION_PHASE_FAIL with_prep_hp=",damage_after_prep," without_prep_hp=",damage_without_prep)
+		print("ABI_TIMING_PREP_FAIL immediate=",immediate_hp," deferred=",next_round_hp)
 	return ok
 
-## Early phase is only for pure stat buffs/debuffs and dispelling.
-## A role label cannot smuggle a DoT, HoT or stun into this phase.
-func _test_phase_safety() -> bool:
-	var cases: Array[Dictionary] = [
-		{"role":"DEBUFF","effect":"EFF_PREP_DEBUFF","expected":"PREPARATION"},
-		{"role":"DEBUFF","effect":"EFF_PREP_DOT","expected":"COMBAT"},
-		{"role":"BUFF","effect":"EFF_PREP_HOT","expected":"COMBAT"},
-		{"role":"DEBUFF","effect":"EFF_PREP_STUN","expected":"COMBAT"},
-		{"role":"DEBUFF","effect":"EFF_PREP_DISGUISED_CONTROL","expected":"COMBAT"},
-		{"role":"DEBUFF","effect":"EFF_MISSING","expected":"COMBAT"},
-		{"role":"DEBUFF","effect":"EFF_PREP_TEST","expected":"COMBAT"}
+## No EFF/category inspection: one explicit setting governs the whole ABI.
+func _test_application_timing() -> bool:
+	var components: Array[Dictionary] = [
+		{"kind":"heal","amount":50},
+		{"kind":"damage","amount":20,"damage_type":"fire"},
+		{"kind":"effect","effect_id":"EFF_PREP_DOT"},
+		{"kind":"effect","effect_id":"EFF_PREP_STUN"},
+		{"kind":"cleanse","dispel_polarity":"BUFF"}
 	]
-	for item in cases:
-		var definition: Dictionary = {
-			"combat_role":String(item["role"]),
-			"components":[{"kind":"effect","effect_id":String(item["effect"])}]
-		}
-		var actual: String = AbilityRuntime.resolution_phase(definition,PREPARATION_EFF_FIXTURES)
-		if actual != String(item["expected"]):
-			print("PREPARATION_SAFETY_FAIL effect=",item["effect"]," actual=",actual)
+	for part in components:
+		var now: Dictionary = {"application_timing":"immediate","components":[part]}
+		var later: Dictionary = {"application_timing":"next_round","components":[part]}
+		if AbilityRuntime.application_timing(now)!="immediate" or AbilityRuntime.application_timing(later)!="next_round":
 			return false
-	var cleanse: Dictionary = {
-		"combat_role":"CLEANSE",
-		"target_team":"ENEMY",
-		"components":[{"kind":"cleanse","dispel_polarity":"BUFF"}]
-	}
-	var dangerous_mixed: Dictionary = {
-		"combat_role":"CLEANSE",
-		"target_team":"ENEMY",
-		"components":[{"kind":"cleanse","dispel_polarity":"BUFF"},{"kind":"damage","amount":5.0,"damage_type":"fire"}]
-	}
-	# Real canonical catalog must enforce the same constraints without
-	# development-only effect metadata being supplied by the caller.
-	var mislabeled_dot: Dictionary = {
-		"combat_role":"DEBUFF",
-		"components":[{"kind":"effect","effect_id":"EFF003"}]
-	}
-	var mislabeled_hot: Dictionary = {
-		"combat_role":"BUFF",
-		"components":[{"kind":"effect","effect_id":"EFF004"}]
-	}
-	return AbilityRuntime.resolution_phase(cleanse,PREPARATION_EFF_FIXTURES)=="PREPARATION" and AbilityRuntime.resolution_phase(dangerous_mixed,PREPARATION_EFF_FIXTURES)=="COMBAT" and AbilityRuntime.resolution_phase(mislabeled_dot)=="COMBAT" and AbilityRuntime.resolution_phase(mislabeled_hot)=="COMBAT"
+		if not AbilityRuntime.validate_definition("ABI_NOW",now).is_empty():
+			return false
+		if not AbilityRuntime.validate_definition("ABI_LATER",later).is_empty():
+			return false
+	var mixed:Dictionary={"application_timing":"next_round","components":[components[0],components[2]]}
+	if AbilityRuntime.application_timing(mixed)!="next_round":
+		return false
+	var invalid:Dictionary={"application_timing":"when_crit","components":[components[0]]}
+	if not AbilityRuntime.validate_definition("ABI_INVALID",invalid).has("invalid_application_timing"):
+		return false
+	return AbilityRuntime.application_timing({"components":[components[0]]})=="immediate"
 
-func _run_prep_case(is_preparation: bool) -> int:
+func _run_prep_case(timing: String) -> int:
 	var state := CombatState.new()
 	var attacker := TestFixtureLoader.new_combatant("attacker","Attacker",5,100)
 	var target := TestFixtureLoader.new_combatant("target","Target",5,100)
@@ -89,15 +60,56 @@ func _run_prep_case(is_preparation: bool) -> int:
 	var engine := CombatEngine.new(state, {"effects":PREPARATION_EFF_FIXTURES})
 	var round := CombatRound.new(state.round_number)
 	var definition := {
-		"combat_role":"BUFF" if is_preparation else "CONTROL",
+		"application_timing":timing,
 		"target_team":"ALLY",
 		"components":[{"kind":"effect","effect_id":"EFF_PREP_TEST","base_chance":100}]
 	}
-	var buff := AbilityRuntime.build_action_event(state,"target","target","ABI_PREP_TEST",definition,PREPARATION_EFF_FIXTURES)
+	var buff := AbilityRuntime.build_action_event(state,"target","target","ABI_PREP_TEST",definition)
 	round.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"attacker","target",{"amount":40.0,"damage_type":"physical"}))
-	round.lock_action(buff) # Locking order does not override phase classification.
+	round.lock_action(buff)
 	round.resolve(engine)
+	# The immediate defensive EFF must protect this round even when locked
+	# after the incoming damage. NEXT_ROUND cannot affect this round's damage.
 	return target.hp
+
+func _test_delayed_ability_once() -> bool:
+	var state := CombatState.new()
+	var caster := TestFixtureLoader.new_combatant("caster","Caster",5,100)
+	var target := TestFixtureLoader.new_combatant("target","Target",5,100)
+	target.hp=50
+	state.add_combatant(caster)
+	state.add_combatant(target)
+	var engine := CombatEngine.new(state)
+	var orchestrator := RoundOrchestrator.new(state,engine)
+	var first := orchestrator.begin_round()
+	var ability:Dictionary={
+		"application_timing":"next_round",
+		"target_team":"ALLY",
+		"components":[{"kind":"heal","amount":30}]
+	}
+	first.lock_action(AbilityRuntime.build_action_event(state,"target","target","ABI_DELAYED_HEAL",ability))
+	orchestrator.resolve_locked_actions(first)
+	if target.hp!=50 or state.scheduled_abi_intents.size()!=1:
+		return false
+	orchestrator.end_round()
+	var second := orchestrator.begin_round()
+	second.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"caster","target",{"amount":20.0,"damage_type":"physical"}))
+	orchestrator.resolve_locked_actions(second)
+	if target.hp!=60 or not state.scheduled_abi_intents.is_empty():
+		return false
+	orchestrator.end_round()
+	var third := orchestrator.begin_round()
+	orchestrator.resolve_locked_actions(third)
+	orchestrator.end_round()
+	var original_actions:=0
+	var executed_actions:=0
+	for event in state.event_log:
+		if String(event.payload.get("ability_id",""))=="ABI_DELAYED_HEAL" and event.kind==CombatEvent.Kind.ACTION:
+			if String(event.result.get("outcome",""))=="scheduled_next_round":
+				original_actions+=1
+			elif int(event.payload.get("scheduled_from_round",-1))==1:
+				executed_actions+=1
+	return original_actions==1 and executed_actions==1 and target.hp==60
 
 func _test_heal_damage_commute() -> bool:
 	var a := _resolve_hp_case(false,false,false)
