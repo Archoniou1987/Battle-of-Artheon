@@ -35,6 +35,7 @@ jobs:
           bash tools/run_godot_check.sh tests/combat/arena_dual_support_round_runner.gd
           bash tools/run_godot_check.sh tests/combat/arena_round_timing_interaction_runner.gd
           bash tools/run_godot_check.sh tests/combat/round_effect_death_regression_runner.gd
+          bash tools/run_godot_check.sh tests/combat/instant_effect_surprise_runner.gd
       - name: Run combat tournament with ABI
         run: bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
       - name: Generate and validate 100 items
