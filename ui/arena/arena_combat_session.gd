@@ -270,43 +270,11 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 	state.pending_events.clear()
 	orchestrator.resolve_locked_actions(round)
 	var outcome: Dictionary = orchestrator.end_round()
-	var lines: Array[String] = []
-	var damage_by_attack: Dictionary = {}
-	for event in state.event_log:
-		if int(event.payload.get("round", -1)) != state.round_number:
-			continue
-		if event.kind == CombatEvent.Kind.DAMAGE and event.parent_event_id >= 0:
-			damage_by_attack[event.parent_event_id] = int(event.result.get("hp_removed", 0))
-	for event in state.event_log:
-		if int(event.payload.get("round",-1))!=state.round_number or event.kind!=CombatEvent.Kind.ACTION:
-			continue
-		if String(event.payload.get("source_kind",""))!="ability":
-			continue
-		var ability_name:=String(AbilityCatalog.definition(ability_scheduler.definitions,String(event.payload.get("ability_id",""))).get("name",event.payload.get("ability_id","")))
-		var user_name:="Игрок" if event.source_id==player_id else "Противник"
-		lines.append("%s использует ABI «%s»: %s" % [user_name,ability_name,String(event.result.get("outcome",""))])
-	for event in state.event_log:
-		if int(event.payload.get("round", -1)) != state.round_number or event.kind != CombatEvent.Kind.ATTACK:
-			continue
-		var actor := "Игрок" if event.source_id == player_id else "Противник"
-		var defender := "противника" if event.source_id == player_id else "игрока"
-		var zone := _zone_name(String(event.payload.get("zone", "chest")))
-		var outcome_text := String(event.result.get("outcome", ""))
-		match outcome_text:
-			"connected":
-				var damage := int(damage_by_attack.get(event.event_id, 0))
-				var critical := " (критический удар)" if bool(event.result.get("critical", false)) else ""
-				lines.append("%s атакует %s (%s): %d урона%s" % [actor, defender, zone, damage, critical])
-			"manual_block":
-				lines.append("%s атакует %s (%s): удар заблокирован" % [actor, defender, zone])
-			"auto_block":
-				lines.append("%s атакует %s (%s): удар отражён щитом" % [actor, defender, zone])
-			"dodge":
-				lines.append("%s атакует %s (%s): уклонение" % [actor, defender, zone])
-			"miss", "magic_miss":
-				lines.append("%s атакует %s (%s): промах" % [actor, defender, zone])
-			_:
-				lines.append("%s атакует %s (%s): %s" % [actor, defender, zone, outcome_text])
+	# Log only resolved CombatEvent results, grouping ABI children through
+	# parent_event_id. A projectile ABI ATTACK is not an extra weapon action.
+	var lines: Array[String] = ArenaCombatLog.lines_for_round(
+		state.event_log, state.round_number, player_id, ability_scheduler.definitions
+	)
 	return {"ok": true, "round": state.round_number, "lines": lines, "outcome": String(outcome.get("battle_outcome", "ongoing"))}
 
 static func _zone_name(zone: String) -> String:
