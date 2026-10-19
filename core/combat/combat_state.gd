@@ -7,8 +7,6 @@ var round_number: int = 0
 var combatants: Dictionary = {}
 var event_log: Array[CombatEvent] = []
 var pending_events: Array[CombatEvent] = []
-## Delayed ABI intents are snapshotted and replayed once at the target round.
-var scheduled_abi_intents: Array[Dictionary] = []
 var next_event_id: int = 1
 var round_damage_by_target: Dictionary = {}
 
