@@ -109,9 +109,9 @@ func _cleanse_case(enemy_buff: bool) -> bool:
 	groups.add_member("A","source")
 	groups.add_member("A","friend")
 	groups.add_member("B","enemy")
-	var target := enemy if enemy_buff else friend
+	var target: CombatantState = enemy if enemy_buff else friend
 	var effect_id := "EFF_POSITIVE" if enemy_buff else "EFF_NEGATIVE"
-	var definition := {"kind":"buff","damage_reduction":0.5,"duration_rounds":3} if enemy_buff else {"kind":"dot","damage":10,"damage_type":"fire","duration_rounds":3}
+	var definition: Dictionary = {"kind":"buff","damage_reduction":0.5,"duration_rounds":3} if enemy_buff else {"kind":"dot","damage":10,"damage_type":"fire","duration_rounds":3}
 	target.active_effects.append({
 		"effect_id":effect_id,"definition":definition,
 		"source_id":"source","start_round":1,"remaining_rounds":3,"stacks":1
