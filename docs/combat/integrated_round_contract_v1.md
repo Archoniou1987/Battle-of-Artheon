@@ -28,38 +28,38 @@ individual rules must not be marked implemented without code + CI evidence.
 - EFF are stateful, autonomous effects and consume NO active ABI budget when ticking,
   stacking, expiring or resolving their ongoing effects.
 
-## Hand-authored ABI application timing (2026-10-19 decision)
-The ability designer controls **one hidden field**, not automatic role/EFF inference:
+## Manual ABI timing: two phases in ONE round (2026-10-19)
+A hand-authored ABI has exactly one hidden configuration field:
 
 ```json
-"application_timing": "immediate"
+"application_timing": "standard"
 ```
 
-Allowed values:
-- `immediate` — execute the ABI in the current round's sealed resolution,
-  before ordinary weapon attacks. Its stat EFF can influence this round's
-  weapon calculations. Direct ABI damage and healing contribute to the same
-  provisional HP total as physical damage; final HP/death is decided at
-  end_round. This is **not** an action on clicking the button.
-- `next_round` — commit the cast and pay mana/start cooldown/use this
-  round's one-ABI allowance, but activate the **whole ability** once in the
-  following round. If its caster is finalized dead or its target invalid at
-  activation, the normal combat resolution rejects it; the paid cast is not
-  refunded or retried.
+The only two supported values:
+- `instant`: execute at the **beginning of the current round** after all
+  actions have been selected and sealed, BEFORE standard attack/damage
+  resolution. Thus a stat buff/debuff can modify the current round's combat
+  calculations, and cleanse can remove an active effect before those checks.
+- `standard`: execute in the **ordinary end-of-round combat calculation**,
+  alongside physical attacks, damaging ABI, control and healing.
 
-No automatic inference from `combat_role`, EFF `kind`, DoT/HoT, stun or
-whether a component deals damage. Mixed abilities inherit one timing as a
-whole. Legacy/test fixture definitions without this field default to
-`immediate`, but hand-authored production ABI declare it explicitly.
+There is **no delayed ABI**, no next-round cast queue, and no retry or
+cancellation introduced by the timing setting. Both cast types apply to the
+current round. Cast payment, cooldown and one-ABI limit are shared; a selected
+ABI is not triggered immediately on button press, only after End Round locks
+all intentions. Provisional death from current-round hits does NOT cancel an
+actor's already-locked standard ABI. Death is finalized after the EFF phase,
+subject to the existing one-shot rule.
 
-EFF durations/stacks retain their separate periodic tick contracts:
-shared-duration DoT/HoT does not tick on application, and keeps its full
-future tick count even if the ABI itself was immediate. A delayed ability's
-EFF is applied only when the delayed ABI resolves.
+No auto-inference from EFF kind, ability role, or component composition.
+The timing applies to the ABI as a whole, including mixed compositions.
+Production ability entries explicitly set the field. For legacy fixtures
+without a field, `standard` is the default.
 
-Other boundaries stay unchanged: choices are sealed before resolution,
-ordinary hits/ABI/HP healing all count within one round, one-shot overrides
-net healing, and death finalization runs after EFF.
+EFF periodic lifetime is distinct from the timing of its casting ABI.
+Autonomous EFF ticks retain their own start, stacking and end-round rules.
+A newly inflicted periodic effect does not retroactively change earlier
+damage results, regardless of the ABI timing setting.
 
 ## Implementation status (2026-10-19)
 - CONFIRMED in ABI Branch Tests #39267341295 on commit `a9beb86`:
@@ -75,11 +75,11 @@ net healing, and death finalization runs after EFF.
 - Implemented: early buffs/debuffs/cleansing and shared resolution of damage,
   healing and control. A pure prep ABI applies an EFF from the current round,
   whereas ordinary EFF retain their own start/tick lifecycle.
-- NEW hand-authored timing (PENDING CI): `application_timing` replaces
-  all previous EFF/role timing checks; only two enum values are validated.
-  A next-round ABI is stored as a sealed intent and activated once next
-  round without paying mana twice. New tests cover immediate defence,
-  delayed healing/damage, cooldown payment and death cancellation.
+- NEW manual timing (PENDING CI): `application_timing` is either
+  `instant` (beginning of current round) or `standard` (shared calculation
+  at end of this same round). There is no scheduled future-round ABI.
+  Targeted tests cover same-round execution, early defence, concurrent
+  healing/damage and deferred death finalization.
 - Implemented: native `cleanse` ABI removes active EFF of declared polarity.
   Explicit `target_team: "ALLY"|"ENEMY"` and
   `{"kind":"cleanse","dispel_polarity":"DEBUFF"|"BUFF","max_effects":1}`
@@ -96,9 +96,9 @@ net healing, and death finalization runs after EFF.
 3. 1–4 arbitrary non-adjacent blocks work in live Arena and shared Combat.
 4. Changing selections after End Round cannot change that round's results.
 5. A mixed ABI has one explicit timing; no type-based early-phase guessing.
-6. Immediate ABI is processed in the sealed current round before weapon
-   attacks; next-round ABI fires exactly once next round. HP damage/healing
-   must have the same final net outcome regardless of processing order,
+6. Instant ABI is processed first in the sealed current round; standard
+   ABI resolves with ordinary damage and healing in the *same* round.
+   HP calculations must preserve equal net results despite traversal order,
    including overheal and negative provisional HP, except one-shot.
 7. EFF stacking/expiry and deferred death/one-shot rules remain intact.
 8. Dead, stunned, invalid and duplicate casts cannot consume an ABI slot, mana or cooldown.
