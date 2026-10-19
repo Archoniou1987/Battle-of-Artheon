@@ -311,6 +311,13 @@ func _test_finalized_death_boundaries() -> void:
 	_check(scheduler.cast_event(state,"target","healer","ABI004") == null and target.mana == mana_before, "dead caster cannot spend mana or start ABI")
 	_check(target.apply_damage(10) == 0 and target.hp == hp_after_death and not target.spend_mana(10), "defensive combatant API protects finalized death")
 	_check(not target.spend_action_points(0) and target.gain_action_points(1) == 0, "dead combatant cannot spend or gain action points")
+	# Rejected casts against a finalized target cannot charge mana or set cooldown.
+	var living_caster := state.get_combatant("healer")
+	var caster_mana_before := living_caster.mana
+	var live_scheduler := AbilityScheduler.new({"ABI004":definitions.get("ABI004",{})}, {"healer":["ABI004"]})
+	var invalid_cast := live_scheduler.cast_event(state,"healer","target","ABI004")
+	_check(invalid_cast == null and living_caster.mana == caster_mana_before, "finalized target rejects cast without mana cost")
+	_check(Dictionary(live_scheduler.cooldowns_by_combatant.get("healer", {})).is_empty(), "rejected cast does not start cooldown")
 	rounds.begin_round()
 	var repeat_summary := rounds.end_round()
 	_check(not Array(repeat_summary.get("dead_ids",[])).has("target"), "death is only finalized/reported once")
