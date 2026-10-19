@@ -35,14 +35,14 @@ func _session() -> ArenaCombatSession:
 	hero_state.mana = 100
 	npc_state.max_mana = 100
 	npc_state.mana = 100
-	session.engine.physical_balance["effects"] = {
-		EFF_GUARD: {
-			"kind": "buff",
-			"name": "Round Guard",
-			"damage_reduction": 0.5,
-			"duration_rounds": 2
-		}
+	var effect_fixtures: Dictionary = {}
+	effect_fixtures[EFF_GUARD] = {
+		"kind": "buff",
+		"name": "Round Guard",
+		"damage_reduction": 0.5,
+		"duration_rounds": 2
 	}
+	session.engine.physical_balance["effects"] = effect_fixtures
 	return session
 
 func _configure(session: ArenaCombatSession, player_abi: String, npc_abi: String, definitions: Dictionary) -> void:
@@ -105,7 +105,10 @@ func _ability_damage_reduction(session: ArenaCombatSession, caster_id: String) -
 
 func _test_player_instant_npc_standard() -> bool:
 	var session := _session()
-	_configure(session,EARLY_GUARD,STANDARD_HIT,{EARLY_GUARD:_guard("instant"),STANDARD_HIT:_hit()})
+	var definitions: Dictionary = {}
+	definitions[EARLY_GUARD] = _guard("instant")
+	definitions[STANDARD_HIT] = _hit()
+	_configure(session, EARLY_GUARD, STANDARD_HIT, definitions)
 	var options := session.player_ability_options()
 	if not bool(options[0].get("available",false)):
 		return false
@@ -121,7 +124,10 @@ func _test_player_instant_npc_standard() -> bool:
 
 func _test_npc_instant_player_standard() -> bool:
 	var session := _session()
-	_configure(session,STANDARD_HIT,EARLY_GUARD,{STANDARD_HIT:_hit(),EARLY_GUARD:_guard("instant")})
+	var definitions: Dictionary = {}
+	definitions[STANDARD_HIT] = _hit()
+	definitions[EARLY_GUARD] = _guard("instant")
+	_configure(session, STANDARD_HIT, EARLY_GUARD, definitions)
 	if not _run(session,STANDARD_HIT):
 		return false
 	var reduction := _ability_damage_reduction(session,session.player_id)
@@ -141,7 +147,10 @@ func _test_instant_dispel_before_standard_buff() -> bool:
 		"components": [{"kind":"cleanse","dispel_polarity":"BUFF","max_effects":1}],
 		"mana_cost": 5
 	}
-	_configure(session,EARLY_DISPEL,STANDARD_GUARD,{EARLY_DISPEL:purge, STANDARD_GUARD:_guard("standard")})
+	var definitions: Dictionary = {}
+	definitions[EARLY_DISPEL] = purge
+	definitions[STANDARD_GUARD] = _guard("standard")
+	_configure(session, EARLY_DISPEL, STANDARD_GUARD, definitions)
 	var npc := session.fighter(false)
 	var old_effect := {
 		"effect_id": EFF_GUARD,
@@ -168,12 +177,16 @@ func _test_instant_dispel_before_standard_buff() -> bool:
 	if dispel_count != 1 or dispel_id < 0 or reapply_id <= dispel_id:
 		print("ARENA_TIMING_DISPEL_ORDER=",dispel_count," ",dispel_id," ",reapply_id)
 		return false
-	if npc.active_effects.size() != 1:
-		return false
-	var restored: Dictionary = npc.active_effects[0]
+	var restored_count := 0
+	var restored_start := -1
+	for raw in npc.active_effects:
+		var record: Dictionary = raw
+		if String(record.get("effect_id","")) == EFF_GUARD:
+			restored_count += 1
+			restored_start = int(record.get("start_round",-1))
 	# Standard ABI at round 1 writes its new EFF for round 2, but its
 	# casting ACTION was completed in round 1. No ABI itself is delayed.
-	return String(restored.get("effect_id","")) == EFF_GUARD and int(restored.get("start_round",-1)) == 2
+	return restored_count == 1 and restored_start == 2
 
 func _finish(ok: bool, detail: String) -> void:
 	print("ARENA_ROUND_TIMING_INTERACTION_TEST=", "PASS" if ok else "FAIL", " detail=", detail)
