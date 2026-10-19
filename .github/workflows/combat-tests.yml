@@ -61,3 +61,5 @@ jobs:
 
       - name: Verify arena and NPC combat contract
         run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/arena_npc_contract_runner.gd
+      - name: Verify live Arena MH/OH strikes plus selected equipped ABI
+        run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/arena_ability_integration_runner.gd
