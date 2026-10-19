@@ -44,7 +44,7 @@ func _cast(session:ArenaCombatSession,kind:String) -> CombatEvent:
 
 func _cleanse(session:ArenaCombatSession,kind:String) -> CombatEvent:
 	var is_buff: bool = kind=="buff"
-	var cleanser: String = ArenaCombatSession.ENEMY_ID if is_buff else ArenaCombatSession.ENEMY_ID
+	var cleanser: String = ArenaCombatSession.ENEMY_ID
 	var target_id: String = session.player_id if is_buff else ArenaCombatSession.ENEMY_ID
 	var definition:Dictionary={
 		"application_timing":"instant",
