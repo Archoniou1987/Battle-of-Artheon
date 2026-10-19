@@ -258,7 +258,7 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 			"ability_id": String(parent.payload.get("ability_id", "")),
 			"delivery_type": delivery_type,
 			"aoe_scale": scale,
-			"preparation_effect": String(parent.payload.get("application_timing", "immediate")) == "immediate"
+			"preparation_effect": String(parent.payload.get("application_timing", "standard")) == "instant"
 		}, parent.event_id)
 	return null
 
