@@ -5,6 +5,9 @@ var state: CombatState
 var engine: CombatEngine
 var orchestrator: RoundOrchestrator
 var commands: CombatCommandApi
+var ability_scheduler: AbilityScheduler
+## Five equipment ABI positions: three from MH, one from chest, one from head.
+var player_ability_slots: Array = []
 var player_id: String
 const ENEMY_ID := "arena_training_enemy"
 # Preview-only loadout overrides selected in the inventory generator.
@@ -67,7 +70,16 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	group.set_active_opponent(ENEMY_ID, player_id)
 	engine = CombatEngine.new(state)
 	orchestrator = RoundOrchestrator.new(state, engine, group, zones)
-	commands = CombatCommandApi.new(state, group, zones, orchestrator)
+	var equipment_slots := EquipmentAbilityLoadout.build(character, repository)
+	for group_name in ["weapon", "chest", "head"]:
+		player_ability_slots.append_array(Array(equipment_slots.get(group_name, [])))
+	# Only the canonical live ABI catalog is executable in Arena. Development
+	# fixture IDs are never silently substituted for production definitions.
+	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/abilities/catalog.json"), {
+		player_id: Array(player.combat_stats.get("abilities", [])).duplicate(),
+		ENEMY_ID: Array(enemy.combat_stats.get("abilities", [])).duplicate()
+	})
+	commands = CombatCommandApi.new(state, group, zones, orchestrator, ability_scheduler)
 
 func fighter(is_player: bool) -> CombatantState:
 	return state.get_combatant(player_id if is_player else ENEMY_ID)
@@ -83,7 +95,23 @@ func player_attack_count() -> int:
 				break
 	return maxi(1, count)
 
-func _queue_attacks(id: String, targets: Array[String]) -> Dictionary:
+func player_ability_options() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var ready_round := state.round_number + 1
+	var player := fighter(true)
+	var cooldowns: Dictionary = ability_scheduler.cooldowns_by_combatant.get(player_id, {})
+	for raw_id in player_ability_slots:
+		var ability_id := "" if raw_id == null else String(raw_id)
+		var definition := AbilityCatalog.definition(ability_scheduler.definitions, ability_id)
+		var available := not definition.is_empty() and player != null and player.hp > 0 and not player.is_death_finalized()
+		available = available and not CombatTempoService.is_stunned(player,ready_round)
+		available = available and ability_scheduler.can_cast_this_round(player_id,ready_round)
+		available = available and AbilityRuntime.can_use(ability_id,cooldowns,ready_round)
+		available = available and player.mana >= int(definition.get("mana_cost",0))
+		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":int(definition.get("mana_cost",0)),"cooldown_until":int(cooldowns.get(ability_id,0)),"defined":not definition.is_empty()})
+	return result
+
+func _prepare_attacks(id: String, targets: Array[String]) -> Dictionary:
 	var sequence: Dictionary = commands.default_weapon_attack_sequence(id)
 	if not bool(sequence.get("ok", false)):
 		return sequence
@@ -103,9 +131,40 @@ func _queue_attacks(id: String, targets: Array[String]) -> Dictionary:
 		offset += count
 		attack["rolls"] = {"zone": String(hits[0].get("zone", "chest")), "hits": hits}
 		attacks.append(attack)
-	return commands.queue_weapon_attack_sequence(id, attacks)
+	return {"ok":true,"attacks":attacks}
 
-func play_round(attacks: Array[String], blocks: Array[String]) -> Dictionary:
+func _queue_attacks(id: String, targets: Array[String]) -> Dictionary:
+	var plan := _prepare_attacks(id,targets)
+	if not bool(plan.get("ok",false)):
+		return plan
+	return commands.queue_weapon_attack_sequence(id,Array(plan.get("attacks",[])))
+
+func _ability_target(source_id:String,definition:Dictionary) -> String:
+	return source_id if String(definition.get("target_team", "")).to_upper()=="ALLY" else (ENEMY_ID if source_id==player_id else player_id)
+
+func _validate_ability(source_id:String,ability_id:String,ready_round:int) -> Dictionary:
+	if ability_id.is_empty():
+		return {"ok":true}
+	var definition := AbilityCatalog.definition(ability_scheduler.definitions,ability_id)
+	if definition.is_empty() or not AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id):
+		return {"ok":false,"reason":"ability_unavailable"}
+	var actor := state.get_combatant(source_id)
+	if actor==null or actor.is_death_finalized() or CombatTempoService.is_stunned(actor,ready_round):
+		return {"ok":false,"reason":"ability_actor_unavailable"}
+	if not AbilityRuntime.validate_definition(ability_id,definition).is_empty():
+		return {"ok":false,"reason":"invalid_ability_definition"}
+	if not ability_scheduler.can_cast_this_round(source_id,ready_round):
+		return {"ok":false,"reason":"abi_limit_reached"}
+	if not AbilityRuntime.can_use(ability_id,ability_scheduler.cooldowns_by_combatant.get(source_id,{}),ready_round):
+		return {"ok":false,"reason":"ability_cooldown"}
+	if actor.mana < int(definition.get("mana_cost",0)):
+		return {"ok":false,"reason":"insufficient_mana"}
+	var target_id:=_ability_target(source_id,definition)
+	if not commands.action_policy.valid_ability_targets(source_id,definition).has(target_id):
+		return {"ok":false,"reason":"ability_target_unavailable"}
+	return {"ok":true,"target_id":target_id}
+
+func play_round(attacks: Array[String], blocks: Array[String], ability_id: String = "") -> Dictionary:
 	# A persistent character at 0 HP cannot start acting again merely by
 	# reopening a test duel. A new life/recovery rule must be explicit.
 	if fighter(true).hp <= 0:
