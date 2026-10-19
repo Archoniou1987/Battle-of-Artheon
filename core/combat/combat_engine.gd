@@ -244,7 +244,8 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 			"source_type": "ability",
 			"ability_id": String(parent.payload.get("ability_id", "")),
 			"delivery_type": delivery_type,
-			"aoe_scale": scale
+			"aoe_scale": scale,
+			"preparation_effect": String(parent.payload.get("resolution_phase", "COMBAT")) == "PREPARATION"
 		}, parent.event_id)
 	return null
 
@@ -494,7 +495,8 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEvent)->Dictionary:
 	var stack_id := "%s:%d" % [effect_id, _next_effect_stack_id]
 	_next_effect_stack_id += 1
-	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
+	var starts_now := bool(event.payload.get("preparation_effect",false))
+	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number if starts_now else state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
 
 func _effect_flag(target: CombatantState, field: String) -> bool:
 	return CombatModifierService.flag(target, field, state.round_number)
