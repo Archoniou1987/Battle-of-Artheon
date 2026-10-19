@@ -739,7 +739,7 @@ func _refresh_ability_buttons() -> void:
 		button.disabled=not available
 		button.text=ability_id if not ability_id.is_empty() else ""
 		button.add_theme_font_size_override("font_size",8)
-		button.tooltip_text=("%s | %s | Mana %d" % [ability_id,String(option.get("name",ability_id)),int(option.get("mana_cost",0))]) if bool(option.get("defined",false)) else ("ABI не определена в основном каталоге: " + ability_id if not ability_id.is_empty() else "Пустой слот ABI")
+		button.tooltip_text=("%s | %s | Мана: %d | Цель: %s" % [ability_id,String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else ("ABI не определена в основном каталоге: " + ability_id if not ability_id.is_empty() else "Пустой слот ABI")
 		button.set_pressed_no_signal(available and selected_ability==ability_id)
 	if not selected_still_valid:
 		selected_ability=""
