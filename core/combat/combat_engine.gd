@@ -517,8 +517,8 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 			var shared_record := _make_effect_record(effect_id, definition, event)
 			shared_record["stacks"] = 1
 			shared_record["active_stacks"] = 0
-			# Shared DoT/HoT never tick on application. If immediate ABI adds
-			# the record this round, preserve all future periodic ticks.
+			# Shared DoT/HoT must not gain a periodic tick from an instant
+			# ABI's early application. Preserve the normal future tick count.
 			if state.round_number >= int(shared_record.get("start_round",999999)):
 				shared_record["remaining_rounds"] = int(shared_record["remaining_rounds"]) + 1
 			target.active_effects.append(shared_record)
