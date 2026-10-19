@@ -60,5 +60,37 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: second tap did not deselect ABI")
 		quit(1)
 		return
+	# No permanent debug placeholders; only real EFF are rendered.
+	var buff_row:=arena.effects_rows.get("player_Баффы") as HBoxContainer
+	var debuff_row:=arena.effects_rows.get("player_Дебаффы") as HBoxContainer
+	if buff_row==null or debuff_row==null or buff_row.visible or debuff_row.visible:
+		push_error("ARENA_OPEN_SMOKE=FAIL: empty EFF rows should be hidden")
+		quit(1)
+		return
+	var player:=arena.combat_session.fighter(true)
+	for i in range(6):
+		player.active_effects.append({
+			"effect_id":"EFF_UI_TEST_%d" % i,
+			"definition":{"kind":"buff","name":"Усиление %d" % i},
+			"source_id":player.combatant_id,
+			"start_round":arena.combat_session.state.round_number+1,
+			"remaining_rounds":3,
+			"stacks":2
+		})
+	arena._refresh_effect_display()
+	if not buff_row.visible or debuff_row.visible:
+		push_error("ARENA_OPEN_SMOKE=FAIL: EFF polarity rows")
+		quit(1)
+		return
+	var fifth:=buff_row.get_child(4) as Button
+	if fifth==null or not fifth.visible or fifth.text!="+2":
+		push_error("ARENA_OPEN_SMOKE=FAIL: EFF +N overflow")
+		quit(1)
+		return
+	var label:=arena.effect_detail_labels.get("player_Баффы") as Label
+	if label==null or not label.text.contains("×2") or not label.text.contains("следующем раунде"):
+		push_error("ARENA_OPEN_SMOKE=FAIL: EFF details, stacks or delayed start")
+		quit(1)
+		return
 	print("ARENA_OPEN_SMOKE=PASS")
 	quit(0)
