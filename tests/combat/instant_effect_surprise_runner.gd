@@ -256,7 +256,18 @@ func _test_shared_cap_refresh() -> bool:
 		return false
 	session.orchestrator.end_round()
 	var revealed:Array=Array(session.effect_view(true).get("buffs",[]))
-	return revealed.size()==1 and int(Dictionary(revealed[0]).get("stacks",-1))==3 and int(Dictionary(revealed[0]).get("remaining_rounds",-1))==3
+	if revealed.size()!=1 or int(Dictionary(revealed[0]).get("stacks",-1))!=3 or int(Dictionary(revealed[0]).get("remaining_rounds",-1))!=3:
+		return false
+	# At cap no new stack exists to shelter: old, disclosed stacks may
+	# still be cleansed this round even when their timer was refreshed.
+	var capped:=_shared_setup("buff",3)
+	var cap_round:=capped.orchestrator.begin_round()
+	var cast:=_shared_cast(capped,"buff")
+	var cleanse:=_cleanse(capped,"buff")
+	cap_round.lock_action(cast)
+	cap_round.lock_action(cleanse)
+	capped.orchestrator.resolve_locked_actions(cap_round)
+	return _removed(capped.state,cleanse.event_id)==1 and capped.fighter(true).active_effects.is_empty()
 
 func _removed(state:CombatState,parent_id:int) -> int:
 	var total:int=0
