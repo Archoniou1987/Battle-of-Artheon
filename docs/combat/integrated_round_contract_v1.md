@@ -73,7 +73,20 @@ and is first eligible for cleanse in **the following round**.
 The runtime must keep separate:
 - `start_round` — when stat/control modifiers actually become active;
 - `revealed` — whether EFF UI is permitted to show the effect;
-- `dispel_available_round` — earliest round in which cleanse can remove it.
+- `dispel_available_round` — earliest round in which cleanse can remove it;
+- `undisclosed_stacks`/`visible_remaining_rounds` — transient fields when
+  a fresh instant stack joins a previously revealed `shared_duration` EFF.
+
+The shared-duration EFF still owns one logical record and one shared timer.
+When a visible EFF gains a concealed instant stack, the UI continues to
+show only the old visible stack count and timer until end_round. Cleansing
+this round removes known stacks but preserves the undisclosed new stack;
+it becomes visible/removable only after the end-of-round reveal. Previously
+active DoT/HoT stacks can tick this round; freshly added stacks join their
+periodic ticks only when promoted by the EFF phase. At the configured stack
+cap, another cast refreshes the timer without creating phantom new stacks;
+the refresh is undisclosed until end_round, but the existing known stacks
+remain eligible for cleansing.
 
 `end_round` marks surviving hidden effects as revealed after periodic
 effects and death finalization. This does **not** change actual activation
@@ -114,8 +127,11 @@ This is a rule about EFF visibility, NOT a next-round ABI cast.
   and immune to same-round dispelling regardless of instant action order.
   A revealed earlier-round effect is still removable. CI scenarios test
   both instant orders with existing ArenaCombatSession and ensure next-round
-  cleanse becomes possible. Existing same-effect shared-duration stack
-  refresh may require separate per-stack disclosure semantics.
+  cleanse becomes possible. NEW shared-duration surprise-stack coverage
+  (PENDING CI): revealed and concealed stacks are tracked within the same
+  EFF record, only known stacks can be cleansed, and new stack count/duration
+  is withheld from Arena until end_round. Stack-cap refresh is checked
+  separately and never creates a hidden phantom stack.
 - Remaining limitations: no interactive ally-target picker for larger groups
   or finalized player-facing ABI artwork. Do not infer success of unexecuted
   regression tests from earlier successful CI runs.
