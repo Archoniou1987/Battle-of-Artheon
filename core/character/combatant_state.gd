@@ -109,12 +109,16 @@ func spend_mana(amount: int) -> bool:
 
 
 func gain_action_points(amount: int) -> int:
+	if death_finalized:
+		return 0
 	var before := action_points
 	action_points = mini(max_action_points, action_points + maxi(0, amount))
 	return action_points - before
 
 
 func spend_action_points(amount: int) -> bool:
+	if death_finalized:
+		return false
 	var cost := maxi(0, amount)
 	if action_points < cost:
 		return false
