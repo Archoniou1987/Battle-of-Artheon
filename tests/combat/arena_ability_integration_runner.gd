@@ -30,18 +30,18 @@ func _init() -> void:
 	if options.is_empty() or not bool(options[0].get("available",false)):
 		_finish(false,"mh_abi_available")
 		return
-	var initial_mana:=actor.mana
-	var initial_round:=session.state.round_number
-	var wrong:=session.play_round(["chest","arms"],["chest"],"ABI004")
-	if bool(wrong.get("ok",true)) or actor.mana!=initial_mana or session.state.round_number!=initial_round or not session.state.pending_events.is_empty():
-		_finish(false,"offhand_ability_must_reject_atomically")
-		return
-	# Real submit: two independent MH/OH physical strikes + one Fireball.
 	var block_count:=CombatModifierService.manual_block_zone_capacity(actor)
 	var candidate_blocks:Array[String]=["chest","arms","waist","legs"]
 	var blocks:Array[String]=[]
 	for i in range(block_count):
 		blocks.append(candidate_blocks[i])
+	var initial_mana:=actor.mana
+	var initial_round:=session.state.round_number
+	var wrong:=session.play_round(["chest","arms"],blocks,"ABI004")
+	if bool(wrong.get("ok",true)) or actor.mana!=initial_mana or session.state.round_number!=initial_round or not session.state.pending_events.is_empty():
+		_finish(false,"offhand_ability_must_reject_atomically")
+		return
+	# Real submit: two independent MH/OH physical strikes + one Fireball.
 	var result:=session.play_round(["head","legs"],blocks,"ABI003")
 	if not bool(result.get("ok",false)):
 		_finish(false,"round_rejected_"+String(result.get("reason","")))
