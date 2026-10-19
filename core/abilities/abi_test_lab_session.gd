@@ -127,15 +127,21 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	scheduler = AbilityScheduler.new({preset: ability_def}, {CASTER_ID: [preset]})
 	return {"ok": true, "ability_id": preset, "damage": float(raw_damage), "damage_type": config["damage_type"]}
 
+func is_finished() -> bool:
+	if state == null:
+		return false
+	var selected := String(config.get("target", "dummy"))
+	var target_id := CASTER_ID if selected == "caster" else (ALLY_ID if selected == "ally" else DUMMY_ID)
+	var caster := state.get_combatant(CASTER_ID)
+	var target := state.get_combatant(target_id)
+	return (caster != null and caster.is_death_finalized()) or (target != null and target.is_death_finalized())
+
 func next_round(cast_ability: bool = true) -> Dictionary:
 	if state == null or scheduler == null or orchestrator == null:
 		return {"ok": false, "reason": "lab_not_initialized"}
-	var selected_id := String(config.get("target", "dummy"))
-	var selected_combatant_id := CASTER_ID if selected_id == "caster" else (ALLY_ID if selected_id == "ally" else DUMMY_ID)
-	if state.get_combatant(selected_combatant_id).is_death_finalized() or state.get_combatant(CASTER_ID).is_death_finalized():
-		return {"ok": false, "reason": "lab_battle_finished"}
+	if is_finished():
+		return {"ok": false, "reason": "lab_battle_finished", "lab_finished": true}
 	var caster := state.get_combatant(CASTER_ID)
-	var dummy := state.get_combatant(DUMMY_ID)
 	var selected_target := String(config.get("target", "dummy"))
 	var target_id := CASTER_ID if selected_target == "caster" else (ALLY_ID if selected_target == "ally" else DUMMY_ID)
 	var target := state.get_combatant(target_id)
@@ -200,7 +206,11 @@ func next_round(cast_ability: bool = true) -> Dictionary:
 		"damage_dealt": actual_damage,
 		"healing_done": actual_healing, "effects": effects,
 		"events": events, "report": report,
-		"battle_outcome": ("target_dead" if target.is_death_finalized() else String(summary.get("battle_outcome", "ongoing"))),
+		# Orchestrator outcome requires teams; the lab tracks its own selected target.
+		"battle_outcome": String(summary.get("battle_outcome", "ongoing")),
+		"lab_outcome": ("target_dead" if target.is_death_finalized() else ("caster_dead" if caster.is_death_finalized() else "ongoing")),
+		"lab_finished": is_finished(),
+		"newly_dead_ids": summary.get("dead_ids", []).duplicate(),
 		"incoming_damage_per_hit": incoming_damage, "incoming_hits": incoming_hits,
 		"event_order": String(config.get("event_order", "damage_first")),
 		"one_shot_kill": target.one_shot_kill, "death_finalized": target.is_death_finalized()
