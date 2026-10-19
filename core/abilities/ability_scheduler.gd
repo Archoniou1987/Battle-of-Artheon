@@ -15,6 +15,12 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 	var source := state.get_combatant(source_id)
 	if source == null: return events
 	if not _source_ready(source, state.round_number): return events
+	# A finalized corpse is never a valid direct target; do not charge mana
+	# or start cooldown for events that would be rejected by CombatEngine.
+	if not target_id.is_empty():
+		var target := state.get_combatant(target_id)
+		if target == null or target.is_death_finalized():
+			return events
 	for raw_id in AbilityCatalog.assigned_abilities(loadouts, source_id):
 		var ability_id := String(raw_id)
 		if not AbilityRuntime.can_use(ability_id, cooldowns, state.round_number): continue
@@ -51,6 +57,11 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
 	if source==null or not _source_ready(source, state.round_number):
+		return null
+	# Check target finalization before spending mana or starting cooldown.
+	# Provisional HP <= 0 is still legal until the round's death phase.
+	var target:=state.get_combatant(target_id)
+	if target==null or target.is_death_finalized():
 		return null
 	if not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
 		return null
