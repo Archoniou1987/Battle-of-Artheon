@@ -100,6 +100,28 @@ func _run() -> void:
 	check(character.current_hp == current_hp and character.current_mana == current_mana, "persistent character HP and mana unchanged")
 	check(fighter.hp == arena_hp and fighter.mana == arena_mana, "ArenaCombatSession HP and mana unchanged")
 	check(arena.combat_session.state.round_number == 0, "live Arena round remains zero")
+	# A finalized laboratory death must disable UI actions and preserve its log.
+	if healing_index >= 0:
+		dialog.preset_select.select(healing_index)
+		dialog._preset_changed(healing_index)
+		(dialog.fields["target_max_hp"] as SpinBox).value = 100
+		(dialog.fields["initial_hp"] as SpinBox).value = 100
+		(dialog.fields["damage"] as SpinBox).value = 20
+		(dialog.fields["incoming_damage"] as SpinBox).value = 70
+		(dialog.fields["incoming_hits"] as SpinBox).value = 2
+		dialog.order_select.select(1) # heal_first
+		dialog._reset_session()
+		dialog._next_round(true)
+		check(dialog.session.is_finished(), "lethal healing scenario finalizes lab death")
+		check(dialog.cast_button.disabled and dialog.skip_button.disabled, "finalized lab death disables both round actions")
+		check(dialog.status_label.text.contains("target_dead"), "lab status shows target death")
+		check(dialog.output.text.contains("Тест завершён"), "lab output explains scenario completion")
+		var completed_rounds := dialog.session.state.round_number
+		var recorded := dialog.round_history.size()
+		dialog._next_round(true) # programmatic bypass must still be harmless
+		check(dialog.session.state.round_number == completed_rounds and dialog.round_history.size() == recorded, "finished lab cannot advance or append rounds")
+		var export_snapshot := JSON.parse_string(dialog._log_json())
+		check(export_snapshot is Dictionary and bool(export_snapshot.get("lab_finished", false)) and not bool(export_snapshot.get("active_session", true)), "export marks finished lab inactive")
 	print("ABI_LAB_UI_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=", failures.size())
 	quit(0 if failures.is_empty() else 1)
 
