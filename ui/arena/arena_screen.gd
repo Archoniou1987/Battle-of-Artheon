@@ -66,6 +66,7 @@ var mana_labels: Dictionary = {}
 var ap_segments: Dictionary = {}
 var ap_labels: Dictionary = {}
 var effects_rows: Dictionary = {}
+var effect_detail_labels: Dictionary = {}
 var selected_ability := ""
 var ability_buttons: Array[Button] = []
 var combat_session: ArenaCombatSession
@@ -195,6 +196,7 @@ func _ready() -> void:
 				details.text = "Нет активных эффектов" if fighter_name == "Игрок" else "Нет известных эффектов"
 				details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				column.add_child(details)
+				effect_detail_labels[("player_" if fighter_name=="Игрок" else "enemy_")+title] = details
 	item_popup = AcceptDialog.new()
 	item_popup.title = "Предмет"
 	item_popup.min_size = Vector2i(320, 260)
@@ -519,14 +521,16 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		var row := HBoxContainer.new()
 		row.position = Vector2(elixir_row.position.x, elixir_row.position.y - (43 if row_type == "Баффы" else 22))
 		row.add_theme_constant_override("separation", 1)
-		row.visible = true # Temporary debug markers for layout review
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.visible = false # No placeholder EFF icons before actual combat state exists.
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		inner.add_child(row)
 		for i in range(5):
-			var effect_icon := ColorRect.new()
+			var effect_icon := Button.new()
 			effect_icon.custom_minimum_size = Vector2(19, 19)
-			effect_icon.color = Color(0.18, 0.43, 0.65, 0.55) if row_type == "Баффы" else Color(0.65, 0.24, 0.28, 0.55)
-			effect_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			effect_icon.add_theme_font_size_override("font_size", 10)
+			effect_icon.focus_mode = Control.FOCUS_NONE
+			effect_icon.visible = false
+			effect_icon.pressed.connect(_show_effect_detail.bind(is_player,row_type,i))
 			row.add_child(effect_icon)
 		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
 	_update_zone_buttons()
@@ -948,6 +952,7 @@ func _sync_combat_session() -> void:
 	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
 	set_fighter_resources(false, enemy.mana, enemy.max_mana, enemy.action_points, enemy.max_action_points)
 	_refresh_ability_buttons()
+	_refresh_effect_display()
 
 func refresh() -> void:
 	for slot in player_slots:
