@@ -55,9 +55,14 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: ABI selection does not reach Arena")
 		quit(1)
 		return
+	# ABI press is a committed action now: second tap cannot deselect it.
 	arena._select_ability(0)
-	if not arena.selected_ability.is_empty():
-		push_error("ARENA_OPEN_SMOKE=FAIL: second tap did not deselect ABI")
+	if arena.selected_ability != "ABI003" or arena.combat_session.locked_ability_id != "ABI003":
+		push_error("ARENA_OPEN_SMOKE=FAIL: committed ABI could be canceled")
+		quit(1)
+		return
+	if not arena.ability_buttons[0].disabled or arena.combat_session.active_round == null:
+		push_error("ARENA_OPEN_SMOKE=FAIL: ABI press not locked by combat")
 		quit(1)
 		return
 	# No permanent debug placeholders; only real EFF are rendered.
