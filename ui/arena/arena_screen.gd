@@ -278,12 +278,26 @@ func _apply_visual_lab() -> void:
 	arena_background.modulate = Color(String(VisualLabPresets.theme(visual_lab_theme_index)["background"]))
 	var preview_index := 0
 	for slot in player_slots:
-		VisualLabPreview.show_mock(player_slots[slot] as ItemIcon, visual_lab_scenario_index == 2 or (visual_lab_scenario_index == 1 and preview_index < 4), preview_index % VisualLabPreview.RARITIES.size())
+		var icon := player_slots[slot] as ItemIcon
+		VisualLabPresets.configure_empty(icon, visual_lab_theme_index, false, true)
+		VisualLabPreview.show_mock(icon, visual_lab_scenario_index == 2 or (visual_lab_scenario_index == 1 and preview_index < 4), preview_index % VisualLabPreview.RARITIES.size())
 		preview_index += 1
 	preview_index = 0
 	for slot in enemy_slots:
-		VisualLabPreview.show_mock(enemy_slots[slot] as ItemIcon, visual_lab_scenario_index == 2, preview_index % VisualLabPreview.RARITIES.size())
+		var icon := enemy_slots[slot] as ItemIcon
+		VisualLabPresets.configure_empty(icon, visual_lab_theme_index, false, true)
+		VisualLabPreview.show_mock(icon, visual_lab_scenario_index == 2, preview_index % VisualLabPreview.RARITIES.size())
 		preview_index += 1
+	for button in ability_buttons:
+		VisualLabPresets.configure_system_button(button, visual_lab_theme_index)
+	for button in player_elixir_slots:
+		VisualLabPresets.configure_system_button(button, visual_lab_theme_index)
+	for button in enemy_elixir_slots:
+		VisualLabPresets.configure_system_button(button, visual_lab_theme_index)
+	for button in defense_buttons:
+		VisualLabPresets.configure_zone_outline(button, visual_lab_theme_index)
+	for button in attack_buttons:
+		VisualLabPresets.configure_zone_outline(button, visual_lab_theme_index)
 
 func _open_level_settings(is_player: bool) -> void:
 	level_settings_dialog.title = "Уровень игрока" if is_player else "Уровень манекена"
