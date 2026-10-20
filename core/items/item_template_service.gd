@@ -57,6 +57,10 @@ static func resolve(instance: Dictionary) -> Dictionary:
 	for field in ["instance_id", "rarity", "quality", "quality_multiplier", "rolled_mods", "origin", "durability_max", "durability_current", "_durability_repair_progress", "owner_id"]:
 		if instance.has(field):
 			resolved[field] = instance[field]
+	# Charges are per item-instance, not template balance. Never copy item
+	# components/max charges from the mutable instance over authored templates.
+	if String(template.get("type","")) == "consumable" and instance.has("charges"):
+		resolved["charges"] = int(instance["charges"])
 	return resolved if validate_parameters(resolved) else {}
 
 static func validate_parameters(item: Dictionary) -> bool:
