@@ -175,6 +175,7 @@ func _ready() -> void:
 		var quick := ItemIcon.new()
 		quick.name = "Elixir%d" % (i + 1)
 		elixirs.add_child(quick)
+		quick.set_empty_placeholder_icon_visible(false)
 		quick.set_item({}, "Эликсир %d" % (i + 1))
 		quick.pressed.connect(_clear_elixir_slot.bind(i))
 		elixir_buttons.append(quick)
@@ -312,6 +313,7 @@ func _add_equipment_slot(parent: Control, slot: String) -> void:
 	button.name = slot
 	button.pressed.connect(_select_slot.bind(slot))
 	parent.add_child(button)
+	button.set_empty_placeholder_icon_visible(false)
 	button.set_item({}, SLOT_NAMES[slot])
 	var row_index := parent.get_child_count() - 1
 	button.position = Vector2(0, row_index * 60)
