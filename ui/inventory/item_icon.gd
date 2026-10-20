@@ -63,6 +63,9 @@ const RARITY_COLORS := {
 var instance_id := ""
 var equipment_slot := ""
 var is_equipped := false
+## Enable only after the square base PNG has the empty slot and frame baked in.
+var empty_art_in_background := false
+var _shown_item: Dictionary = {}
 var _icon_texture: TextureRect
 var _fallback: Label
 var _marker: Label
@@ -133,30 +136,37 @@ func _ready() -> void:
 	SquareSlotFeedback.attach(self, "equipment")
 	set_item({})
 
+func set_empty_art_in_background(enabled: bool) -> void:
+	if empty_art_in_background == enabled:
+		return
+	empty_art_in_background = enabled
+	if _icon_texture != null:
+		set_item(_shown_item, equipment_slot, is_equipped)
+
 func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) -> void:
+	_shown_item = item.duplicate(true)
 	equipment_slot = slot_name
 	instance_id = String(item.get("instance_id", ""))
 	is_equipped = equipped
 	var rarity := String(item.get("rarity", "grey")).to_lower()
 	var empty_key := _resolve_empty_slot(slot_name)
-	var empty_texture: Texture2D = empty_slot_texture(empty_key) if item.is_empty() else null
+	var empty_texture: Texture2D = empty_slot_texture(empty_key) if item.is_empty() and not empty_art_in_background else null
 	var border := Color(String(RARITY_COLORS.get(rarity, "#777f8a"))) if not item.is_empty() else Color("#66543d")
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#263346")
 	style.border_color = border
 	style.set_border_width_all(3)
 	if not item.is_empty():
-		style.shadow_color = Color(border.r, border.g, border.b, 0.78)
-		style.shadow_size = 5
+		style.shadow_color = Color(border.r, border.g, border.b, 0.32)
+		style.shadow_size = 2
 	style.set_corner_radius_all(4)
 	style.set_content_margin_all(0)
-	if empty_texture != null or ResourceLoader.exists(SLOT_BACKGROUND_PATH):
-		style.bg_color = Color.TRANSPARENT
-		style.set_border_width_all(0)
-	# Subtle cool-blue outline only for empty slots; filled items retain rarity styling.
+	# Rarity border is exclusively the equipped item's UI; the empty
+	# background contains only an unchanging dark square and faint frame.
 	if item.is_empty():
+		style.bg_color = Color.TRANSPARENT if empty_texture != null or empty_art_in_background else Color("#263346")
 		style.border_color = Color("#83B8D9", 0.65)
-		style.set_border_width_all(1)
+		style.set_border_width_all(0 if empty_art_in_background else 1)
 	add_theme_stylebox_override("normal", style)
 	var hover := style.duplicate() as StyleBoxFlat
 	hover.bg_color = Color("#35465a") if empty_texture == null and not ResourceLoader.exists(SLOT_BACKGROUND_PATH) else Color.TRANSPARENT
@@ -173,12 +183,12 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	if _icon_texture == null:
 		return
 	var use_new_slot_art := ResourceLoader.exists(NEW_EMPTY_ATLAS_PATH) and ResourceLoader.exists(SLOT_BACKGROUND_PATH)
-	_slot_background.visible = use_new_slot_art
-	_slot_frame.visible = use_new_slot_art and SHOW_DECORATIVE_SLOT_FRAMES
+	_slot_background.visible = use_new_slot_art and item.is_empty() and not empty_art_in_background
+	_slot_frame.visible = use_new_slot_art and SHOW_DECORATIVE_SLOT_FRAMES and item.is_empty() and not empty_art_in_background
 	_empty_background.texture = empty_texture
 	_empty_background.visible = empty_texture != null
 	_icon_texture.texture = texture
-	_fallback.visible = texture == null and empty_texture == null
+	_fallback.visible = texture == null and empty_texture == null and not (item.is_empty() and empty_art_in_background)
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
 	_marker.text = ""
 	tooltip_text = (String(item.get("name", slot_name)) if not item.is_empty() else (slot_name + " — пусто" if not slot_name.is_empty() else "Пустая ячейка"))
