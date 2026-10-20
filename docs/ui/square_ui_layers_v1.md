@@ -1,3 +1,12 @@
+## Combat integration test ladder (2026-10-20)
+1. **Stage 0 — baseline**: `arena_basic_round_runner.gd` and `battle_baseline_runner.gd`: one weapon, one strike, manual defence, PAR readout, rejected invalid command, canonical engine events and journal; no ABI/EFF required.
+2. **Stage 1 — phase order**: `integrated_round_phases_runner.gd`: existing phase integration.
+3. **Stage 2 — physical + ABI**: `arena_ability_integration_runner.gd`: two independent weapon strikes plus one canonical ABI003 in the same real round, no off-hand ABI.
+4. **Stage 3 — complete vertical slice**: `full_battle_vertical_slice_runner.gd`: event trace, PAR, attack/defence, ABI, journal, and EFF *projection*. The appended EFF presentation records do not test real EFF application.
+5. **Stage 4 — interaction/regression**: `arena_round_timing_interaction_runner.gd`, `round_effect_death_regression_runner.gd`, `instant_effect_surprise_runner.gd`, `elixir_mind_game_runner.gd` and existing specialized tests cover timing, EFF, end-of-round death and elixirs.
+
+CI executes all stages in one manually started **ABI Branch Tests** run and reports each failing runner separately. A passing run is necessary but not sufficient for full combat correctness; follow up with controlled scenario matrices for mitigation, penetration, criticals, tempo, death and EFF stacking.
+
 ## Combat test ladder — first batch
 - **Stage 0:** `tests/combat/arena_basic_round_runner.gd` tests a genuine Arena duel with one physical main-hand attack, one manual-block selection, a rejected invalid zone and the resulting canonical event/journal. It does not assume an exact random damage amount.
 - **Stage 1:** `tests/combat/full_battle_vertical_slice_runner.gd` tests two weapons, a canonical ABI003 cast, PAR diagnostics, resource accounting, outcome and EFF read projection in the same underlying Arena session.
