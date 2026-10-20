@@ -6,7 +6,7 @@ const WEAPON_SLOTS := ["main_hand"]
 const MAX_WEAPON_ABILITIES := 3
 
 ## Builds five ABI slots from actual equipped item instances:
-## weapon[0..2], head[0], chest[0]. Empty positions remain null.
+## weapon[0..2], chest[0], head[0]. Empty positions remain null.
 static func build(character: CharacterState, repository: ItemRepository) -> Dictionary:
 	var weapon: Array = [null, null, null]
 	var chest: Array = [null]
@@ -24,17 +24,17 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 			weapon[weapon_index] = ability_id
 			seen[ability_id] = true
 			weapon_index += 1
-	# Resolve in visible slot order: Helmet 4 has priority over Chest 5
-	# when two equipped items provide the same ABI ID.
-	head[0] = _first_unique_ability("head", character, repository, seen)
-	if head[0] != null: seen[String(head[0])] = true
+	# Resolve in visible slot order: Chest 4 takes precedence over Head 5
+	# if two equipped items supply the same ABI ID.
 	chest[0] = _first_unique_ability("chest", character, repository, seen)
+	if chest[0] != null: seen[String(chest[0])] = true
+	head[0] = _first_unique_ability("head", character, repository, seen)
 	return {"weapon": weapon, "chest": chest, "head": head}
 
 static func active_abilities(character: CharacterState, repository: ItemRepository) -> Array[String]:
 	var result: Array[String] = []
 	var slots := build(character, repository)
-	for group in ["weapon", "head", "chest"]:
+	for group in ["weapon", "chest", "head"]:
 		for value in slots[group]:
 			if value != null: result.append(String(value))
 	return result
