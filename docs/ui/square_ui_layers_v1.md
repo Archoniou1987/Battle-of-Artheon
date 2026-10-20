@@ -1,3 +1,8 @@
+## Follow-up combat verification package — 2026-10-20 (CI pending)
+- `tests/combat/physical_stage_matrix_runner.gd` now feeds deterministic rolls to the actual `CombatEngine`: miss/dodge/manual shield/auto shield/block crush priority, critical before armour, PAR126 general penetration, PAR132 slashing-only penetration, flat armour penetration and attack-to-damage canonical event lineage.
+- The existing real three-round `arena_real_eff_chain_runner.gd` additionally checks that an invalid cooldown recast does not alter either fighter, active EFF, the event log or event ID sequence; the read-only diagnostics projection must not alias live event results. ABI003→EFF003 and ABI004→EFF004 remain real engine effects, not manually appended UI records.
+- Both tests run inside the existing manual **ABI Branch Tests** batch on `feature/character-inventory-ui-v1`. This is a committed code checkpoint, **not a verified passing CI**. Do not rerun individual workflows per commit. No Arena/Inventory 480×480 layout or production combat formula changes were made in this package.
+
 ## Integration checkpoint — pre-CI (2026-10-20)
 The current package is **ready to execute**, not yet proven green:
 - Basic attack + manual defence + PAR, including atomic rejection of invalid attack **and** block zones: `battle_baseline_runner.gd`.
