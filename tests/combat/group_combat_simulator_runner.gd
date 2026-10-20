@@ -14,7 +14,9 @@ func _initialize()->void:
 		state.add_combatant(enemy)
 		group.add_member("enemies",id)
 	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)
-	var valid:=group.active_opponent("PLAYER")=="E0"
+	var valid:=simulator.attack_pipeline.combat_engine == simulator.engine
+	valid=valid and simulator.attack_pipeline.rng == simulator.engine.combat_rng
+	valid=valid and group.active_opponent("PLAYER")=="E0"
 	var r1:=simulator.run_round()
 	valid=valid and bool(r1.get("ok",false)) and state.get_combatant("E0").is_death_finalized()
 	# A normal player action must hit only the active opponent, never every NPC.
