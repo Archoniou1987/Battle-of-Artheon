@@ -304,23 +304,23 @@ func _build_square() -> void:
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(242, 8), false)
 	var abilities := HBoxContainer.new()
-	abilities.position = Vector2(147, 389)
-	abilities.add_theme_constant_override("separation", 4)
+	abilities.name = "AbilitySlots"
+	# Permanent 5-square system strip: MH 1-3, Head 4, Chest 5.
+	abilities.position = Vector2((ARENA_LOGICAL_EXTENT - 5.0 * 34.0) / 2.0, 389)
+	abilities.add_theme_constant_override("separation", 0)
 	square_content.add_child(abilities)
 	for index in range(5):
 		var button := Button.new()
+		button.name = "ABI%d" % (index + 1)
 		button.custom_minimum_size = Vector2(34, 34)
 		button.text = ""
-		var abi_style := StyleBoxTexture.new()
-		abi_style.texture = ItemIcon.empty_slot_texture("abi")
-		if abi_style.texture != null:
-			for state in ["normal", "hover", "pressed", "disabled"]:
-				button.add_theme_stylebox_override(state, abi_style)
-		button.tooltip_text = "Активная способность %d" % (index + 1)
+		SquareSlotFeedback.style_abi_square(button)
+		button.tooltip_text = SquareUiGeometry.abi_source(index) + " — пусто"
 		button.toggle_mode = true
-		button.disabled = true # Enabled only for a canonical equipped ABI.
+		button.disabled = true
 		button.pressed.connect(_select_ability.bind(index))
 		abilities.add_child(button)
+		SquareSlotFeedback.attach(button, "ability")
 		ability_buttons.append(button)
 	_build_resource_display(true)
 	_build_resource_display(false)
@@ -346,6 +346,7 @@ func _build_square() -> void:
 	# Cosmetic END TURN skins; the first skin is the default.
 	# Until the transparent PNGs are uploaded, keep the original button.
 	_apply_end_turn_skin(1)
+	SquareSlotFeedback.attach_art(round_button, round_button_art)
 
 
 ## Skin IDs follow atlas reading order: left-to-right, top-to-bottom.
@@ -473,6 +474,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			for state in ["normal", "hover", "pressed", "disabled"]:
 				elixir_button.add_theme_stylebox_override(state, elixir_style)
 		elixir_row.add_child(elixir_button)
+		SquareSlotFeedback.attach(elixir_button, "elixir")
 		if is_player:
 			elixir_button.pressed.connect(_use_elixir.bind(elixir_index))
 			player_elixir_slots.append(elixir_button)
@@ -513,6 +515,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		button.button_pressed = is_player and zone == "chest"
 		button.pressed.connect(_select_zone.bind(is_player, zone))
 		zone_row.add_child(button)
+		SquareSlotFeedback.attach(button, "zone")
 		if is_player:
 			defense_buttons.append(button)
 		else:
@@ -598,8 +601,13 @@ func _show_equipment_details(is_player: bool, slot: String) -> void:
 				item = repository.get_item(String(instance_id))
 	else:
 		item = disclosed_enemy_equipment.get(slot, {})
-	# Empty equipment slots must never open a card.
+	# Undisclosed opponent equipment must not reveal whether a slot is empty.
 	if item.is_empty():
+		if is_player:
+			item_popup.title = "Слот экипировки"
+			item_popup_text.clear()
+			item_popup_text.add_text("%s — пусто" % SquareUiGeometry.equipment_name(slot))
+			item_popup.popup_centered()
 		return
 	var rarity := String(item.get("rarity", "grey")).to_lower()
 	var quality_color := String(ItemIcon.RARITY_COLORS.get(rarity, "#aab0b8"))
@@ -762,8 +770,10 @@ func _refresh_ability_buttons() -> void:
 		button.disabled=not available
 		button.text=ability_id if not ability_id.is_empty() else ""
 		button.add_theme_font_size_override("font_size",8)
-		button.tooltip_text=("%s | %s | Мана: %d | Цель: %s" % [ability_id,String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else ("ABI не определена в основном каталоге: " + ability_id if not ability_id.is_empty() else "Пустой слот ABI")
+		var source := SquareUiGeometry.abi_source(index)
+		button.tooltip_text=("%s | %s — %s | Мана: %d | Цель: %s" % [source, ability_id, String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else (source + ": ABI не определена — " + ability_id if not ability_id.is_empty() else source + " — пусто")
 		button.set_pressed_no_signal((available and selected_ability==ability_id) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
+		SquareSlotFeedback.set_selected(button, combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
 	if not selected_still_valid:
 		selected_ability=""
 
@@ -1071,6 +1081,8 @@ func refresh() -> void:
 		var icon := enemy_slots[slot] as ItemIcon
 		var disclosed: Dictionary = disclosed_enemy_equipment.get(slot, {})
 		icon.set_item(disclosed, slot)
+		if disclosed.is_empty():
+			icon.tooltip_text = "Снаряжение противника неизвестно"
 	if character != null and repository != null and hp_label != null and combat_session == null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
@@ -1090,16 +1102,9 @@ func _apply_layout() -> void:
 	else:
 		available_width = maxf(1.0, size.x - LANDSCAPE_LOG_MIN_WIDTH - separation)
 	var edge := floorf(maxf(1.0, minf(available_width, available_height)))
-	var logical_size := Vector2(ARENA_LOGICAL_EXTENT, ARENA_LOGICAL_EXTENT)
-	square_host.custom_minimum_size = Vector2(edge, edge)
-	square_host.size = Vector2(edge, edge)
-	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	square_content.position = Vector2.ZERO
-	square_content.size = logical_size
-	square_content.scale = Vector2.ONE * (edge / ARENA_LOGICAL_EXTENT)
+	SquareUiGeometry.fit(square_host, square_content, edge, ARENA_LOGICAL_EXTENT)
 	if arena_background != null:
-		arena_background.size = logical_size
+		arena_background.size = Vector2.ONE * ARENA_LOGICAL_EXTENT
 
 ## Read-only diagnostic snapshot. No combat calculations are changed.
 func _show_par_report() -> void:
