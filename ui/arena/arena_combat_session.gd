@@ -184,14 +184,16 @@ func activate_ability(ability_id: String) -> Dictionary:
 	if not bool(result.get("ok",false)):
 		return result
 	locked_ability_id=ability_id
-	for event in state.pending_events:
+	# Detach the committed root before resolving: instant ABI children may
+	# enqueue EFF and must never be accidentally reclassified as Standard.
+	var roots: Array[CombatEvent] = state.pending_events.duplicate()
+	state.pending_events.clear()
+	for event in roots:
 		if String(event.payload.get("application_timing","standard"))=="instant":
-			# One button press resolves the entire instant ABI synchronously.
 			engine.resolve_event(event)
 		else:
 			active_round.lock_action(event)
-	state.pending_events.clear()
-	# Instant ACTION may create EFF children, resolved in the same click.
+	# Instant ACTION children now resolve immediately, exactly once.
 	engine.resolve_pending_events()
 	return {"ok":true,"timing":AbilityRuntime.application_timing(AbilityCatalog.definition(ability_scheduler.definitions,ability_id))}
 
@@ -225,8 +227,11 @@ func use_elixir(index: int) -> Dictionary:
 	var target_round := state.round_number if active_round != null else state.round_number+1
 	if not elixir_service.can_use(fighter(true),target_round):
 		return {"ok":false,"reason":"elixir_unavailable"}
-	if CombatElixirService.validate_components(repository.get_item(id))!="":
+	var item: Dictionary = repository.get_item(id)
+	if CombatElixirService.validate_components(item)!="":
 		return {"ok":false,"reason":"invalid_elixir"}
+	if int(item.get("charges",0))<=0 or int(item.get("charges",0))>maxi(1,int(item.get("max_charges",1))):
+		return {"ok":false,"reason":"invalid_charges"}
 	_ensure_round()
 	return elixir_service.use(player_id,id,repository)
 
