@@ -293,7 +293,9 @@ func _change_test_level(is_player: bool, delta: int) -> void:
 func _build_square() -> void:
 	arena_background = TextureRect.new()
 	arena_background.texture = load("res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png") as Texture2D
-	arena_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Fixed logical 480x480 image: the enclosing square is uniformly scaled.
+	# Full-rect anchors plus explicit size caused Godot _set_size warnings.
+	arena_background.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	arena_background.custom_minimum_size = Vector2.ZERO
 	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	arena_background.stretch_mode = TextureRect.STRETCH_SCALE
