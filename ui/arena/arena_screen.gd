@@ -430,6 +430,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			icon.custom_minimum_size = Vector2(30, 30)
 			icon.scale = Vector2.ONE * 0.74
 			inner.add_child(icon)
+			icon.set_empty_placeholder_icon_visible(false)
 			if is_player:
 				player_slots[slot] = icon
 			else:
@@ -470,11 +471,8 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		elixir_button.custom_minimum_size = Vector2(31, 32)
 		elixir_button.add_theme_font_size_override("font_size", 10)
 		elixir_button.disabled = true
-		var elixir_style := StyleBoxTexture.new()
-		elixir_style.texture = ItemIcon.empty_slot_texture("elixir")
-		if elixir_style.texture != null:
-			for state in ["normal", "hover", "pressed", "disabled"]:
-				elixir_button.add_theme_stylebox_override(state, elixir_style)
+		# Frame-only placeholder; keep the actual elixir and charges dynamic.
+		SquareSlotFeedback.style_abi_square(elixir_button)
 		elixir_row.add_child(elixir_button)
 		SquareSlotFeedback.attach(elixir_button, "elixir")
 		if is_player:
