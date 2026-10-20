@@ -69,8 +69,8 @@ func _run() -> void:
 		check(button.get_theme_stylebox("normal") is StyleBoxFlat, "system_square_abi_" + str(index))
 		check(button.get_node_or_null(SquareSlotFeedback.HOVER_OVERLAY) != null, "tactile_abi_" + str(index))
 		check(button.tooltip_text.contains(SquareUiGeometry.abi_source(index)), "abi_source_" + str(index))
-	check(arena.ability_buttons[3].tooltip_text.contains("Шлем"), "abi4_helmet")
-	check(arena.ability_buttons[4].tooltip_text.contains("Нагрудная броня"), "abi5_chest")
+	check(arena.ability_buttons[3].tooltip_text.contains("Нагрудная броня"), "abi4_chest")
+	check(arena.ability_buttons[4].tooltip_text.contains("Шлем"), "abi5_helmet")
 	var row := arena.square_content.get_node_or_null("AbilitySlots") as HBoxContainer
 	check(row != null and row.get_theme_constant("separation")==0, "abi_strip_no_gaps")
 	SquareSlotFeedback.set_selected(arena.ability_buttons[0],true)
