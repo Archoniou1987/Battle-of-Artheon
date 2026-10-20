@@ -1,3 +1,10 @@
+## Combat test ladder — first batch
+- **Stage 0:** `tests/combat/arena_basic_round_runner.gd` tests a genuine Arena duel with one physical main-hand attack, one manual-block selection, a rejected invalid zone and the resulting canonical event/journal. It does not assume an exact random damage amount.
+- **Stage 1:** `tests/combat/full_battle_vertical_slice_runner.gd` tests two weapons, a canonical ABI003 cast, PAR diagnostics, resource accounting, outcome and EFF read projection in the same underlying Arena session.
+- **Stages 2+:** existing integrated round, end-of-round death, healing/DoT/HoT, combat RNG and broader ABI suites. Extend with systematic scenario families only after Stage 0/1 pass.
+- The ABI Branch Tests workflow runs Stage 0 before Stage 1 as one batched execution. The WEB workflow verifies actual UI presentation separately.
+- No isolated workflow run per minor change. A passing workflow validates the tests it contains, not every possible physical/magical effect combination.
+
 ## Combat validation sequence — stage gates
 - **Gate 0 (minimal, real)**: `tests/combat/battle_baseline_runner.gd` runs one player sword attack and enemy attack, one manual block selection, PAR diagnostic readout, invalid-command atomicity, one resolved round and journal.
 - **Gate 1 (integrated)**: `tests/combat/full_battle_vertical_slice_runner.gd` extends to dual wield + canonical ABI003 and engine event diagnostics; existing ABI/EFF lifecycle regressions remain in the same CI batch.
