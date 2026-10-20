@@ -11,6 +11,14 @@
 2. **Content and transparent hit areas:** equipped item icon (with its rarity frame), ABI icon/text, potion icon; the slot's semantic ID and hit target; empty-slot tooltip / touch description. When the proper base image is installed, empty sprites can be hidden while retaining their clickable regions.
 3. **Interactive state:** one lightweight glow/outline on hover, a brief pulse on button press, a persistent outline only for a selected/committed ABI, and gameplay-controlled disabled/cooldown states. `SquareSlotFeedback` affects only visuals. It must not change `Button` dimensions or scale, emit gameplay commands, or intercept mouse/touch events.
 
+## Frame-only composition pass (2026-10-20)
+- Inventory and Arena empty equipment slots now hide all **ghost/silhouette icons** but keep a neutral 2px interactive frame and readable empty-slot description.
+- Empty elixir slots also keep a neutral system frame; filled elixirs still display their own icon/charges.
+- Five empty ABI buttons were already system squares; no decorative ABI atlas is baked into them.
+- This is a **non-destructive display switch** (`ItemIcon.set_empty_placeholder_icon_visible(false)`). Atlas files remain in the repository for rollback and art design. Item rarity frames remain entirely tied to equipped items, not to placeholder art.
+- Temporary neutral frames expose the current slot positions; **do not assume those coordinates are final** until aligned against the actual 1:1 square background and verified visually on device.
+- Bag item icons are unaffected because the request concerns empty equipment/elixir/ABI slots inside square panels.
+
 ## Input behavior
 - Hover (desktop): a mild brightening and slot description.
 - Tap/click (mobile or desktop): tactile pulse; for empty Inventory equipment the popup displays e.g. "Шлем — пусто".
