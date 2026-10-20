@@ -757,13 +757,13 @@ func _refresh_ability_buttons() -> void:
 		var option:Dictionary=options[index] if index<options.size() else {}
 		var ability_id:=String(option.get("id",""))
 		var available:=bool(option.get("available",false))
-		if selected_ability==ability_id and available and not ability_id.is_empty():
+		if (selected_ability==ability_id and available and not ability_id.is_empty()) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty():
 			selected_still_valid=true
 		button.disabled=not available
 		button.text=ability_id if not ability_id.is_empty() else ""
 		button.add_theme_font_size_override("font_size",8)
 		button.tooltip_text=("%s | %s | Мана: %d | Цель: %s" % [ability_id,String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else ("ABI не определена в основном каталоге: " + ability_id if not ability_id.is_empty() else "Пустой слот ABI")
-		button.set_pressed_no_signal(available and selected_ability==ability_id)
+		button.set_pressed_no_signal((available and selected_ability==ability_id) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
 	if not selected_still_valid:
 		selected_ability=""
 
