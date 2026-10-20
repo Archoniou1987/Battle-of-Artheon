@@ -49,6 +49,15 @@ var bag_title: Label
 var bag_panel: PanelContainer
 var equipment_content: Control
 var equipment_background: TextureRect
+var visual_lab_dialog: AcceptDialog
+var visual_lab_theme: OptionButton
+var visual_lab_ghosts: CheckBox
+var visual_lab_frames: CheckBox
+var visual_lab_background: HSlider
+var visual_lab_theme_index := 0
+var visual_lab_show_ghosts := false
+var visual_lab_show_frames := true
+var visual_lab_background_alpha := 1.0
 var hp_label: Label
 var hp_bar: ProgressBar
 var stats_content: VBoxContainer
@@ -82,6 +91,11 @@ func _ready() -> void:
 	heading.text = "Инвентарь"
 	heading.add_theme_font_size_override("font_size", 24)
 	header.add_child(heading)
+	var visual_button := Button.new()
+	visual_button.name = "VisualLabButton"
+	visual_button.text = "🎨 Визуал"
+	visual_button.pressed.connect(_open_visual_lab)
+	header.add_child(visual_button)
 	layout_row = BoxContainer.new()
 	layout_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(layout_row)
@@ -302,11 +316,103 @@ func _ready() -> void:
 	discard_confirm.cancel_button_text = "Отмена"
 	discard_confirm.confirmed.connect(_confirm_discard)
 	add_child(discard_confirm)
+	_build_visual_lab()
 	detail_dialog.changed.connect(refresh)
 	detail_dialog.elixir_requested.connect(_assign_elixir)
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
+
+## Design experiments are intentionally session-only and never touch saves.
+func _build_visual_lab() -> void:
+	visual_lab_dialog = AcceptDialog.new()
+	visual_lab_dialog.name = "VisualLabDialog"
+	visual_lab_dialog.title = "Visual Lab · Inventory"
+	visual_lab_dialog.ok_button_text = "Закрыть"
+	visual_lab_dialog.min_size = Vector2i(310, 300)
+	add_child(visual_lab_dialog)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	visual_lab_dialog.add_child(column)
+	var note := Label.new()
+	note.text = "Эксперименты без изменения предметов и сохранений."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(note)
+	visual_lab_theme = OptionButton.new()
+	visual_lab_theme.name = "Theme"
+	for theme_data in VisualLabPresets.THEMES:
+		visual_lab_theme.add_item(String(theme_data["title"]))
+	visual_lab_theme.item_selected.connect(_visual_lab_theme_changed)
+	column.add_child(visual_lab_theme)
+	visual_lab_ghosts = CheckBox.new()
+	visual_lab_ghosts.name = "GhostIcons"
+	visual_lab_ghosts.text = "Силуэты пустых слотов"
+	visual_lab_ghosts.button_pressed = false
+	visual_lab_ghosts.toggled.connect(_visual_lab_ghosts_changed)
+	column.add_child(visual_lab_ghosts)
+	visual_lab_frames = CheckBox.new()
+	visual_lab_frames.name = "EmptyFrames"
+	visual_lab_frames.text = "Рамки пустых слотов"
+	visual_lab_frames.button_pressed = true
+	visual_lab_frames.toggled.connect(_visual_lab_frames_changed)
+	column.add_child(visual_lab_frames)
+	var opacity_label := Label.new()
+	opacity_label.text = "Насыщенность фонового арта"
+	column.add_child(opacity_label)
+	visual_lab_background = HSlider.new()
+	visual_lab_background.name = "BackgroundStrength"
+	visual_lab_background.min_value = 0.15
+	visual_lab_background.max_value = 1.0
+	visual_lab_background.step = 0.05
+	visual_lab_background.value = 1.0
+	visual_lab_background.value_changed.connect(_visual_lab_background_changed)
+	column.add_child(visual_lab_background)
+	var reset := Button.new()
+	reset.name = "Reset"
+	reset.text = "Вернуть исходный вид"
+	reset.pressed.connect(_reset_visual_lab)
+	column.add_child(reset)
+
+func _open_visual_lab() -> void:
+	visual_lab_dialog.popup_centered(Vector2i(360, 355))
+
+func _visual_lab_theme_changed(index: int) -> void:
+	visual_lab_theme_index = index
+	_apply_visual_lab()
+
+func _visual_lab_ghosts_changed(value: bool) -> void:
+	visual_lab_show_ghosts = value
+	_apply_visual_lab()
+
+func _visual_lab_frames_changed(value: bool) -> void:
+	visual_lab_show_frames = value
+	_apply_visual_lab()
+
+func _visual_lab_background_changed(value: float) -> void:
+	visual_lab_background_alpha = value
+	_apply_visual_lab()
+
+func _reset_visual_lab() -> void:
+	visual_lab_theme.select(0)
+	visual_lab_ghosts.set_pressed_no_signal(false)
+	visual_lab_frames.set_pressed_no_signal(true)
+	visual_lab_background.set_value_no_signal(1.0)
+	visual_lab_theme_index = 0
+	visual_lab_show_ghosts = false
+	visual_lab_show_frames = true
+	visual_lab_background_alpha = 1.0
+	_apply_visual_lab()
+
+func _apply_visual_lab() -> void:
+	if equipment_background == null:
+		return
+	var palette := VisualLabPresets.theme(visual_lab_theme_index)
+	equipment_background.modulate = Color(String(palette["background"]))
+	equipment_background.modulate.a = visual_lab_background_alpha
+	for slot in slot_buttons:
+		VisualLabPresets.configure_empty(slot_buttons[slot] as ItemIcon, visual_lab_theme_index, visual_lab_show_ghosts, visual_lab_show_frames)
+	for icon in elixir_buttons:
+		VisualLabPresets.configure_empty(icon, visual_lab_theme_index, visual_lab_show_ghosts, visual_lab_show_frames)
 
 func _add_equipment_slot(parent: Control, slot: String) -> void:
 	var button := ItemIcon.new()
@@ -445,6 +551,7 @@ func refresh() -> void:
 		var item := repository.get_item(String(id)) if id != null and repository != null else {}
 		(button as ItemIcon).set_item(item, SLOT_NAMES[slot], id != null)
 		button.modulate = Color("#ed5961") if id != null and not character.is_equipment_active(String(id), repository) else Color.WHITE
+	_apply_visual_lab()
 	for child in bag_grid.get_children():
 		bag_grid.remove_child(child)
 		child.queue_free()
