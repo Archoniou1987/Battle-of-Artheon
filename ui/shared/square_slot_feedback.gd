@@ -83,12 +83,22 @@ static func _hover(button: BaseButton, overlay: Panel, entered: bool) -> void:
 		_fade(overlay, 0.38 if entered else 0.0, 0.12)
 
 static func _down(button: BaseButton, overlay: Panel) -> void:
-	if not button.disabled:
-		_fade(overlay, 0.9, 0.055)
+	if button.disabled or not is_instance_valid(overlay):
+		return
+	# Touch feedback must be visible on the SAME frame as button_down.
+	# A newly queued Tween may not advance before a short mobile tap or
+	# in headless UI tests, so never depend on its first tick.
+	var previous: Variant = overlay.get_meta("_square_feedback_tween") if overlay.has_meta("_square_feedback_tween") else null
+	if previous is Tween and is_instance_valid(previous):
+		(previous as Tween).kill()
+	overlay.modulate.a = 0.9
 
 static func _up(button: BaseButton, overlay: Panel) -> void:
-	if not button.disabled:
-		_fade(overlay, 0.3 if button.is_hovered() else 0.0, 0.13)
+	if not is_instance_valid(overlay):
+		return
+	# Release always removes the down state, even when gameplay disables
+	# the button synchronously after a successful click.
+	_fade(overlay, 0.3 if button.is_hovered() and not button.disabled else 0.0, 0.13)
 
 static func _flash(button: BaseButton, overlay: Panel) -> void:
 	if not is_instance_valid(overlay):
