@@ -10,6 +10,7 @@ static func seed(character: CharacterState, repository: ItemRepository) -> bool:
 		{"instance_id":"elixir_test_mana_v1","name":"Эликсир энергии","type":"consumable","rarity":"green","charges":3,"max_charges":3,"cooldown_rounds":1,"elixir_components":[{"kind":"mana","amount":30}]},
 		{"instance_id":"elixir_test_fire_v1","name":"Огненный оберег","type":"consumable","rarity":"blue","charges":2,"max_charges":2,"cooldown_rounds":1,"elixir_components":[{"kind":"effect","effect_id":"EFF005"}]},
 		{"instance_id":"elixir_test_ward_v1","name":"Эликсир защиты","type":"consumable","rarity":"green","charges":3,"max_charges":3,"cooldown_rounds":1,"elixir_components":[{"kind":"effect","effect_id":"EFF006"}]},
+		{"instance_id":"elixir_test_focus_v1","name":"Эликсир концентрации","type":"consumable","rarity":"blue","charges":3,"max_charges":3,"cooldown_rounds":1,"elixir_components":[{"kind":"effect","effect_id":"EFF007"}]},
 		{"instance_id":"elixir_test_cleanse_v1","name":"Эликсир очищения","type":"consumable","rarity":"green","charges":3,"max_charges":3,"cooldown_rounds":1,"elixir_components":[{"kind":"cleanse","dispel_polarity":"DEBUFF","max_effects":2}]}
 	]
 	var changed := false
