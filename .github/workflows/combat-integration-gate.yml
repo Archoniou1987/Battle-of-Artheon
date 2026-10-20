@@ -39,6 +39,7 @@ jobs:
             tests/combat/integrated_round_phases_runner.gd \
             tests/combat/arena_round_timing_interaction_runner.gd \
             tests/combat/arena_dual_support_round_runner.gd \
+            tests/combat/group_combat_simulator_runner.gd \
             tests/combat/round_effect_death_regression_runner.gd \
             tests/combat/instant_effect_surprise_runner.gd \
             tests/combat/elixir_mind_game_runner.gd \
