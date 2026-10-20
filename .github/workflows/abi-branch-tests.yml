@@ -25,11 +25,23 @@ jobs:
         run: bash tools/run_godot_check.sh tests/combat/abi_test_lab_runner.gd
       - name: Open ABI Test Lab from Arena and preserve live resources
         run: bash tools/run_godot_check.sh tests/ui/abi_test_lab_open_runner.gd
-      - name: Validate independent Arena defence zones and real EFF indicators
+      - name: Validate Arena controls, EFF indicators and tactile square UI
         run: |
-          bash tools/run_godot_check.sh tests/ui/arena_open_smoke.gd
-          bash tools/run_godot_check.sh tests/ui/elixir_abi_press_runner.gd
-          bash tools/run_godot_check.sh tests/ui/square_slot_interaction_runner.gd
+          # Report all three UI results in one manually initiated workflow.
+          status=0
+          for script in \
+            tests/ui/arena_open_smoke.gd \
+            tests/ui/elixir_abi_press_runner.gd \
+            tests/ui/square_slot_interaction_runner.gd
+          do
+            echo "::group::UI smoke: $script"
+            if ! bash tools/run_godot_check.sh "$script"; then
+              echo "::error::UI regression: $script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
       - name: Validate simultaneous round, ABI/EFF integration and resolved Arena journal
         run: |
           # Run every integration runner even if a prior one fails. This
