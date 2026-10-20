@@ -23,8 +23,8 @@
 | index 0–4 | item source |
 | --- | --- |
 | 0, 1, 2 | Main Hand weapon, abilities 1–3 |
-| 3 | Head armour, first eligible ABI |
-| 4 | Chest armour, first eligible ABI |
+| 3 | Chest armour, first eligible ABI |
+| 4 | Head armour, first eligible ABI |
 
 - Always five equal squares, a single contiguous row, no extra spacing.
 - Off Hand / rings / gloves / belt do not add active ABI.
@@ -33,6 +33,6 @@
 
 ## Validation
 - `tests/ui/square_slot_interaction_runner.gd`: geometric invariants, five system ABI buttons, press overlay and empty equipment information.
-- `tests/items/item_abi_chain_runner.gd`: MH/Head/Chest slot ordering, duplicate exclusion and Off Hand exclusion.
+- `tests/items/item_abi_chain_runner.gd`: MH/Chest/Head slot ordering, duplicate exclusion and Off Hand exclusion.
 - Existing `tests/ui/arena_open_smoke.gd` and `tests/ui/elixir_abi_press_runner.gd` must also pass.
 - CI on this revision has **not yet been run**. New/updated fixtures do not constitute a successful runtime test until the workflow finishes.
