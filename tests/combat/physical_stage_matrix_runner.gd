@@ -33,7 +33,8 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	victim.combat_stats["dodge_rating_percent"] = float(settings.get("dodge", 0.0))
 	victim.combat_stats["shield_auto_block_rating_percent"] = float(settings.get("auto", 0.0))
 	victim.combat_stats["manual_block_zones"] = ["chest"] if bool(settings.get("manual", false)) else []
-	victim.armour["chest"] = {"slashing": float(settings.get("armour", 0.0))}
+	var physical_type := String(settings.get("damage_type", "slashing"))
+	victim.armour["chest"] = {physical_type: float(settings.get("armour", 0.0))}
 	state.add_combatant(actor)
 	state.add_combatant(victim)
 	state.begin_round()
@@ -45,7 +46,7 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 		"damage": 0.5
 	}
 	var attack := state.create_event(CombatEvent.Kind.ATTACK, "matrix_actor", "matrix_victim", {
-		"raw_damage": 100.0, "damage_type": "slashing",
+		"raw_damage": 100.0, "damage_type": physical_type,
 		"zone": "chest", "rolls": rolls, "is_weapon_attack": false
 	})
 	state.queue_event(attack)
@@ -94,6 +95,12 @@ func _typed_and_flat_penetration() -> void:
 	_check(is_equal_approx(float(hit.result.get("armour_penetration_flat", -1.0)), 10.0), "flat_penetration_rating")
 	_check(float(hit.result.get("armour_reduction", 1.0)) < float(base.result.get("armour_reduction", 0.0)), "penetration_reduces_mitigation")
 	_check(float(hit.result.get("after_armour_damage", 0.0)) > float(base.result.get("after_armour_damage", 0.0)), "penetration_increases_resolved_damage")
+	# PAR132 is slashing-only: the same item rating must not penetrate piercing.
+	var other_type := _scenario({"armour": 35.0, "typed_pen": 50.0, "damage_type": "piercing"})
+	var piercing_hit: CombatEvent = other_type["attack"]
+	_check(String(piercing_hit.result.get("outcome", "")) == "connected", "other_physical_type_connected")
+	_check(is_zero_approx(float(piercing_hit.result.get("typed_armour_penetration_percent", -1.0))), "par132_does_not_affect_piercing")
+	_check(is_equal_approx(float(piercing_hit.result.get("effective_armour", -1.0)), 35.0), "wrong_type_keeps_armour")
 
 func _event_lineage_and_read_only_projection() -> void:
 	var scenario := _scenario({"armour": 35.0, "general_pen": 20.0})
