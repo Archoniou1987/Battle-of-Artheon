@@ -129,6 +129,8 @@ func _ready() -> void:
 	_marker.add_theme_color_override("font_color", Color("#e5c57f"))
 	_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_marker)
+	# Input/state lives above the item and empty-slot artwork.
+	SquareSlotFeedback.attach(self, "equipment")
 	set_item({})
 
 func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) -> void:
@@ -179,7 +181,7 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	_fallback.visible = texture == null and empty_texture == null
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
 	_marker.text = ""
-	tooltip_text = String(item.get("name", slot_name))
+	tooltip_text = (String(item.get("name", slot_name)) if not item.is_empty() else (slot_name + " — пусто" if not slot_name.is_empty() else "Пустая ячейка"))
 
 static func _resolve_empty_slot(value: String) -> String:
 	if EMPTY_SLOT_INDICES.has(value):
