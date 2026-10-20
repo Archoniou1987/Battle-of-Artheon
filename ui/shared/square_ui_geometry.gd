@@ -13,7 +13,7 @@ const EQUIPMENT_LABELS := {
 }
 const ABI_SOURCE_LABELS := [
 	"Оружие MH — ABI 1", "Оружие MH — ABI 2", "Оружие MH — ABI 3",
-	"Шлем — ABI", "Нагрудная броня — ABI"
+	"Нагрудная броня — ABI", "Шлем — ABI"
 ]
 
 static func fit(host: Control, content: Control, requested_edge: float, design_edge: float = DESIGN_EDGE) -> void:
