@@ -78,7 +78,7 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	engine = CombatEngine.new(state)
 	orchestrator = RoundOrchestrator.new(state, engine, group, zones)
 	var equipment_slots := EquipmentAbilityLoadout.build(character, repository)
-	for group_name in ["weapon", "chest", "head"]:
+	for group_name in ["weapon", "head", "chest"]:
 		player_ability_slots.append_array(Array(equipment_slots.get(group_name, [])))
 	# Only the canonical live ABI catalog is executable in Arena. Development
 	# fixture IDs are never silently substituted for production definitions.
