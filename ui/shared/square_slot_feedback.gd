@@ -104,9 +104,12 @@ static func _fade(overlay: Panel, opacity: float, duration: float) -> void:
 	tween.tween_property(overlay, "modulate:a", opacity, duration)
 
 static func _new_tween(target: CanvasItem) -> Tween:
-	var previous: Variant = target.get_meta("_square_feedback_tween", null)
-	if previous is Tween:
-		(previous as Tween).kill()
+	# In Godot 4.5 get_meta(key, null) still logs ERROR for a missing
+	# key. First interaction has no tween metadata yet; guard explicitly.
+	if target.has_meta("_square_feedback_tween"):
+		var previous: Variant = target.get_meta("_square_feedback_tween")
+		if previous is Tween and is_instance_valid(previous):
+			(previous as Tween).kill()
 	var tween := target.create_tween()
 	tween.set_trans(Tween.TRANS_QUAD)
 	tween.set_ease(Tween.EASE_OUT)
