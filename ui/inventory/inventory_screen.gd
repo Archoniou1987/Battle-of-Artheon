@@ -40,6 +40,7 @@ var discard_cancel: Button
 var discard_confirm: ConfirmationDialog
 var slot_buttons: Dictionary = {}
 var elixir_buttons: Array[ItemIcon] = []
+## Reference the character-owned quickslots; no UI-local copy.
 var elixir_assignments: Array[String] = ["", "", "", ""]
 var _last_portrait := false
 var bag_scroll: ScrollContainer
@@ -425,6 +426,8 @@ func _tap_item(instance_id: String, slot: String, target: Control) -> void:
 		detail_dialog.show_item(instance_id, slot, target)
 
 func refresh() -> void:
+	if character != null:
+		elixir_assignments = character.elixir_slots.duplicate()
 	if bag_grid == null:
 		return
 	_refresh_combat_stats()
@@ -442,7 +445,7 @@ func refresh() -> void:
 		return
 	var owned_ids: Array = []
 	for instance_id in character.inventory.instance_ids():
-		if not character.equipment.is_equipped(String(instance_id)) and not elixir_assignments.has(String(instance_id)):
+		if not character.equipment.is_equipped(String(instance_id)) and not character.elixir_slots.has(String(instance_id)):
 			owned_ids.append(instance_id)
 	bag_title.text = "Сумка (%d)" % owned_ids.size()
 	for instance_id in owned_ids:
@@ -457,29 +460,28 @@ func refresh() -> void:
 func _assign_elixir(instance_id: String) -> void:
 	if character == null or not character.inventory.owns(instance_id) or repository == null:
 		return
-	if elixir_assignments.has(instance_id):
+	if character.elixir_slots.has(instance_id):
 		detail_dialog.status_label.text = "Этот эликсир уже размещён в слоте."
 		return
 	var item := repository.get_item(instance_id)
 	if String(item.get("type", "")) != "consumable":
 		return
-	for index in range(elixir_assignments.size()):
-		if elixir_assignments[index].is_empty():
-			elixir_assignments[index] = instance_id
+	for index in range(character.elixir_capacity(repository)):
+		if character.elixir_slots[index].is_empty() and character.assign_elixir(index, instance_id, repository):
 			detail_dialog.visible = false
 			refresh()
 			return
-	detail_dialog.status_label.text = "Все четыре слота эликсиров заняты."
+	detail_dialog.status_label.text = "Нет доступного слота эликсира — нужен пояс или свободное место."
 
 func _clear_elixir_slot(index: int) -> void:
 	if index < 0 or index >= elixir_assignments.size():
 		return
-	elixir_assignments[index] = ""
-	refresh()
+	if character != null and character.clear_elixir(index):
+		refresh()
 
 func _refresh_elixir_slots() -> void:
 	for index in range(elixir_buttons.size()):
-		var instance_id := elixir_assignments[index]
+		var instance_id := character.elixir_slots[index] if character != null else ""
 		var item := repository.get_item(instance_id) if not instance_id.is_empty() and repository != null else {}
 		elixir_buttons[index].set_item(item, "Эликсир %d" % (index + 1), not instance_id.is_empty())
 
@@ -549,7 +551,7 @@ func _confirm_discard() -> void:
 		return
 	for id in discard_ids.keys():
 		var item_id := String(id)
-		if character.inventory.owns(item_id) and not character.equipment.is_equipped(item_id) and not elixir_assignments.has(item_id):
+		if character.inventory.owns(item_id) and not character.equipment.is_equipped(item_id) and not character.elixir_slots.has(item_id):
 			character.remove_item(item_id)
 	_cancel_discard()
 	refresh()
