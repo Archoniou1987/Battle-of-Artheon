@@ -103,7 +103,16 @@ func _run() -> void:
 	arena._refresh_effect_display()
 	check(arena._effect_entries(true, "Баффы").size() == 7, "eff_preview_overflow_fixture")
 	check((arena.effects_rows["player_Баффы"] as HBoxContainer).visible, "eff_preview_player_buff_row")
+	var buff_cell := (arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(0) as Button
+	var debuff_cell := (arena.effects_rows["player_Дебаффы"] as HBoxContainer).get_child(0) as Button
+	check((buff_cell.get_theme_stylebox("normal") as StyleBoxFlat).border_color == Color("#55bf73"), "eff_buff_green_frame")
+	check((debuff_cell.get_theme_stylebox("normal") as StyleBoxFlat).border_color == Color("#d95757"), "eff_debuff_red_frame")
+	var buff_picture := buff_cell.get_node_or_null("EFFItemPicture") as TextureRect
+	var debuff_picture := debuff_cell.get_node_or_null("EFFItemPicture") as TextureRect
+	check(buff_picture != null and buff_picture.texture != null and buff_picture.visible, "eff_buff_existing_item_image")
+	check(debuff_picture != null and debuff_picture.texture != null and debuff_picture.visible, "eff_debuff_existing_item_image")
 	check(((arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(4) as Button).text == "+3", "eff_preview_overflow_badge")
+	check(not (((arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(4) as Button).get_node("EFFItemPicture") as TextureRect).visible, "eff_overflow_displays_count_not_item")
 	arena.visual_lab_eff_index = 3
 	check(bool(Dictionary(arena._effect_entries(false, "Дебаффы")[0]).get("pending", false)), "eff_preview_pending_fixture")
 	arena.visual_lab_eff_index = 0
