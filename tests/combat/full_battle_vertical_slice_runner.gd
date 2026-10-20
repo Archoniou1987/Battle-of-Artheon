@@ -84,6 +84,11 @@ func _init() -> void:
 			physical_indices.append(int(event.payload.get("weapon_index",-1)))
 		if event.source_id == session.player_id and event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) == "ABI003":
 			casts += 1
+	var audit: Dictionary = CombatDiagnostics.round_trace(session.state,session.state.round_number)
+	_check(bool(audit.get("valid_event_lineage",false)), "engine_event_parentage")
+	_check(int(audit.get("event_count",0)) == round_events, "diagnostic_event_reconciliation")
+	_check(int(Dictionary(audit.get("weapon_attacks_by_source",{})).get(session.player_id,0)) == 2, "diagnostic_dual_weapon_attacks")
+	_check(int(Dictionary(audit.get("abi_casts_by_source",{})).get(session.player_id,0)) == 1, "diagnostic_one_abi")
 	_check(round_events > 0, "engine_emitted_events")
 	_check(attacks == 2 and physical_indices.has(0) and physical_indices.has(1), "two_weapon_events")
 	_check(casts == 1, "single_abi_dispatch")
