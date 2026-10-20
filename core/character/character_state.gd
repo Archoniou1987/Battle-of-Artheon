@@ -9,6 +9,8 @@ var progression: CharacterProgression
 var inventory: InventoryState
 var equipment: EquipmentState
 var in_combat := false
+## Persistent equipped consumable quickslots (inventory instance IDs).
+var elixir_slots: Array[String] = ["", "", "", ""]
 
 ## Persistent current resources: maximums are derived afresh from PAR010/011.
 ## Equipping +max HP never heals current HP; removing gear only clamps it.
@@ -125,6 +127,49 @@ func reset_resources_to_full(repository: ItemRepository) -> bool:
 	current_mana = maxi(0, 30 + int(totals["PAR011"]))
 	out_combat_hp_fraction = 0.0
 	out_combat_mana_fraction = 0.0
+	return true
+
+## An active waist item opens 1..4 elixir slots. No belt means none.
+func elixir_capacity(repository: ItemRepository) -> int:
+	var belt_id: Variant = equipment.get_equipped_instance_id("waist")
+	if belt_id == null or not is_equipment_active(String(belt_id), repository):
+		return 0
+	var belt: Dictionary = repository.get_item(String(belt_id))
+	return clampi(int(belt.get("elixir_slots", 1)), 0, 4)
+
+func assign_elixir(index: int, instance_id: String, repository: ItemRepository) -> bool:
+	if in_combat or index < 0 or index >= elixir_capacity(repository):
+		return false
+	if not inventory.owns(instance_id) or equipment.is_equipped(instance_id) or elixir_slots.has(instance_id):
+		return false
+	var item: Dictionary = repository.get_item(instance_id)
+	if String(item.get("type", "")) != "consumable":
+		return false
+	elixir_slots[index] = instance_id
+	return true
+
+func clear_elixir(index: int) -> bool:
+	if in_combat or index < 0 or index >= elixir_slots.size():
+		return false
+	elixir_slots[index] = ""
+	return true
+
+func restore_elixir_slots(ids: Array, repository: ItemRepository) -> bool:
+	if ids.size() != 4:
+		return false
+	var fresh: Array[String] = ["", "", "", ""]
+	for i in range(4):
+		if not ids[i] is String:
+			return false
+		var id: String = String(ids[i])
+		if id.is_empty():
+			continue
+		if not inventory.owns(id) or equipment.is_equipped(id) or fresh.has(id):
+			return false
+		if String(repository.get_item(id).get("type", "")) != "consumable":
+			return false
+		fresh[i] = id
+	elixir_slots = fresh
 	return true
 
 func receive_item(instance_id: String, repository: ItemRepository) -> bool:
@@ -279,6 +324,8 @@ func _revalidate_equipment(_repository: ItemRepository) -> void:
 	pass
 
 func remove_item(instance_id: String) -> bool:
+	if elixir_slots.has(instance_id):
+		return false
 	return inventory.remove_instance(instance_id, equipment)
 
 ## Character-level progression is kept outside the combat runtime.
