@@ -91,7 +91,9 @@ static func _down(button: BaseButton, overlay: Panel) -> void:
 	var previous: Variant = overlay.get_meta("_square_feedback_tween") if overlay.has_meta("_square_feedback_tween") else null
 	if previous is Tween and is_instance_valid(previous):
 		(previous as Tween).kill()
-	overlay.modulate.a = 0.9
+	var press_tint := overlay.modulate
+	press_tint.a = 0.9
+	overlay.modulate = press_tint
 
 static func _up(button: BaseButton, overlay: Panel) -> void:
 	if not is_instance_valid(overlay):
