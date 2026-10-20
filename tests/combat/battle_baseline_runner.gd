@@ -42,9 +42,14 @@ func _init() -> void:
 	for i in range(capacity):
 		chosen_blocks.append(["chest","arms","waist","legs"][i])
 	var before_hp := actor.hp
+	var before_mana := actor.mana
 	var invalid := session.play_round(["not_a_zone"],chosen_blocks)
 	check(not bool(invalid.get("ok",false)), "invalid_attack_rejected")
-	check(session.state.round_number == 0 and actor.hp == before_hp, "invalid_attack_atomic")
+	check(session.state.round_number == 0 and actor.hp == before_hp and actor.mana == before_mana, "invalid_attack_atomic")
+	check(session.state.pending_events.is_empty(), "invalid_attack_no_pending_events")
+	if not failures.is_empty():
+		_finish()
+		return
 	var result := session.play_round(["legs"],chosen_blocks)
 	check(bool(result.get("ok",false)), "basic_round_accepted")
 	if not bool(result.get("ok",false)):
@@ -54,17 +59,26 @@ func _init() -> void:
 	check(session.state.round_number == 1, "round_advanced_once")
 	check(String(result.get("outcome","")) == session.orchestrator.battle_outcome(), "engine_outcome_matches")
 	check(actor.visible_hp() <= actor.max_hp and target.visible_hp() <= target.max_hp, "HP_bounds")
+	var diagnostics := CombatDiagnostics.combatant_trace(actor,session.state.round_number)
+	check(not Dictionary(diagnostics.get("combat_stats",{})).is_empty(), "PAR_available_after_round")
 	var physical_count := 0
 	var opponent_physical_count := 0
+	var ability_count := 0
+	var round_event_count := 0
 	for event in session.state.event_log:
 		if int(event.payload.get("round",-1)) != 1:
 			continue
+		round_event_count += 1
+		if event.kind == CombatEvent.Kind.ACTION and not String(event.payload.get("ability_id","")).is_empty():
+			ability_count += 1
 		if event.kind != CombatEvent.Kind.ATTACK or not bool(event.payload.get("is_weapon_attack",false)):
 			continue
 		if event.source_id == session.player_id and not bool(event.payload.get("is_counterattack",false)):
 			physical_count += 1
 		elif event.source_id == ArenaCombatSession.ENEMY_ID:
 			opponent_physical_count += 1
+	check(round_event_count > 0, "engine_emitted_canonical_events")
+	check(ability_count == 0, "baseline_has_no_abi_actions")
 	check(physical_count == 1, "one_player_weapon_event")
 	check(opponent_physical_count >= 1, "enemy_attack_event")
 	check(Array(result.get("lines",[])).size() >= 2, "both_sides_in_journal")
