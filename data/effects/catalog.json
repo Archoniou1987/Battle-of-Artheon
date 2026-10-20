@@ -33,5 +33,13 @@
     "damage_reduction": 0.2,
     "duration_rounds": 2,
     "stacking": "unique"
+  },
+  "EFF007": {
+    "id": "EFF007",
+    "name": "Focus",
+    "kind": "buff",
+    "crit_chance_direct_pct": 20,
+    "duration_rounds": 2,
+    "stacking": "unique"
   }
 }
