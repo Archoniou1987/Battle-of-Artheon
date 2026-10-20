@@ -191,7 +191,8 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	_fallback.visible = texture == null and empty_texture == null and not (item.is_empty() and empty_art_in_background)
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
 	_marker.text = ""
-	tooltip_text = (String(item.get("name", slot_name)) if not item.is_empty() else (slot_name + " — пусто" if not slot_name.is_empty() else "Пустая ячейка"))
+	var readable_slot := SquareUiGeometry.equipment_name(empty_key) if not empty_key.is_empty() and not ["elixir", "bag", "abi"].has(empty_key) else slot_name
+	tooltip_text = (String(item.get("name", readable_slot)) if not item.is_empty() else (readable_slot + " — пусто" if not readable_slot.is_empty() else "Пустая ячейка"))
 
 static func _resolve_empty_slot(value: String) -> String:
 	if EMPTY_SLOT_INDICES.has(value):
