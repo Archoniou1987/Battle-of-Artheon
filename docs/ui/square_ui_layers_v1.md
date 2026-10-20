@@ -1,4 +1,7 @@
 ## Combat Integration Gate — real ABI/EFF end-to-end (2026-10-20)
+### Manual CI entry point before merge
+Run the existing **Combat Tests** workflow on `feature/character-inventory-ui-v1`. Its workflow file already exists in `main`, and this branch extends it with a bundled live Arena/Group integration step. The existing **ABI Branch Tests** also includes the real EFF chain. The new `Combat Integration Gate` is branch-only and may not be dispatchable from the Actions UI until its workflow definition reaches the default branch. Do **not** report a green CI run until GitHub Actions confirms it.
+
 The lightweight manually dispatched `.github/workflows/combat-integration-gate.yml` covers seventeen real-Godot scenarios in one run. It begins with one weapon and a manual block, then exercises PAR, dual weapons, canonical ABI, active EFF, turn phases, healing, death-at-round-end, elixirs and EFF UI indicators. Every runner executes even if one fails; failing logs are uploaded.
 
 The new `arena_real_eff_chain_runner.gd` checks three **real ArenaCombatSession rounds**, not faked EFF UI state:
