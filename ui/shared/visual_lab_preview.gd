@@ -30,7 +30,7 @@ static func show_mock(icon: ItemIcon, enabled: bool, rarity_index: int = 0) -> v
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 12)
 		existing.add_child(label)
-	var rarity := RARITIES[clampi(rarity_index, 0, RARITIES.size() - 1)]
+	var rarity: String = String(RARITIES[clampi(rarity_index, 0, RARITIES.size() - 1)])
 	var frame := StyleBoxFlat.new()
 	frame.bg_color = Color("#263342")
 	frame.border_color = Color(String(ItemIcon.RARITY_COLORS[rarity]))
