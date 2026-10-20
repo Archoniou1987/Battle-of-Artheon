@@ -1,3 +1,11 @@
+## Visual Lab v0.2 — experiment workbench
+- **Inventory:** visual scenario dropdown (live equipment, rarity examples, fully equipped preview); equipment-group scale (80–105%) and horizontal offset (−20…+20 logical pixels). Existing theme, ghost icons, empty borders and background opacity controls remain available.
+- **Arena:** Visual Lab button exposes shared theme presets and mock equipment scenarios for player/enemy. This is presentation-only, not the existing ABI Lab or CombatSession.
+- Mock examples are implemented as `VisualLabPreview` overlays on genuinely empty `ItemIcon` nodes; they never add items to the repository, change ownership, grant stats or select ABI.
+- Geometry sliders affect only the **Inventory equipment group**, never bag inventory, touch targets outside that group, or saved game rules. Reset returns its scale to 0.9025 and position to (23,18).
+- This remains a transient prototyping tool. A/B persistence and drag-and-drop positioning are deliberately out of scope pending mobile usability review.
+- Run ABI Branch Tests first, then Web Preview and verify controls in portrait and landscape.
+
 ## Visual Lab: experiment layer (v0.1, Inventory)
 - In browser preview, open **Inventory → 🎨 Визуал**. Options: Original / Bronze / Steel palettes, empty ghost illustrations on/off, empty frame on/off, and backdrop strength 15–100%.
 - **Reset** returns to baseline (blue stone, frame only, full backdrop), without modifying equipment, item rarity, combat stats or saves.
