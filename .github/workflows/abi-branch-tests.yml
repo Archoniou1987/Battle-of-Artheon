@@ -52,6 +52,7 @@ jobs:
             tests/combat/arena_basic_round_runner.gd \
             tests/combat/battle_baseline_runner.gd \
             tests/combat/integrated_round_phases_runner.gd \
+            tests/combat/physical_stage_matrix_runner.gd \
             tests/combat/arena_ability_integration_runner.gd \
             tests/combat/full_battle_vertical_slice_runner.gd \
             tests/combat/arena_real_eff_chain_runner.gd \
