@@ -7,6 +7,7 @@
 
 ## Three independent layers
 1. **Square background:** decorative base, only a dark empty-slot backdrop, a modest permanent frame and faint silhouette. No item rarity, charges, cooldown, ABI ID, combat state or tooltip baked in. Final composite 1:1 background images for the two squares are **not yet installed**; existing empty slot sprites remain temporary art.
+- `ItemIcon.set_empty_art_in_background(true)` is ready for the final PNG: it hides temporary empty-slot sprites and outlines but leaves the hit target and equipped item rarity frame intact. Keep the switch **off** until the image contains the precisely aligned slot art.
 2. **Content and transparent hit areas:** equipped item icon (with its rarity frame), ABI icon/text, potion icon; the slot's semantic ID and hit target; empty-slot tooltip / touch description. When the proper base image is installed, empty sprites can be hidden while retaining their clickable regions.
 3. **Interactive state:** one lightweight glow/outline on hover, a brief pulse on button press, a persistent outline only for a selected/committed ABI, and gameplay-controlled disabled/cooldown states. `SquareSlotFeedback` affects only visuals. It must not change `Button` dimensions or scale, emit gameplay commands, or intercept mouse/touch events.
 
