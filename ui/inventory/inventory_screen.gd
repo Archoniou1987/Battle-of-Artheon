@@ -22,6 +22,7 @@ var avatar_texture: TextureRect
 var character_portrait: PanelContainer
 var bag_grid: GridContainer
 var detail_dialog: ItemDetailDialog
+var empty_slot_info: AcceptDialog
 var layout_row: BoxContainer
 var selected_instance_id := ""
 var _last_tap_id := ""
@@ -287,6 +288,11 @@ func _ready() -> void:
 	bag_scroll.add_child(bag_grid)
 	detail_dialog = ItemDetailDialog.new(character, repository)
 	add_child(detail_dialog)
+	# Empty slots are still clickable hit regions over the square artwork.
+	empty_slot_info = AcceptDialog.new()
+	empty_slot_info.title = "Слот экипировки"
+	empty_slot_info.ok_button_text = "Закрыть"
+	add_child(empty_slot_info)
 	discard_confirm = ConfirmationDialog.new()
 	discard_confirm.title = "Подтверждение"
 	discard_confirm.ok_button_text = "Да"
@@ -325,15 +331,9 @@ func _apply_layout() -> void:
 	else:
 		available_width = maxf(1.0, size.x - 260.0 - separation)
 	var square_size := floorf(maxf(1.0, minf(available_width, available_height)))
-	square_host.custom_minimum_size = Vector2(square_size, square_size)
-	square_host.size = Vector2(square_size, square_size)
-	equipment_content.position = Vector2.ZERO
-	equipment_content.size = Vector2(INVENTORY_LOGICAL_EXTENT, INVENTORY_LOGICAL_EXTENT)
+	SquareUiGeometry.fit(square_host, equipment_content, square_size, INVENTORY_LOGICAL_EXTENT)
 	if equipment_background != null:
 		equipment_background.size = Vector2(INVENTORY_LOGICAL_EXTENT, INVENTORY_LOGICAL_EXTENT)
-	square_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	square_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	equipment_content.scale = Vector2.ONE * (square_size / INVENTORY_LOGICAL_EXTENT)
 	layout_row.add_theme_constant_override("separation", 10)
 	var cell_size := ItemIcon.CELL_SIZE * (square_size / 480.0)
 	var gap := 8.0 * (square_size / 480.0)
@@ -388,6 +388,9 @@ func _select_slot(slot: String) -> void:
 	selected_instance_id = String(id) if id != null else ""
 	if id != null:
 		_tap_item(selected_instance_id, slot, slot_buttons[slot] as Control)
+	elif empty_slot_info != null:
+		empty_slot_info.dialog_text = "%s — пусто" % SquareUiGeometry.equipment_name(slot)
+		empty_slot_info.popup_centered(Vector2i(280, 110))
 
 func _select_item(instance_id: String) -> void:
 	if discard_mode:
