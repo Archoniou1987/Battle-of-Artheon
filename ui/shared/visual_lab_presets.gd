@@ -28,3 +28,35 @@ static func configure_empty(icon: ItemIcon, theme_index: int, show_ghost: bool, 
 	icon.add_theme_stylebox_override("normal", style)
 	icon.add_theme_stylebox_override("hover", style.duplicate())
 	icon.add_theme_stylebox_override("pressed", style.duplicate())
+
+## Themed square-button chrome. Call only on ABI/elixir buttons; never on
+## textured attack/defense icons, whose red/blue meaning must remain intact.
+static func configure_system_button(button: Button, theme_index: int) -> void:
+	if button == null:
+		return
+	var colors: Dictionary = theme(theme_index)
+	var base := StyleBoxFlat.new()
+	base.bg_color = Color(String(colors["empty_fill"]))
+	base.border_color = Color(String(colors["empty_border"]))
+	base.set_border_width_all(2)
+	base.set_corner_radius_all(3)
+	base.set_content_margin_all(0)
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		button.add_theme_stylebox_override(state, base.duplicate())
+	var disabled_style := base.duplicate() as StyleBoxFlat
+	disabled_style.bg_color = base.bg_color.darkened(0.24)
+	disabled_style.border_color = base.border_color.darkened(0.20)
+	button.add_theme_stylebox_override("disabled", disabled_style)
+
+## The zone illustration is deliberately untouched; tint only the separately
+## rendered selection border, not semantic red/blue defense/attack artwork.
+static func configure_zone_outline(button: Button, theme_index: int) -> void:
+	if button == null:
+		return
+	var outline := button.get_node_or_null("SelectionOutline") as Panel
+	if outline == null:
+		return
+	var colors: Dictionary = theme(theme_index)
+	var style := outline.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	style.border_color = Color(String(colors["empty_border"]))
+	outline.add_theme_stylebox_override("panel", style)
