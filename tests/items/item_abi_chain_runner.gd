@@ -17,17 +17,17 @@ func _init() -> void:
 	var weapon_ok: bool = slots.get("weapon", []) == ["TEST_ABI_FIREBALL","ABI002",null]
 	var chest_ok: bool = slots.get("chest", []) == ["ABI004"]
 	var head_ok: bool = slots.get("head", []) == ["ABI_HEAD_TEST"]
-	var slot_order_ok: bool = active == ["TEST_ABI_FIREBALL","ABI002","ABI_HEAD_TEST","ABI004"]
+	var slot_order_ok: bool = active == ["TEST_ABI_FIREBALL","ABI002","ABI004","ABI_HEAD_TEST"]
 	var duplicate_deduped: bool = active.count("TEST_ABI_FIREBALL") == 1
 	var oh_excluded: bool = not active.has("TEST_ABI_LIGHTNING")
 	var ok: bool = equipped and weapon_ok and chest_ok and head_ok and slot_order_ok and duplicate_deduped and oh_excluded and active.size() == 4
-	# A duplicate Head/Chest ABI belongs to the earlier reserved slot, Head.
-	var duplicate_chest := repository.get_item("ABI-CHEST-1")
-	duplicate_chest["abilities"] = ["ABI_HEAD_TEST"]
-	var updated: bool = repository.update_item(duplicate_chest)
+	# A duplicate Chest/Head ABI belongs to the earlier reserved slot, Chest.
+	var duplicate_head: Dictionary = repository.get_item("ABI-HELM-1")
+	duplicate_head["abilities"] = ["ABI004"]
+	var updated: bool = repository.update_item(duplicate_head)
 	var duplicate_slots: Dictionary = EquipmentAbilityLoadout.build(hero, repository)
-	var head_priority: bool = updated and duplicate_slots.get("head", []) == ["ABI_HEAD_TEST"] and duplicate_slots.get("chest", []) == [null]
-	ok = ok and head_priority
+	var chest_priority: bool = updated and duplicate_slots.get("chest", []) == ["ABI004"] and duplicate_slots.get("head", []) == [null]
+	ok = ok and chest_priority
 	print("ITEM_ABI_CHAIN weapon=", slots.get("weapon", []), " chest=", slots.get("chest", []), " head=", slots.get("head", []))
 	print("ITEM_ABI_CHAIN duplicate_deduped=", duplicate_deduped, " active=", active, " oh_excluded=", oh_excluded)
 	print("ITEM_ABI_CHAIN_TEST=", "PASS" if ok else "FAIL")
