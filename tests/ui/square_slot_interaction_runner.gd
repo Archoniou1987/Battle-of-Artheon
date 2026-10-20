@@ -40,6 +40,14 @@ func _run() -> void:
 	check((inventory.slot_buttons["head"] as ItemIcon).show_empty_placeholder_icon, "visual_lab_toggle_ghosts")
 	inventory._visual_lab_background_changed(0.5)
 	check(is_equal_approx(inventory.equipment_background.modulate.a, 0.5), "visual_lab_backdrop_strength")
+	inventory._visual_lab_scenario_changed(2)
+	check(inventory.visual_lab_scenario_index == 2, "visual_lab_full_equipment_scenario")
+	check((inventory.slot_buttons["head"] as ItemIcon).has_node(VisualLabPreview.OVERLAY), "visual_lab_mock_overlay_isolated")
+	inventory._visual_lab_scale_changed(0.85)
+	inventory._visual_lab_shift_changed(12.0)
+	var inventory_middle := inventory.equipment_content.get_node("EquipmentMiddle") as Control
+	check(is_equal_approx(inventory_middle.scale.x, 0.9025 * 0.85), "visual_lab_equipment_scale")
+	check(is_equal_approx(inventory_middle.position.x, 35.0), "visual_lab_equipment_shift")
 	inventory._reset_visual_lab()
 	check(inventory.visual_lab_theme_index == 0 and not (inventory.slot_buttons["head"] as ItemIcon).show_empty_placeholder_icon, "visual_lab_reset_without_save")
 
@@ -81,6 +89,14 @@ func _run() -> void:
 	root.add_child(arena)
 	await process_frame
 	check(arena.ability_buttons.size()==5,"five_permanent_abi_buttons")
+	check(arena.visual_lab_dialog != null and arena.visual_lab_theme.item_count == 3, "arena_visual_lab_available")
+	arena.visual_lab_theme_index = 2
+	arena.visual_lab_scenario_index = 1
+	arena._apply_visual_lab()
+	check(arena.arena_background.modulate == Color("#b7c3d4"), "arena_visual_lab_steel_theme")
+	arena._reset_visual_lab()
+	check(arena.visual_lab_theme_index == 0 and arena.visual_lab_scenario_index == 0, "arena_visual_lab_reset")
+
 	var empty_arena_head := arena.player_slots.get("head", null) as ItemIcon
 	check(empty_arena_head != null and not empty_arena_head.show_empty_placeholder_icon and not empty_arena_head._empty_background.visible, "empty_arena_equipment_icon_hidden")
 	check(arena.player_elixir_slots[0].get_theme_stylebox("normal") is StyleBoxFlat, "arena_elixir_frame_without_icon_atlas")
