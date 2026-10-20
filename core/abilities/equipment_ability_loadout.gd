@@ -6,7 +6,7 @@ const WEAPON_SLOTS := ["main_hand"]
 const MAX_WEAPON_ABILITIES := 3
 
 ## Builds five ABI slots from actual equipped item instances:
-## weapon[0..2], chest[0], head[0]. Empty positions remain null.
+## weapon[0..2], head[0], chest[0]. Empty positions remain null.
 static func build(character: CharacterState, repository: ItemRepository) -> Dictionary:
 	var weapon: Array = [null, null, null]
 	var chest: Array = [null]
@@ -32,7 +32,7 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 static func active_abilities(character: CharacterState, repository: ItemRepository) -> Array[String]:
 	var result: Array[String] = []
 	var slots := build(character, repository)
-	for group in ["weapon", "chest", "head"]:
+	for group in ["weapon", "head", "chest"]:
 		for value in slots[group]:
 			if value != null: result.append(String(value))
 	return result
