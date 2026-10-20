@@ -37,6 +37,10 @@ func _run() -> void:
 		check(hover != null, "head_hover_overlay")
 		check(hover != null and hover.mouse_filter==Control.MOUSE_FILTER_IGNORE, "overlay_not_clickable")
 		check(head.tooltip_text.contains("пусто"), "empty_slot_hover_hint")
+		check(not head.show_empty_placeholder_icon and not head._empty_background.visible and not head._slot_background.visible, "inventory_ghost_icons_hidden")
+		var empty_frame := head.get_theme_stylebox("normal") as StyleBoxFlat
+		check(empty_frame != null and empty_frame.border_width_left == 2, "empty_inventory_frame_visible")
+		check(not inventory.elixir_buttons[0].show_empty_placeholder_icon and not inventory.elixir_buttons[0]._empty_background.visible, "empty_inventory_elixir_icon_hidden")
 		# The final artwork can take over the entire empty-slot baseline
 		# without removing the input target or the independent item border.
 		head.set_empty_art_in_background(true)
@@ -64,6 +68,9 @@ func _run() -> void:
 	root.add_child(arena)
 	await process_frame
 	check(arena.ability_buttons.size()==5,"five_permanent_abi_buttons")
+	var empty_arena_head := arena.player_slots.get("head", null) as ItemIcon
+	check(empty_arena_head != null and not empty_arena_head.show_empty_placeholder_icon and not empty_arena_head._empty_background.visible, "empty_arena_equipment_icon_hidden")
+	check(arena.player_elixir_slots[0].get_theme_stylebox("normal") is StyleBoxFlat, "arena_elixir_frame_without_icon_atlas")
 	for index in range(arena.ability_buttons.size()):
 		var button := arena.ability_buttons[index]
 		check(button.get_theme_stylebox("normal") is StyleBoxFlat, "system_square_abi_" + str(index))
