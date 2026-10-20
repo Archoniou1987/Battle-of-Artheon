@@ -21,6 +21,13 @@ func _init() -> void:
 	var duplicate_deduped: bool = active.count("TEST_ABI_FIREBALL") == 1
 	var oh_excluded: bool = not active.has("TEST_ABI_LIGHTNING")
 	var ok: bool = equipped and weapon_ok and chest_ok and head_ok and slot_order_ok and duplicate_deduped and oh_excluded and active.size() == 4
+	# A duplicate Head/Chest ABI belongs to the earlier reserved slot, Head.
+	var duplicate_chest := repository.get_item("ABI-CHEST-1")
+	duplicate_chest["abilities"] = ["ABI_HEAD_TEST"]
+	var updated := repository.update_item(duplicate_chest)
+	var duplicate_slots := EquipmentAbilityLoadout.build(hero, repository)
+	var head_priority := updated and duplicate_slots.get("head", []) == ["ABI_HEAD_TEST"] and duplicate_slots.get("chest", []) == [null]
+	ok = ok and head_priority
 	print("ITEM_ABI_CHAIN weapon=", slots.get("weapon", []), " chest=", slots.get("chest", []), " head=", slots.get("head", []))
 	print("ITEM_ABI_CHAIN duplicate_deduped=", duplicate_deduped, " active=", active, " oh_excluded=", oh_excluded)
 	print("ITEM_ABI_CHAIN_TEST=", "PASS" if ok else "FAIL")
