@@ -20,11 +20,9 @@ static var training_dummy_items: Dictionary = {}
 static var training_dummy_clear_defaults := false
 var enemy_equipment_display: Dictionary = {}
 
-func _init(p_character: CharacterState, p_repository: ItemRepository) -> void:
-	character = p_character
-	repository = p_repository
-	var character := p_character
-	var repository := p_repository
+func _init(character: CharacterState, repository: ItemRepository) -> void:
+	self.character = character
+	self.repository = repository
 	state = CombatState.new()
 	var player := CharacterCombatBuilder.build(character, repository)
 	player_id = player.combatant_id
