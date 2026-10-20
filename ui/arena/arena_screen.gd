@@ -1243,11 +1243,11 @@ func _refresh_effect_display() -> void:
 					picture.visible = extra == 0
 				if extra>0:
 					button.text="+%d" % extra
-					button.tooltip_text="Ещё %d эффект(ов) — нажмите для списка" % extra
+					button.tooltip_text="Открыть вкладку %s" % row_type
 				else:
 					var entry:Dictionary=effects[index]
 					button.text = "" if picture != null and picture.texture != null else _effect_symbol(String(entry.get("kind","")))
-					button.tooltip_text=_effect_description(entry)
+					button.tooltip_text="Открыть вкладку %s" % row_type
 				button.modulate = Color.WHITE
 			var detail:=effect_detail_labels.get(key) as Label
 			if detail!=null:
@@ -1259,20 +1259,13 @@ func _refresh_effect_display() -> void:
 						all_lines.append(_effect_description(Dictionary(item)))
 					detail.text="\n".join(all_lines)
 
+## EFF icons are visual signals. Detailed data lives only in the
+## existing Buffs/Debuffs journal tabs, not in separate popup windows.
 func _show_effect_detail(is_player:bool,row_type:String,index:int) -> void:
-	var effects:=_effect_entries(is_player,row_type)
-	if index>=effects.size() and not (effects.size()>5 and index==4):
+	var effects := _effect_entries(is_player, row_type)
+	if index >= mini(5,effects.size()) or tabs == null:
 		return
-	var lines:PackedStringArray=[]
-	if effects.size()>5 and index==4:
-		for i in range(4,effects.size()):
-			lines.append(_effect_description(Dictionary(effects[i])))
-	else:
-		lines.append(_effect_description(Dictionary(effects[index])))
-	item_popup.title=("%s — %s" % ["Игрок" if is_player else "Противник",row_type])
-	item_popup_text.clear()
-	item_popup_text.add_text("\n".join(lines))
-	item_popup.popup_centered()
+	tabs.current_tab = 1 if row_type == "Баффы" else 2
 
 func _sync_combat_session() -> void:
 	if combat_session == null:
