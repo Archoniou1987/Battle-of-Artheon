@@ -54,6 +54,15 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 		if kind=="cleanse" and not ["BUFF","DEBUFF"].has(String(raw_component.get("dispel_polarity","")).to_upper()): errors.append("invalid_dispel_polarity")
 		if kind=="damage" and float(raw_component.get("amount",-1.0))<0.0: errors.append("invalid_damage_amount")
 		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
+		# Timings are hand-authored. Reject an incompatible instant ABI rather
+		# than silently rewriting it; periodic damage/healing still means Standard.
+		if application_timing(definition)=="instant":
+			if kind in ["damage","heal"]:
+				errors.append("instant_damage_or_heal_requires_standard")
+			elif kind=="effect":
+				var eff: Dictionary = EffectCatalog.definition(EffectCatalog.load_json(),String(raw_component.get("effect_id","")))
+				if String(eff.get("kind","")).to_lower() in ["dot","hot","heal"] or float(eff.get("damage",0.0))>0.0 or float(eff.get("healing",0.0))>0.0:
+					errors.append("instant_periodic_damage_or_heal_requires_standard")
 	if String(normalized.get("combat_role","")).to_upper()=="CLEANSE" and not ["ALLY","ENEMY"].has(String(normalized.get("target_team","")).to_upper()):
 		errors.append("cleanse_target_team_required")
 	return errors
