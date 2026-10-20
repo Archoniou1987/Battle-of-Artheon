@@ -1,3 +1,15 @@
+## Combat Integration Gate — real ABI/EFF end-to-end (2026-10-20)
+The lightweight manually dispatched `.github/workflows/combat-integration-gate.yml` covers thirteen real-Godot scenarios in one run. It begins with one weapon and a manual block, then exercises PAR, dual weapons, canonical ABI, active EFF, turn phases, healing, death-at-round-end, elixirs and EFF UI indicators. Every runner executes even if one fails; failing logs are uploaded.
+
+The new `arena_real_eff_chain_runner.gd` checks three **real ArenaCombatSession rounds**, not faked EFF UI state:
+1. Player equips MH `ABI003`; the actual engine casts Fireball and attaches `EFF003` Burning, which is visible as a pending debuff but must not tick in the application round.
+2. An immediate Fireball cooldown retry must not consume a round, resources or events. Player legally casts chest `ABI004` Healing; engine emits the first Burning tick, applies real `EFF004` Regeneration and exposes it as a pending buff.
+3. With no ABI selected, **both real periodic effects tick**. The canonical events, resource changes, read-only EFF view and Arena journal must agree.
+
+`CombatDiagnostics.round_trace(state,round)` is a reusable **read-only integration audit**. It exposes canonical resolved events, attack/ABI counts by actor, EFF applications, periodic ticks and event-parent lineage; it never recomputes damage and is independent of Arena UI.
+
+Current validation status: GitHub commits created; **CI not yet executed or confirmed**. The new integration runner does not replace stochastic balance analysis, multi-participant encounters or independent numerical armour/penetration tests. Expand those only after the initial gate passes.
+
 ## Combat integration test ladder (2026-10-20)
 1. **Stage 0 — baseline**: `arena_basic_round_runner.gd` and `battle_baseline_runner.gd`: one weapon, one strike, manual defence, PAR readout, rejected invalid command, canonical engine events and journal; no ABI/EFF required.
 2. **Stage 1 — phase order**: `integrated_round_phases_runner.gd`: existing phase integration.
