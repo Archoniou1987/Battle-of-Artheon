@@ -50,6 +50,16 @@ func _init() -> void:
 	if not failures.is_empty():
 		_finish()
 		return
+	# Invalid defence must be rejected before opening the real round.
+	var duplicate_blocks: Array[String] = chosen_blocks.duplicate()
+	duplicate_blocks[0] = "not_a_zone"
+	var invalid_defence := session.play_round(["legs"],duplicate_blocks)
+	check(not bool(invalid_defence.get("ok",false)), "invalid_defence_rejected")
+	check(session.state.round_number == 0 and actor.hp == before_hp and actor.mana == before_mana, "invalid_defence_atomic")
+	check(session.state.pending_events.is_empty(), "invalid_defence_no_pending_events")
+	if not failures.is_empty():
+		_finish()
+		return
 	var result := session.play_round(["legs"],chosen_blocks)
 	check(bool(result.get("ok",false)), "basic_round_accepted")
 	if not bool(result.get("ok",false)):
