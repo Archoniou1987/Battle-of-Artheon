@@ -26,7 +26,8 @@ jobs:
       - name: Open ABI Test Lab from Arena and preserve live resources
         run: bash tools/run_godot_check.sh tests/ui/abi_test_lab_open_runner.gd
       - name: Validate independent Arena defence zones and real EFF indicators
-        run: bash tools/run_godot_check.sh tests/ui/arena_open_smoke.gd
+        run: |
+          bash tools/run_godot_check.sh tests/ui/arena_open_smoke.gd
           bash tools/run_godot_check.sh tests/ui/elixir_abi_press_runner.gd
       - name: Validate simultaneous round, ABI/EFF integration and resolved Arena journal
         run: |
