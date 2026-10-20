@@ -76,6 +76,7 @@ func _init() -> void:
 		_finish()
 		return
 	_check(session.state.round_number == 1, "round1_number")
+	_audit_round(session,1,1,0)
 	_check(_abi_casts(session,1,"ABI003") == 1, "round1_fireball_cast_once")
 	_check(_effect_applications(session,1,"EFF003") == 1, "round1_burning_applied_by_engine")
 	_check(_periodic_tick(session,1,"EFF003",false)["count"] == 0, "round1_no_early_dot")
@@ -99,6 +100,7 @@ func _init() -> void:
 		_finish()
 		return
 	_check(session.state.round_number == 2, "round2_number")
+	_audit_round(session,2,1,1)
 	_check(_abi_casts(session,2,"ABI004") == 1, "round2_healing_cast_once")
 	_check(_effect_applications(session,2,"EFF004") == 1, "round2_regeneration_applied_by_engine")
 	var dot: Dictionary = _periodic_tick(session,2,"EFF003",false)
@@ -117,6 +119,7 @@ func _init() -> void:
 		_finish()
 		return
 	_check(session.state.round_number == 3, "round3_number")
+	_audit_round(session,3,0,2)
 	_check(_abi_casts(session,3,"ABI003") == 0 and _abi_casts(session,3,"ABI004") == 0, "round3_no_unselected_abi")
 	var second_dot: Dictionary = _periodic_tick(session,3,"EFF003",false)
 	var hot: Dictionary = _periodic_tick(session,3,"EFF004",true)
@@ -127,6 +130,20 @@ func _init() -> void:
 	_check(_contains_effect(Array(session.effect_view(true).get("buffs",[])),"EFF004",false), "round3_regeneration_still_visible")
 	_check(session.orchestrator.battle_outcome() == "ongoing", "three_rounds_stay_active")
 	_finish()
+
+func _audit_round(session: ArenaCombatSession, round_number: int, expected_abi: int, expected_ticks: int) -> void:
+	var audit: Dictionary = CombatDiagnostics.round_trace(session.state,round_number)
+	print("ARENA_REAL_EFF_AUDIT_ROUND=",round_number,
+		" weapon=",audit.get("weapon_attacks",0),
+		" abi=",audit.get("abi_casts",0),
+		" periodic=",audit.get("periodic_ticks",0),
+		" applied=",audit.get("applied_effects",0),
+		" orphan=",audit.get("missing_parent_event_ids",[]))
+	_check(bool(audit.get("valid_event_lineage",false)), "round%d_event_lineage" % round_number)
+	_check(int(audit.get("event_count",0)) > 0, "round%d_engine_events" % round_number)
+	_check(int(Dictionary(audit.get("weapon_attacks_by_source",{})).get(session.player_id,0)) == 1, "round%d_real_weapon_action" % round_number)
+	_check(int(Dictionary(audit.get("abi_casts_by_source",{})).get(session.player_id,0)) == expected_abi, "round%d_real_abi_dispatch" % round_number)
+	_check(int(audit.get("periodic_ticks",0)) == expected_ticks, "round%d_periodic_event_count" % round_number)
 
 func _record_count(target: CombatantState, effect_id: String) -> int:
 	var count := 0
