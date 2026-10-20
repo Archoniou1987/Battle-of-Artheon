@@ -98,10 +98,7 @@ static func typed_armour_penetration_percent(combatant: CombatantState, damage_t
 	if not totals is Dictionary:
 		return 0.0
 	var percent := float(totals.get(key, 0.0)) + modifier(combatant, "armour_pen_" + damage_type.to_lower(), round_number)
-	# Elemental elixirs/buffs contribute through the existing EFF overlay.
-\t# The damage pipeline still uses damage * (1 - effective resistance).
-\tvar direct_bonus := modifier(combatant, key + "_resist_direct_pct", round_number)
-\treturn clampf((percent + direct_bonus) / 100.0, 0.0, 1.0)
+	return clampf(percent / 100.0, 0.0, 1.0)
 
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
 	# PAR135 is a percentage (e.g. 20 = 20%); runtime overlays retain
@@ -146,7 +143,10 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	if not is_finite(percent):
 		push_error("Invalid magic resistance rating")
 		return 0.0
-	return clampf(percent / 100.0, 0.0, 1.0)
+	# Existing EFF overlay contributes direct percentage points, not PAR rating.
+	# The CombatEngine damage formula remains unchanged.
+	var effect_bonus: float = modifier(combatant, key + "_resist_direct_pct", round_number)
+	return clampf((percent + effect_bonus) / 100.0, 0.0, 1.0)
 
 ## The shared combat/UI read contract. A caller can request any derived stat
 ## without reimplementing the overlay. Raw ratings remain available separately.
