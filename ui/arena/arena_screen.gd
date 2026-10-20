@@ -50,6 +50,11 @@ var layout: BoxContainer
 var square_host: Control
 var square_content: Control
 var arena_background: TextureRect
+var visual_lab_dialog: AcceptDialog
+var visual_lab_theme: OptionButton
+var visual_lab_scenario: OptionButton
+var visual_lab_theme_index := 0
+var visual_lab_scenario_index := 0
 var log_view: RichTextLabel
 var round_button: Button
 var round_button_art: TextureRect
@@ -147,6 +152,11 @@ func _ready() -> void:
 	abi_lab_button.tooltip_text = "Изолированная проверка ABI, PAR, урона и эффектов на манекене"
 	abi_lab_button.pressed.connect(_open_abi_test_lab)
 	header.add_child(abi_lab_button)
+	var visual_button := Button.new()
+	visual_button.name = "VisualLabButton"
+	visual_button.text = "🎨 Визуал"
+	visual_button.pressed.connect(_open_visual_lab)
+	header.add_child(visual_button)
 	var level_button := Button.new()
 	level_button.text = "Уровень игрока"
 	level_button.pressed.connect(func() -> void: _open_level_settings(true))
@@ -156,6 +166,7 @@ func _ready() -> void:
 	dummy_level_button.pressed.connect(func() -> void: _open_level_settings(false))
 	header.add_child(dummy_level_button)
 	_build_level_settings()
+	_build_visual_lab()
 	abi_lab_dialog = AbiTestLabDialog.new()
 	add_child(abi_lab_dialog)
 	par_report_dialog = AcceptDialog.new()
@@ -218,6 +229,61 @@ func _ready() -> void:
 	_apply_layout()
 	refresh()
 	_start_combat_session()
+
+## Visual Lab is a view-only overlay and does not change CombatSession.
+func _build_visual_lab() -> void:
+	visual_lab_dialog = AcceptDialog.new()
+	visual_lab_dialog.name = "VisualLabDialog"
+	visual_lab_dialog.title = "Visual Lab · Arena"
+	visual_lab_dialog.min_size = Vector2i(310, 230)
+	add_child(visual_lab_dialog)
+	var column := VBoxContainer.new()
+	visual_lab_dialog.add_child(column)
+	visual_lab_theme = OptionButton.new()
+	visual_lab_theme.name = "Theme"
+	for theme_data in VisualLabPresets.THEMES:
+		visual_lab_theme.add_item(String(theme_data["title"]))
+	visual_lab_theme.item_selected.connect(func(index: int) -> void:
+		visual_lab_theme_index = index
+		_apply_visual_lab()
+	)
+	column.add_child(visual_lab_theme)
+	visual_lab_scenario = OptionButton.new()
+	visual_lab_scenario.name = "Scenario"
+	for scenario_name in VisualLabPreview.SCENARIOS:
+		visual_lab_scenario.add_item(scenario_name)
+	visual_lab_scenario.item_selected.connect(func(index: int) -> void:
+		visual_lab_scenario_index = index
+		_apply_visual_lab()
+	)
+	column.add_child(visual_lab_scenario)
+	var reset := Button.new()
+	reset.text = "Сбросить оформление"
+	reset.pressed.connect(_reset_visual_lab)
+	column.add_child(reset)
+
+func _open_visual_lab() -> void:
+	visual_lab_dialog.popup_centered(Vector2i(350, 240))
+
+func _reset_visual_lab() -> void:
+	visual_lab_theme.select(0)
+	visual_lab_scenario.select(0)
+	visual_lab_theme_index = 0
+	visual_lab_scenario_index = 0
+	_apply_visual_lab()
+
+func _apply_visual_lab() -> void:
+	if arena_background == null:
+		return
+	arena_background.modulate = Color(String(VisualLabPresets.theme(visual_lab_theme_index)["background"]))
+	var preview_index := 0
+	for slot in player_slots:
+		VisualLabPreview.show_mock(player_slots[slot] as ItemIcon, visual_lab_scenario_index == 2 or (visual_lab_scenario_index == 1 and preview_index < 4), preview_index % VisualLabPreview.RARITIES.size())
+		preview_index += 1
+	preview_index = 0
+	for slot in enemy_slots:
+		VisualLabPreview.show_mock(enemy_slots[slot] as ItemIcon, visual_lab_scenario_index == 2, preview_index % VisualLabPreview.RARITIES.size())
+		preview_index += 1
 
 func _open_level_settings(is_player: bool) -> void:
 	level_settings_dialog.title = "Уровень игрока" if is_player else "Уровень манекена"
@@ -1083,6 +1149,7 @@ func refresh() -> void:
 		icon.set_item(disclosed, slot)
 		if disclosed.is_empty():
 			icon.tooltip_text = "Снаряжение противника неизвестно"
+	_apply_visual_lab()
 	if character != null and repository != null and hp_label != null and combat_session == null:
 		var snapshot := CharacterCombatBuilder.build(character, repository)
 		_update_hp(hp_bars["player"], hp_label, snapshot.hp, snapshot.max_hp)
