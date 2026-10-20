@@ -5,6 +5,11 @@ var state: CombatState
 var engine: CombatEngine
 var orchestrator: RoundOrchestrator
 var commands: CombatCommandApi
+var elixir_service: CombatElixirService
+var active_round: CombatRound
+var locked_ability_id := ""
+var character: CharacterState
+var repository: ItemRepository
 var ability_scheduler: AbilityScheduler
 ## Five equipment ABI positions: three from MH, one from chest, one from head.
 var player_ability_slots: Array = []
@@ -15,7 +20,11 @@ static var training_dummy_items: Dictionary = {}
 static var training_dummy_clear_defaults := false
 var enemy_equipment_display: Dictionary = {}
 
-func _init(character: CharacterState, repository: ItemRepository) -> void:
+func _init(p_character: CharacterState, p_repository: ItemRepository) -> void:
+	character = p_character
+	repository = p_repository
+	var character := p_character
+	var repository := p_repository
 	state = CombatState.new()
 	var player := CharacterCombatBuilder.build(character, repository)
 	player_id = player.combatant_id
@@ -80,6 +89,7 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	combat_ability_loadouts[ENEMY_ID] = Array(enemy.combat_stats.get("abilities", [])).duplicate()
 	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/abilities/catalog.json"), combat_ability_loadouts)
 	commands = CombatCommandApi.new(state, group, zones, orchestrator, ability_scheduler)
+	elixir_service = CombatElixirService.new(state, engine)
 
 func fighter(is_player: bool) -> CombatantState:
 	return state.get_combatant(player_id if is_player else ENEMY_ID)
@@ -140,7 +150,7 @@ func player_attack_count() -> int:
 
 func player_ability_options() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var ready_round := state.round_number + 1
+	var ready_round := state.round_number if active_round != null else state.round_number + 1
 	var player := fighter(true)
 	var cooldowns: Dictionary = ability_scheduler.cooldowns_by_combatant.get(player_id, {})
 	for raw_id in player_ability_slots:
@@ -157,6 +167,70 @@ func player_ability_options() -> Array[Dictionary]:
 		var target_label:="Себя" if String(definition.get("target_team","")).to_upper()=="ALLY" else "Противник"
 		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":int(definition.get("mana_cost",0)),"cooldown_until":int(cooldowns.get(ability_id,0)),"defined":not definition.is_empty(),"target_id":target_id,"target_label":target_label})
 	return result
+
+## Current Mind Game round opens on the first instant action, not on End Turn.
+func _ensure_round() -> void:
+	if active_round == null:
+		active_round = orchestrator.begin_round()
+
+func activate_ability(ability_id: String) -> Dictionary:
+	if active_round != null and not locked_ability_id.is_empty():
+		return {"ok":false, "reason":"abi_limit_reached"}
+	var target_round := state.round_number if active_round != null else state.round_number + 1
+	var check := _validate_ability(player_id,ability_id,target_round)
+	if not bool(check.get("ok",false)) or ability_id.is_empty():
+		return {"ok":false,"reason":String(check.get("reason","ability_unavailable"))}
+	_ensure_round()
+	var target_id: String = String(check.get("target_id",""))
+	var result := commands.cast_ability(player_id,target_id,ability_id)
+	if not bool(result.get("ok",false)):
+		return result
+	locked_ability_id=ability_id
+	for event in state.pending_events:
+		if String(event.payload.get("application_timing","standard"))=="instant":
+			# One button press resolves the entire instant ABI synchronously.
+			engine.resolve_event(event)
+		else:
+			active_round.lock_action(event)
+	state.pending_events.clear()
+	# Instant ACTION may create EFF children, resolved in the same click.
+	engine.resolve_pending_events()
+	return {"ok":true,"timing":AbilityRuntime.application_timing(AbilityCatalog.definition(ability_scheduler.definitions,ability_id))}
+
+func elixir_options() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var capacity := character.elixir_capacity(repository)
+	var target_round := state.round_number if active_round != null else state.round_number + 1
+	var ready := elixir_service.can_use(fighter(true),target_round) and orchestrator.battle_outcome()=="ongoing"
+	for index in range(4):
+		var entry: Dictionary = {}
+		if index < capacity:
+			var item_id: String = character.elixir_slots[index]
+			if not item_id.is_empty() and character.inventory.owns(item_id):
+				entry = repository.get_item(item_id)
+				entry["available"] = ready and int(entry.get("charges",0))>0 and CombatElixirService.validate_components(entry).is_empty()
+		out.append(entry)
+	return out
+
+func elixir_cooldown() -> int:
+	var target_round := state.round_number if active_round != null else state.round_number + 1
+	return elixir_service.remaining_cooldown(player_id,target_round)
+
+func use_elixir(index: int) -> Dictionary:
+	if orchestrator.battle_outcome()!="ongoing" or fighter(true).hp<=0:
+		return {"ok":false,"reason":"battle_finished"}
+	if index<0 or index>=character.elixir_capacity(repository):
+		return {"ok":false,"reason":"belt_slot_unavailable"}
+	var id: String = character.elixir_slots[index]
+	if id.is_empty() or not character.inventory.owns(id):
+		return {"ok":false,"reason":"elixir_not_owned"}
+	var target_round := state.round_number if active_round != null else state.round_number+1
+	if not elixir_service.can_use(fighter(true),target_round):
+		return {"ok":false,"reason":"elixir_unavailable"}
+	if CombatElixirService.validate_components(repository.get_item(id))!="":
+		return {"ok":false,"reason":"invalid_elixir"}
+	_ensure_round()
+	return elixir_service.use(player_id,id,repository)
 
 func _prepare_attacks(id: String, targets: Array[String]) -> Dictionary:
 	var sequence: Dictionary = commands.default_weapon_attack_sequence(id)
@@ -220,7 +294,7 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		return {"ok": false, "reason": "battle_finished"}
 	# Preflight the complete submission before begin_round changes resources,
 	# Tempo or the round number. Failed ABI/block/attack does not consume a turn.
-	var next_round := state.round_number + 1
+	var next_round := state.round_number if active_round != null else state.round_number + 1
 	var player_stunned := CombatTempoService.is_stunned(fighter(true),next_round)
 	var enemy_stunned := CombatTempoService.is_stunned(fighter(false),next_round)
 	if not player_stunned:
@@ -238,6 +312,8 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		for requested_zone in attacks:
 			if not CombatCommandApi.BODY_ZONES.has(requested_zone):
 				return {"ok":false,"reason":"invalid_attack_zone"}
+		if not locked_ability_id.is_empty() and not ability_id.is_empty():
+			return {"ok":false,"reason":"abi_limit_reached"}
 		var player_abi_check:=_validate_ability(player_id,ability_id,next_round)
 		if not bool(player_abi_check.get("ok",false)):
 			return player_abi_check
@@ -247,7 +323,7 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 			return {"ok":false,"reason":String(enemy_plan.get("reason","enemy_attack_rejected"))}
 	# All inputs are snapshotted before any engine event is resolved. No subsequent
 	# UI selection can change this round's pending physical/ABI actions.
-	var round := orchestrator.begin_round()
+	var round: CombatRound = active_round if active_round != null else orchestrator.begin_round()
 	if player_stunned:
 		commands.clear_manual_block(player_id)
 	else:
@@ -277,6 +353,8 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 	state.pending_events.clear()
 	orchestrator.resolve_locked_actions(round)
 	var outcome: Dictionary = orchestrator.end_round()
+	active_round=null
+	locked_ability_id=""
 	# Log only resolved CombatEvent results, grouping ABI children through
 	# parent_event_id. A projectile ABI ATTACK is not an extra weapon action.
 	var lines: Array[String] = ArenaCombatLog.lines_for_round(
