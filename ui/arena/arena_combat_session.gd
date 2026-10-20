@@ -87,7 +87,7 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	combat_ability_loadouts[ENEMY_ID] = Array(enemy.combat_stats.get("abilities", [])).duplicate()
 	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/abilities/catalog.json"), combat_ability_loadouts)
 	commands = CombatCommandApi.new(state, group, zones, orchestrator, ability_scheduler)
-	elixir_service = CombatElixirService.new(state, engine)
+	elixir_service = CombatElixirService.new(state, engine, character)
 
 func fighter(is_player: bool) -> CombatantState:
 	return state.get_combatant(player_id if is_player else ENEMY_ID)
