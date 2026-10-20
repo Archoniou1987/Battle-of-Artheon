@@ -94,7 +94,7 @@ func _init() -> void:
 	var npc_before_mana := enemy.mana
 	var before_event_count := session.state.event_log.size()
 	var before_next_event_id := session.state.next_event_id
-	var before_burning: Array[Dictionary] = enemy.active_effects.duplicate(true)
+	var before_burning: Array = enemy.active_effects.duplicate(true)
 	var rejected: Dictionary = session.play_round(["head"],block_zones,"ABI003")
 	_check(not bool(rejected.get("ok",false)), "round2_abi003_cooldown_rejected")
 	_check(session.state.round_number == 1 and player.mana == before_mana and player.hp == before_hp, "round2_reject_is_atomic")
@@ -152,8 +152,12 @@ func _audit_round(session: ArenaCombatSession, round_number: int, expected_abi: 
 	_check(int(Dictionary(audit.get("weapon_attacks_by_source",{})).get(session.player_id,0)) == 1, "round%d_real_weapon_action" % round_number)
 	_check(int(Dictionary(audit.get("abi_casts_by_source",{})).get(session.player_id,0)) == expected_abi, "round%d_real_abi_dispatch" % round_number)
 	_check(int(audit.get("periodic_ticks",0)) == expected_ticks, "round%d_periodic_event_count" % round_number)
-	var expected_applications := 1 if round_number <= 2 else 0
-	_check(int(audit.get("applied_effects",0)) == expected_applications, "round%d_real_eff_application_count" % round_number)
+	# Count the specific engine-authored EFF instead of assuming no other
+	# passive weapon/NPC effects could also be present in the same round.
+	if round_number <= 2:
+		var expected_id := "EFF003" if round_number == 1 else "EFF004"
+		var applications: Dictionary = audit.get("applied_effects_by_id", {})
+		_check(int(applications.get(expected_id,0)) == 1, "round%d_real_eff_application_count" % round_number)
 	# Diagnostics exposes detached dictionaries. Mutating this projection must
 	# never alter the canonical, resolved engine events.
 	var projection: Array = audit.get("events",[])
