@@ -47,12 +47,13 @@ jobs:
           # Run every integration runner even if a prior one fails. This
           # surfaces all regressions in one manual Actions run.
           status=0
+          # Stage 0 first; full integration only after the isolated phases.
           for script in \
             tests/combat/arena_basic_round_runner.gd \
-            tests/combat/integrated_round_phases_runner.gd \
             tests/combat/battle_baseline_runner.gd \
-            tests/combat/full_battle_vertical_slice_runner.gd \
+            tests/combat/integrated_round_phases_runner.gd \
             tests/combat/arena_ability_integration_runner.gd \
+            tests/combat/full_battle_vertical_slice_runner.gd \
             tests/combat/arena_combat_log_runner.gd \
             tests/combat/arena_dual_support_round_runner.gd \
             tests/combat/arena_round_timing_interaction_runner.gd \
@@ -61,6 +62,7 @@ jobs:
             tests/combat/elixir_mind_game_runner.gd
           do
             echo "::group::Integration: $script"
+            echo "COMBAT_TEST_SCRIPT=$script"
             if ! bash tools/run_godot_check.sh "$script"; then
               echo "::error::Integration runner failed: $script"
               status=1
