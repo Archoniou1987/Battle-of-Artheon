@@ -7,6 +7,7 @@ const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
 const ENABLE_INVENTORY_PREVIEW_ITEMS := false
 const INVENTORY_RESET_MARKER_PATH := "user://inventory_reset_empty_v1.marker"
 const TEST_ITEMS_GRANT_MARKER_PATH := "user://combat_test_items_v1_granted.marker"
+const TEST_ELIXIRS_GRANT_MARKER_PATH := "user://combat_test_elixirs_v1_granted.marker"
 const IMAGE_PATH := "res://assets/locations/starting_village.jpg"
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const PORTRAIT_NAV_COLUMNS := 3
@@ -74,6 +75,7 @@ func _ready() -> void:
 	_regen_clock_unix = now_unix
 	_reset_preview_inventory_once()
 	_grant_combat_test_items_once()
+	_grant_combat_test_elixirs_once()
 	_save_progression()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
@@ -115,6 +117,7 @@ func _reset_preview_inventory_once() -> void:
 		return
 	player_character.inventory = InventoryState.new(player_character.character_id)
 	player_character.equipment = EquipmentState.new()
+	player_character.elixir_slots = ["", "", "", ""]
 	item_repository = ItemRepository.new()
 	var marker := FileAccess.open(INVENTORY_RESET_MARKER_PATH, FileAccess.WRITE)
 	if marker == null:
@@ -140,6 +143,20 @@ func _grant_combat_test_items_once() -> void:
 	marker.store_string("granted_v1")
 	marker.close()
 
+
+# Separate v1 fixture marker: existing players receive test consumables once.
+func _grant_combat_test_elixirs_once() -> void:
+	if FileAccess.file_exists(TEST_ELIXIRS_GRANT_MARKER_PATH):
+		return
+	if not ArenaTestElixirs.seed(player_character,item_repository):
+		return
+	_save_inventory()
+	var marker := FileAccess.open(TEST_ELIXIRS_GRANT_MARKER_PATH,FileAccess.WRITE)
+	if marker == null:
+		push_warning("Elixir test grant marker could not be saved")
+		return
+	marker.store_string("granted_v1")
+	marker.close()
 
 func _build_screen() -> void:
 	var background := ColorRect.new()
