@@ -6,12 +6,14 @@ extends RefCounted
 ## Their inventory charges are written to ItemRepository only after validation.
 var state: CombatState
 var engine: CombatEngine
+var owner: CharacterState
 var next_available_round: Dictionary = {}
 var used_round: Dictionary = {}
 
-func _init(p_state: CombatState, p_engine: CombatEngine) -> void:
+func _init(p_state: CombatState, p_engine: CombatEngine, p_owner: CharacterState) -> void:
 	state = p_state
 	engine = p_engine
+	owner = p_owner
 
 static func validate_components(item: Dictionary) -> String:
 	if String(item.get("type", "")) != "consumable":
@@ -50,6 +52,12 @@ func remaining_cooldown(source_id: String, round_number: int) -> int:
 	return maxi(0, int(next_available_round.get(source_id, 0)) - round_number)
 
 func use(source_id: String, item_id: String, repository: ItemRepository) -> Dictionary:
+	# The gameplay service enforces slot ownership too, not only the UI.
+	if owner == null or source_id != owner.character_id or not owner.inventory.owns(item_id) or not owner.elixir_slots.has(item_id):
+		return {"ok":false,"reason":"unowned_elixir"}
+	var slot := owner.elixir_slots.find(item_id)
+	if slot < 0 or slot >= owner.elixir_capacity(repository):
+		return {"ok":false,"reason":"belt_slot_unavailable"}
 	var source := state.get_combatant(source_id)
 	if not can_use(source, state.round_number):
 		return {"ok":false, "reason":"elixir_unavailable"}
