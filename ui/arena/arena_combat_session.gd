@@ -11,7 +11,7 @@ var locked_ability_id := ""
 var character: CharacterState
 var repository: ItemRepository
 var ability_scheduler: AbilityScheduler
-## Five equipment ABI positions: three from MH, one from chest, one from head.
+## Five permanent ABI positions: three from MH, Head at index 3, Chest at index 4.
 var player_ability_slots: Array = []
 var player_id: String
 const ENEMY_ID := "arena_training_enemy"
