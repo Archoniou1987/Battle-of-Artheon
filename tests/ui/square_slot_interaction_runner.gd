@@ -112,6 +112,13 @@ func _run() -> void:
 	check(buff_picture != null and buff_picture.texture != null and buff_picture.visible, "eff_buff_existing_item_image")
 	check(debuff_picture != null and debuff_picture.texture != null and debuff_picture.visible, "eff_debuff_existing_item_image")
 	check(((arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(4) as Button).text == "+3", "eff_preview_overflow_badge")
+	arena.tabs.current_tab = 0
+	arena._show_effect_detail(true,"Баффы",0)
+	check(arena.tabs.current_tab == 1, "eff_signal_opens_buff_journal")
+	arena._show_effect_detail(false,"Дебаффы",0)
+	check(arena.tabs.current_tab == 2, "eff_signal_opens_debuff_journal")
+	var buff_signal := (arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(0) as Button
+	check(not buff_signal.tooltip_text.contains("раунд") and not buff_signal.tooltip_text.contains("stacks"), "eff_arena_signal_without_verbose_details")
 	check(not (((arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(4) as Button).get_node("EFFItemPicture") as TextureRect).visible, "eff_overflow_displays_count_not_item")
 	arena.visual_lab_eff_index = 3
 	check(bool(Dictionary(arena._effect_entries(false, "Дебаффы")[0]).get("pending", false)), "eff_preview_pending_fixture")
