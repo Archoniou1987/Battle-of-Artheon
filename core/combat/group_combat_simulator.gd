@@ -15,7 +15,8 @@ func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Diction
 	controller=GroupCombatController.new(group)
 	engine=CombatEngine.new(state,balance)
 	orchestrator=RoundOrchestrator.new(state,engine,group)
-	attack_pipeline=CombatAttackPipeline.new(state,1)
+	## Group and duel simulators must share the engine RNG and resolution path.
+	attack_pipeline=CombatAttackPipeline.new(state,1,engine)
 	controller.initialize_active_opponents()
 
 func run() -> Dictionary:
