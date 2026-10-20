@@ -32,9 +32,9 @@ static func validate_components(item: Dictionary) -> String:
 				var effect_id := String(part.get("effect_id", ""))
 				if effect_id.is_empty() or EffectCatalog.definition(EffectCatalog.load_json(), effect_id).is_empty():
 					return "unknown_effect"
-				# Consumables cannot be used to bypass Standard ABI DoT/HoT.
+				# Consumables cannot apply offensive periodic damage in preparation.
 				var effect := EffectCatalog.definition(EffectCatalog.load_json(), effect_id)
-				if String(effect.get("kind", "")).to_lower() in ["dot", "hot"] or float(effect.get("damage", 0.0)) > 0.0 or float(effect.get("healing", 0.0)) > 0.0:
+				if String(effect.get("kind", "")).to_lower() == "dot" or float(effect.get("damage", 0.0)) > 0.0:
 					return "periodic_effect_not_preparation"
 			"cleanse":
 				if String(part.get("dispel_polarity", "")).to_upper() != "DEBUFF" or int(part.get("max_effects", 1)) < 1:
