@@ -346,7 +346,7 @@ func _open_arena_screen() -> void:
 		_save_progression()
 	)
 	arena_screen.resources_changed.connect(_save_progression)
-		arena_screen.inventory_changed.connect(_save_inventory)
+	arena_screen.inventory_changed.connect(_save_inventory)
 	arena_screen.visible = true
 	arena_screen.refresh()
 
