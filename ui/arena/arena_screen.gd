@@ -18,9 +18,12 @@ const PORTRAIT_LOG_MIN_HEIGHT := 180.0
 const LANDSCAPE_LOG_MIN_WIDTH := 260.0
 const END_TURN_ATLAS_PATH := "res://assets/ui/buttons/end_turn/BOA_END_TURN_SKINS_ATLAS_V1.png"
 const COMBAT_ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_v2.png"
+# Temporary shared item art for every EFF (buff and debuff); replace per effect later.
+const EFF_ITEM_ATLAS := "res://assets/items/items_atlas_01.png"
 var end_turn_atlas: Texture2D
 var zone_atlas: Texture2D
 var zone_textures: Dictionary = {}
+var eff_item_texture: Texture2D
 
 func _zone_texture(is_player: bool, index: int) -> Texture2D:
 	if zone_atlas == null:
@@ -693,10 +696,45 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 			effect_icon.add_theme_font_size_override("font_size", 10)
 			effect_icon.focus_mode = Control.FOCUS_NONE
 			effect_icon.visible = false
+			_configure_effect_button(effect_icon, row_type)
 			effect_icon.pressed.connect(_show_effect_detail.bind(is_player,row_type,i))
 			row.add_child(effect_icon)
 		effects_rows[("player_" if is_player else "enemy_") + row_type] = row
 	_update_zone_buttons()
+
+## One existing item icon serves as temporary EFF art. A flat style owns the
+## semantic border, so the icon is never tinted green/red.
+func _configure_effect_button(button: Button, row_type: String) -> void:
+	var border_color := Color("#55bf73") if row_type == "Баффы" else Color("#d95757")
+	var frame := StyleBoxFlat.new()
+	frame.bg_color = Color("#17212c")
+	frame.border_color = border_color
+	frame.set_border_width_all(2)
+	frame.set_corner_radius_all(2)
+	frame.set_content_margin_all(0)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		button.add_theme_stylebox_override(state, frame.duplicate())
+	button.add_theme_color_override("font_color", Color("#f4e8d4"))
+	button.add_theme_color_override("font_hover_color", Color("#f4e8d4"))
+	button.add_theme_color_override("font_pressed_color", Color("#f4e8d4"))
+	var picture := TextureRect.new()
+	picture.name = "EFFItemPicture"
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	picture.offset_left = 3.0
+	picture.offset_top = 3.0
+	picture.offset_right = -3.0
+	picture.offset_bottom = -3.0
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	picture.texture = _effect_item_icon_texture()
+	button.add_child(picture)
+
+func _effect_item_icon_texture() -> Texture2D:
+	if eff_item_texture == null and ResourceLoader.exists(EFF_ITEM_ATLAS):
+		var atlas := load(EFF_ITEM_ATLAS) as Texture2D
+		eff_item_texture = ItemIcon._atlas_cell(atlas, 0, ItemIcon.ATLAS_COLUMNS, ItemIcon.ATLAS_ROWS)
+	return eff_item_texture
 
 ## UI-only disclosure contract. Callers must provide ratings computed from visible
 ## primary stats and disclosed equipment; never pass combatant totals here.
@@ -1200,14 +1238,17 @@ func _refresh_effect_display() -> void:
 				if index>=visible_count:
 					continue
 				var extra: int = effects.size()-4 if effects.size()>5 and index==4 else 0
+				var picture := button.get_node_or_null("EFFItemPicture") as TextureRect
+				if picture != null:
+					picture.visible = extra == 0
 				if extra>0:
 					button.text="+%d" % extra
 					button.tooltip_text="Ещё %d эффект(ов) — нажмите для списка" % extra
 				else:
 					var entry:Dictionary=effects[index]
-					button.text=_effect_symbol(String(entry.get("kind","")))
+					button.text = "" if picture != null and picture.texture != null else _effect_symbol(String(entry.get("kind","")))
 					button.tooltip_text=_effect_description(entry)
-				button.modulate=Color("#9ebfdb") if row_type=="Баффы" else Color("#e0a3a3")
+				button.modulate = Color.WHITE
 			var detail:=effect_detail_labels.get(key) as Label
 			if detail!=null:
 				if effects.is_empty():
