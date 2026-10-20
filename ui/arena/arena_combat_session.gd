@@ -11,7 +11,7 @@ var locked_ability_id := ""
 var character: CharacterState
 var repository: ItemRepository
 var ability_scheduler: AbilityScheduler
-## Five permanent ABI positions: three from MH, Head at index 3, Chest at index 4.
+## Five permanent ABI positions: three from MH, Chest at index 3, Head at index 4.
 var player_ability_slots: Array = []
 var player_id: String
 const ENEMY_ID := "arena_training_enemy"
@@ -78,7 +78,7 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	engine = CombatEngine.new(state)
 	orchestrator = RoundOrchestrator.new(state, engine, group, zones)
 	var equipment_slots := EquipmentAbilityLoadout.build(character, repository)
-	for group_name in ["weapon", "head", "chest"]:
+	for group_name in ["weapon", "chest", "head"]:
 		player_ability_slots.append_array(Array(equipment_slots.get(group_name, [])))
 	# Only the canonical live ABI catalog is executable in Arena. Development
 	# fixture IDs are never silently substituted for production definitions.
