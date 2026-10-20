@@ -52,6 +52,9 @@ static func run()->bool:
 	var diagnostic:=api.diagnostics()
 	var diagnostic_events:Array=diagnostic.get("events",[])
 	var diagnostic_combatants:Dictionary=diagnostic.get("combatants",{})
+	var round_trace:Dictionary=diagnostic.get("round_trace",{})
+	if int(round_trace.get("round",-1))!=1 or int(round_trace.get("event_count",-1))!=1: return false
+	if not bool(round_trace.get("valid_event_lineage",false)) or int(round_trace.get("weapon_attacks",-1))!=0: return false
 	if diagnostic_events.size()!=1: return false
 	if not Dictionary(diagnostic_events[0]).has("payload") or not Dictionary(diagnostic_events[0]).has("result"): return false
 	var hero_trace:Dictionary=diagnostic_combatants.get("hero",{})
