@@ -1,10 +1,12 @@
 ## Combat Integration Gate — real ABI/EFF end-to-end (2026-10-20)
-The lightweight manually dispatched `.github/workflows/combat-integration-gate.yml` covers thirteen real-Godot scenarios in one run. It begins with one weapon and a manual block, then exercises PAR, dual weapons, canonical ABI, active EFF, turn phases, healing, death-at-round-end, elixirs and EFF UI indicators. Every runner executes even if one fails; failing logs are uploaded.
+The lightweight manually dispatched `.github/workflows/combat-integration-gate.yml` covers seventeen real-Godot scenarios in one run. It begins with one weapon and a manual block, then exercises PAR, dual weapons, canonical ABI, active EFF, turn phases, healing, death-at-round-end, elixirs and EFF UI indicators. Every runner executes even if one fails; failing logs are uploaded.
 
 The new `arena_real_eff_chain_runner.gd` checks three **real ArenaCombatSession rounds**, not faked EFF UI state:
 1. Player equips MH `ABI003`; the actual engine casts Fireball and attaches `EFF003` Burning, which is visible as a pending debuff but must not tick in the application round.
 2. An immediate Fireball cooldown retry must not consume a round, resources or events. Player legally casts chest `ABI004` Healing; engine emits the first Burning tick, applies real `EFF004` Regeneration and exposes it as a pending buff.
 3. With no ABI selected, **both real periodic effects tick**. The canonical events, resource changes, read-only EFF view and Arena journal must agree.
+
+`GroupCombatSimulator` now passes the exact same `CombatEngine` to its `CombatAttackPipeline`, sharing the seeded RNG with the duel pipeline; the group simulator regression asserts this identity. The unified read-only `CombatApi.diagnostics()` now includes a `round_trace` projection, without modifying combat state.
 
 `CombatDiagnostics.round_trace(state,round)` is a reusable **read-only integration audit**. It exposes canonical resolved events, attack/ABI counts by actor, EFF applications, periodic ticks and event-parent lineage; it never recomputes damage and is independent of Arena UI.
 
