@@ -43,8 +43,8 @@ func _run() -> void:
 	# Use a canonical definition for UI selection; no fake combat damage.
 	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id] = ["ABI003"]
 	arena.combat_session.player_ability_slots[0] = "ABI003"
-	arena.combat_session.fighter(true).max_mana = 100
-	arena.combat_session.fighter(true).mana = 100
+	# Keep the snapshot max pool canonical: press now writes spent mana back.
+	arena.combat_session.fighter(true).mana = arena.combat_session.fighter(true).max_mana
 	arena._refresh_ability_buttons()
 	if arena.ability_buttons[0].disabled:
 		push_error("ARENA_OPEN_SMOKE=FAIL: equipped ABI remains disabled")
