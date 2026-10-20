@@ -55,6 +55,10 @@ var visual_lab_theme: OptionButton
 var visual_lab_scenario: OptionButton
 var visual_lab_theme_index := 0
 var visual_lab_scenario_index := 0
+var visual_lab_abi_mode: OptionButton
+var visual_lab_eff_mode: OptionButton
+var visual_lab_abi_index := 0
+var visual_lab_eff_index := 0
 var log_view: RichTextLabel
 var round_button: Button
 var round_button_art: TextureRect
@@ -235,7 +239,7 @@ func _build_visual_lab() -> void:
 	visual_lab_dialog = AcceptDialog.new()
 	visual_lab_dialog.name = "VisualLabDialog"
 	visual_lab_dialog.title = "Visual Lab · Arena"
-	visual_lab_dialog.min_size = Vector2i(310, 230)
+	visual_lab_dialog.min_size = Vector2i(310, 340)
 	add_child(visual_lab_dialog)
 	var column := VBoxContainer.new()
 	visual_lab_dialog.add_child(column)
@@ -257,20 +261,50 @@ func _build_visual_lab() -> void:
 		_apply_visual_lab()
 	)
 	column.add_child(visual_lab_scenario)
+	var abi_heading := Label.new()
+	abi_heading.text = "ABI — визуальные состояния"
+	column.add_child(abi_heading)
+	visual_lab_abi_mode = OptionButton.new()
+	visual_lab_abi_mode.name = "ABIPreview"
+	for name_text in ["Живой бой", "Все 5 ABI", "Выбранная ABI", "Недоступные ABI"]:
+		visual_lab_abi_mode.add_item(name_text)
+	visual_lab_abi_mode.item_selected.connect(func(index: int) -> void:
+		visual_lab_abi_index = index
+		_apply_visual_lab_abi()
+	)
+	column.add_child(visual_lab_abi_mode)
+	var eff_heading := Label.new()
+	eff_heading.text = "EFF — состояния эффектов"
+	column.add_child(eff_heading)
+	visual_lab_eff_mode = OptionButton.new()
+	visual_lab_eff_mode.name = "EFFPreview"
+	for name_text in ["Живой бой", "Баффы и дебаффы", "Переполнение +N", "Ожидающие эффекты"]:
+		visual_lab_eff_mode.add_item(name_text)
+	visual_lab_eff_mode.item_selected.connect(func(index: int) -> void:
+		visual_lab_eff_index = index
+		_refresh_effect_display()
+	)
+	column.add_child(visual_lab_eff_mode)
 	var reset := Button.new()
 	reset.text = "Сбросить оформление"
 	reset.pressed.connect(_reset_visual_lab)
 	column.add_child(reset)
 
 func _open_visual_lab() -> void:
-	visual_lab_dialog.popup_centered(Vector2i(350, 240))
+	visual_lab_dialog.popup_centered(Vector2i(350, 395))
 
 func _reset_visual_lab() -> void:
 	visual_lab_theme.select(0)
 	visual_lab_scenario.select(0)
+	visual_lab_abi_mode.select(0)
+	visual_lab_eff_mode.select(0)
+	visual_lab_abi_index = 0
+	visual_lab_eff_index = 0
 	visual_lab_theme_index = 0
 	visual_lab_scenario_index = 0
 	_apply_visual_lab()
+	_apply_visual_lab_abi()
+	_refresh_effect_display()
 
 func _apply_visual_lab() -> void:
 	if arena_background == null:
@@ -298,6 +332,47 @@ func _apply_visual_lab() -> void:
 		VisualLabPresets.configure_zone_outline(button, visual_lab_theme_index)
 	for button in attack_buttons:
 		VisualLabPresets.configure_zone_outline(button, visual_lab_theme_index)
+	_apply_visual_lab_abi()
+
+## Visual-only ABI labels sit above existing hit regions; never modify button
+## availability, selection, ability IDs or combat session actions.
+func _apply_visual_lab_abi() -> void:
+	for index in range(ability_buttons.size()):
+		var button := ability_buttons[index]
+		var overlay := button.get_node_or_null("VisualLabABILabel") as Label
+		if visual_lab_abi_index == 0:
+			if overlay != null:
+				overlay.visible = false
+			continue
+		if overlay == null:
+			overlay = Label.new()
+			overlay.name = "VisualLabABILabel"
+			overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			overlay.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			overlay.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			overlay.add_theme_font_size_override("font_size", 9)
+			button.add_child(overlay)
+		overlay.visible = true
+		if visual_lab_abi_index == 3:
+			overlay.text = "×"
+			overlay.add_theme_color_override("font_color", Color("#8b939c"))
+		else:
+			overlay.text = "%d" % (index + 1)
+			overlay.add_theme_color_override("font_color", Color("#f4dfb5"))
+		var outline := button.get_node_or_null("VisualLabABIOutline") as Panel
+		if outline == null:
+			outline = Panel.new()
+			outline.name = "VisualLabABIOutline"
+			outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			button.add_child(outline)
+			outline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color.TRANSPARENT
+		style.border_color = Color("#efca77") if visual_lab_abi_index == 2 and index == 0 else Color("#505d69")
+		style.set_border_width_all(2 if visual_lab_abi_index == 2 and index == 0 else 1)
+		outline.add_theme_stylebox_override("panel", style)
+		outline.visible = visual_lab_abi_index != 0
 
 func _open_level_settings(is_player: bool) -> void:
 	level_settings_dialog.title = "Уровень игрока" if is_player else "Уровень манекена"
@@ -1057,10 +1132,29 @@ func _prepend_combat_log(entry: String) -> void:
 ## Compact two-row EFF view. Five cells per row; last cell becomes +N when
 ## there are more than five active/pending effects. Tap for details on mobile.
 func _effect_entries(is_player:bool,row_type:String) -> Array:
+	if visual_lab_eff_index > 0:
+		return _visual_lab_effect_examples(is_player, row_type)
 	if combat_session == null:
 		return []
 	var snapshot:=combat_session.effect_view(is_player)
 	return Array(snapshot.get("buffs" if row_type=="Баффы" else "debuffs",[]))
+
+## Data-shaped presentation fixtures; no effect service / combat state mutation.
+func _visual_lab_effect_examples(is_player: bool, row_type: String) -> Array:
+	var is_buff := row_type == "Баффы"
+	var base: Array = []
+	var count := 7 if visual_lab_eff_index == 2 else 3
+	for index in range(count):
+		var kind := ("shield" if index % 2 == 0 else "regen") if is_buff else ("poison" if index % 2 == 0 else "slow")
+		base.append({
+			"id": "PREVIEW_%d" % index,
+			"name": ("Защита" if is_buff else "Отравление") + " · пример %d" % (index + 1),
+			"kind": kind,
+			"remaining_rounds": 2 + index % 3,
+			"stacks": 1 + index % 2,
+			"pending": visual_lab_eff_index == 3 and index == 0
+		})
+	return base
 
 func _effect_symbol(kind:String) -> String:
 	match kind:
@@ -1083,7 +1177,7 @@ func _effect_description(effect:Dictionary) -> String:
 	return result
 
 func _refresh_effect_display() -> void:
-	if combat_session==null:
+	if combat_session==null and visual_lab_eff_index == 0:
 		return
 	for is_player in [true,false]:
 		var fighter_key: String = "player_" if is_player else "enemy_"
@@ -1150,6 +1244,7 @@ func _sync_combat_session() -> void:
 	set_elixir_cooldown(combat_session.elixir_cooldown())
 	_refresh_ability_buttons()
 	_refresh_effect_display()
+	_apply_visual_lab_abi()
 
 func refresh() -> void:
 	for slot in player_slots:
