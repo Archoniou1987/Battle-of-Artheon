@@ -49,6 +49,7 @@ func _run() -> void:
 		head.set_empty_art_in_background(false)
 		if hover != null:
 			head.button_down.emit()
+			check(hover.modulate.a >= 0.85, "press_feedback_is_immediate")
 			await create_timer(0.08).timeout
 			check(hover.modulate.a > 0.2, "press_has_visible_feedback")
 			head.button_up.emit()
