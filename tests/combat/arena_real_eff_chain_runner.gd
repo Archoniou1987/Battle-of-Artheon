@@ -90,9 +90,17 @@ func _init() -> void:
 	# ABI004, which heals the hero and attaches EFF004. EFF003 begins ticking.
 	var before_mana := player.mana
 	var before_hp := player.hp
+	var npc_before_hp := enemy.hp
+	var npc_before_mana := enemy.mana
+	var before_event_count := session.state.event_log.size()
+	var before_next_event_id := session.state.next_event_id
+	var before_burning: Array[Dictionary] = enemy.active_effects.duplicate(true)
 	var rejected: Dictionary = session.play_round(["head"],block_zones,"ABI003")
 	_check(not bool(rejected.get("ok",false)), "round2_abi003_cooldown_rejected")
 	_check(session.state.round_number == 1 and player.mana == before_mana and player.hp == before_hp, "round2_reject_is_atomic")
+	_check(enemy.hp == npc_before_hp and enemy.mana == npc_before_mana, "round2_reject_does_not_mutate_npc")
+	_check(session.state.event_log.size() == before_event_count and session.state.next_event_id == before_next_event_id, "round2_reject_does_not_allocate_or_record_events")
+	_check(enemy.active_effects == before_burning, "round2_reject_preserves_real_eff_lifecycle")
 	_check(session.state.pending_events.is_empty(), "round2_reject_has_no_events")
 	var second: Dictionary = session.play_round(["head"],block_zones,"ABI004")
 	_check(bool(second.get("ok",false)), "round2_accepted_" + String(second.get("reason","")))
@@ -144,6 +152,20 @@ func _audit_round(session: ArenaCombatSession, round_number: int, expected_abi: 
 	_check(int(Dictionary(audit.get("weapon_attacks_by_source",{})).get(session.player_id,0)) == 1, "round%d_real_weapon_action" % round_number)
 	_check(int(Dictionary(audit.get("abi_casts_by_source",{})).get(session.player_id,0)) == expected_abi, "round%d_real_abi_dispatch" % round_number)
 	_check(int(audit.get("periodic_ticks",0)) == expected_ticks, "round%d_periodic_event_count" % round_number)
+	var expected_applications := 1 if round_number <= 2 else 0
+	_check(int(audit.get("applied_effects",0)) == expected_applications, "round%d_real_eff_application_count" % round_number)
+	# Diagnostics exposes detached dictionaries. Mutating this projection must
+	# never alter the canonical, resolved engine events.
+	var projection: Array = audit.get("events",[])
+	if not projection.is_empty():
+		var projected: Dictionary = projection[0]
+		var projected_result: Dictionary = projected.get("result",{})
+		projected_result["__test_read_only_probe"] = true
+		var original_id := int(projected.get("id",-1))
+		for event in session.state.event_log:
+			if event.event_id == original_id:
+				_check(not event.result.has("__test_read_only_probe"), "round%d_diagnostics_are_detached" % round_number)
+				break
 
 func _record_count(target: CombatantState, effect_id: String) -> int:
 	var count := 0
