@@ -26,6 +26,7 @@ func _run() -> void:
 	_test_immediate_hp_and_cooldown()
 	_test_mana_and_ownership()
 	_test_fire_ward_and_surprise()
+	_test_stat_buff()
 	_test_cleanse_visibility()
 	_test_abi_manual_timings()
 	_test_persistence()
@@ -64,6 +65,12 @@ func _test_mana_and_ownership() -> void:
 	var ch: CharacterState = setup["hero"]
 	check(not ch.assign_elixir(2,"elixir_test_mana_v1",repo),"duplicate_slot_blocked")
 	check(not ch.remove_item("elixir_test_mana_v1"),"cannot_remove_equipped_quickslot")
+	# The potion restores Mana during Mind Game, enabling a Standard ABI.
+	session.ability_scheduler.loadouts[session.player_id]=["ABI004"]
+	session.player_ability_slots=["ABI004","","","",""]
+	check(bool(session.activate_ability("ABI004").get("ok",false)),"mana_potion_enables_standard_abi")
+	check(hero.mana==mini(hero.max_mana,30)-10,"standard_abi_mana_cost_after_potion")
+
 
 func _test_fire_ward_and_surprise() -> void:
 	var setup := fixture()
@@ -79,6 +86,19 @@ func _test_fire_ward_and_surprise() -> void:
 	check(int(hit.result.get("final_damage",-1))<=11,"ward_reduces_current_round_fire_damage")
 	session.orchestrator.end_round()
 	check(Array(session.effect_view(true).get("buffs",[])).size()==1,"ward_revealed_after_round")
+
+func _test_stat_buff() -> void:
+	var setup := fixture()
+	var hero: CharacterState = setup["hero"]
+	var repository: ItemRepository = setup["repository"]
+	var session: ArenaCombatSession = setup["session"]
+	check(hero.clear_elixir(2),"clear_fixture_fire_slot")
+	check(hero.assign_elixir(2,"elixir_test_focus_v1",repository),"assign_stat_buff")
+	var initial := CombatModifierService.effective_percent(session.fighter(true),"crit_chance_rating",1)
+	check(bool(session.use_elixir(2).get("ok",false)),"stat_buff_click")
+	var modified := CombatModifierService.effective_percent(session.fighter(true),"crit_chance_rating",1)
+	check(modified>=initial+19.9,"stat_buff_affects_canonical_crit_readout")
+	check(Array(session.effect_view(true).get("buffs",[])).is_empty(),"stat_buff_hidden_until_reveal")
 
 func _test_cleanse_visibility() -> void:
 	var setup := fixture()
