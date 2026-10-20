@@ -34,7 +34,9 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	victim.combat_stats["shield_auto_block_rating_percent"] = float(settings.get("auto", 0.0))
 	victim.combat_stats["manual_block_zones"] = ["chest"] if bool(settings.get("manual", false)) else []
 	var physical_type := String(settings.get("damage_type", "slashing"))
-	victim.armour["chest"] = {physical_type: float(settings.get("armour", 0.0))}
+	var zone_armour: Dictionary = {}
+	zone_armour[physical_type] = float(settings.get("armour", 0.0))
+	victim.armour["chest"] = zone_armour
 	state.add_combatant(actor)
 	state.add_combatant(victim)
 	state.begin_round()
