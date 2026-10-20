@@ -1,3 +1,11 @@
+## Visual Lab: experiment layer (v0.1, Inventory)
+- In browser preview, open **Inventory → 🎨 Визуал**. Options: Original / Bronze / Steel palettes, empty ghost illustrations on/off, empty frame on/off, and backdrop strength 15–100%.
+- **Reset** returns to baseline (blue stone, frame only, full backdrop), without modifying equipment, item rarity, combat stats or saves.
+- `ui/shared/visual_lab_presets.gd` is the reusable design-token registry. `VisualLabPresets.configure_empty` only touches empty cells; an occupied cell retains its rarity border.
+- Runtime controls are intentionally **session-only**; not coupled to persistent character state or production settings.
+- Do not treat these palette variations as finished art: they are experiments for finding workable visual directions, later extensible to Arena.
+- The UI regression runner asserts the theme, frame and ghost controls plus reset.
+
 # Square UI panels v1 — interactive foundation (2026-10-20)
 
 ## Two squares, one geometric contract
