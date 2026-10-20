@@ -98,7 +98,10 @@ static func typed_armour_penetration_percent(combatant: CombatantState, damage_t
 	if not totals is Dictionary:
 		return 0.0
 	var percent := float(totals.get(key, 0.0)) + modifier(combatant, "armour_pen_" + damage_type.to_lower(), round_number)
-	return clampf(percent / 100.0, 0.0, 1.0)
+	# Elemental elixirs/buffs contribute through the existing EFF overlay.
+\t# The damage pipeline still uses damage * (1 - effective resistance).
+\tvar direct_bonus := modifier(combatant, key + "_resist_direct_pct", round_number)
+\treturn clampf((percent + direct_bonus) / 100.0, 0.0, 1.0)
 
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
 	# PAR135 is a percentage (e.g. 20 = 20%); runtime overlays retain
