@@ -409,8 +409,17 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if event.payload.has("dispel_polarity"):
 		_resolve_dispel(event,target)
 		return
+	if event.payload.has("inline_mana"):
+		var before_mana: int = target.mana
+		target.mana = mini(target.max_mana, target.mana + maxi(0, int(event.payload.get("inline_mana",0))))
+		event.set_result("mana_restored",target.mana-before_mana)
+		event.set_result("resolved",target.mana>before_mana)
+		return
 	if event.payload.has("inline_heal"):
-		var healed:=target.restore_hp(int(event.payload.get("inline_heal",0)))
+		var healed_amount: int = maxi(0,int(event.payload.get("inline_heal",0)))
+		if bool(event.payload.get("clamp_heal_to_max",false)):
+			healed_amount = mini(healed_amount, maxi(0,target.max_hp-target.hp))
+		var healed:=target.restore_hp(healed_amount)
 		event.set_result("healed",healed)
 		event.set_result("resolved",healed!=0)
 		return
