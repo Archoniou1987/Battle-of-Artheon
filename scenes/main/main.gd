@@ -322,7 +322,6 @@ func _open_inventory_screen() -> void:
 		inventory_screen.name = "InventoryScreen"
 		add_child(inventory_screen)
 		inventory_screen.inventory_changed.connect(_save_inventory)
-		_load_saved_elixirs()
 		inventory_screen.back_button.pressed.connect(func() -> void: inventory_screen.visible = false)
 	inventory_screen.visible = true
 	inventory_screen.refresh()
@@ -497,7 +496,7 @@ func _save_inventory() -> void:
 	if file == null:
 		push_warning("Inventory save failed")
 		return
-	var quickslots: Array = inventory_screen.elixir_assignments.duplicate() if inventory_screen != null else ["", "", "", ""]
+	var quickslots: Array = player_character.elixir_slots.duplicate()
 	var payload := {"schema_version": 1, "repository": item_repository.to_dict(), "inventory": player_character.inventory.to_dict(), "equipment": player_character.equipment.slots.duplicate(true), "elixirs": quickslots}
 	file.store_string(JSON.stringify(payload))
 	file.close()
@@ -560,22 +559,8 @@ func _load_saved_inventory() -> bool:
 	item_repository = loaded_repository
 	player_character.inventory = loaded_inventory
 	player_character.equipment = loaded_equipment
+	if not player_character.restore_elixir_slots(Array(raw.get("elixirs", ["", "", "", ""])), item_repository):
+		player_character.elixir_slots = ["", "", "", ""]
 	return true
 
 
-func _load_saved_elixirs() -> void:
-	if inventory_screen == null or not FileAccess.file_exists(INVENTORY_SAVE_PATH):
-		return
-	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var raw: Variant = JSON.parse_string(file.get_as_text())
-	if not raw is Dictionary:
-		return
-	var elixirs: Variant = raw.get("elixirs", [])
-	if not elixirs is Array or elixirs.size() != 4:
-		return
-	for i in range(4):
-		var id: Variant = elixirs[i]
-		if id is String and (id.is_empty() or player_character.inventory.owns(id)):
-			inventory_screen.elixir_assignments[i] = id
