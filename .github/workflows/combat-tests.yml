@@ -6,7 +6,7 @@ on:
 jobs:
   combat-tests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 4
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v7
       - name: Setup Godot
@@ -63,3 +63,24 @@ jobs:
         run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/arena_npc_contract_runner.gd
       - name: Verify live Arena MH/OH strikes plus selected equipped ABI
         run: GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh tests/combat/arena_ability_integration_runner.gd
+
+      - name: Verify real Arena and group integration from single strike through ABI/EFF
+        shell: bash
+        run: |
+          status=0
+          for script in \
+            tests/combat/arena_basic_round_runner.gd \
+            tests/combat/battle_baseline_runner.gd \
+            tests/combat/full_battle_vertical_slice_runner.gd \
+            tests/combat/arena_real_eff_chain_runner.gd \
+            tests/combat/group_combat_simulator_runner.gd \
+            tests/ui/square_slot_interaction_runner.gd
+          do
+            echo "::group::Live combat integration: $script"
+            if ! GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh "$script"; then
+              echo "::error title=Live combat integration::$script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
