@@ -90,6 +90,25 @@ func _run() -> void:
 	await process_frame
 	check(arena.ability_buttons.size()==5,"five_permanent_abi_buttons")
 	check(arena.visual_lab_dialog != null and arena.visual_lab_theme.item_count == 3, "arena_visual_lab_available")
+	check(arena.visual_lab_abi_mode.item_count == 4 and arena.visual_lab_eff_mode.item_count == 4, "arena_visual_lab_abi_eff_controls")
+	var real_abi_disabled := arena.ability_buttons[0].disabled
+	arena.visual_lab_abi_index = 2
+	arena._apply_visual_lab_abi()
+	check((arena.ability_buttons[0].get_node_or_null("VisualLabABILabel") as Label).visible, "abi_preview_label_visible")
+	check(arena.ability_buttons[0].disabled == real_abi_disabled, "abi_preview_does_not_unlock_cast")
+	arena.visual_lab_abi_index = 0
+	arena._apply_visual_lab_abi()
+	check(not (arena.ability_buttons[0].get_node("VisualLabABIOutline") as Panel).visible, "abi_preview_reset_hides_outline")
+	arena.visual_lab_eff_index = 2
+	arena._refresh_effect_display()
+	check(arena._effect_entries(true, "Баффы").size() == 7, "eff_preview_overflow_fixture")
+	check((arena.effects_rows["player_Баффы"] as HBoxContainer).visible, "eff_preview_player_buff_row")
+	check(((arena.effects_rows["player_Баффы"] as HBoxContainer).get_child(4) as Button).text == "+3", "eff_preview_overflow_badge")
+	arena.visual_lab_eff_index = 3
+	check(bool(Dictionary(arena._effect_entries(false, "Дебаффы")[0]).get("pending", false)), "eff_preview_pending_fixture")
+	arena.visual_lab_eff_index = 0
+	arena._refresh_effect_display()
+
 	arena.visual_lab_theme_index = 2
 	arena.visual_lab_scenario_index = 1
 	arena._apply_visual_lab()
