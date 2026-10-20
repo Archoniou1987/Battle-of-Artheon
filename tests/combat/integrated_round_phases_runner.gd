@@ -17,34 +17,40 @@ func _init() -> void:
 	print("INTEGRATED_ROUND_PHASES_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
 
-## The setting is authored on the ABI as a whole, regardless of components.
+## Timing is authored manually. Damage and healing (including DoT/HoT)
+## must be Standard; protective and cleansing effects may be Instant.
 func _test_timing_setting() -> bool:
-	var components: Array[Dictionary] = [
+	var standard_only: Array[Dictionary] = [
 		{"kind":"heal","amount":50},
 		{"kind":"damage","amount":20,"damage_type":"fire"},
-		{"kind":"effect","effect_id":"EFF_PREP_DOT"},
+		{"kind":"effect","effect_id":"EFF003"},
+		{"kind":"effect","effect_id":"EFF004"}
+	]
+	for component in standard_only:
+		var standard: Dictionary = {"application_timing":"standard","target_team":"ENEMY","components":[component]}
+		if AbilityRuntime.application_timing(standard)!="standard" or not AbilityRuntime.validate_definition("ABI_TIMING_TEST",standard).is_empty():
+			return false
+		var instant: Dictionary = standard.duplicate(true)
+		instant["application_timing"]="instant"
+		if AbilityRuntime.validate_definition("ABI_TIMING_TEST",instant).is_empty():
+			return false
+	var instant_ok: Array[Dictionary] = [
 		{"kind":"effect","effect_id":"EFF_PREP_STUN"},
 		{"kind":"cleanse","dispel_polarity":"BUFF"}
 	]
-	for component in components:
+	for component in instant_ok:
 		for timing in ["instant","standard"]:
-			var definition:Dictionary={
-				"application_timing":timing,
-				"target_team":"ENEMY",
-				"components":[component]
-			}
-			if AbilityRuntime.application_timing(definition)!=timing:
+			var definition:Dictionary={"application_timing":timing,"target_team":"ENEMY","components":[component]}
+			if AbilityRuntime.application_timing(definition)!=timing or not AbilityRuntime.validate_definition("ABI_TIMING_TEST",definition).is_empty():
 				return false
-			if not AbilityRuntime.validate_definition("ABI_TIMING_TEST",definition).is_empty():
-				return false
-	var mixed:Dictionary={"application_timing":"instant","components":[components[0],components[2]]}
-	if AbilityRuntime.application_timing(mixed)!="instant":
+	var mixed: Dictionary = {"application_timing":"instant","components":[standard_only[0],instant_ok[0]]}
+	if AbilityRuntime.application_timing(mixed)!="instant" or AbilityRuntime.validate_definition("ABI_MIXED",mixed).is_empty():
 		return false
 	for invalid_timing in ["next_round","immediate","when_crit"]:
-		var invalid:Dictionary={"application_timing":invalid_timing,"components":[components[0]]}
+		var invalid:Dictionary={"application_timing":invalid_timing,"components":[standard_only[0]]}
 		if not AbilityRuntime.validate_definition("ABI_INVALID_TIMING",invalid).has("invalid_application_timing"):
 			return false
-	return AbilityRuntime.application_timing({"components":[components[0]]})=="standard"
+	return AbilityRuntime.application_timing({"components":[standard_only[0]]})=="standard"
 
 func _test_early_defence() -> bool:
 	var early_hp: int = _run_defence_case("instant")
