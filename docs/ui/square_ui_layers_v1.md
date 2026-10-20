@@ -1,3 +1,10 @@
+## Arena Visual Lab — ABI/EFF presentation fixtures
+- In Arena open **Визуал**, use **ABI — визуальные состояния** for real slots / all five examples / selected first slot / unavailable examples. ABI examples are mouse-transparent labels/outlines placed on existing ABI button geometry; the combat ability availability, selection, IDs, costs and cast logic are unchanged.
+- Use **EFF — состояния эффектов** to show actual combat effects, example buffs and debuffs, overflow (7 entries in each row, last visible tile displays `+3`), or examples with a pending effect.
+- The effect examples flow through the existing `_effect_entries`, `_refresh_effect_display`, and tooltip detail display; they never write to the real combat session or effect services.
+- **Сбросить оформление** reverts both ABI and EFF to live battle display.
+- No geometry adjustments. CI is intentionally batched with subsequent changes rather than triggered per small commit.
+
 ## Visual Lab v0.2 — experiment workbench
 - **Inventory:** visual scenario dropdown (live equipment, rarity examples, fully equipped preview); equipment-group scale (80–105%) and horizontal offset (−20…+20 logical pixels). Existing theme, ghost icons, empty borders and background opacity controls remain available.
 - **Arena:** Visual Lab button exposes shared theme presets and mock equipment scenarios for player/enemy. This is presentation-only, not the existing ABI Lab or CombatSession.
