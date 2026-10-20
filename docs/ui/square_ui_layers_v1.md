@@ -1,3 +1,10 @@
+## Temporary EFF icon artwork
+- Arena EFF icons reuse the first cell from the **existing** `assets/items/items_atlas_01.png` (8×8 atlas) for both buffs and debuffs.
+- Buff EFF frame: green `#55bf73`. Debuff EFF frame: red `#d95757`. The shared item image remains untinted.
+- EFF tooltip preserves the actual effect name, duration, stacks and pending flag; overflow tiles display `+N` instead of item art. Missing atlas art falls back to the existing symbolic marker.
+- This applies to real EFF rows and Visual Lab EFF scenarios, without changing effect mechanics or Arena geometry.
+- Run ABI and WEB CI together after this batch, not after every minor visual tweak.
+
 ## Arena Visual Lab — ABI/EFF presentation fixtures
 - In Arena open **Визуал**, use **ABI — визуальные состояния** for real slots / all five examples / selected first slot / unavailable examples. ABI examples are mouse-transparent labels/outlines placed on existing ABI button geometry; the combat ability availability, selection, IDs, costs and cast logic are unchanged.
 - Use **EFF — состояния эффектов** to show actual combat effects, example buffs and debuffs, overflow (7 entries in each row, last visible tile displays `+3`), or examples with a pending effect.
