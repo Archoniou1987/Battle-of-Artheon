@@ -65,6 +65,8 @@ var equipment_slot := ""
 var is_equipped := false
 ## Enable only after the square base PNG has the empty slot and frame baked in.
 var empty_art_in_background := false
+## Preview layout with only neutral empty-slot frames (no ghost icons).
+var show_empty_placeholder_icon := true
 var _shown_item: Dictionary = {}
 var _icon_texture: TextureRect
 var _fallback: Label
@@ -143,6 +145,13 @@ func set_empty_art_in_background(enabled: bool) -> void:
 	if _icon_texture != null:
 		set_item(_shown_item, equipment_slot, is_equipped)
 
+func set_empty_placeholder_icon_visible(enabled: bool) -> void:
+	if show_empty_placeholder_icon == enabled:
+		return
+	show_empty_placeholder_icon = enabled
+	if _icon_texture != null:
+		set_item(_shown_item, equipment_slot, is_equipped)
+
 func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) -> void:
 	_shown_item = item.duplicate(true)
 	equipment_slot = slot_name
@@ -150,7 +159,7 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	is_equipped = equipped
 	var rarity := String(item.get("rarity", "grey")).to_lower()
 	var empty_key := _resolve_empty_slot(slot_name)
-	var empty_texture: Texture2D = empty_slot_texture(empty_key) if item.is_empty() and not empty_art_in_background else null
+	var empty_texture: Texture2D = empty_slot_texture(empty_key) if item.is_empty() and show_empty_placeholder_icon and not empty_art_in_background else null
 	var border := Color(String(RARITY_COLORS.get(rarity, "#777f8a"))) if not item.is_empty() else Color("#66543d")
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color("#263346")
@@ -166,7 +175,7 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	if item.is_empty():
 		style.bg_color = Color.TRANSPARENT if empty_texture != null or empty_art_in_background else Color("#263346")
 		style.border_color = Color("#83B8D9", 0.65)
-		style.set_border_width_all(0 if empty_art_in_background else 1)
+		style.set_border_width_all(0 if empty_art_in_background and show_empty_placeholder_icon else (2 if not show_empty_placeholder_icon else 1))
 	add_theme_stylebox_override("normal", style)
 	var hover := style.duplicate() as StyleBoxFlat
 	hover.bg_color = Color("#35465a") if empty_texture == null and not ResourceLoader.exists(SLOT_BACKGROUND_PATH) else Color.TRANSPARENT
@@ -182,13 +191,13 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 		texture = _atlas_cell(load(ATLAS_PATH) as Texture2D, int(item["atlas_index"]), ATLAS_COLUMNS, ATLAS_ROWS)
 	if _icon_texture == null:
 		return
-	var use_new_slot_art := ResourceLoader.exists(NEW_EMPTY_ATLAS_PATH) and ResourceLoader.exists(SLOT_BACKGROUND_PATH)
+	var use_new_slot_art := show_empty_placeholder_icon and ResourceLoader.exists(NEW_EMPTY_ATLAS_PATH) and ResourceLoader.exists(SLOT_BACKGROUND_PATH)
 	_slot_background.visible = use_new_slot_art and item.is_empty() and not empty_art_in_background
 	_slot_frame.visible = use_new_slot_art and SHOW_DECORATIVE_SLOT_FRAMES and item.is_empty() and not empty_art_in_background
 	_empty_background.texture = empty_texture
 	_empty_background.visible = empty_texture != null
 	_icon_texture.texture = texture
-	_fallback.visible = texture == null and empty_texture == null and not (item.is_empty() and empty_art_in_background)
+	_fallback.visible = texture == null and empty_texture == null and not item.is_empty()
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
 	_marker.text = ""
 	var readable_slot := SquareUiGeometry.equipment_name(empty_key) if not empty_key.is_empty() and not ["elixir", "bag", "abi"].has(empty_key) else slot_name
