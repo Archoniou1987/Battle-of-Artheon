@@ -17,5 +17,21 @@
     "duration_rounds": 3,
     "stacking": "shared_duration",
     "max_stacks": 3
+  },
+  "EFF005": {
+    "id": "EFF005",
+    "name": "Fire Ward",
+    "kind": "buff",
+    "fire_resist_direct_pct": 90,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF006": {
+    "id": "EFF006",
+    "name": "Guardian Ward",
+    "kind": "buff",
+    "damage_reduction": 0.2,
+    "duration_rounds": 2,
+    "stacking": "unique"
   }
 }
