@@ -55,6 +55,8 @@ func _init() -> void:
 	_check(not bool(rejected.get("ok",false)), "invalid_command_rejected")
 	_check(player.hp == before_hp and player.mana == before_mana, "rejection_no_resource_mutation")
 	_check(session.state.round_number == before_round, "rejection_no_round_consumption")
+	_check(session.state.pending_events.is_empty(), "rejection_no_pending_events")
+	_check(session.active_round == null, "rejection_does_not_open_round")
 
 	var result := session.play_round(["head","legs"],blocks,"ABI003")
 	_check(bool(result.get("ok",false)), "valid_full_round_accepted")
@@ -62,6 +64,9 @@ func _init() -> void:
 		_finish()
 		return
 	_check(int(result.get("round",0)) == before_round + 1, "exactly_one_round")
+	_check(session.active_round == null, "completed_round_not_left_open")
+	_check(session.locked_ability_id.is_empty(), "abi_lock_released_at_round_end")
+	_check(session.state.pending_events.is_empty(), "no_unresolved_pending_events")
 	_check(String(result.get("outcome","")) == session.orchestrator.battle_outcome(), "same_combat_outcome")
 	_check(enemy.visible_hp() <= enemy.max_hp and player.visible_hp() <= player.max_hp, "combat_resources_bounded")
 	_check(not player.is_death_finalized() or player.visible_hp() == 0, "death_state_consistent")
