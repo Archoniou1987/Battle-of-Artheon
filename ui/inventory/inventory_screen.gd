@@ -97,7 +97,9 @@ func _ready() -> void:
 	equipment_background = TextureRect.new()
 	equipment_background.name = "InventoryBackground"
 	equipment_background.texture = load(INVENTORY_BACKGROUND_PATH) as Texture2D
-	equipment_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Fixed logical 480x480 image: the enclosing square is uniformly scaled.
+	# Full-rect anchors plus explicit size caused Godot _set_size warnings.
+	equipment_background.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	equipment_background.custom_minimum_size = Vector2.ZERO
 	equipment_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	equipment_background.stretch_mode = TextureRect.STRETCH_SCALE
