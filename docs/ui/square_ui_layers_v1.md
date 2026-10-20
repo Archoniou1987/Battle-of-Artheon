@@ -1,3 +1,10 @@
+## Full Combat vertical slice — stage 1
+- The existing Arena is already connected to the real `ArenaCombatSession` / `CombatCommandApi` / `RoundOrchestrator` / `CombatEngine`. Do not introduce another parallel simulator for UI tests.
+- EFF indicators remain compact segmented icon rows (5 cells per polarity, overflow `+N`). Detailed text belongs in the existing **Баффы** and **Дебаффы** tabs; tapping the icon jumps to its tab instead of presenting a second popup. Arena tooltip is navigation-only.
+- `tests/combat/full_battle_vertical_slice_runner.gd` tests: real equipment and PAR readout, invalid command atomicity, two weapon attacks, one canonical ABI003, resource debit, resulting event trace, journal grouping and the same-session EFF view. Post-round fixture EFF records test the projection only; they are **not** a substitute for EFF lifecycle tests.
+- Existing round EFF tests, end-of-round death tests, attack pipeline tests and canonical ABI runners still own deeper mechanics. Expand coverage incrementally to a scenario matrix without replacing those tests.
+- Run ABI Branch Tests and Web Preview after grouped changes. The new runner is part of the ABI integration batch and has not yet been validated by CI.
+
 ## Temporary EFF icon artwork
 - Arena EFF icons reuse the first cell from the **existing** `assets/items/items_atlas_01.png` (8×8 atlas) for both buffs and debuffs.
 - Buff EFF frame: green `#55bf73`. Debuff EFF frame: red `#d95757`. The shared item image remains untinted.
