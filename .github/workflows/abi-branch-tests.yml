@@ -31,14 +31,27 @@ jobs:
           bash tools/run_godot_check.sh tests/ui/elixir_abi_press_runner.gd
       - name: Validate simultaneous round, ABI/EFF integration and resolved Arena journal
         run: |
-          bash tools/run_godot_check.sh tests/combat/integrated_round_phases_runner.gd
-          bash tools/run_godot_check.sh tests/combat/arena_ability_integration_runner.gd
-          bash tools/run_godot_check.sh tests/combat/arena_combat_log_runner.gd
-          bash tools/run_godot_check.sh tests/combat/arena_dual_support_round_runner.gd
-          bash tools/run_godot_check.sh tests/combat/arena_round_timing_interaction_runner.gd
-          bash tools/run_godot_check.sh tests/combat/round_effect_death_regression_runner.gd
-          bash tools/run_godot_check.sh tests/combat/instant_effect_surprise_runner.gd
-          bash tools/run_godot_check.sh tests/combat/elixir_mind_game_runner.gd
+          # Run every integration runner even if a prior one fails. This
+          # surfaces all regressions in one manual Actions run.
+          status=0
+          for script in \
+            tests/combat/integrated_round_phases_runner.gd \
+            tests/combat/arena_ability_integration_runner.gd \
+            tests/combat/arena_combat_log_runner.gd \
+            tests/combat/arena_dual_support_round_runner.gd \
+            tests/combat/arena_round_timing_interaction_runner.gd \
+            tests/combat/round_effect_death_regression_runner.gd \
+            tests/combat/instant_effect_surprise_runner.gd \
+            tests/combat/elixir_mind_game_runner.gd
+          do
+            echo "::group::Integration: $script"
+            if ! bash tools/run_godot_check.sh "$script"; then
+              echo "::error::Integration runner failed: $script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
       - name: Run combat tournament with ABI
         run: bash tools/run_godot_check.sh tests/combat/tournament_runner.gd
       - name: Generate and validate 100 items
