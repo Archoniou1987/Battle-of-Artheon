@@ -343,6 +343,9 @@ func _apply_visual_lab_abi() -> void:
 		if visual_lab_abi_index == 0:
 			if overlay != null:
 				overlay.visible = false
+			var old_outline := button.get_node_or_null("VisualLabABIOutline") as Panel
+			if old_outline != null:
+				old_outline.visible = false
 			continue
 		if overlay == null:
 			overlay = Label.new()
