@@ -29,10 +29,10 @@ func _init() -> void:
 	# separate NPC combat logic may be used for the automatic cast.
 	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["ABI004"]
 	var options: Array[Dictionary] = session.player_ability_options()
-	if options.size() != 5 or String(options[3].get("id","")) != "ABI004" or not bool(options[3].get("available",false)):
+	if options.size() != 5 or String(options[4].get("id","")) != "ABI004" or not bool(options[4].get("available",false)):
 		_finish(false,"chest_ability_option")
 		return
-	if String(options[3].get("target_id","")) != session.player_id:
+	if String(options[4].get("target_id","")) != session.player_id:
 		_finish(false,"support_targets_owner")
 		return
 	var blocks: Array[String] = []
