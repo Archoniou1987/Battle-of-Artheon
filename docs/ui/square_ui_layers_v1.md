@@ -1,3 +1,13 @@
+## Integration checkpoint — pre-CI (2026-10-20)
+The current package is **ready to execute**, not yet proven green:
+- Basic attack + manual defence + PAR, including atomic rejection of invalid attack **and** block zones: `battle_baseline_runner.gd`.
+- Shared combat round, dual weapon action, canonical ABI dispatch, event lineage and journal: `full_battle_vertical_slice_runner.gd`. Also asserts the round is closed, ABI lock cleared, and no pending events remain.
+- Actual EFF behavior is tested independently by `abi003_fireball_runner.gd`, `round_effect_death_regression_runner.gd`, `instant_effect_surprise_runner.gd` and `effect_stacking_runner.gd`. The EFF entries appended to the full-battle slice are **presentation-only fixture records**; they must never be cited as proof that EFF was applied by that round.
+- Elixirs, round phases and combat journal have dedicated tests in the same manually dispatched workflow.
+- Do not change the approved Arena/Inventory 480×480 UI geometry during combat verification.
+
+**CI gate:** run `ABI Branch Tests` on `feature/character-inventory-ui-v1` and inspect every failing integration runner. The pipeline uses Godot 4.5.1; until the run passes, neither build correctness nor integrated mechanics can be claimed as verified. Follow-up coverage after the first green run: deterministic defence/penetration/critical matrix, multiple rounds of mixed ABI+EFF and player/NPC heal/death edge cases.
+
 ## Combat Integration Gate — real ABI/EFF end-to-end (2026-10-20)
 ### Manual CI entry point before merge
 Run the existing **Combat Tests** workflow on `feature/character-inventory-ui-v1`. Its workflow file already exists in `main`, and this branch extends it with a bundled live Arena/Group integration step. The existing **ABI Branch Tests** also includes the real EFF chain. The new `Combat Integration Gate` is branch-only and may not be dispatchable from the Actions UI until its workflow definition reaches the default branch. Do **not** report a green CI run until GitHub Actions confirms it.
