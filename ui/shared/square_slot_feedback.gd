@@ -27,7 +27,7 @@ static func attach(button: BaseButton, role: String = "equipment") -> void:
 	button.mouse_exited.connect(_hover.bind(button, overlay, false))
 	button.button_down.connect(_down.bind(button, overlay))
 	button.button_up.connect(_up.bind(button, overlay))
-	button.pressed.connect(_flash.bind(overlay))
+	button.pressed.connect(_flash.bind(button, overlay))
 
 	var selected := Panel.new()
 	selected.name = SELECTION_OVERLAY
@@ -76,7 +76,7 @@ static func attach_art(button: BaseButton, art: CanvasItem) -> void:
 		return
 	button.button_down.connect(_art_tint.bind(art, Color("#afa49a"), 0.05))
 	button.button_up.connect(_art_tint.bind(art, Color.WHITE, 0.12))
-	button.pressed.connect(_art_tint.bind(art, Color("#f4dab1"), 0.12))
+	button.pressed.connect(_art_flash.bind(art))
 
 static func _hover(button: BaseButton, overlay: Panel, entered: bool) -> void:
 	if not button.disabled:
@@ -90,12 +90,12 @@ static func _up(button: BaseButton, overlay: Panel) -> void:
 	if not button.disabled:
 		_fade(overlay, 0.3 if button.is_hovered() else 0.0, 0.13)
 
-static func _flash(overlay: Panel) -> void:
+static func _flash(button: BaseButton, overlay: Panel) -> void:
 	if not is_instance_valid(overlay):
 		return
 	var tween := _new_tween(overlay)
 	tween.tween_property(overlay, "modulate:a", 0.95, 0.045)
-	tween.tween_property(overlay, "modulate:a", 0.0, 0.21)
+	tween.tween_property(overlay, "modulate:a", 0.3 if button.is_hovered() and not button.disabled else 0.0, 0.21)
 
 static func _fade(overlay: Panel, opacity: float, duration: float) -> void:
 	if not is_instance_valid(overlay):
@@ -112,6 +112,13 @@ static func _new_tween(target: CanvasItem) -> Tween:
 	tween.set_ease(Tween.EASE_OUT)
 	target.set_meta("_square_feedback_tween", tween)
 	return tween
+
+static func _art_flash(art: CanvasItem) -> void:
+	if not is_instance_valid(art):
+		return
+	var tween := _new_tween(art)
+	tween.tween_property(art, "modulate", Color("#f4dab1"), 0.065)
+	tween.tween_property(art, "modulate", Color.WHITE, 0.20)
 
 static func _art_tint(art: CanvasItem, color: Color, duration: float) -> void:
 	if not is_instance_valid(art):
