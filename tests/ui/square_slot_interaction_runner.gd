@@ -30,6 +30,19 @@ func _run() -> void:
 	root.add_child(inventory)
 	await process_frame
 	check(inventory.slot_buttons.size()==14, "inventory_equipment_slots")
+	check(inventory.visual_lab_dialog != null and inventory.visual_lab_theme.item_count == 3, "visual_lab_three_themes")
+	check(inventory.visual_lab_frames.button_pressed and not inventory.visual_lab_ghosts.button_pressed, "visual_lab_default_frame_only")
+	inventory._visual_lab_theme_changed(1)
+	check(inventory.visual_lab_theme_index == 1 and inventory.equipment_background.modulate == Color("#e8c99d"), "visual_lab_bronze_theme")
+	inventory._visual_lab_frames_changed(false)
+	check((inventory.slot_buttons["head"] as ItemIcon).get_theme_stylebox("normal").border_width_left == 0, "visual_lab_hide_empty_frame")
+	inventory._visual_lab_ghosts_changed(true)
+	check((inventory.slot_buttons["head"] as ItemIcon).show_empty_placeholder_icon, "visual_lab_toggle_ghosts")
+	inventory._visual_lab_background_changed(0.5)
+	check(is_equal_approx(inventory.equipment_background.modulate.a, 0.5), "visual_lab_backdrop_strength")
+	inventory._reset_visual_lab()
+	check(inventory.visual_lab_theme_index == 0 and not (inventory.slot_buttons["head"] as ItemIcon).show_empty_placeholder_icon, "visual_lab_reset_without_save")
+
 	var head := inventory.slot_buttons.get("head", null) as ItemIcon
 	check(head != null, "head_button_exists")
 	if head != null:
