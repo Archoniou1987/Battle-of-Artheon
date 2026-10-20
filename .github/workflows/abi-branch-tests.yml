@@ -29,6 +29,7 @@ jobs:
         run: |
           bash tools/run_godot_check.sh tests/ui/arena_open_smoke.gd
           bash tools/run_godot_check.sh tests/ui/elixir_abi_press_runner.gd
+          bash tools/run_godot_check.sh tests/ui/square_slot_interaction_runner.gd
       - name: Validate simultaneous round, ABI/EFF integration and resolved Arena journal
         run: |
           # Run every integration runner even if a prior one fails. This
