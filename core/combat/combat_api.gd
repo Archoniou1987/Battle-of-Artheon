@@ -77,7 +77,9 @@ func diagnostics(after_event_id:int=0)->Dictionary:
 	return {
 		"round":state.round_number,
 		"combatants":combatants,
-		"events":recent_events(after_event_id)
+		"events":recent_events(after_event_id),
+		# Computed from the same resolved events, not from simulated UI rolls.
+		"round_trace":CombatDiagnostics.round_trace(state,state.round_number)
 	}
 
 func _teams()->Dictionary:
