@@ -1,3 +1,10 @@
+## Combat validation sequence — stage gates
+- **Gate 0 (minimal, real)**: `tests/combat/battle_baseline_runner.gd` runs one player sword attack and enemy attack, one manual block selection, PAR diagnostic readout, invalid-command atomicity, one resolved round and journal.
+- **Gate 1 (integrated)**: `tests/combat/full_battle_vertical_slice_runner.gd` extends to dual wield + canonical ABI003 and engine event diagnostics; existing ABI/EFF lifecycle regressions remain in the same CI batch.
+- **Gate 2+ (after baseline passes)**: scenario groups for hit/dodge/crit, shield/armour/penetration, PAR modifiers, ABI cost/cooldown, EFF timing/stack/cleanse and final-round death. Grow from deterministic fixtures; do not mutate the production battle logic for the test.
+- Both new scripts are wired into `ABI Branch Tests` ahead of the deeper integrations; manual launch is required. If the first CI fails, fix only confirmed failures before expanding.
+- Current Arena geometry is frozen. EFF mini-slots signal state, and the Buff/Debuff tabs own full descriptions.
+
 ## Full Combat vertical slice — stage 1
 - The existing Arena is already connected to the real `ArenaCombatSession` / `CombatCommandApi` / `RoundOrchestrator` / `CombatEngine`. Do not introduce another parallel simulator for UI tests.
 - EFF indicators remain compact segmented icon rows (5 cells per polarity, overflow `+N`). Detailed text belongs in the existing **Баффы** and **Дебаффы** tabs; tapping the icon jumps to its tab instead of presenting a second popup. Arena tooltip is navigation-only.
