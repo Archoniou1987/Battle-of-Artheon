@@ -94,8 +94,20 @@ func _run() -> void:
 	arena.visual_lab_scenario_index = 1
 	arena._apply_visual_lab()
 	check(arena.arena_background.modulate == Color("#b7c3d4"), "arena_visual_lab_steel_theme")
+	var arena_head := arena.player_slots["head"] as ItemIcon
+	var arena_empty_style := arena_head.get_theme_stylebox("normal") as StyleBoxFlat
+	check(arena_empty_style.border_color == Color("#9aabb8"), "arena_visual_lab_empty_slot_border")
+	var abi_style := arena.ability_buttons[0].get_theme_stylebox("normal") as StyleBoxFlat
+	check(abi_style.border_color == Color("#9aabb8"), "arena_visual_lab_abi_border")
+	var elixir_style := arena.player_elixir_slots[0].get_theme_stylebox("normal") as StyleBoxFlat
+	check(elixir_style.border_color == Color("#9aabb8"), "arena_visual_lab_elixir_border")
+	var selection := arena.defense_buttons[0].get_node("SelectionOutline") as Panel
+	var selection_style := selection.get_theme_stylebox("panel") as StyleBoxFlat
+	check(selection_style.border_color == Color("#9aabb8"), "arena_visual_lab_zone_outline")
+	check(arena.defense_buttons[0].get_theme_stylebox("normal") is StyleBoxTexture, "arena_visual_lab_zone_icon_preserved")
 	arena._reset_visual_lab()
 	check(arena.visual_lab_theme_index == 0 and arena.visual_lab_scenario_index == 0, "arena_visual_lab_reset")
+	check((arena.ability_buttons[0].get_theme_stylebox("normal") as StyleBoxFlat).border_color == Color("#83b8d9"), "arena_visual_lab_abi_reset_border")
 
 	var empty_arena_head := arena.player_slots.get("head", null) as ItemIcon
 	check(empty_arena_head != null and not empty_arena_head.show_empty_placeholder_icon and not empty_arena_head._empty_background.visible, "empty_arena_equipment_icon_hidden")
