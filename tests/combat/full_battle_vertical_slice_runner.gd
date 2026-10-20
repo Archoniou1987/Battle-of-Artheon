@@ -107,8 +107,16 @@ func _init() -> void:
 	enemy.active_effects.append({"effect_id":"FULL_SLICE_BUFF","definition":{"kind":"buff","name":"Defence"},"stacks":2,"remaining_rounds":3,"start_round":session.state.round_number,"revealed":true})
 	enemy.active_effects.append({"effect_id":"FULL_SLICE_DEBUFF","definition":{"kind":"debuff","name":"Weakness"},"stacks":1,"remaining_rounds":2,"start_round":session.state.round_number,"revealed":true})
 	var effect_view := session.effect_view(false)
-	_check(Array(effect_view.get("buffs",[])).any(func(e: Dictionary) -> bool: return String(e.get("id","")) == "FULL_SLICE_BUFF"), "eff_buff_projection")
-	_check(Array(effect_view.get("debuffs",[])).any(func(e: Dictionary) -> bool: return String(e.get("id","")) == "FULL_SLICE_DEBUFF"), "eff_debuff_projection")
+	var found_buff := false
+	var found_debuff := false
+	for raw in Array(effect_view.get("buffs",[])):
+		if String(Dictionary(raw).get("id","")) == "FULL_SLICE_BUFF":
+			found_buff = true
+	for raw in Array(effect_view.get("debuffs",[])):
+		if String(Dictionary(raw).get("id","")) == "FULL_SLICE_DEBUFF":
+			found_debuff = true
+	_check(found_buff, "eff_buff_projection")
+	_check(found_debuff, "eff_debuff_projection")
 
 	_finish()
 
