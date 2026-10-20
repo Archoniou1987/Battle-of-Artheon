@@ -307,7 +307,7 @@ func _build_square() -> void:
 	_build_fighter(Vector2(242, 8), false)
 	var abilities := HBoxContainer.new()
 	abilities.name = "AbilitySlots"
-	# Permanent 5-square system strip: MH 1-3, Head 4, Chest 5.
+	# Permanent 5-square system strip: MH 1-3, Chest 4, Head 5.
 	abilities.position = Vector2((ARENA_LOGICAL_EXTENT - 5.0 * 34.0) / 2.0, 389)
 	abilities.add_theme_constant_override("separation", 0)
 	square_content.add_child(abilities)
