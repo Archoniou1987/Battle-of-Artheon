@@ -24,9 +24,11 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 			weapon[weapon_index] = ability_id
 			seen[ability_id] = true
 			weapon_index += 1
-	chest[0] = _first_unique_ability("chest", character, repository, seen)
-	if chest[0] != null: seen[String(chest[0])] = true
+	# Resolve in visible slot order: Helmet 4 has priority over Chest 5
+	# when two equipped items provide the same ABI ID.
 	head[0] = _first_unique_ability("head", character, repository, seen)
+	if head[0] != null: seen[String(head[0])] = true
+	chest[0] = _first_unique_ability("chest", character, repository, seen)
 	return {"weapon": weapon, "chest": chest, "head": head}
 
 static func active_abilities(character: CharacterState, repository: ItemRepository) -> Array[String]:
