@@ -6,6 +6,7 @@ signal back_requested
 signal end_turn_requested(attack_targets: Array[String], block_zones: Array[String])
 ## Notify the owning scene to save persistent HP/mana after an accepted round.
 signal resources_changed
+signal inventory_changed
 
 const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
@@ -465,7 +466,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		var elixir_button := Button.new()
 		elixir_button.custom_minimum_size = Vector2(31, 32)
 		elixir_button.add_theme_font_size_override("font_size", 10)
-		elixir_button.disabled = true # UI only; no consumption or round action yet.
+		elixir_button.disabled = true
 		var elixir_style := StyleBoxTexture.new()
 		elixir_style.texture = ItemIcon.empty_slot_texture("elixir")
 		if elixir_style.texture != null:
@@ -473,6 +474,7 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 				elixir_button.add_theme_stylebox_override(state, elixir_style)
 		elixir_row.add_child(elixir_button)
 		if is_player:
+			elixir_button.pressed.connect(_use_elixir.bind(elixir_index))
 			player_elixir_slots.append(elixir_button)
 		else:
 			enemy_elixir_slots.append(elixir_button)
@@ -585,6 +587,7 @@ func _update_elixir_slots() -> void:
 			if elixir_global_cooldown > 0:
 				button.text = "%s\nКД %d" % [symbol, elixir_global_cooldown]
 				button.tooltip_text += " | Общее КД: %d раунд(ов)" % elixir_global_cooldown
+			button.disabled = not is_player or not bool(item.get("available",false)) or charges <= 0 or elixir_global_cooldown>0
 
 func _show_equipment_details(is_player: bool, slot: String) -> void:
 	var item: Dictionary = {}
@@ -714,15 +717,35 @@ func set_attack_count(count: int) -> void:
 func _select_ability(index: int) -> void:
 	if combat_session == null or index < 0 or index >= ability_buttons.size():
 		return
-	var options:=combat_session.player_ability_options()
-	if index >= options.size():
+	var options := combat_session.player_ability_options()
+	if index >= options.size() or not bool(Dictionary(options[index]).get("available",false)):
 		return
-	var option:Dictionary=options[index]
-	if not bool(option.get("available",false)):
+	var ability_id := String(Dictionary(options[index]).get("id",""))
+	var result := combat_session.activate_ability(ability_id)
+	if not bool(result.get("ok",false)):
+		_prepend_combat_log("ABI отклонена: " + String(result.get("reason","unknown")))
 		return
-	var ability_id:=String(option.get("id",""))
-	selected_ability = "" if selected_ability==ability_id else ability_id
-	_refresh_ability_buttons()
+	selected_ability = ability_id
+	_sync_combat_session()
+	# Instant resolves on this click; Standard is now irrevocably locked.
+	_prepend_combat_log("%s: %s" % [ability_id, "эффект применён" if String(result.get("timing",""))=="instant" else "действие зафиксировано до конца раунда"])
+	if character != null and repository != null:
+		if character.commit_combat_resources(combat_session.fighter(true), repository):
+			resources_changed.emit()
+
+func _use_elixir(index: int) -> void:
+	if combat_session == null:
+		return
+	var result := combat_session.use_elixir(index)
+	if not bool(result.get("ok",false)):
+		_prepend_combat_log("Эликсир отклонён: " + String(result.get("reason","unknown")))
+		return
+	_sync_combat_session()
+	_prepend_combat_log("Эликсир использован — осталось зарядов: %d" % int(result.get("charges",0)))
+	if character != null and repository != null:
+		if character.commit_combat_resources(combat_session.fighter(true), repository):
+			resources_changed.emit()
+	inventory_changed.emit()
 
 func _refresh_ability_buttons() -> void:
 	if combat_session == null:
@@ -909,8 +932,7 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 	if combat_session == null:
 		return
 	set_combat_ready(false)
-	var locked_ability_id:=selected_ability
-	var result: Dictionary = combat_session.play_round(targets, blocks, locked_ability_id)
+	var result: Dictionary = combat_session.play_round(targets, blocks)
 	if not bool(result.get("ok", false)):
 		_prepend_combat_log("Команда отклонена: %s" % String(result.get("reason", "unknown")))
 		set_combat_ready(true)
@@ -1033,6 +1055,9 @@ func _sync_combat_session() -> void:
 	set_fighter_hp(false, enemy.visible_hp(), enemy.max_hp)
 	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
 	set_fighter_resources(false, enemy.mana, enemy.max_mana, enemy.action_points, enemy.max_action_points)
+	set_elixir_display(true, character.elixir_capacity(repository), combat_session.elixir_options())
+	set_elixir_display(false, 0, [])
+	set_elixir_cooldown(combat_session.elixir_cooldown())
 	_refresh_ability_buttons()
 	_refresh_effect_display()
 
