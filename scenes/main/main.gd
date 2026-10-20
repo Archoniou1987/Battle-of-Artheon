@@ -346,6 +346,7 @@ func _open_arena_screen() -> void:
 		_save_progression()
 	)
 	arena_screen.resources_changed.connect(_save_progression)
+		arena_screen.inventory_changed.connect(_save_inventory)
 	arena_screen.visible = true
 	arena_screen.refresh()
 
@@ -436,7 +437,11 @@ func _seed_inventory_preview() -> void:
 			"requirements": {"PAR001": 10} if index == 21 else {},
 			"par_stats": {},
 			"par_bonuses": {"PAR001": 25} if index == 20 else {},
-			"description": "Тестовый предмет для проверки интерфейса. Не является частью игрового баланса."
+			"description": "Тестовый предмет для проверки интерфейса. Не является частью игрового баланса.",
+			"elixir_slots": 2 if index == 14 else 0,
+			"charges": 3 if index == 16 else 0,
+			"max_charges": 3 if index == 16 else 0,
+			"elixir_components": [{"kind":"heal","amount":100}] if index == 16 else []
 		}
 		ItemDurabilityService.initialize_item(item, 100)
 		if item_repository.add_item(item):
