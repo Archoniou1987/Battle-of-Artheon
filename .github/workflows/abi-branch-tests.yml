@@ -49,6 +49,7 @@ jobs:
           status=0
           for script in \
             tests/combat/integrated_round_phases_runner.gd \
+            tests/combat/battle_baseline_runner.gd \
             tests/combat/full_battle_vertical_slice_runner.gd \
             tests/combat/arena_ability_integration_runner.gd \
             tests/combat/arena_combat_log_runner.gd \
