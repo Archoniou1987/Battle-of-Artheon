@@ -37,6 +37,16 @@ func _run() -> void:
 		check(hover != null, "head_hover_overlay")
 		check(hover != null and hover.mouse_filter==Control.MOUSE_FILTER_IGNORE, "overlay_not_clickable")
 		check(head.tooltip_text.contains("пусто"), "empty_slot_hover_hint")
+		# The final artwork can take over the entire empty-slot baseline
+		# without removing the input target or the independent item border.
+		head.set_empty_art_in_background(true)
+		check(not head._empty_background.visible and not head._slot_background.visible, "baked_empty_art_hides_individual_sprites")
+		check(head.tooltip_text.contains("пусто"), "baked_slot_keeps_semantics")
+		head.set_item({"instance_id":"TEST_ICON","name":"Test Helmet","rarity":"purple"}, "Голова")
+		var rarity_box := head.get_theme_stylebox("normal") as StyleBoxFlat
+		check(rarity_box != null and rarity_box.border_width_left > 0 and rarity_box.border_color == Color(ItemIcon.RARITY_COLORS["purple"]), "rarity_border_only_on_item")
+		head.set_item({}, "Голова")
+		head.set_empty_art_in_background(false)
 		if hover != null:
 			head.button_down.emit()
 			await create_timer(0.08).timeout
