@@ -54,6 +54,12 @@ var visual_lab_theme: OptionButton
 var visual_lab_ghosts: CheckBox
 var visual_lab_frames: CheckBox
 var visual_lab_background: HSlider
+var visual_lab_scenario: OptionButton
+var visual_lab_scale: HSlider
+var visual_lab_shift: HSlider
+var visual_lab_scenario_index := 0
+var visual_lab_equipment_scale := 1.0
+var visual_lab_equipment_shift := 0.0
 var visual_lab_theme_index := 0
 var visual_lab_show_ghosts := false
 var visual_lab_show_frames := true
@@ -329,7 +335,7 @@ func _build_visual_lab() -> void:
 	visual_lab_dialog.name = "VisualLabDialog"
 	visual_lab_dialog.title = "Visual Lab · Inventory"
 	visual_lab_dialog.ok_button_text = "Закрыть"
-	visual_lab_dialog.min_size = Vector2i(310, 300)
+	visual_lab_dialog.min_size = Vector2i(310, 450)
 	add_child(visual_lab_dialog)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
@@ -367,6 +373,33 @@ func _build_visual_lab() -> void:
 	visual_lab_background.value = 1.0
 	visual_lab_background.value_changed.connect(_visual_lab_background_changed)
 	column.add_child(visual_lab_background)
+	visual_lab_scenario = OptionButton.new()
+	visual_lab_scenario.name = "Scenario"
+	for scenario_name in VisualLabPreview.SCENARIOS:
+		visual_lab_scenario.add_item(scenario_name)
+	visual_lab_scenario.item_selected.connect(_visual_lab_scenario_changed)
+	column.add_child(visual_lab_scenario)
+	var scale_label := Label.new()
+	scale_label.text = "Размер блока экипировки: 80–105%"
+	column.add_child(scale_label)
+	visual_lab_scale = HSlider.new()
+	visual_lab_scale.name = "EquipmentScale"
+	visual_lab_scale.min_value = 0.8
+	visual_lab_scale.max_value = 1.05
+	visual_lab_scale.step = 0.025
+	visual_lab_scale.value = 1.0
+	visual_lab_scale.value_changed.connect(_visual_lab_scale_changed)
+	column.add_child(visual_lab_scale)
+	var shift_label := Label.new()
+	shift_label.text = "Смещение экипировки по горизонтали"
+	column.add_child(shift_label)
+	visual_lab_shift = HSlider.new()
+	visual_lab_shift.name = "EquipmentShift"
+	visual_lab_shift.min_value = -20
+	visual_lab_shift.max_value = 20
+	visual_lab_shift.step = 1
+	visual_lab_shift.value_changed.connect(_visual_lab_shift_changed)
+	column.add_child(visual_lab_shift)
 	var reset := Button.new()
 	reset.name = "Reset"
 	reset.text = "Вернуть исходный вид"
@@ -374,7 +407,7 @@ func _build_visual_lab() -> void:
 	column.add_child(reset)
 
 func _open_visual_lab() -> void:
-	visual_lab_dialog.popup_centered(Vector2i(360, 355))
+	visual_lab_dialog.popup_centered(Vector2i(360, 520))
 
 func _visual_lab_theme_changed(index: int) -> void:
 	visual_lab_theme_index = index
@@ -392,11 +425,29 @@ func _visual_lab_background_changed(value: float) -> void:
 	visual_lab_background_alpha = value
 	_apply_visual_lab()
 
+func _visual_lab_scenario_changed(index: int) -> void:
+	visual_lab_scenario_index = index
+	_apply_visual_lab()
+
+func _visual_lab_scale_changed(value: float) -> void:
+	visual_lab_equipment_scale = value
+	_apply_visual_lab()
+
+func _visual_lab_shift_changed(value: float) -> void:
+	visual_lab_equipment_shift = value
+	_apply_visual_lab()
+
 func _reset_visual_lab() -> void:
 	visual_lab_theme.select(0)
 	visual_lab_ghosts.set_pressed_no_signal(false)
 	visual_lab_frames.set_pressed_no_signal(true)
 	visual_lab_background.set_value_no_signal(1.0)
+	visual_lab_scenario.select(0)
+	visual_lab_scale.set_value_no_signal(1.0)
+	visual_lab_shift.set_value_no_signal(0.0)
+	visual_lab_scenario_index = 0
+	visual_lab_equipment_scale = 1.0
+	visual_lab_equipment_shift = 0.0
 	visual_lab_theme_index = 0
 	visual_lab_show_ghosts = false
 	visual_lab_show_frames = true
@@ -406,11 +457,20 @@ func _reset_visual_lab() -> void:
 func _apply_visual_lab() -> void:
 	if equipment_background == null:
 		return
+	var middle := equipment_content.get_node_or_null("EquipmentMiddle") as Control
+	if middle != null:
+		middle.scale = Vector2.ONE * (0.9025 * visual_lab_equipment_scale)
+		middle.position = Vector2(23.0 + visual_lab_equipment_shift, 18.0)
 	var palette := VisualLabPresets.theme(visual_lab_theme_index)
 	equipment_background.modulate = Color(String(palette["background"]))
 	equipment_background.modulate.a = visual_lab_background_alpha
+	var preview_index := 0
 	for slot in slot_buttons:
-		VisualLabPresets.configure_empty(slot_buttons[slot] as ItemIcon, visual_lab_theme_index, visual_lab_show_ghosts, visual_lab_show_frames)
+		var icon := slot_buttons[slot] as ItemIcon
+		VisualLabPresets.configure_empty(icon, visual_lab_theme_index, visual_lab_show_ghosts, visual_lab_show_frames)
+		var mock_active := visual_lab_scenario_index == 2 or (visual_lab_scenario_index == 1 and preview_index < 4)
+		VisualLabPreview.show_mock(icon, mock_active, preview_index % VisualLabPreview.RARITIES.size())
+		preview_index += 1
 	for icon in elixir_buttons:
 		VisualLabPresets.configure_empty(icon, visual_lab_theme_index, visual_lab_show_ghosts, visual_lab_show_frames)
 
