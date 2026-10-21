@@ -38,6 +38,9 @@ jobs:
       - name: Bind real combat verdict to one-time map reward
         run: bash tools/run_godot_check.sh tests/map/map_real_duel_reward_chain_runner.gd
 
+      - name: Replay terminal map combat settlement without duplicate world rewards
+        run: bash tools/run_godot_check.sh tests/map/map_combat_settlement_resume_runner.gd
+
       - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
         run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
       - name: Validate isolated ABI Test Lab physical and magical PAR calculations
