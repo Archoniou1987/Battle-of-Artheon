@@ -121,7 +121,7 @@ static func _persist(receipt: Dictionary,path: String) -> Dictionary:
 static func stage(session: Dictionary, expedition: ExpeditionState, map, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository, loot_service: NpcPossessionLootService, quality_chances: Dictionary, encounter_key: String, receipt_path: String = DEFAULT_PATH, now_unix: int = -1) -> Dictionary:
 	if expedition == null or not expedition.is_active() or player == null or repository == null or bridge == null or map == null or loot_service == null:
 		return {"ok":false,"reason":"invalid_settlement_dependencies"}
-	if not _valid_identity(encounter_key,expedition.expedition_id,player.character_id) or not _valid_path(receipt_path):
+	if not _validate_identity(encounter_key,expedition.expedition_id,player.character_id) or not _valid_path(receipt_path):
 		return {"ok":false,"reason":"invalid_settlement_context"}
 	if FileAccess.file_exists(receipt_path):
 		var prior := read(receipt_path,encounter_key,expedition.expedition_id,player.character_id)
