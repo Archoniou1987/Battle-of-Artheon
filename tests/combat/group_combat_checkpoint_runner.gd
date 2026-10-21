@@ -152,6 +152,13 @@ func _execute() -> void:
 
 	_check(not bool(GroupCombatCheckpointService.read(PATH,"different_map:patrol",fingerprint).get("ok",false)), "different_encounter_rejected")
 	_check(not bool(GroupCombatCheckpointService.read(PATH,ENCOUNTER,"f".repeat(64)).get("ok",false)), "outdated_equipment_signature_rejected")
+	# A changed weapon changes the freshly rebuilt canonical roster hash.
+	# It must not load a previous fight using equipment the player no
+	# longer possesses, even if combatant IDs have not changed.
+	var changed_gear := _player()
+	TestFixtureLoader.set_weapon_profiles(changed_gear,[{"damage_min":7.0,"damage_max":8.0,"damage_type":"slashing"}])
+	var stale: Dictionary = MapEncounterCombatService.begin_resumable(seed_b["encounter"],seed_b["catalog"],changed_gear,ENCOUNTER,PATH)
+	_check(not bool(stale.get("ok",false)) and String(stale.get("reason","")) == "checkpoint_context_mismatch", "changed_player_gear_rejects_resume")
 	# Emulate process death: drop the old simulator and encounter build,
 	# instantiate a completely new world encounter using the same NPC cohort.
 	paused = null
