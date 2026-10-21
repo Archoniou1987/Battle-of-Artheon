@@ -6,6 +6,11 @@ extends RefCounted
 ## once and returns the canonical saved owners on subsequent launches.
 const ORIGIN_KEY := "solo_town_origin_v1"
 
+static func expedition_id_for_player(player_id: String) -> String:
+	if not MapWorldCommitService._valid_id(player_id):
+		return ""
+	return "solo_exp_" + player_id
+
 static func _town_fingerprint(player: CharacterState, repository: ItemRepository) -> String:
 	var character_data := MapWorldCommitService._character_to_dict(player)
 	var payload := JSON.stringify({"character":character_data,"repository":repository.to_dict()})
