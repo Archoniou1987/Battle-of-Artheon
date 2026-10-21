@@ -113,7 +113,7 @@ func _activate_canonical_owner(restored: Dictionary) -> void:
 func _save_canonical_town() -> void:
 	if _town_storage_blocked or not _canonical_town_active:
 		return
-	var saved := SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository,_canonical_town_revision)
+	var saved := SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository,_canonical_town_revision,true)
 	if bool(saved.get("ok",false)):
 		_canonical_town_revision = String(saved["sha256"])
 	else:
