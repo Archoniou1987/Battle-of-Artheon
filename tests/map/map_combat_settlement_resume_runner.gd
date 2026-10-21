@@ -145,6 +145,14 @@ func _run() -> void:
 	_check(continued_exp.restore_loot_pool(ENCOUNTER).available_for("PLAYER") == ["WORLD_DAGGER_02"],"claimed_loot_never_recreated")
 	_check(continued_repo.size() == 2,"no_duplicate_item_instances")
 	_check(not continued_exp.claim_loot_at_hex(character,CELL,"WORLD_DAGGER_01",continued_repo,1100),"same_item_claim_twice_denied")
+	# Later, the remaining unclaimed coin expires. A stale durable receipt
+	# must not bring that item instance or pool back into the world.
+	_check(continued_exp.cleanup_expired_loot(2000,continued_repo) == 1,"remaining_coin_pool_expires")
+	_check(continued_exp.restore_loot_pool(ENCOUNTER) == null and not continued_repo.has_item("WORLD_DAGGER_02"),"expired_loot_removed")
+	var after_expiry := MapCombatSettlementService.apply(RECEIPT,ENCOUNTER,continued_exp,after_reload["map"],after_reload["bridge"],character,continued_repo)
+	_check(bool(after_expiry.get("ok",false)) and bool(after_expiry.get("already_applied",false)),"receipt_remains_idempotent_after_ttl")
+	_check(continued_exp.restore_loot_pool(ENCOUNTER) == null and not continued_repo.has_item("WORLD_DAGGER_02"),"receipt_never_resurrects_expired_item")
+	_check(character.inventory.owns("WORLD_DAGGER_01"),"previously_claimed_item_survives_expiry")
 
 	# A journal is bound to one expedition / encounter / winner.
 	_check(not bool(MapCombatSettlementService.read(RECEIPT,"other_cohort",EXPEDITION,"PLAYER").get("ok",false)),"wrong_encounter_rejected")
