@@ -75,15 +75,15 @@ func _tempo_cycle() -> void:
 	CombatTempoService.initialize(npc, 0.0, 100.0, 0.0)
 	# Fixture only: the actual ACTION->EFF->CombatTempoService chain is used.
 	# No direct calls to apply_control or manually planted active_effects.
-	session.engine.physical_balance["effects"] = {
-		CONTROL_EFF: {
-			"name": "Temporary Arena control",
-			"kind": "debuff",
-			"tempo_modifier": -220.0,
-			"duration_rounds": 2,
-			"stacking": "unique"
-		}
+	var effect_fixtures: Dictionary = {}
+	effect_fixtures[CONTROL_EFF] = {
+		"name": "Temporary Arena control",
+		"kind": "debuff",
+		"tempo_modifier": -220.0,
+		"duration_rounds": 2,
+		"stacking": "unique"
 	}
+	session.engine.physical_balance["effects"] = effect_fixtures
 	session.ability_scheduler.definitions[CONTROL_ABI] = {
 		"name": "Arena Tempo Control",
 		"application_timing": "standard",
