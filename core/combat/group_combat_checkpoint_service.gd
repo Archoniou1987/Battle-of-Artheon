@@ -98,9 +98,12 @@ static func capture(simulator, encounter_key: String, roster_fingerprint: String
 		},
 		"ability":{
 			"definitions":ability.definitions.duplicate(true),
-			"loadouts":ability.loadouts.duplicate(true),
-			"cooldowns":ability.cooldowns_by_combatant.duplicate(true),
-			"cast_rounds":ability.cast_round_by_combatant.duplicate(true)
+			# The default test-capable scheduler may contain templates for
+			# unrelated fixture IDs. They are NOT actors in this encounter
+			# and must never invalidate an otherwise completed checkpoint.
+			"loadouts":_roster_scheduler_entries(ability.loadouts, state),
+			"cooldowns":_roster_scheduler_entries(ability.cooldowns_by_combatant, state),
+			"cast_rounds":_roster_scheduler_entries(ability.cast_round_by_combatant, state)
 		},
 		"max_rounds":simulator.max_rounds,
 		"terminal":simulator.controller.combat_finished()
@@ -109,6 +112,22 @@ static func capture(simulator, encounter_key: String, roster_fingerprint: String
 	if not error.is_empty():
 		return {"ok":false,"reason":error}
 	return {"ok":true,"payload":payload}
+
+## The runtime catalog is global; persisted actor-specific state is not.
+## Excluding inactive fixture identities also avoids serializing unrelated
+## combat data as if it were part of the encounter.
+static func _roster_scheduler_entries(source: Dictionary, state: CombatState) -> Dictionary:
+	var result: Dictionary = {}
+	var ids: Array[String] = []
+	for raw_id in source.keys():
+		var id := String(raw_id)
+		if state.get_combatant(id) != null:
+			ids.append(id)
+	ids.sort()
+	for id in ids:
+		var value: Variant = source[id]
+		result[id] = value.duplicate(true) if value is Dictionary or value is Array else value
+	return result
 
 static func save(simulator, path: String, encounter_key: String, roster_fingerprint: String) -> Dictionary:
 	if not _valid_path(path):
