@@ -30,7 +30,13 @@ func _initialize() -> void:
 	check(owner.progression.level==7 and owner.inventory.owns("MIGRATED_ITEM"),"legacy_progress_and_items_preserved")
 	check(repository.add_item({"instance_id":"NEW_TOWN_ITEM","weight":0.2}),"new_item_register")
 	check(owner.inventory.add_instance("NEW_TOWN_ITEM",repository),"new_item_owned")
-	var updated := SoloTownSaveService.save(PATH,owner,repository,String(canonical["sha256"]))
+	owner.in_combat = true
+	check(not bool(SoloTownSaveService.save(PATH,owner,repository,String(canonical["sha256"])).get("ok",false)),"world_combat_write_stays_blocked")
+	var arena_saved := SoloTownSaveService.save(PATH,owner,repository,String(canonical["sha256"]),true)
+	check(bool(arena_saved.get("ok",false)),"arena_can_persist_resources_during_training")
+	owner.in_combat = false
+	var arena_revision: String = String(arena_saved.get("sha256",""))
+	var updated := SoloTownSaveService.save(PATH,owner,repository,arena_revision)
 	check(bool(updated.get("ok",false)),"canonical_revision_update")
 	var stale := SoloTownSaveService.save(PATH,legacy_owner,legacy_items,String(canonical["sha256"]))
 	check(not bool(stale.get("ok",false)),"old_legacy_owner_cannot_resurrect_inventory")
