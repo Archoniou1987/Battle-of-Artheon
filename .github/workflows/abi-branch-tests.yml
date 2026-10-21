@@ -53,6 +53,9 @@ jobs:
       - name: Project current Solo cell items NPCs and interactive objects
         run: bash tools/run_godot_check.sh tests/map/cell_content_solo_runner.gd
 
+      - name: Render current Solo cell icon tabs and selection without world mutations
+        run: bash tools/run_godot_check.sh tests/ui/cell_content_panel_runner.gd
+
       - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
         run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
       - name: Validate isolated ABI Test Lab physical and magical PAR calculations
