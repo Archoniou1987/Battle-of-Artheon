@@ -79,8 +79,8 @@ func _run() -> void:
 		print("LIVE_TERMINAL_RESUME_REASON=",resumed.get("reason","unknown"),":",resumed.get("detail",""))
 		return
 	var recovered: SoloLiveNpcCombat = resumed["combat"]
-	var old_round := recovered.battle["simulator"].state.round_number
-	var old_event_id := recovered.battle["simulator"].state.next_event_id
+	var old_round: int = int(recovered.battle["simulator"].state.round_number)
+	var old_event_id: int = int(recovered.battle["simulator"].state.next_event_id)
 	check(recovered.battle["simulator"].controller.combat_finished(),"terminal_state_preserved")
 	check(old_round==rounds,"terminal_round_number_identical")
 	check(not bool(pending["session"].move_one_step(Vector2i(5,5)).get("ok",false)),"terminal_pending_still_blocks_move")
