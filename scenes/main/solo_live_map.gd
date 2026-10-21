@@ -140,8 +140,9 @@ func _play_combat_round() -> void:
 		round_button.disabled=true
 		_set_status("Бой приостановлен: "+String(step.get("reason",step.get("state","unknown")))+". Сохранения не удалены; дальнейшие действия заблокированы.")
 		return
-	if String(step.get("state","")) == "victory":
-		# Publish recovery writes new canonical owners. Never keep the
+	var state := String(step.get("state",""))
+	if state == "victory" or state == "defeat":
+		# Both outcomes publish new canonical owners. Never keep the
 		# pre-combat character/repository in the map scene.
 		var reopened := SoloLiveMapSession.open(SAVE,MANIFEST,session.expedition.expedition_id,PLAYER)
 		if not bool(reopened.get("ok",false)):
@@ -154,7 +155,10 @@ func _play_combat_round() -> void:
 		round_button.text="Следующий раунд"
 		return_button.disabled=false
 		_refresh()
-		_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
+		if state == "victory":
+			_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
+		else:
+			_set_status("Поражение сохранено. Герой вернулся на стартовую клетку экспедиции; враг и добыча не изменены.")
 	else:
 		_set_status("Раунд "+str(step.get("round",0))+" завершён и сохранён.")
 
