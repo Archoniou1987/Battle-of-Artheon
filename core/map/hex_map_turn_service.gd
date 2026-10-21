@@ -86,7 +86,7 @@ func recover_settled_group_victory(receipt_path: String, encounter_key: String, 
 ## single atomic expedition/inventory snapshot are verified on disk.
 ## The older resolve_group_victory_durable() remains available for callers
 ## managing their own snapshot/acknowledgement workflow.
-func finalize_group_victory_atomic(session: Dictionary, encounter_key: String, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository, loot_service: NpcPossessionLootService, quality_chances: Dictionary, receipt_path: String = MapCombatSettlementService.DEFAULT_PATH, checkpoint_path: String = GroupCombatCheckpointService.DEFAULT_PATH, world_snapshot_path: String = MapWorldCommitService.DEFAULT_PATH, now_unix: int = -1) -> Dictionary:
+func finalize_group_victory_atomic(session: Dictionary, encounter_key: String, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository, loot_service: NpcPossessionLootService, quality_chances: Dictionary, receipt_path: String = MapCombatSettlementService.DEFAULT_PATH, checkpoint_path: String = GroupCombatCheckpointService.DEFAULT_PATH, world_snapshot_path: String = MapWorldCommitService.DEFAULT_PATH, now_unix: int = -1, ground_loot_solo: bool = false) -> Dictionary:
 	if not coordinator.combat_active:
 		return {"ok":false,"reason":"no_active_combat"}
 	var simulator: GroupCombatSimulator = session.get("simulator") as GroupCombatSimulator
@@ -97,6 +97,16 @@ func finalize_group_victory_atomic(session: Dictionary, encounter_key: String, e
 	var resolved: Dictionary = MapCombatSettlementService.settle(session,expedition,map,bridge,player,repository,loot_service,quality_chances,encounter_key,receipt_path,now_unix)
 	if not bool(resolved.get("ok",false)):
 		return {"ok":false,"reason":"world_settlement_failed","detail":String(resolved.get("reason","unknown"))}
+	# Opt-in Solo Final-v1 world mode: rewards become persistent ground
+	# objects before the atomic world save; no claim or 15-minute TTL.
+	# Legacy reward-pool callers retain their old semantics by default.
+	if ground_loot_solo:
+		var journal := MapCombatSettlementService.read(receipt_path,encounter_key,expedition.expedition_id,player.character_id)
+		if not bool(journal.get("ok",false)):
+			return {"ok":false,"reason":"ground_receipt_missing","detail":String(journal.get("reason","unknown"))}
+		var transferred := GroundLootSettlementAdapter.migrate(expedition,repository,encounter_key,player,String(journal["sha256"]))
+		if not bool(transferred.get("ok",false)):
+			return {"ok":false,"reason":"ground_migration_failed","detail":String(transferred.get("reason","unknown"))}
 	# The canonical combatant (not the map-NPC or the Arena test avatar)
 	# owns these resources. Failure retains the journals and map pause.
 	var winner: CombatantState = simulator.state.get_combatant(player.character_id)
@@ -109,7 +119,7 @@ func finalize_group_victory_atomic(session: Dictionary, encounter_key: String, e
 	if not bool(acknowledgement.get("ok",false)):
 		return {"ok":false,"reason":"atomic_world_ack_failed","detail":String(acknowledgement.get("reason","unknown"))}
 	coordinator.finish_combat()
-	return {"ok":true,"world_snapshot_path":world_snapshot_path,"defeated_ids":resolved.get("defeated_ids",[]),"loot_pool":expedition.restore_loot_pool(encounter_key),"world_committed":true}
+	return {"ok":true,"world_snapshot_path":world_snapshot_path,"defeated_ids":resolved.get("defeated_ids",[]),"loot_pool":expedition.restore_loot_pool(encounter_key),"ground_loot_solo":ground_loot_solo,"world_committed":true}
 
 func finish_combat()->void:
 	coordinator.finish_combat()
