@@ -78,6 +78,7 @@ func test_chain() -> void:
 	if not bool(committed.get("ok",false)):
 		print("SOLO_GROUND_COMBAT_REASON=",committed.get("reason",""),":",committed.get("detail",""))
 		return
+	check(expedition.player_position == CELL,"atomic_snapshot_captures_player_hex")
 	check(not turns.coordinator.combat_active,"map_unpaused_only_after_commit")
 	check(not FileAccess.file_exists(RECEIPT) and not FileAccess.file_exists(FIGHT),"journals_acknowledged")
 	check(expedition.restore_loot_pool(ENCOUNTER) == null,"old_pool_removed")
@@ -103,6 +104,13 @@ func test_chain() -> void:
 	check(bool(approach.get("ok",false)),"player_walks_to_ground_items")
 	if not bool(approach.get("ok",false)):
 		return
+	var attached := MapCellWorldSession.open(WORLD,ENCOUNTER,EXPEDITION,"PLAYER",regenerated["map"],regenerated["bridge"])
+	check(bool(attached.get("ok",false)),"verified_session_attaches_after_reconciliation")
+	if not bool(attached.get("ok",false)):
+		print("SOLO_WORLD_BIND_REASON=",attached.get("reason",""),":",attached.get("detail",""))
+		return
+	var live_session: MapCellWorldSession = attached["session"]
+	check(int(live_session.current_cell(100010).get("total",-1))==2,"live_cell_shows_ground_items")
 	var pickup := GroundLootService.new()
 	var started := pickup.begin_pickup(continued,regenerated["map"],carried,repo,"GROUND_SWORD_01",100010)
 	check(bool(started.get("ok",false)),"first_pickup_started")
