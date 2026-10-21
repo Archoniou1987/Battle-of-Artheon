@@ -1,10 +1,11 @@
 extends SceneTree
 
-## Real Village -> Arena -> persistent CharacterState -> progression JSON ->
+## Real Village -> Arena -> persistent CharacterState -> canonical town snapshot ->
 ## reopened Arena -> restarted Village, for BOTH victory and defeat.
 ## No synthetic combat outcome is supplied to the game controller.
 const PROGRESSION_SAVE := "user://character_progression_v1.json"
 const INVENTORY_SAVE := "user://character_inventory_v1.json"
+const TOWN_SAVE := SoloTownSaveService.DEFAULT_PATH
 var failures: Array[String] = []
 
 func _check(ok: bool, label: String) -> void:
@@ -67,7 +68,7 @@ func _run() -> void:
 	_check(hero.current_hp == victory_hp and hero.current_mana == victory_mana, "victory_writes_live_resources_back")
 	_check((arena.hp_overlays["player"] as Label).text == "%d / %d" % [victory_hp, player.max_hp], "victory_hp_overlay")
 	_check(arena.log_view.text.contains("Бой завершён: winner:player"), "victory_outcome_visible_in_journal")
-	_check(_saved_resources_match(victory_hp, victory_mana), "victory_resources_in_progression_json")
+	_check(_saved_resources_match(victory_hp, victory_mana), "victory_resources_in_canonical_town_snapshot")
 	_assert_terminal_retry_atomic(arena, victory_session, "victory")
 	arena.back_requested.emit()
 	_check(not hero.in_combat, "victory_exit_unpauses_out_of_combat")
@@ -117,7 +118,7 @@ func _run() -> void:
 	_check(second_arena.round_button.disabled, "defeat_disables_end_turn")
 	_check((second_arena.hp_overlays["player"] as Label).text == "0 / %d" % second_player.max_hp, "defeat_overlay_shows_zero")
 	_check(second_arena.log_view.text.contains("Бой завершён: winner:enemy"), "defeat_outcome_visible_in_journal")
-	_check(_saved_resources_match(0, restored.current_mana), "defeat_zero_hp_in_progression_json")
+	_check(_saved_resources_match(0, restored.current_mana), "defeat_zero_hp_in_canonical_town_snapshot")
 	_assert_terminal_retry_atomic(second_arena, second_arena.combat_session, "defeat")
 	second_arena.back_requested.emit()
 	second.queue_free()
@@ -152,13 +153,13 @@ func _blocks(player: CombatantState) -> Array[String]:
 	return result
 
 func _saved_resources_match(hp: int, mana: int) -> bool:
-	if not FileAccess.file_exists(PROGRESSION_SAVE):
+	# The city writes one authoritative atomic character+inventory
+	# snapshot; the old progression file is migration input only.
+	var restored: Dictionary = SoloTownSaveService.read(TOWN_SAVE,"player")
+	if not bool(restored.get("ok",false)):
 		return false
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(PROGRESSION_SAVE))
-	if not raw is Dictionary or not raw.get("resources", {}) is Dictionary:
-		return false
-	var resources: Dictionary = raw["resources"]
-	return int(resources.get("hp", -1)) == hp and int(resources.get("mana", -1)) == mana
+	var owner: CharacterState = restored["character"]
+	return owner.current_hp == hp and owner.current_mana == mana
 
 func _assert_terminal_retry_atomic(arena: ArenaScreen, session: ArenaCombatSession, label: String) -> void:
 	var before_round := session.state.round_number
@@ -178,6 +179,7 @@ func _assert_terminal_retry_atomic(arena: ArenaScreen, session: ArenaCombatSessi
 func _remove_saves() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PROGRESSION_SAVE))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(INVENTORY_SAVE))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TOWN_SAVE))
 
 func _finish() -> void:
 	_remove_saves()
