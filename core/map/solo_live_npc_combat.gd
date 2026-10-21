@@ -118,11 +118,10 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 
 func play_round() -> Dictionary:
 	var simulator: GroupCombatSimulator = battle["simulator"]
-	if simulator.controller.combat_finished():
-		return {"ok":false,"reason":"combat_already_terminal"}
-	var step := simulator.run_round()
-	if not bool(step.get("ok",false)) or not bool(step.get("checkpoint_ok",false)):
-		return {"ok":false,"reason":"combat_round_checkpoint_failed","detail":String(step.get("checkpoint_reason",step.get("reason","unknown")))}
+	if not simulator.controller.combat_finished():
+		var step := simulator.run_round()
+		if not bool(step.get("ok",false)) or not bool(step.get("checkpoint_ok",false)):
+			return {"ok":false,"reason":"combat_round_checkpoint_failed","detail":String(step.get("checkpoint_reason",step.get("reason","unknown")))}
 	if not simulator.controller.combat_finished():
 		return {"ok":true,"state":"ongoing","round":simulator.state.round_number}
 	if simulator.controller.winning_team() != "players":
