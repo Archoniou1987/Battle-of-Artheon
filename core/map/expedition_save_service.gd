@@ -148,6 +148,16 @@ static func _ledgers_monotonic(previous: ExpeditionState, next: ExpeditionState)
 				return "expedition_ledger_rollback_" + name
 	return ""
 
+## One-time handoff from a VERIFIED legacy combat-world snapshot. A
+## previously created expedition save must never be overwritten by import.
+static func import_committed_world(path: String, old_snapshot: String, encounter_key: String, expedition_id: String, player_id: String) -> Dictionary:
+	if FileAccess.file_exists(path):
+		return {"ok":false,"reason":"expedition_save_already_exists"}
+	var legacy := MapWorldCommitService.read(old_snapshot,encounter_key,expedition_id,player_id)
+	if not bool(legacy.get("ok",false)):
+		return {"ok":false,"reason":"legacy_world_not_verified","detail":String(legacy.get("reason","unknown"))}
+	return save(path,legacy["expedition"],legacy["character"],legacy["repository"])
+
 static func save(path: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
 	if not _valid_identity(expedition,player,repository) or not MapWorldCommitService._valid_path(path):
 		return {"ok":false,"reason":"expedition_save_invalid_context"}
