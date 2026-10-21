@@ -55,6 +55,11 @@ func _configure(sim: GroupCombatSimulator) -> void:
 		npc.mana = 500
 		npc.combat_stats["hp_regen_round"] = 0.0
 		npc.combat_stats["mana_regen_round"] = 0.0
+	# A real Tempo lifecycle reaches its two-round immunity at checkpoint
+	# round 3. The resumed stream must retain that control debt and lockout.
+	var controlled_npc := sim.state.get_combatant("PATROL_02")
+	CombatTempoService.initialize(controlled_npc,40.0,100.0,5.0)
+	CombatTempoService.apply_control(controlled_npc,150.0)
 	sim.attack_pipeline.ability_scheduler = AbilityScheduler.new(
 		AbilityCatalog.load_json("res://data/abilities/catalog.json"),
 		{"PLAYER":["ABI003","ABI004"],"PATROL_01":["ABI004"],"PATROL_02":[]})
@@ -117,15 +122,19 @@ func _execute() -> void:
 			GroupCombatCheckpointService.clear(PATH)
 			return
 	_check(paused.state.round_number == 3, "three_rounds_checkpointed")
+	_check(paused.state.get_combatant("PATROL_02").tempo_stun_round == 2, "prior_real_tempo_stun_executed")
+	_check(paused.state.get_combatant("PATROL_02").tempo_immunity_until_round == 4, "active_stun_immunity_at_checkpoint")
 	var frozen_rng_state := paused.engine.combat_rng.state
 	var frozen_effect_counter := paused.engine._next_effect_stack_id
 	var frozen_event_id := paused.state.next_event_id
 	var frozen_casts: Dictionary = paused.attack_pipeline.ability_scheduler.cast_round_by_combatant.duplicate(true)
 	var frozen_cooldowns: Dictionary = paused.attack_pipeline.ability_scheduler.cooldowns_by_combatant.duplicate(true)
+	var frozen_tempo: Dictionary = {}
 	var frozen_effects: Dictionary = {}
 	for raw_id in paused.state.combatants.keys():
 		var fighter := paused.state.get_combatant(String(raw_id))
 		frozen_effects[String(raw_id)] = fighter.active_effects.duplicate(true)
+		frozen_tempo[String(raw_id)] = {"tempo":fighter.tempo,"stun":fighter.tempo_stun_round,"immune":fighter.tempo_immunity_until_round}
 	var saved_contents := _read_original()
 	_check(saved_contents.length() > 100, "serialized_checkpoint_nonempty")
 
@@ -158,7 +167,10 @@ func _execute() -> void:
 	_check(resumed.state.next_event_id == frozen_event_id, "restore_next_canonical_event_id")
 	_check(resumed.attack_pipeline.ability_scheduler.cast_round_by_combatant == frozen_casts and resumed.attack_pipeline.ability_scheduler.cooldowns_by_combatant == frozen_cooldowns, "restore_cooldowns_and_abi_round_budget")
 	for raw_id in frozen_effects:
-		_check(resumed.state.get_combatant(String(raw_id)).active_effects == frozen_effects[raw_id], "restore_real_effects_" + String(raw_id))
+		var restored_fighter := resumed.state.get_combatant(String(raw_id))
+		_check(restored_fighter.active_effects == frozen_effects[raw_id], "restore_real_effects_" + String(raw_id))
+		var tempo_snapshot: Dictionary = frozen_tempo[raw_id]
+		_check(is_equal_approx(restored_fighter.tempo,float(tempo_snapshot["tempo"])) and restored_fighter.tempo_stun_round == int(tempo_snapshot["stun"]) and restored_fighter.tempo_immunity_until_round == int(tempo_snapshot["immune"]), "restore_tempo_debt_stun_immunity_" + String(raw_id))
 	_check(_signature(baseline,ENCOUNTER,fingerprint) == _signature(resumed,ENCOUNTER,fingerprint), "full_snapshot_exactly_restored")
 
 	for i in range(3,9):
