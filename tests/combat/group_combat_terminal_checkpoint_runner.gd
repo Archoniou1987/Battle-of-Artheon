@@ -44,13 +44,14 @@ func _run() -> void:
 	sim.engine.combat_rng.seed = 20261021
 	_check(bool(sim.enable_checkpoint(ENCOUNTER,signature,PATH).get("ok",false)), "checkpoint_enabled")
 	_check(not bool(GroupCombatCheckpointService.capture(sim,ENCOUNTER,signature).get("ok",false)), "cannot_checkpoint_before_first_round")
-	sim.round_in_progress = true
-	_check(String(GroupCombatCheckpointService.capture(sim,ENCOUNTER,signature).get("reason","")) == "round_not_fully_resolved" or sim.state.round_number == 0, "midround_checkpoint_rejected")
-	sim.round_in_progress = false
 	var result: Dictionary = {}
 	for i in range(1,11):
 		result = sim.run_round()
 		_check(bool(result.get("ok",false)) and bool(result.get("checkpoint_ok",false)), "end_round_checkpoint_%d" % i)
+		if i == 1:
+			sim.round_in_progress = true
+			_check(String(GroupCombatCheckpointService.capture(sim,ENCOUNTER,signature).get("reason","")) == "round_not_fully_resolved", "cannot_save_partial_round")
+			sim.round_in_progress = false
 		if sim.controller.combat_finished() or not bool(result.get("ok",false)):
 			break
 	_check(sim.controller.combat_finished() and sim.controller.winning_team() == "players", "actual_engine_boss_defeat")
