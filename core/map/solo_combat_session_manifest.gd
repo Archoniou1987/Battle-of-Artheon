@@ -86,11 +86,23 @@ static func recover_on_launch(path: String = PATH) -> Dictionary:
 	var terminal_path := String(data["terminal_path"])
 	if not FileAccess.file_exists(terminal_path):
 		return {"ok":false,"state":"resume_combat_checkpoint","checkpoint_path":String(data["checkpoint_path"]),"encounter_key":String(data["encounter_key"]),"reason":"terminal_snapshot_missing"}
-	var outcome := ExpeditionSaveService.recover_pending_combat(String(data["expedition_path"]),terminal_path,String(data["encounter_key"]),String(data["expedition_id"]),String(data["player_id"]),String(data["base_sha256"]))
+	# Victory uses a map combat world receipt; defeat uses a verified full
+	# expedition snapshot and never grants NPC tombstones or reward rolls.
+	var typed := SoloCombatDefeatService.inspect_terminal_type(terminal_path)
+	if not bool(typed.get("ok",false)):
+		return {"ok":false,"state":"manual_reconciliation_required","reason":String(typed.get("reason","unknown"))}
+	var terminal_format := String(typed["format"])
+	var outcome: Dictionary
+	if terminal_format == MapWorldCommitService.FORMAT:
+		outcome = ExpeditionSaveService.recover_pending_combat(String(data["expedition_path"]),terminal_path,String(data["encounter_key"]),String(data["expedition_id"]),String(data["player_id"]),String(data["base_sha256"]))
+	elif terminal_format == ExpeditionSaveService.FORMAT:
+		outcome = SoloCombatDefeatService.recover(data)
+	else:
+		return {"ok":false,"state":"manual_reconciliation_required","reason":"unknown_combat_terminal_format"}
 	if not bool(outcome.get("ok",false)):
-		return {"ok":false,"state":"manual_reconciliation_required","reason":String(outcome.get("reason","unknown"))}
+		return {"ok":false,"state":"manual_reconciliation_required","reason":String(outcome.get("reason","unknown")),"detail":String(outcome.get("detail",""))}
 	# A completed recovery can be replayed if deletion fails, so never
 	# delete the terminal snapshot before the manifest is cleared.
 	if DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) != OK:
 		return {"ok":false,"state":"published_manifest_cleanup_failed"}
-	return {"ok":true,"state":"recovered","recovered":bool(outcome.get("recovered",false)),"already_published":bool(outcome.get("already_published",false)),"terminal_path":terminal_path}
+	return {"ok":true,"state":"recovered","outcome":"defeat" if terminal_format == ExpeditionSaveService.FORMAT else "victory","recovered":bool(outcome.get("recovered",false)),"already_published":bool(outcome.get("already_published",false)),"terminal_path":terminal_path}
