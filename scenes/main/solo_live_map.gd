@@ -39,7 +39,7 @@ func _build_view() -> void:
 	status_label = Label.new()
 	root.add_child(status_label)
 	var explanation := Label.new()
-	explanation.text = "Перемещение: одна соседняя клетка. Каждый шаг сохраняется. NPC и бои появятся после подключения боевого интерфейса."
+	explanation.text = "Перемещение: одна соседняя клетка с сохранением. Враги отмечены ⚔; столкновения пока заблокированы до подключения боевого интерфейса."
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(explanation)
 	tile_container = GridContainer.new()
@@ -68,6 +68,8 @@ func _refresh() -> void:
 			btn.custom_minimum_size = Vector2(37,35)
 			if pos == session.expedition.player_position:
 				btn.text = "◆"
+			elif not session.npc_bridge.npc_at(session.map,pos).is_empty() and HexGrid.distance(session.expedition.player_position,pos) <= 3:
+				btn.text = "⚔"
 			elif HexGrid.distance(session.expedition.player_position,pos) <= 3:
 				btn.text = "·"
 			else:
