@@ -188,6 +188,41 @@ static func publish_verified_combat(path: String, combat_snapshot: String, encou
 		return {"ok":false,"reason":"combat_tombstone_missing"}
 	return save(path,next,terminal["character"],terminal["repository"])
 
+## Crash-recovery reconciliation: terminal combat can already be durable
+## while the expedition file still contains its pre-battle revision.
+## Re-running this operation must not reroll, overwrite later progress,
+## or treat an already-published receipt as a second reward.
+static func recover_pending_combat(path: String, combat_snapshot: String, encounter_key: String, expedition_id: String, player_id: String, expected_base_sha256: String) -> Dictionary:
+	if expected_base_sha256.length() != 64:
+		return {"ok":false,"reason":"invalid_expected_expedition_revision"}
+	var terminal: Dictionary = MapWorldCommitService.read(combat_snapshot,encounter_key,expedition_id,player_id)
+	if not bool(terminal.get("ok",false)):
+		return {"ok":false,"reason":"recovery_combat_snapshot_invalid","detail":String(terminal.get("reason","unknown"))}
+	var current: Dictionary = read(path,expedition_id,player_id)
+	if not bool(current.get("ok",false)):
+		return current
+	var saved_world: ExpeditionState = current["expedition"]
+	var current_markers: Dictionary = saved_world.world_state.get(MARKERS_KEY,{})
+	var receipt_hash := String(terminal["receipt_sha256"])
+	if current_markers.has(encounter_key):
+		if String(current_markers[encounter_key]) != receipt_hash:
+			return {"ok":false,"reason":"recovery_receipt_conflict"}
+		var tombstones: Dictionary = saved_world.world_state.get(TOMBSTONES_KEY,{})
+		if not tombstones.has(encounter_key) or String(Dictionary(tombstones[encounter_key]).get("receipt_sha256","")) != receipt_hash:
+			return {"ok":false,"reason":"recovery_tombstone_conflict"}
+		return {"ok":true,"already_published":true,"recovered":false}
+	var revision: Dictionary = _read_payload_envelope(path)
+	if not bool(revision.get("ok",false)):
+		return revision
+	if String(revision.get("sha256","")) != expected_base_sha256:
+		return {"ok":false,"reason":"recovery_base_revision_changed"}
+	# The terminal snapshot is the durable outcome owner; the ordinary
+	# publisher still checks ledger monotonicity and item uniqueness.
+	var result: Dictionary = publish_verified_combat(path,combat_snapshot,encounter_key,expedition_id,player_id,expected_base_sha256)
+	if not bool(result.get("ok",false)):
+		return result
+	return {"ok":true,"already_published":false,"recovered":true}
+
 static func _read_payload_envelope(path: String) -> Dictionary:
 	if not MapWorldCommitService._valid_path(path) or not FileAccess.file_exists(path):
 		return {"ok":false,"reason":"expedition_envelope_not_found"}
