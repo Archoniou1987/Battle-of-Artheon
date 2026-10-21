@@ -65,8 +65,6 @@ func _set_status(value: String) -> void:
 func _refresh() -> void:
 	if session == null:
 		return
-	if live_combat != null:
-		return
 	_set_status("Позиция: %s   •   Персонаж: %s" % [str(session.expedition.player_position),session.character.display_name])
 	for n in tile_container.get_children():
 		tile_container.remove_child(n)
@@ -108,8 +106,8 @@ func _start_combat(cell: Vector2i) -> void:
 	live_combat=result["combat"]
 	round_button.visible=true
 	return_button.disabled=true
-	_set_status("Бой начался. Следующий раунд: базовые атаки обеих сторон.")
 	_refresh()
+	_set_status("Бой начался. Следующий раунд: базовые атаки обеих сторон.")
 
 func _play_combat_round() -> void:
 	if live_combat == null:
@@ -120,11 +118,11 @@ func _play_combat_round() -> void:
 		_set_status("Бой остановлен: "+String(step.get("state",step.get("reason","unknown")))+". Продолжение через checkpoint ещё требует интерфейса восстановления.")
 		return
 	if String(step.get("state","")) == "victory":
-		_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
 		live_combat=null
 		round_button.visible=false
 		return_button.disabled=false
 		_refresh()
+		_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
 	else:
 		_set_status("Раунд "+str(step.get("round",0))+" завершён и сохранён.")
 
