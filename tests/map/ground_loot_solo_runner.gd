@@ -67,8 +67,17 @@ func _run() -> void:
 	_check(GroundLootService.remove_expired(restored,restored_repo,100000)==0,"expedition_loot_has_no_fifteen_minute_ttl")
 	var new_service := GroundLootService.new()
 	var restored_ticket := new_service.begin_pickup(restored,map,player,restored_repo,"DEER_HIDE",100000)
-	_check(bool(new_service.finish_pickup(String(restored_ticket.get("ticket","")),restored,map,player,restored_repo,100005,5,10).get("ok",false)),"pickup_after_restart")
-	_check(repository.add_item(_new_item("HERBS",0.1)),"herb_instance_exists")
-	_check(bool(GroundLootService.place_unowned(restored,repository,"HERBS",CELL,"quest","",GroundLootService.POLICY_TIMED,200).get("ok",false)),"timed_object_placed")
-	_check(GroundLootService.remove_expired(restored,repository,201)==1 and not repository.has_item("HERBS"),"timed_object_expires_separately")
+	_check(bool(restored_ticket.get("ok",false)),"pickup_restart_begin")
+	if not bool(restored_ticket.get("ok",false)):
+		print("GROUND_LOOT_RESTART_BEGIN_REASON=",restored_ticket.get("reason","unknown"))
+	else:
+		var restored_claim := new_service.finish_pickup(String(restored_ticket["ticket"]),restored,map,player,restored_repo,100005,5,10)
+		if not bool(restored_claim.get("ok",false)):
+			print("GROUND_LOOT_RESTART_FINISH_REASON=",restored_claim.get("reason","unknown"))
+		_check(bool(restored_claim.get("ok",false)),"pickup_after_restart")
+	# Timed cleanup must operate on the SAME restored repository, not a
+	# different pre-restart store. The permanent claim must stay intact.
+	_check(restored_repo.add_item(_new_item("HERBS",0.1)),"herb_instance_exists")
+	_check(bool(GroundLootService.place_unowned(restored,restored_repo,"HERBS",CELL,"quest","",GroundLootService.POLICY_TIMED,200).get("ok",false)),"timed_object_placed")
+	_check(GroundLootService.remove_expired(restored,restored_repo,201)==1 and not restored_repo.has_item("HERBS"),"timed_object_expires_separately")
 	_check(restored_repo.has_item("DEER_HIDE") and player.inventory.owns("DEER_HIDE"),"timed_cleanup_does_not_touch_persistent_reward")
