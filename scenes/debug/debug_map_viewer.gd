@@ -54,6 +54,21 @@ func set_cell_content_context(expedition:ExpeditionState,character:CharacterStat
 	cell_content_world_snapshot_path=snapshot_path
 	refresh_cell_content()
 
+## Live Solo entry point: the viewer may operate on an expedition only
+## after the map and saved world agree about the player and defeated NPCs.
+## The caller owns map generation and NPC tombstone reconciliation first.
+func attach_verified_cell_world(snapshot_path:String,encounter_key:String,expedition_id:String,player_id:String,bridge:MapNpcBridge)->Dictionary:
+	if playable_map==null or _moving or battle_active:
+		return {"ok":false,"reason":"viewer_map_not_ready"}
+	var opened:Dictionary=MapCellWorldSession.open(snapshot_path,encounter_key,expedition_id,player_id,playable_map,bridge)
+	if not bool(opened.get("ok",false)):
+		return opened
+	var live:MapCellWorldSession=opened["session"]
+	set_cell_content_context(live.expedition,live.character,live.bridge,live.repository,live.encounter_key,live.snapshot_path)
+	player_hex=playable_map.entity_positions[player_id]
+	refresh_cell_content()
+	return {"ok":true,"session":live}
+
 func refresh_cell_content()->void:
 	if cell_content_panel==null or playable_map==null:
 		return
