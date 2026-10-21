@@ -75,8 +75,8 @@ static func _write(path: String, player: CharacterState, repository: ItemReposit
 		return {"ok":false,"reason":"town_snapshot_replace_failed"}
 	return {"ok":true,"sha256":encoded.sha256_text()}
 
-static func save(path: String, player: CharacterState, repository: ItemRepository, expected_sha256: String = "") -> Dictionary:
-	if not MapWorldCommitService._valid_path(path) or player == null or repository == null or player.in_combat:
+static func save(path: String, player: CharacterState, repository: ItemRepository, expected_sha256: String = "", allow_town_arena_combat: bool = false) -> Dictionary:
+	if not MapWorldCommitService._valid_path(path) or player == null or repository == null or (player.in_combat and not allow_town_arena_combat):
 		return {"ok":false,"reason":"invalid_town_save_context"}
 	if FileAccess.file_exists(path):
 		var existing := read(path,player.character_id)
