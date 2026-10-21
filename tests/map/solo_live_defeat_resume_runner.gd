@@ -103,6 +103,9 @@ func _run() -> void:
 	check(Dictionary(exp1.world_state.get(MapCombatSettlementService.MARKER_KEY,{})).is_empty(),"no_victory_receipt_on_loss")
 	check(Dictionary(exp1.world_state.get(MapWorldCommitService.TOMBSTONES_KEY,{})).is_empty(),"no_enemy_tombstones_on_loss")
 	check(GroundLootService.items_at(exp1,TARGET,PLAYER).is_empty(),"no_ground_reward_on_loss")
+	var rollback := ExpeditionState.from_dict(exp1.to_dict())
+	rollback.world_state.erase(SoloCombatDefeatService.LEDGER_KEY)
+	check(not bool(ExpeditionSaveService.save(EXP,rollback,published["character"],published["repository"]).get("ok",false)),"defeat_history_cannot_be_rolled_back")
 	var once_sha := String(ExpeditionSaveService._read_payload_envelope(EXP).get("sha256",""))
 	var manifest_one := {
 		"expedition_path":EXP,"terminal_path":combat.terminal_path,"checkpoint_path":combat.checkpoint_path,
