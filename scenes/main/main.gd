@@ -467,7 +467,8 @@ func _open_solo_map_gate() -> void:
 			_add_solo_map_button("Начать экспедицию",true)
 
 		"resume_combat_checkpoint":
-			popup_description.text = "Незавершённый бой. Продолжение с checkpoint требуется до открытия карты."
+			popup_description.text = "Обнаружен незавершённый бой. Восстановить контрольную точку и вернуться к тому же NPC."
+			_add_solo_map_button("Продолжить бой",false,true)
 		"ready", "ready_after_recovery":
 			popup_description.text = "Продолжить сохранённую экспедицию с последней клетки."
 			_add_solo_map_button("Продолжить экспедицию",false)
@@ -479,17 +480,28 @@ func _open_solo_map_gate() -> void:
 	popup.reset_size()
 	popup.position = (size - popup.size) * 0.5
 
-func _add_solo_map_button(title: String, create: bool) -> void:
+func _add_solo_map_button(title: String, create: bool, resume_pending: bool = false) -> void:
 	var button := Button.new()
 	button.text = title
-	button.pressed.connect(_enter_solo_map.bind(create))
+	button.pressed.connect(_enter_solo_map.bind(create,resume_pending))
 	popup_actions.add_child(button)
 
-func _enter_solo_map(create: bool) -> void:
+func _enter_solo_map(create: bool, resume_pending: bool = false) -> void:
 	if _town_storage_blocked or player_character.in_combat:
 		return
 	var id := SoloTownExpeditionBridge.expedition_id_for_player(player_character.character_id)
-	if create:
+	if resume_pending:
+		# Inspect/restore the exact fight before changing scenes. An invalid
+		# checkpoint never falls through to a fresh expedition or map session.
+		var pending := SoloLiveMapSession.open_pending(ExpeditionSaveService.DEFAULT_PATH,SoloCombatSessionManifest.PATH,id,player_character.character_id)
+		if not bool(pending.get("ok",false)):
+			popup_description.text = "Нельзя открыть незавершённый бой: "+String(pending.get("reason","unknown"))
+			return
+		var resumed := SoloLiveNpcCombat.resume(pending["session"])
+		if not bool(resumed.get("ok",false)):
+			popup_description.text = "Checkpoint боя отклонён: "+String(resumed.get("detail",resumed.get("reason","unknown")))
+			return
+	elif create:
 		# City must be saved first, otherwise the one-time fingerprint
 		# could represent progress never persisted to the canonical town.
 		_save_canonical_town()
