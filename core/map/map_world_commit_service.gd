@@ -132,6 +132,9 @@ static func _validate_tombstones(world: Dictionary, encounter_key: String, recei
 		var pos: Variant = entry["npc_positions"][raw_id]
 		if not pos is Array or Array(pos).size() != 2:
 			return "world_tombstone_invalid_position"
+		for raw_coordinate in Array(pos):
+			if not CharacterProgression._is_whole_number(raw_coordinate):
+				return "world_tombstone_invalid_coordinate"
 		var expected: Variant = Dictionary(receipt["npc_positions"]).get(raw_id,null)
 		if JSON.stringify(pos) != JSON.stringify(expected):
 			return "world_tombstone_position_mismatch"
@@ -165,6 +168,12 @@ static func read(path: String, encounter_key: String, expedition_id: String, pla
 	if not payload["receipt_sha256"] is String or String(payload["receipt_sha256"]).length() != 64:
 		return {"ok":false,"reason":"world_snapshot_invalid_receipt_hash"}
 	var receipt: Dictionary = payload["receipt"]
+	if not receipt.get("npc_ids") is Array or not receipt.get("npc_positions") is Dictionary:
+		return {"ok":false,"reason":"world_snapshot_invalid_receipt_roster"}
+	if not receipt.get("round") is int and not receipt.get("round") is float:
+		return {"ok":false,"reason":"world_snapshot_invalid_receipt_round"}
+	if not _valid_id(String(receipt.get("encounter_key",""))) or not _valid_id(String(receipt.get("expedition_id",""))) or not _valid_id(String(receipt.get("player_id",""))):
+		return {"ok":false,"reason":"world_snapshot_invalid_receipt_identity"}
 	if String(receipt.get("encounter_key","")) != encounter_key or String(receipt.get("expedition_id","")) != expedition_id or String(receipt.get("player_id","")) != player_id or String(receipt.get("winning_team","")) != "players":
 		return {"ok":false,"reason":"world_snapshot_receipt_identity_mismatch"}
 	# The settlement journal's SHA covers the ORIGINAL receipt JSON bytes.
@@ -172,10 +181,12 @@ static func read(path: String, encounter_key: String, expedition_id: String, pla
 	# types during parsing. The world envelope hashes the full payload and
 	# the expedition's immutable marker pins its originating receipt SHA.
 	var expedition_data: Dictionary = payload["expedition"]
-	if String(expedition_data.get("expedition_id","")) != expedition_id or not expedition_data.get("world_state") is Dictionary:
+	if String(expedition_data.get("expedition_id","")) != expedition_id or not expedition_data.get("world_state") is Dictionary or not expedition_data.get("profile") is Dictionary:
 		return {"ok":false,"reason":"world_snapshot_expedition_invalid"}
 	var world: Dictionary = expedition_data["world_state"]
-	if String(Dictionary(world.get(MapCombatSettlementService.MARKER_KEY,{})).get(encounter_key,"")) != String(payload["receipt_sha256"]):
+	if not world.get(MapCombatSettlementService.MARKER_KEY) is Dictionary:
+		return {"ok":false,"reason":"world_snapshot_settlement_ledger_invalid"}
+	if String(Dictionary(world[MapCombatSettlementService.MARKER_KEY]).get(encounter_key,"")) != String(payload["receipt_sha256"]):
 		return {"ok":false,"reason":"world_snapshot_missing_settlement_marker"}
 	var issue := _validate_tombstones(world,encounter_key,String(payload["receipt_sha256"]),receipt)
 	if not issue.is_empty():
