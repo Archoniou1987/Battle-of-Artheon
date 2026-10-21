@@ -159,7 +159,9 @@ static func read(path: String, encounter_key: String, roster_fingerprint: String
 	var error := _validate_payload(decoded, encounter_key, roster_fingerprint)
 	if not error.is_empty():
 		return {"ok":false,"reason":error}
-	var restored := _restore_simulator(decoded)
+	# The restore factory returns a dynamically loaded script instance.
+	# Godot cannot infer a concrete type via := across that boundary.
+	var restored: Variant = _restore_simulator(decoded)
 	if restored == null:
 		return {"ok":false,"reason":"checkpoint_restore_failed"}
 	if restored.controller.combat_finished() != bool(decoded["terminal"]):
