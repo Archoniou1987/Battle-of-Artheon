@@ -5,6 +5,7 @@ extends RefCounted
 ## of the same player's inventory. This bridge only seeds an expedition
 ## once and returns the canonical saved owners on subsequent launches.
 const ORIGIN_KEY := "solo_town_origin_v1"
+const START_CELL_KEY := "solo_start_cell_v1"
 
 static func expedition_id_for_player(player_id: String) -> String:
 	if not MapWorldCommitService._valid_id(player_id):
@@ -35,6 +36,7 @@ static func create_from_town(path: String, expedition_id: String, seed: int, sta
 		return {"ok":false,"reason":"town_character_invalid","detail":String(restored.get("reason","unknown"))}
 	var expedition := ExpeditionState.new(expedition_id,null,seed)
 	expedition.player_position = starting_cell
+	expedition.world_state[START_CELL_KEY] = [starting_cell.x,starting_cell.y]
 	var fingerprint := _town_fingerprint(town_player,town_repository)
 	expedition.world_state[ORIGIN_KEY] = {"character_id":town_player.character_id,"fingerprint":fingerprint}
 	var created: Dictionary = ExpeditionSaveService.save(path,expedition,restored["character"],copied_repository)
