@@ -44,6 +44,9 @@ jobs:
       - name: Validate Solo expedition save before combat and after multiple encounters
         run: bash tools/run_godot_check.sh tests/map/expedition_save_runner.gd
 
+      - name: Start real Solo NPC combat and persist its first engine round
+        run: bash tools/run_godot_check.sh tests/map/solo_live_npc_combat_runner.gd
+
       - name: Verify playable Solo map stepping, reload and town checkout
         run: bash tools/run_godot_check.sh tests/map/solo_live_map_roundtrip_runner.gd
 
