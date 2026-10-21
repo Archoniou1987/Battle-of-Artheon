@@ -60,6 +60,9 @@ jobs:
           done
           exit "$status"
 
+      - name: Persist Solo defeat, retreat and second NPC attempt after restart
+        run: bash tools/run_godot_check.sh tests/map/solo_live_defeat_resume_runner.gd
+
       - name: Start real Solo NPC combat and persist its first engine round
         run: bash tools/run_godot_check.sh tests/map/solo_live_npc_combat_runner.gd
 
