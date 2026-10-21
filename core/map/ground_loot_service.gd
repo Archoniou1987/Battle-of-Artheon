@@ -66,7 +66,7 @@ static func items_at(expedition: ExpeditionState, cell: Vector2i, player_id: Str
 static func place_unowned(expedition: ExpeditionState, repository: ItemRepository, instance_id: String, cell: Vector2i, source_id: String, owner_id: String = "", policy: String = POLICY_EXPEDITION, expires_at_unix: int = 0) -> Dictionary:
 	if not _valid_expedition(expedition) or repository == null or instance_id.is_empty() or not repository.has_item(instance_id):
 		return {"ok":false,"reason":"invalid_ground_item"}
-	if not ["",POLICY_EXPEDITION,POLICY_TIMED].has(policy) or (policy == POLICY_TIMED and expires_at_unix <= 0):
+	if not [POLICY_EXPEDITION,POLICY_TIMED].has(policy) or (policy == POLICY_TIMED and expires_at_unix <= 0):
 		return {"ok":false,"reason":"invalid_ground_lifetime"}
 	var registry := _registry(expedition)
 	if registry.has(instance_id):
@@ -78,7 +78,7 @@ static func place_unowned(expedition: ExpeditionState, repository: ItemRepositor
 ## Dropping an item on a map transfers exactly the same instance ID from
 ## the player's BAG to the ground. Equipped items must be unequipped first.
 static func drop_from_bag(expedition: ExpeditionState, map: TacticalMapState, player: CharacterState, repository: ItemRepository, instance_id: String) -> Dictionary:
-	if not _valid_expedition(expedition) or map == null or player == null or repository == null:
+	if not _valid_expedition(expedition) or map == null or player == null or repository == null or player.in_combat:
 		return {"ok":false,"reason":"invalid_drop_context"}
 	if not map.entity_positions.has(player.character_id):
 		return {"ok":false,"reason":"player_not_on_map"}
@@ -98,7 +98,7 @@ static func drop_from_bag(expedition: ExpeditionState, map: TacticalMapState, pl
 	return {"ok":true,"instance_id":instance_id}
 
 func begin_pickup(expedition: ExpeditionState, map: TacticalMapState, player: CharacterState, repository: ItemRepository, instance_id: String, started_at_unix: int) -> Dictionary:
-	if not _valid_expedition(expedition) or map == null or player == null or repository == null or started_at_unix < 0:
+	if not _valid_expedition(expedition) or map == null or player == null or repository == null or player.in_combat or started_at_unix < 0:
 		return {"ok":false,"reason":"invalid_pickup_context"}
 	if not map.entity_positions.has(player.character_id):
 		return {"ok":false,"reason":"player_not_on_map"}
@@ -130,7 +130,7 @@ func finish_pickup(ticket: String, expedition: ExpeditionState, map: TacticalMap
 		return {"ok":false,"reason":"pickup_still_running"}
 	# The action cannot be replayed after a failed or successful completion.
 	pending_pickups.erase(ticket)
-	if not _valid_expedition(expedition) or map == null or player == null or repository == null:
+	if not _valid_expedition(expedition) or map == null or player == null or repository == null or player.in_combat:
 		return {"ok":false,"reason":"invalid_pickup_context"}
 	if expedition.expedition_id != String(action["expedition_id"]) or player.character_id != String(action["player_id"]):
 		return {"ok":false,"reason":"pickup_identity_mismatch"}
