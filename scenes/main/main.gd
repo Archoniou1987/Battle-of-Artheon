@@ -386,6 +386,9 @@ func _open_panel(section: String) -> void:
 	if section == "Персонаж":
 		_open_character_screen()
 		return
+	if section == "Карта":
+		_open_solo_map_gate()
+		return
 	popup_title.text = section
 	popup_description.text = "Раздел будет подключён на следующем этапе."
 	for child in popup_actions.get_children():
@@ -398,6 +401,30 @@ func _open_panel(section: String) -> void:
 	popup.reset_size()
 	popup.position = (size - popup.size) * 0.5
 
+
+## The real Solo map is not yet a playable scene. Keep this entry
+## fail-closed while honoring pending combat manifests on startup.
+func _open_solo_map_gate() -> void:
+	popup_title.text = "Карта — экспедиция"
+	for child in popup_actions.get_children():
+		popup_actions.remove_child(child)
+		child.queue_free()
+	var gate: Dictionary = SoloExpeditionLaunchGate.inspect(ExpeditionSaveService.DEFAULT_PATH,SoloCombatSessionManifest.PATH,"",player_character.character_id)
+	var state := String(gate.get("state","blocked"))
+	match state:
+		"new_expedition_required":
+			popup_description.text = "Экспедиция ещё не начата. Создание игрового мира будет подключено следующим этапом."
+		"resume_combat_checkpoint":
+			popup_description.text = "Незавершённый бой. Продолжение с checkpoint требуется до открытия карты."
+		"ready", "ready_after_recovery":
+			popup_description.text = "Сохранение экспедиции проверено. Игровая сцена карты ещё не подключена; запуск заблокирован."
+		"expedition_closed":
+			popup_description.text = "Экспедиция завершена. Для продолжения нужна новая экспедиция."
+		_:
+			popup_description.text = "Вход заблокирован: " + String(gate.get("reason","unknown")) + ". Прогресс не изменён."
+	popup.visible = true
+	popup.reset_size()
+	popup.position = (size - popup.size) * 0.5
 
 func _add_debug_button(title: String, path: String) -> void:
 	var button := Button.new()
