@@ -32,6 +32,7 @@ var battle_active:=false
 var battle_defeat_button:Button
 var chase_entity_id:String=""
 var cell_content_panel:CellContentPanel
+var _verified_cell_world:MapCellWorldSession
 var cell_content_bridge:MapNpcBridge=MapNpcBridge.new()
 var cell_content_expedition:ExpeditionState
 var cell_content_character:CharacterState
@@ -50,6 +51,7 @@ func set_cell_content_context(expedition:ExpeditionState,character:CharacterStat
 	cell_content_character=character
 	cell_content_bridge=bridge if bridge!=null else MapNpcBridge.new()
 	cell_content_repository=repository
+	_verified_cell_world=null
 	cell_content_encounter_key=encounter_key
 	cell_content_world_snapshot_path=snapshot_path
 	refresh_cell_content()
@@ -65,6 +67,7 @@ func attach_verified_cell_world(snapshot_path:String,encounter_key:String,expedi
 		return opened
 	var live:MapCellWorldSession=opened["session"]
 	set_cell_content_context(live.expedition,live.character,live.bridge,live.repository,live.encounter_key,live.snapshot_path)
+	_verified_cell_world=live
 	player_hex=playable_map.entity_positions[player_id]
 	refresh_cell_content()
 	return {"ok":true,"session":live}
@@ -315,6 +318,15 @@ func _random_seed()->void:
 
 func _regenerate()->void:
 	_cancel_cell_pickup()
+	# The new generated map is a different world: never retain an old
+	# expedition's repository or player ownership in this debug scene.
+	_verified_cell_world=null
+	cell_content_expedition=null
+	cell_content_character=null
+	cell_content_repository=null
+	cell_content_bridge=MapNpcBridge.new()
+	cell_content_encounter_key=""
+	cell_content_world_snapshot_path=""
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
@@ -502,6 +514,19 @@ func _process(delta:float)->void:
 		move_status.text="Движение: "+str(result.get("reason","ошибка"))
 		_update_movement_panel()
 		return
+	# A verified Solo world must commit movement before UI or combat
+	# observes the destination; otherwise closing the app rolls back
+	# player position while items remain in a newer save.
+	if _verified_cell_world!=null:
+		var persisted:Dictionary=_verified_cell_world.save_player_position()
+		if not bool(persisted.get("ok",false)):
+			playable_map.entity_positions["PLAYER"]=player_hex
+			_moving=false
+			_next_hex=Vector2i(-1,-1)
+			planned_path.clear()
+			move_status.text="Движение не сохранено: "+String(persisted.get("reason","unknown"))
+			_update_movement_panel()
+			return
 	player_hex=_next_hex
 	planned_path.remove_at(0)
 	refresh_cell_content()
