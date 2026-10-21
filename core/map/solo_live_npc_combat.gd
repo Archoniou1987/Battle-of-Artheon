@@ -65,6 +65,57 @@ static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 	live.target_cell=cell
 	return {"ok":true,"combat":live}
 
+## Restore the SAME NPC cohort and checkpoint after a process restart.
+## A missing/corrupt checkpoint is never replaced by a fresh encounter.
+static func resume(session: SoloLiveMapSession) -> Dictionary:
+	if session == null or session.map == null:
+		return {"ok":false,"reason":"invalid_resume_session"}
+	var record := SoloCombatSessionManifest.read(session.manifest_path)
+	if not bool(record.get("ok",false)):
+		return record
+	var data: Dictionary = record["data"]
+	if String(data.get("expedition_path","")) != session.save_path or String(data.get("expedition_id","")) != session.expedition.expedition_id or String(data.get("player_id","")) != session.character.character_id:
+		return {"ok":false,"reason":"resume_owner_mismatch"}
+	var checkpoint := String(data["checkpoint_path"])
+	if not FileAccess.file_exists(checkpoint) or FileAccess.file_exists(String(data["terminal_path"])):
+		return {"ok":false,"reason":"resume_checkpoint_missing_or_terminal"}
+	var match_cell := Vector2i(-1,-1)
+	var npc_id := ""
+	for id in session.npc_bridge.instances:
+		var expected := _paths(session.expedition.expedition_id,String(id))
+		if String(expected["encounter_key"]) == String(data["encounter_key"]) and String(expected["checkpoint"]) == checkpoint and String(expected["terminal"]) == String(data["terminal_path"]):
+			npc_id = String(id)
+			match_cell = session.map.entity_positions.get(npc_id,Vector2i(-1,-1))
+			break
+	if npc_id.is_empty() or HexGrid.distance(session.expedition.player_position,match_cell) != 1:
+		return {"ok":false,"reason":"resume_encounter_position_invalid"}
+	var turn := HexMapTurnService.new()
+	var contact := turn.move_player(session.map,session.npc_bridge,session.character.character_id,match_cell,RandomNumberGenerator.new())
+	if not bool(contact.get("ok",false)) or not contact.has("encounter"):
+		session.map.entity_positions[session.character.character_id] = session.expedition.player_position
+		return {"ok":false,"reason":"resume_contact_invalid"}
+	var catalog := NpcRepository.new()
+	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/npc/starting_region_npcs.json"))
+	if not document is Dictionary:
+		return {"ok":false,"reason":"resume_npc_catalog_invalid"}
+	catalog.load_definitions(document)
+	var fighter := CharacterCombatBuilder.build(session.character,session.repository)
+	if fighter == null:
+		return {"ok":false,"reason":"resume_player_invalid"}
+	var opened := turn.begin_resumable_group_combat(contact["encounter"],catalog,fighter,String(data["encounter_key"]),checkpoint)
+	if not bool(opened.get("ok",false)) or not bool(opened.get("resumed",false)):
+		return {"ok":false,"reason":"resume_checkpoint_rejected","detail":String(opened.get("reason","unknown"))}
+	var instance := SoloLiveNpcCombat.new()
+	instance.owner = session
+	instance.turns = turn
+	instance.battle = opened
+	instance.encounter_key = String(data["encounter_key"])
+	instance.checkpoint_path = checkpoint
+	instance.receipt_path = String(_paths(session.expedition.expedition_id,npc_id)["receipt"])
+	instance.terminal_path = String(data["terminal_path"])
+	instance.target_cell = match_cell
+	return {"ok":true,"combat":instance,"round":opened["simulator"].state.round_number}
+
 func play_round() -> Dictionary:
 	var simulator: GroupCombatSimulator = battle["simulator"]
 	if simulator.controller.combat_finished():
