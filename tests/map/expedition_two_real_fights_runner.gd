@@ -47,6 +47,14 @@ func fight(n: int, expedition: ExpeditionState, player: CharacterState, repo: It
 	GroupCombatCheckpointService.clear(checkpoint)
 	wipe(receipt)
 	wipe(snapshot)
+	var manifest_path := "user://test_solo_manifest_%02d.json" % n
+	wipe(manifest_path)
+	var registered := SoloCombatSessionManifest.begin(manifest_path,SAVE,snapshot,checkpoint,key,EXP_ID,player.character_id)
+	check(bool(registered.get("ok",false)),"manifest_written_before_fight_"+str(n))
+	if not bool(registered.get("ok",false)):
+		return false
+	var early_launch := SoloCombatSessionManifest.recover_on_launch(manifest_path)
+	check(not bool(early_launch.get("ok",false)) and String(early_launch.get("state",""))=="resume_combat_checkpoint","checkpoint_required_before_terminal_"+str(n))
 	var level := make_world(n,repo)
 	check(not level.is_empty(),"world_"+str(n))
 	if level.is_empty():
@@ -87,13 +95,16 @@ func fight(n: int, expedition: ExpeditionState, player: CharacterState, repo: It
 	check(not old_markers.has(key),"combat_not_published_before_recovery_"+str(n))
 	var stale: Dictionary = ExpeditionSaveService.recover_pending_combat(SAVE,snapshot,key,EXP_ID,player.character_id,"f".repeat(64))
 	check(not bool(stale.get("ok",false)) and String(stale.get("reason",""))=="recovery_base_revision_changed","stale_recovery_rejected_"+str(n))
-	var recovery: Dictionary = ExpeditionSaveService.recover_pending_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha)
+	var recovery: Dictionary = SoloCombatSessionManifest.recover_on_launch(manifest_path)
 	check(bool(recovery.get("ok",false)) and bool(recovery.get("recovered",false)),"recover_terminal_combat_"+str(n))
 	if not bool(recovery.get("ok",false)):
-		print("TWO_FIGHTS_RECOVERY_REASON=",recovery.get("reason",""),":",recovery.get("detail",""))
+		print("TWO_FIGHTS_RECOVERY_REASON=",recovery.get("reason",""),":",recovery.get("state",""))
 		return false
+	check(not FileAccess.file_exists(manifest_path),"manifest_cleared_after_publish_"+str(n))
 	var again: Dictionary = ExpeditionSaveService.recover_pending_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha)
 	check(bool(again.get("ok",false)) and bool(again.get("already_published",false)),"recovery_idempotent_"+str(n))
+	var quiet: Dictionary = SoloCombatSessionManifest.recover_on_launch(manifest_path)
+	check(bool(quiet.get("ok",false)) and String(quiet.get("state",""))=="no_pending_combat","restart_after_cleanup_"+str(n))
 	check(not bool(ExpeditionSaveService.publish_verified_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha).get("ok",false)),"double_publish_blocked_"+str(n))
 	wipe(snapshot)
 	return true
