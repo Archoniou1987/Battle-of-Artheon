@@ -73,6 +73,23 @@ func _initialize() -> void:
 		check(not bool(broken.get("ok",false)) and String(broken.get("reason",""))=="resume_checkpoint_rejected","corrupt_checkpoint_fails_closed")
 		check(broken_session["session"].map.entity_positions.get("player",Vector2i(-1,-1))==Vector2i(6,5),"rejected_resume_restores_in_memory_player_position")
 	check(FileAccess.file_exists(MANIFEST),"corrupt_checkpoint_keeps_manifest")
+	# The outer file can be valid JSON with a matching checksum, yet the
+	# nested payload can still be malformed. Both parse errors are ordinary
+	# rejected user input and must not emit Godot's fatal ERROR diagnostics.
+	var invalid_payload := "{broken payload"
+	var nested_corrupt := JSON.stringify({
+		"format":GroupCombatCheckpointService.FORMAT,
+		"payload_json":invalid_payload,
+		"sha256":invalid_payload.sha256_text()
+	})
+	check(write_text(combat.checkpoint_path,nested_corrupt),"nested_corrupt_checkpoint_written")
+	var nested_session := SoloLiveMapSession.open_pending(EXP,MANIFEST,ID,"player")
+	check(bool(nested_session.get("ok",false)),"nested_corrupt_world_remains_locked")
+	if bool(nested_session.get("ok",false)):
+		var nested := SoloLiveNpcCombat.resume(nested_session["session"])
+		check(not bool(nested.get("ok",false)) and String(nested.get("reason",""))=="resume_checkpoint_rejected","nested_corrupt_checkpoint_fails_closed")
+		check(nested_session["session"].map.entity_positions.get("player",Vector2i(-1,-1))==Vector2i(6,5),"nested_corrupt_does_not_move_player")
+	check(FileAccess.file_exists(MANIFEST),"nested_corrupt_keeps_manifest")
 	check(not FileAccess.file_exists(combat.receipt_path) and not FileAccess.file_exists(combat.terminal_path),"invalid_resume_never_mints_rewards")
 	check(String(ExpeditionSaveService._read_payload_envelope(EXP).get("sha256",""))==base_sha,"invalid_resume_does_not_mutate_world")
 	check(write_text(combat.checkpoint_path,checkpoint_text),"original_checkpoint_restored_for_test")
