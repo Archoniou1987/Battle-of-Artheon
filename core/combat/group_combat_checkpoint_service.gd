@@ -117,7 +117,7 @@ static func save(simulator, path: String, encounter_key: String, roster_fingerpr
 		return snapshot
 	var raw := JSON.stringify(snapshot["payload"])
 	var wrapper := JSON.stringify({"format":FORMAT,"payload_json":raw,"sha256":raw.sha256_text()})
-	if wrapper.length() > MAX_BYTES:
+	if wrapper.to_utf8_buffer().size() > MAX_BYTES:
 		return {"ok":false,"reason":"checkpoint_too_large"}
 	var temp_path := path + ".tmp"
 	var file := FileAccess.open(temp_path, FileAccess.WRITE)
@@ -161,6 +161,8 @@ static func read(path: String, encounter_key: String, roster_fingerprint: String
 	var restored := _restore_simulator(decoded)
 	if restored == null:
 		return {"ok":false,"reason":"checkpoint_restore_failed"}
+	if restored.controller.combat_finished() != bool(decoded["terminal"]):
+		return {"ok":false,"reason":"checkpoint_terminal_state_mismatch"}
 	return {"ok":true,"simulator":restored,"round":restored.state.round_number,"terminal":restored.controller.combat_finished()}
 
 static func clear(path: String = DEFAULT_PATH) -> bool:
@@ -243,7 +245,12 @@ static func _restore_simulator(payload: Dictionary):
 		for raw_id in Array(saved_group["teams"][raw_team]):
 			if not group.add_member(team_id,String(raw_id)):
 				return null
-	var simulator := GroupCombatSimulator.new(state,group,Dictionary(saved_engine["physical_balance"]))
+	# Runtime load avoids a compile-time type cycle: GroupCombatSimulator uses
+	# this checkpoint codec after each committed round.
+	var simulator_script := load("res://core/combat/group_combat_simulator.gd")
+	if simulator_script == null:
+		return null
+	var simulator = simulator_script.new(state,group,Dictionary(saved_engine["physical_balance"]))
 	simulator.engine.combat_rng.state = int(String(saved_engine["rng_state"]))
 	simulator.engine._next_effect_stack_id = int(saved_engine["next_effect_stack_id"])
 	# CombatAttackPipeline.rng and CombatEngine.combat_rng are the SAME object.
@@ -256,7 +263,7 @@ static func _restore_simulator(payload: Dictionary):
 	simulator.attack_pipeline.ability_scheduler = scheduler
 	group.active_opponent_by_combatant = Dictionary(saved_group["active_opponents"]).duplicate(true)
 	simulator.controller.engagement.lock_until_round = Dictionary(saved_group["engagement_lock_until_round"]).duplicate(true)
-	simulator.orchestrator.persistent_actions = Dictionary(payload["orchestrator"]).get("persistent_actions",[]).duplicate(true)
+	simulator.orchestrator.persistent_actions = Array(Dictionary(payload["orchestrator"]).get("persistent_actions",[])).duplicate(true)
 	simulator.max_rounds = int(payload["max_rounds"])
 	return simulator
 
