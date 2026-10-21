@@ -67,7 +67,15 @@ func _run() -> void:
 	if not bool(opened.get("ok",false)):
 		return
 	var session: SoloLiveMapSession = opened["session"]
-	check(session.expedition.world_state.get(SoloTownExpeditionBridge.START_CELL_KEY,[]) == [START.x,START.y],"starting_cell_persisted")
+	# JSON restores numeric array entries as floats; compare canonical
+	# integer coordinates rather than exact Variant array element types.
+	var recorded_start: Variant = session.expedition.world_state.get(SoloTownExpeditionBridge.START_CELL_KEY,null)
+	var valid_start := recorded_start is Array and Array(recorded_start).size()==2
+	if valid_start:
+		valid_start = CharacterProgression._is_whole_number(recorded_start[0]) and CharacterProgression._is_whole_number(recorded_start[1])
+	if valid_start:
+		valid_start = Vector2i(int(recorded_start[0]),int(recorded_start[1])) == START
+	check(valid_start,"starting_cell_persisted")
 	var started := SoloLiveNpcCombat.start(session,TARGET)
 	check(bool(started.get("ok",false)),"real_npc_contact_started")
 	if not bool(started.get("ok",false)):
