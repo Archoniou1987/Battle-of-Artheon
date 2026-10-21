@@ -106,9 +106,11 @@ static func adopt_closed_expedition(town_path: String, expedition_path: String, 
 		var origin: Dictionary = existing["return_origin"]
 		if String(origin.get("expedition_id","")) == expedition_id and String(origin.get("snapshot_sha256","")) == source_hash:
 			return {"ok":true,"already_adopted":true}
-		# Existing town progress might contain changes since the expedition
-		# departed. Require an explicit future conflict resolution protocol.
-		return {"ok":false,"reason":"town_snapshot_conflict"}
+		# A city save normally already exists before the expedition.
+		# It may be replaced ONLY when it still equals the verified
+		# departure snapshot. Never silently merge divergent owners.
+		if not SoloTownExpeditionBridge.town_matches_origin(returned["expedition"],existing["character"],existing["repository"]):
+			return {"ok":false,"reason":"town_snapshot_conflict"}
 	var receipt := {"expedition_id":expedition_id,"snapshot_sha256":source_hash}
 	var done := _write(town_path,returned["character"],returned["repository"],receipt)
 	if not bool(done.get("ok",false)):
