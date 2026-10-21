@@ -118,6 +118,11 @@ func _move(target: Vector2i) -> void:
 func _start_combat(cell: Vector2i) -> void:
 	var result := SoloLiveNpcCombat.start(session,cell)
 	if not bool(result.get("ok",false)):
+		# A failed start can still own a durable manifest. Do not visually
+		# advertise movement/return if recovery must reconcile it first.
+		if FileAccess.file_exists(MANIFEST):
+			return_button.disabled = true
+			_refresh()
 		_set_status("Бой заблокирован: "+String(result.get("reason","unknown")))
 		return
 	live_combat=result["combat"]
