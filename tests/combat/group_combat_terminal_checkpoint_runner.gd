@@ -87,6 +87,36 @@ func _run() -> void:
 			var obsolete := GroupCombatCheckpointService.read(PATH,ENCOUNTER,signature)
 			_check(not bool(obsolete.get("ok",false)) and String(obsolete.get("reason","")) == "checkpoint_schema_mismatch", "changed_schema_is_rejected_even_with_matching_checksum")
 	_write_checkpoint_text(original)
+	# A structurally altered payload with a freshly computed checksum must
+	# still be rejected. SHA-256 is corruption detection, not validation.
+	var duplicate_outer: Variant = JSON.parse_string(original)
+	if duplicate_outer is Dictionary:
+		var duplicate_payload: Variant = JSON.parse_string(String(duplicate_outer["payload_json"]))
+		if duplicate_payload is Dictionary:
+			var logged_events: Array = duplicate_payload["state"]["events"]
+			if logged_events.size() > 1:
+				logged_events[1]["id"] = logged_events[0]["id"]
+				var unsafe_payload := JSON.stringify(duplicate_payload)
+				duplicate_outer["payload_json"] = unsafe_payload
+				duplicate_outer["sha256"] = unsafe_payload.sha256_text()
+				_write_checkpoint_text(JSON.stringify(duplicate_outer))
+				var duplicates := GroupCombatCheckpointService.read(PATH,ENCOUNTER,signature)
+				_check(not bool(duplicates.get("ok",false)) and String(duplicates.get("reason","")) == "checkpoint_invalid_event_payload", "duplicate_event_ids_rejected_even_with_valid_hash")
+	_write_checkpoint_text(original)
+	# An attacker cannot change terminal=true to terminal=false to replay the
+	# last round. The restored group and snapshot must agree on finality.
+	var terminal_outer: Variant = JSON.parse_string(original)
+	if terminal_outer is Dictionary:
+		var terminal_payload: Variant = JSON.parse_string(String(terminal_outer["payload_json"]))
+		if terminal_payload is Dictionary:
+			terminal_payload["terminal"] = false
+			var unsafe_terminal := JSON.stringify(terminal_payload)
+			terminal_outer["payload_json"] = unsafe_terminal
+			terminal_outer["sha256"] = unsafe_terminal.sha256_text()
+			_write_checkpoint_text(JSON.stringify(terminal_outer))
+			var false_terminal := GroupCombatCheckpointService.read(PATH,ENCOUNTER,signature)
+			_check(not bool(false_terminal.get("ok",false)) and String(false_terminal.get("reason","")) == "checkpoint_terminal_state_mismatch", "terminal_flag_cannot_be_cleared")
+	_write_checkpoint_text(original)
 	_check(bool(GroupCombatCheckpointService.read(PATH,ENCOUNTER,signature).get("ok",false)), "valid_checkpoint_untouched_after_negative_tests")
 	_check(GroupCombatCheckpointService.clear(PATH), "acknowledgement_can_clear_terminal_checkpoint")
 	_check(not FileAccess.file_exists(PATH), "cleared_checkpoint_cannot_replay")
