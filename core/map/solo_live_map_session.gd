@@ -8,6 +8,7 @@ var expedition: ExpeditionState
 var character: CharacterState
 var repository: ItemRepository
 var map: TacticalMapState
+var npc_bridge: MapNpcBridge
 var save_path: String
 var manifest_path: String
 
@@ -22,6 +23,29 @@ static func open(path: String, manifest: String, expedition_id: String, player_i
 	session.save_path = path
 	session.manifest_path = manifest
 	session.map = TacticalMapState.new(WIDTH,HEIGHT)
+	session.npc_bridge = MapNpcBridge.new()
+	var npc_catalog := NpcRepository.new()
+	var npc_document: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/npc/starting_region_npcs.json"))
+	if not npc_document is Dictionary:
+		return {"ok":false,"reason":"live_npc_catalog_invalid"}
+	npc_catalog.load_definitions(npc_document)
+	# Stable instance IDs and cells across all saves/restarts. The
+	# encounter handler is intentionally not wired to the UI yet.
+	var placements: Array = [
+		{"id":"solo_npc_bandit_01","template":"NPC003","cell":Vector2i(7,5)},
+		{"id":"solo_npc_wolf_01","template":"NPC001","cell":Vector2i(8,8)},
+		{"id":"solo_npc_archer_01","template":"NPC004","cell":Vector2i(4,8)}
+	]
+	for placement in placements:
+		var npc_id := String(placement["id"])
+		if MapWorldCommitService.is_defeated_spawn(session.expedition,npc_id):
+			continue
+		var template: NpcState = npc_catalog.get_npc(String(placement["template"]))
+		if template == null:
+			return {"ok":false,"reason":"live_npc_template_missing"}
+		var npc := NpcInstance.new(npc_id,template)
+		if not session.npc_bridge.register_npc(session.map,npc,placement["cell"]):
+			return {"ok":false,"reason":"live_npc_registration_failed"}
 	if not session.map.place_entity(player_id,session.expedition.player_position):
 		return {"ok":false,"reason":"saved_player_hex_invalid"}
 	session.map.mark_visited(session.expedition.player_position)
@@ -33,6 +57,12 @@ func move_one_step(to: Vector2i) -> Dictionary:
 		return {"ok":false,"reason":"expedition_not_active"}
 	if FileAccess.file_exists(manifest_path):
 		return {"ok":false,"reason":"pending_combat_blocks_movement"}
+	# Do not allow the live world to move onto an enemy until the
+	# verified battle UI and settlement contract are connected.
+	# Movement and rewards must remain unchanged on a rejected contact.
+	var encountered := npc_bridge.encounter_at(map,to)
+	if bool(encountered.get("ok",false)):
+		return {"ok":false,"reason":"combat_ui_not_connected","npc_instance_ids":encountered.get("npc_instance_ids",[])}
 	var from := expedition.player_position
 	var moved := map.move_entity(character.character_id,to)
 	if not bool(moved.get("ok",false)):
