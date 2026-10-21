@@ -47,6 +47,9 @@ jobs:
       - name: Validate Solo per-cell ground loot persistence and timed pickup
         run: bash tools/run_godot_check.sh tests/map/ground_loot_solo_runner.gd
 
+      - name: Prove Solo group combat rewards land on the current hex before pickup
+        run: bash tools/run_godot_check.sh tests/map/ground_loot_combat_e2e_runner.gd
+
       - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
         run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
       - name: Validate isolated ABI Test Lab physical and magical PAR calculations
