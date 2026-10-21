@@ -44,6 +44,9 @@ jobs:
       - name: Validate Solo expedition save before combat and after multiple encounters
         run: bash tools/run_godot_check.sh tests/map/expedition_save_runner.gd
 
+      - name: Seal Solo expedition exit and return only owned item instances
+        run: bash tools/run_godot_check.sh tests/map/solo_town_return_runner.gd
+
       - name: Preserve town character inventory on Solo expedition handoff and reopen
         run: bash tools/run_godot_check.sh tests/map/solo_town_expedition_bridge_runner.gd
 
