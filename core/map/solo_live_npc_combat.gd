@@ -18,6 +18,12 @@ static func _paths(expedition_id: String, npc_id: String) -> Dictionary:
 	var digest := key.sha256_text().substr(0,24)
 	return {"encounter_key":key,"checkpoint":"user://solo_live_fight_"+digest+".json","receipt":"user://solo_live_receipt_"+digest+".json","terminal":"user://solo_live_world_"+digest+".json"}
 
+## Failed contact reconstruction must not leave a ghost player on the NPC
+## tile. The persisted expedition position always remains authoritative.
+static func _restore_precombat_position(session: SoloLiveMapSession) -> void:
+	if session != null and session.map != null and session.character != null and session.expedition != null:
+		session.map.entity_positions[session.character.character_id] = session.expedition.player_position
+
 static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 	if session == null or session.map == null or session.npc_bridge == null or session.character == null:
 		return {"ok":false,"reason":"invalid_live_combat_context"}
@@ -41,18 +47,21 @@ static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 	var turns_instance := HexMapTurnService.new()
 	var contact_result := turns_instance.move_player(session.map,session.npc_bridge,session.character.character_id,cell,RandomNumberGenerator.new())
 	if not bool(contact_result.get("ok",false)) or not contact_result.has("encounter"):
-		session.map.entity_positions[session.character.character_id] = session.expedition.player_position
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"map_encounter_start_failed"}
 	var catalog := NpcRepository.new()
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/npc/starting_region_npcs.json"))
 	if not raw is Dictionary:
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"npc_catalog_unavailable"}
 	catalog.load_definitions(raw)
 	var fighter := CharacterCombatBuilder.build(session.character,session.repository)
 	if fighter == null:
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"player_combat_build_failed"}
 	var opened := turns_instance.begin_resumable_group_combat(contact_result["encounter"],catalog,fighter,String(files["encounter_key"]),String(files["checkpoint"]))
 	if not bool(opened.get("ok",false)):
+		_restore_precombat_position(session)
 		return opened
 	var live := SoloLiveNpcCombat.new()
 	live.owner=session
@@ -92,18 +101,21 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	var turn := HexMapTurnService.new()
 	var contact := turn.move_player(session.map,session.npc_bridge,session.character.character_id,match_cell,RandomNumberGenerator.new())
 	if not bool(contact.get("ok",false)) or not contact.has("encounter"):
-		session.map.entity_positions[session.character.character_id] = session.expedition.player_position
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"resume_contact_invalid"}
 	var catalog := NpcRepository.new()
 	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/npc/starting_region_npcs.json"))
 	if not document is Dictionary:
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"resume_npc_catalog_invalid"}
 	catalog.load_definitions(document)
 	var fighter := CharacterCombatBuilder.build(session.character,session.repository)
 	if fighter == null:
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"resume_player_invalid"}
 	var opened := turn.begin_resumable_group_combat(contact["encounter"],catalog,fighter,String(data["encounter_key"]),checkpoint)
 	if not bool(opened.get("ok",false)) or not bool(opened.get("resumed",false)):
+		_restore_precombat_position(session)
 		return {"ok":false,"reason":"resume_checkpoint_rejected","detail":String(opened.get("reason","unknown"))}
 	var instance := SoloLiveNpcCombat.new()
 	instance.owner = session
