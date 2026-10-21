@@ -140,7 +140,7 @@ func _execute() -> void:
 
 	# Bad checksum never instantiates a simulator, and the MAP adapter must
 	# not silently start a new encounter on a damaged checkpoint.
-	var corrupted := JSON.parse_string(saved_contents)
+	var corrupted: Variant = JSON.parse_string(saved_contents)
 	if corrupted is Dictionary:
 		corrupted["sha256"] = "bad"
 		_write_raw(JSON.stringify(corrupted))
