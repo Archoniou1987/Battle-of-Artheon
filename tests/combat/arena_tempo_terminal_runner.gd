@@ -166,6 +166,15 @@ func _terminal_battle() -> void:
 	_check(String(result.get("outcome", "")) == "winner:player", "canonical_arena_winner")
 	_check(session.orchestrator.battle_outcome() == "winner:player", "outcome_matches_orchestrator")
 	_check(_npc_abi_count(session, 1) == 1, "lethally_hit_npc_still_resolves_locked_heal")
+	var npc_heal_cast_id := -1
+	for logged in session.state.event_log:
+		if logged.kind == CombatEvent.Kind.ACTION and logged.source_id == ArenaCombatSession.ENEMY_ID and String(logged.payload.get("ability_id", "")) == "ABI004":
+			npc_heal_cast_id = logged.event_id
+	var resolved_heals := 0
+	for logged in session.state.event_log:
+		if logged.kind == CombatEvent.Kind.EFFECT and logged.parent_event_id == npc_heal_cast_id and logged.payload.has("inline_heal") and int(logged.result.get("healed", 0)) > 0:
+			resolved_heals += 1
+	_check(npc_heal_cast_id > 0 and resolved_heals == 1, "npc_healing_effect_resolves_despite_provisional_lethal_damage")
 	var trace: Dictionary = CombatDiagnostics.round_trace(session.state, 1)
 	_check(bool(trace.get("valid_event_lineage", false)), "terminal_canonical_event_lineage")
 	var hp_before := player.hp
