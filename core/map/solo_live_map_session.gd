@@ -70,7 +70,7 @@ static func _mount(path: String, manifest: String, saved_expedition: ExpeditionS
 		var npc := NpcInstance.new(npc_id,template)
 		if not session.npc_bridge.register_npc(session.map,npc,placement["cell"]):
 			return {"ok":false,"reason":"live_npc_registration_failed"}
-	if not session.map.place_entity(player_id,session.expedition.player_position):
+	if not session.map.place_entity(session.character.character_id,session.expedition.player_position):
 		return {"ok":false,"reason":"saved_player_hex_invalid"}
 	session.map.mark_visited(session.expedition.player_position)
 	session.map.reveal_from(session.expedition.player_position,3)
