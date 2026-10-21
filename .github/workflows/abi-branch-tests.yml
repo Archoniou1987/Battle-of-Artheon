@@ -32,7 +32,8 @@ jobs:
           for script in \
             tests/ui/arena_open_smoke.gd \
             tests/ui/elixir_abi_press_runner.gd \
-            tests/ui/square_slot_interaction_runner.gd
+            tests/ui/square_slot_interaction_runner.gd \
+            tests/ui/arena_terminal_persistence_runner.gd
           do
             echo "::group::UI smoke: $script"
             if ! bash tools/run_godot_check.sh "$script"; then
