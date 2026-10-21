@@ -51,5 +51,35 @@ func resolve_group_victory(result:Dictionary,map:TacticalMapState,bridge:MapNpcB
 		coordinator.finish_combat()
 	return outcome
 
+## World-map opt-in route. Map contact and patrol/chase movement are
+## handled by the existing HexEncounterCoordinator; the combat state is
+## still owned by MapEncounterCombatService / GroupCombatSimulator.
+func begin_resumable_group_combat(encounter: Dictionary, repository: NpcRepository, fighter: CombatantState, encounter_key: String, checkpoint_path: String = GroupCombatCheckpointService.DEFAULT_PATH) -> Dictionary:
+	if not coordinator.combat_active and not FileAccess.file_exists(checkpoint_path):
+		return {"ok":false,"reason":"no_active_map_encounter"}
+	var opened: Dictionary = MapEncounterCombatService.begin_resumable(encounter,repository,fighter,encounter_key,checkpoint_path)
+	if bool(opened.get("ok",false)):
+		coordinator.combat_active = true
+	return opened
+
+## Maps may progress after the outcome journal is durable and applied,
+## but the calling game state still MUST persist the expedition/repository
+## and acknowledge the journal in a later step.
+func resolve_group_victory_durable(session: Dictionary, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository, loot_service: NpcPossessionLootService, quality_chances: Dictionary, encounter_key: String, receipt_path: String = MapCombatSettlementService.DEFAULT_PATH, now_unix: int = -1) -> Dictionary:
+	if not coordinator.combat_active:
+		return {"ok":false,"reason":"no_active_combat"}
+	var result: Dictionary = MapCombatSettlementService.settle(session,expedition,map,bridge,player,repository,loot_service,quality_chances,encounter_key,receipt_path,now_unix)
+	if bool(result.get("ok",false)):
+		coordinator.finish_combat()
+	return result
+
+## On restart a world may be reconstructed with every NPC alive again.
+## Reapply the immutable journal before map movement/patrol simulation.
+func recover_settled_group_victory(receipt_path: String, encounter_key: String, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository) -> Dictionary:
+	var result: Dictionary = MapCombatSettlementService.apply(receipt_path,encounter_key,expedition,map,bridge,player,repository)
+	if bool(result.get("ok",false)):
+		coordinator.finish_combat()
+	return result
+
 func finish_combat()->void:
 	coordinator.finish_combat()
