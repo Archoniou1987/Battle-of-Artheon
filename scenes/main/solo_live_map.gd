@@ -17,6 +17,20 @@ func _ready() -> void:
 	var id := SoloTownExpeditionBridge.expedition_id_for_player(PLAYER)
 	var opened := SoloLiveMapSession.open(SAVE,MANIFEST,id,PLAYER)
 	_build_view()
+	if not bool(opened.get("ok",false)) and String(opened.get("state","")) == "resume_combat_checkpoint":
+		opened = SoloLiveMapSession.open_pending(SAVE,MANIFEST,id,PLAYER)
+		if bool(opened.get("ok",false)):
+			session = opened["session"]
+			var resumed := SoloLiveNpcCombat.resume(session)
+			if not bool(resumed.get("ok",false)):
+				_set_status("Восстановление боя заблокировано: "+String(resumed.get("reason","unknown")))
+				return
+			live_combat = resumed["combat"]
+			round_button.visible = true
+			return_button.disabled = true
+			_refresh()
+			_set_status("Восстановлен бой, завершён раунд "+str(resumed.get("round",0))+".")
+			return
 	if not bool(opened.get("ok",false)):
 		_set_status("Экспедиция недоступна: "+String(opened.get("reason","unknown")))
 		return
@@ -118,6 +132,14 @@ func _play_combat_round() -> void:
 		_set_status("Бой остановлен: "+String(step.get("state",step.get("reason","unknown")))+". Продолжение через checkpoint ещё требует интерфейса восстановления.")
 		return
 	if String(step.get("state","")) == "victory":
+		# Publish recovery writes new canonical owners. Never keep the
+		# pre-combat character/repository in the map scene.
+		var reopened := SoloLiveMapSession.open(SAVE,MANIFEST,session.expedition.expedition_id,PLAYER)
+		if not bool(reopened.get("ok",false)):
+			round_button.disabled = true
+			_set_status("Победа сохранена, но карту не удалось обновить: "+String(reopened.get("reason","unknown")))
+			return
+		session = reopened["session"]
 		live_combat=null
 		round_button.visible=false
 		return_button.disabled=false
