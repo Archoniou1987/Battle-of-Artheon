@@ -76,11 +76,24 @@ func fight(n: int, expedition: ExpeditionState, player: CharacterState, repo: It
 		print("TWO_FIGHTS_ATOMIC_REASON=",completed.get("reason",""),":",completed.get("detail",""))
 		return false
 	check(not FileAccess.file_exists(receipt) and not FileAccess.file_exists(checkpoint),"journal_ack_"+str(n))
-	var published: Dictionary = ExpeditionSaveService.publish_verified_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha)
-	check(bool(published.get("ok",false)),"publish_"+str(n))
-	if not bool(published.get("ok",false)):
-		print("TWO_FIGHTS_PUBLISH_REASON=",published.get("reason",""),":",published.get("detail",""))
+	# Simulate app termination after the terminal combat world was
+	# committed and its receipt/checkpoint acknowledged, but BEFORE
+	# publishing it into the canonical expedition-wide file.
+	var before_recovery: Dictionary = ExpeditionSaveService.read(SAVE,EXP_ID,player.character_id)
+	check(bool(before_recovery.get("ok",false)),"pre_recovery_save_valid_"+str(n))
+	if not bool(before_recovery.get("ok",false)):
 		return false
+	var old_markers: Dictionary = before_recovery["expedition"].world_state.get(MapCombatSettlementService.MARKER_KEY,{})
+	check(not old_markers.has(key),"combat_not_published_before_recovery_"+str(n))
+	var stale: Dictionary = ExpeditionSaveService.recover_pending_combat(SAVE,snapshot,key,EXP_ID,player.character_id,"f".repeat(64))
+	check(not bool(stale.get("ok",false)) and String(stale.get("reason",""))=="recovery_base_revision_changed","stale_recovery_rejected_"+str(n))
+	var recovery: Dictionary = ExpeditionSaveService.recover_pending_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha)
+	check(bool(recovery.get("ok",false)) and bool(recovery.get("recovered",false)),"recover_terminal_combat_"+str(n))
+	if not bool(recovery.get("ok",false)):
+		print("TWO_FIGHTS_RECOVERY_REASON=",recovery.get("reason",""),":",recovery.get("detail",""))
+		return false
+	var again: Dictionary = ExpeditionSaveService.recover_pending_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha)
+	check(bool(again.get("ok",false)) and bool(again.get("already_published",false)),"recovery_idempotent_"+str(n))
 	check(not bool(ExpeditionSaveService.publish_verified_combat(SAVE,snapshot,key,EXP_ID,player.character_id,base_sha).get("ok",false)),"double_publish_blocked_"+str(n))
 	wipe(snapshot)
 	return true
