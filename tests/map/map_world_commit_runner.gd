@@ -55,6 +55,58 @@ func _delete(path: String) -> void:
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
+## Public runtime entry point: settlement, HP/Mana, atomic bundle and
+## journal acknowledgement must all finish BEFORE movement is released.
+func _test_atomic_finish() -> void:
+	var fight_path := "user://boa_test_atomic_finish_fight.json"
+	var receipt_path := "user://boa_test_atomic_finish_receipt.json"
+	var bundle_path := "user://boa_test_atomic_finish_bundle.json"
+	var cohort_key := ENCOUNTER + ":atomic"
+	var expedition_id := EXPEDITION_ID + "_ATOMIC"
+	GroupCombatCheckpointService.clear(fight_path)
+	_delete(receipt_path)
+	_delete(bundle_path)
+	var world := _world()
+	_check(not world.is_empty(),"atomic_public_world_ready")
+	if world.is_empty():
+		return
+	var character := CharacterState.new("PLAYER","Map Hero",20)
+	var expedition := ExpeditionState.new(expedition_id)
+	var turns := HexMapTurnService.new()
+	var contact := turns.move_player(world["map"],world["bridge"],"PLAYER",CELL,RandomNumberGenerator.new())
+	_check(bool(contact.get("ok",false)) and contact.has("encounter"),"atomic_public_map_contact")
+	if not contact.has("encounter"):
+		return
+	var opened := turns.begin_resumable_group_combat(contact["encounter"],world["catalog"],_fighter(character,world["repository"]),cohort_key,fight_path)
+	_check(bool(opened.get("ok",false)),"atomic_public_checkpointed_battle")
+	if not bool(opened.get("ok",false)):
+		return
+	var simulator: GroupCombatSimulator = opened["simulator"]
+	var outcome := simulator.run()
+	_check(String(outcome.get("winning_team",""))=="players","atomic_public_real_fight_won")
+	if String(outcome.get("winning_team",""))!="players":
+		return
+	_check(turns.coordinator.combat_active,"atomic_public_map_still_frozen_before_commit")
+	var final := turns.finalize_group_victory_atomic(opened,cohort_key,expedition,world["map"],world["bridge"],character,world["repository"],NpcPossessionLootService.new(1),{"common":100.0},receipt_path,fight_path,bundle_path,1000)
+	_check(bool(final.get("ok",false)),"atomic_public_finalize_success")
+	if not bool(final.get("ok",false)):
+		_check(false,"atomic_public_reason_"+String(final.get("reason","unknown"))+"_"+String(final.get("detail","")))
+		return
+	_check(not turns.coordinator.combat_active,"atomic_public_map_only_unpaused_after_commit")
+	_check(FileAccess.file_exists(bundle_path) and not FileAccess.file_exists(receipt_path) and not FileAccess.file_exists(fight_path),"atomic_public_journals_acknowledged")
+	_check(character.current_hp == simulator.state.get_combatant("PLAYER").visible_hp(),"atomic_public_hp_committed")
+	var recovered := MapWorldCommitService.read(bundle_path,cohort_key,expedition_id,"PLAYER")
+	_check(bool(recovered.get("ok",false)),"atomic_public_reboot_restores")
+	if bool(recovered.get("ok",false)):
+		var fresh_map := _world(false)
+		var suppressed := MapWorldCommitService.reconcile_map(recovered["expedition"],fresh_map["map"],fresh_map["bridge"])
+		_check(bool(suppressed.get("ok",false)) and int(suppressed.get("deaths_applied",-1)) == 2,"atomic_public_no_respawn_after_ack")
+		_check(recovered["expedition"].restore_loot_pool(cohort_key).item_ids().size() == 2,"atomic_public_two_claimable_items")
+	_check(not bool(turns.finalize_group_victory_atomic(opened,cohort_key,expedition,world["map"],world["bridge"],character,world["repository"],NpcPossessionLootService.new(1),{"common":100.0},receipt_path,fight_path,bundle_path,1000).get("ok",false)),"atomic_public_no_double_completion")
+	_delete(bundle_path)
+	GroupCombatCheckpointService.clear(fight_path)
+	_delete(receipt_path)
+
 func _run() -> void:
 	GroupCombatCheckpointService.clear(CHECKPOINT)
 	_delete(RECEIPT)
@@ -222,6 +274,7 @@ func _run() -> void:
 				rollback.store_string(original)
 				rollback.close()
 	_check(bool(MapWorldCommitService.read(SNAPSHOT,ENCOUNTER,EXPEDITION_ID,"PLAYER").get("ok",false)),"valid_snapshot_survives_negative_tests")
+	_test_atomic_finish()
 	_delete(SNAPSHOT)
 	GroupCombatCheckpointService.clear(CHECKPOINT)
 	_delete(RECEIPT)
