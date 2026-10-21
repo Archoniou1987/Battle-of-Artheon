@@ -32,7 +32,8 @@ func _initialize() -> void:
 	var first: SoloLiveMapSession = opened["session"]
 	check(first.npc_bridge.instances.size()==3,"three_stable_npc_instances")
 	check(first.npc_bridge.instances.has("solo_npc_bandit_01"),"stable_bandit_id")
-	var adjacent: Vector2i = first.map.neighbors(Vector2i(5,5))[0]
+	var adjacent := Vector2i(6,5)
+	check(first.map.neighbors(Vector2i(5,5)).has(adjacent),"safe_adjacent_hex_exists")
 	check(not bool(first.move_one_step(Vector2i(11,11)).get("ok",false)),"non_adjacent_rejected")
 	check(bool(first.move_one_step(adjacent).get("ok",false)),"adjacent_step_saved")
 	var reopened := SoloLiveMapSession.open(EXP,MANIFEST,ID,"player")
