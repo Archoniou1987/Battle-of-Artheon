@@ -54,6 +54,8 @@ func _initialize() -> void:
 	check(bool(revision.get("ok",false)),"prebattle_revision_readable")
 	var base_sha := String(revision.get("sha256",""))
 	check(not bool(SoloLiveMapSession.open(EXP,MANIFEST,ID,"player").get("ok",false)),"normal_map_entry_blocks_pending")
+	var resume_gate := SoloExpeditionLaunchGate.inspect(EXP,MANIFEST,ID,"player")
+	check(String(resume_gate.get("state",""))=="resume_combat_checkpoint","village_gate_offers_pending_combat")
 	# A missing checkpoint must never turn the manifest into a new combat.
 	wipe(combat.checkpoint_path)
 	var missing_session := SoloLiveMapSession.open_pending(EXP,MANIFEST,ID,"player")
