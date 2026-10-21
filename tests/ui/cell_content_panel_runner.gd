@@ -9,7 +9,7 @@ func check(ok:bool,label:String)->void:
 
 func _initialize()->void:
 	var panel := CellContentPanel.new()
-	root.add_child.call_deferred(panel)
+	root.add_child(panel)
 	call_deferred("_test",panel)
 
 func _test(panel:CellContentPanel)->void:
