@@ -409,7 +409,8 @@ func _open_solo_map_gate() -> void:
 	for child in popup_actions.get_children():
 		popup_actions.remove_child(child)
 		child.queue_free()
-	var gate: Dictionary = SoloExpeditionLaunchGate.inspect(ExpeditionSaveService.DEFAULT_PATH,SoloCombatSessionManifest.PATH,"",player_character.character_id)
+	var identity := SoloTownExpeditionBridge.expedition_id_for_player(player_character.character_id)
+	var gate: Dictionary = SoloExpeditionLaunchGate.inspect(ExpeditionSaveService.DEFAULT_PATH,SoloCombatSessionManifest.PATH,identity,player_character.character_id)
 	var state := String(gate.get("state","blocked"))
 	match state:
 		"new_expedition_required":
