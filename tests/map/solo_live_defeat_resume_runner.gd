@@ -21,6 +21,14 @@ func wipe(path: String) -> void:
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
+func write_text(path: String, value: String) -> bool:
+	var file := FileAccess.open(path,FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(value)
+	file.close()
+	return true
+
 func _initialize() -> void:
 	_run()
 	print("LIVE_DEFEAT_RESUME_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=",failures)
@@ -145,6 +153,16 @@ func _run() -> void:
 	if not bool(durable.get("ok",false)):
 		print("SECOND_DEFEAT_STAGE_REASON=",durable.get("reason","unknown"),":",durable.get("detail",""))
 		return
+	# A corrupt terminal must never be interpreted as a valid victory or
+	# cause a second world write. Restore it to simulate recovered storage.
+	var intact_terminal := FileAccess.get_file_as_string(second_combat.terminal_path)
+	var staged_revision := String(ExpeditionSaveService._read_payload_envelope(EXP).get("sha256",""))
+	check(write_text(second_combat.terminal_path,"{corrupt terminal"),"damaged_terminal_written")
+	var damaged_gate := SoloExpeditionLaunchGate.inspect(EXP,MANIFEST,ID,PLAYER)
+	check(not bool(damaged_gate.get("ok",false)) and String(damaged_gate.get("state",""))=="manual_reconciliation_required","corrupt_terminal_fail_closed")
+	check(FileAccess.file_exists(MANIFEST),"corrupt_terminal_keeps_manifest")
+	check(String(ExpeditionSaveService._read_payload_envelope(EXP).get("sha256",""))==staged_revision,"corrupt_terminal_cannot_publish")
+	check(write_text(second_combat.terminal_path,intact_terminal),"repaired_terminal_restored")
 	var crash_gap := SoloExpeditionLaunchGate.inspect(EXP,MANIFEST,ID,PLAYER)
 	check(bool(crash_gap.get("ok",false)) and String(crash_gap.get("state",""))=="ready_after_recovery","restart_publishes_durable_defeat")
 	check(not FileAccess.file_exists(MANIFEST),"restart_clears_pending_manifest")
