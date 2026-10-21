@@ -17,6 +17,8 @@ func _ready() -> void:
 	var id := SoloTownExpeditionBridge.expedition_id_for_player(PLAYER)
 	var opened := SoloLiveMapSession.open(SAVE,MANIFEST,id,PLAYER)
 	_build_view()
+	# Fail closed until a verified normal session is available.
+	return_button.disabled = true
 	if not bool(opened.get("ok",false)) and String(opened.get("state","")) == "resume_combat_checkpoint":
 		opened = SoloLiveMapSession.open_pending(SAVE,MANIFEST,id,PLAYER)
 		if bool(opened.get("ok",false)):
@@ -27,7 +29,7 @@ func _ready() -> void:
 				return
 			live_combat = resumed["combat"]
 			round_button.visible = true
-			return_button.disabled = true
+			round_button.text = "Подтвердить результат боя" if live_combat.battle["simulator"].controller.combat_finished() else "Следующий раунд"
 			_refresh()
 			_set_status("Восстановлен бой, завершён раунд "+str(resumed.get("round",0))+".")
 			return
@@ -35,6 +37,7 @@ func _ready() -> void:
 		_set_status("Экспедиция недоступна: "+String(opened.get("reason","unknown")))
 		return
 	session = opened["session"]
+	return_button.disabled = false
 	_refresh()
 
 func _build_view() -> void:
@@ -96,12 +99,12 @@ func _refresh() -> void:
 				btn.text = "·"
 			else:
 				btn.text = " "
-			btn.disabled = live_combat != null or HexGrid.distance(session.expedition.player_position,pos) != 1
+			btn.disabled = live_combat != null or FileAccess.file_exists(MANIFEST) or HexGrid.distance(session.expedition.player_position,pos) != 1
 			btn.pressed.connect(_move.bind(pos))
 			tile_container.add_child(btn)
 
 func _move(target: Vector2i) -> void:
-	if session == null:
+	if session == null or live_combat != null or FileAccess.file_exists(MANIFEST):
 		return
 	var moved := session.move_one_step(target)
 	if not bool(moved.get("ok",false)):
@@ -118,6 +121,7 @@ func _start_combat(cell: Vector2i) -> void:
 		_set_status("Бой заблокирован: "+String(result.get("reason","unknown")))
 		return
 	live_combat=result["combat"]
+	round_button.text="Следующий раунд"
 	round_button.visible=true
 	return_button.disabled=true
 	_refresh()
@@ -129,7 +133,7 @@ func _play_combat_round() -> void:
 	var step := live_combat.play_round()
 	if not bool(step.get("ok",false)):
 		round_button.disabled=true
-		_set_status("Бой остановлен: "+String(step.get("state",step.get("reason","unknown")))+". Продолжение через checkpoint ещё требует интерфейса восстановления.")
+		_set_status("Бой приостановлен: "+String(step.get("reason",step.get("state","unknown")))+". Сохранения не удалены; дальнейшие действия заблокированы.")
 		return
 	if String(step.get("state","")) == "victory":
 		# Publish recovery writes new canonical owners. Never keep the
@@ -142,6 +146,7 @@ func _play_combat_round() -> void:
 		session = reopened["session"]
 		live_combat=null
 		round_button.visible=false
+		round_button.text="Следующий раунд"
 		return_button.disabled=false
 		_refresh()
 		_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
@@ -149,7 +154,7 @@ func _play_combat_round() -> void:
 		_set_status("Раунд "+str(step.get("round",0))+" завершён и сохранён.")
 
 func _return_town() -> void:
-	if session == null or live_combat != null:
+	if session == null or live_combat != null or FileAccess.file_exists(MANIFEST):
 		return
 	var result := session.return_to_town(TOWN)
 	if not bool(result.get("ok",false)):
