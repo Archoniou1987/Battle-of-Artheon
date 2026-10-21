@@ -78,6 +78,15 @@ func _signature(sim: GroupCombatSimulator, encounter_key: String, fingerprint: S
 	var normalized: Variant = JSON.parse_string(JSON.stringify(captured["payload"]))
 	return JSON.stringify(normalized)
 
+## Godot JSON numbers are restored from disk as float variants. Direct
+## Dictionary equality compares runtime representation; the checkpoint
+## contract compares the canonical serialized data and its gameplay meaning.
+## A separate whole-simulator signature check runs on every resumed round.
+func _same_json_state(before: Variant, after: Variant) -> bool:
+	var normalized_before: Variant = JSON.parse_string(JSON.stringify(before))
+	var normalized_after: Variant = JSON.parse_string(JSON.stringify(after))
+	return JSON.stringify(normalized_before) == JSON.stringify(normalized_after)
+
 func _read_original() -> String:
 	return FileAccess.get_file_as_string(PATH) if FileAccess.file_exists(PATH) else ""
 
@@ -172,10 +181,10 @@ func _execute() -> void:
 	_check(resumed.state.round_number == 3, "resume_starts_at_next_round")
 	_check(resumed.engine.combat_rng.state == frozen_rng_state and resumed.engine._next_effect_stack_id == frozen_effect_counter, "restore_rng_and_eff_sequence")
 	_check(resumed.state.next_event_id == frozen_event_id, "restore_next_canonical_event_id")
-	_check(resumed.attack_pipeline.ability_scheduler.cast_round_by_combatant == frozen_casts and resumed.attack_pipeline.ability_scheduler.cooldowns_by_combatant == frozen_cooldowns, "restore_cooldowns_and_abi_round_budget")
+	_check(_same_json_state(resumed.attack_pipeline.ability_scheduler.cast_round_by_combatant, frozen_casts) and _same_json_state(resumed.attack_pipeline.ability_scheduler.cooldowns_by_combatant, frozen_cooldowns), "restore_cooldowns_and_abi_round_budget")
 	for raw_id in frozen_effects:
 		var restored_fighter := resumed.state.get_combatant(String(raw_id))
-		_check(restored_fighter.active_effects == frozen_effects[raw_id], "restore_real_effects_" + String(raw_id))
+		_check(_same_json_state(restored_fighter.active_effects, frozen_effects[raw_id]), "restore_real_effects_" + String(raw_id))
 		var tempo_snapshot: Dictionary = frozen_tempo[raw_id]
 		_check(is_equal_approx(restored_fighter.tempo,float(tempo_snapshot["tempo"])) and restored_fighter.tempo_stun_round == int(tempo_snapshot["stun"]) and restored_fighter.tempo_immunity_until_round == int(tempo_snapshot["immune"]), "restore_tempo_debt_stun_immunity_" + String(raw_id))
 	_check(_signature(baseline,ENCOUNTER,fingerprint) == _signature(resumed,ENCOUNTER,fingerprint), "full_snapshot_exactly_restored")
