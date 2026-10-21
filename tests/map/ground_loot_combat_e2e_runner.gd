@@ -97,6 +97,12 @@ func test_chain() -> void:
 	var regenerated := world()
 	var reconciled := MapWorldCommitService.reconcile_map(continued,regenerated["map"],regenerated["bridge"])
 	check(bool(reconciled.get("ok",false)) and int(reconciled.get("deaths_applied",-1))==2,"defeated_npcs_do_not_respawn")
+	# The reconstructed world starts the player outside the reward cell;
+	# manual pickup only becomes available after walking onto that cell.
+	var approach := regenerated["map"].move_entity("PLAYER",CELL)
+	check(bool(approach.get("ok",false)),"player_walks_to_ground_items")
+	if not bool(approach.get("ok",false)):
+		return
 	var pickup := GroundLootService.new()
 	var started := pickup.begin_pickup(continued,regenerated["map"],carried,repo,"GROUND_SWORD_01",100010)
 	check(bool(started.get("ok",false)),"first_pickup_started")
