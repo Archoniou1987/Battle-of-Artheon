@@ -14,6 +14,8 @@ var checkpoint_path := ""
 var checkpoint_encounter_key := ""
 var checkpoint_roster_fingerprint := ""
 var round_in_progress := false
+## Only this field certifies a fully completed run_round() boundary.
+var last_completed_round := 0
 
 func enable_checkpoint(encounter_key: String, roster_fingerprint: String, path: String = GroupCombatCheckpointService.DEFAULT_PATH) -> Dictionary:
 	if not GroupCombatCheckpointService._valid_identity(encounter_key,roster_fingerprint) or not GroupCombatCheckpointService._valid_path(path):
@@ -83,6 +85,7 @@ func run_round() -> Dictionary:
 	orchestrator.resolve_locked_actions(round)
 	var summary:=orchestrator.end_round()
 	var sync:=controller.after_end_round(summary)
+	last_completed_round = state.round_number
 	round_in_progress = false
 	var result: Dictionary = {"ok":true,"round":state.round_number,"summary":summary,"sync":sync,"battle_outcome":"winner:"+controller.winning_team() if controller.combat_finished() and not controller.winning_team().is_empty() else ("draw" if controller.combat_finished() else "ongoing")}
 	if not checkpoint_path.is_empty():
