@@ -55,7 +55,7 @@ static func capture(simulator, encounter_key: String, roster_fingerprint: String
 		return {"ok":false,"reason":"missing_combat_contract"}
 	if state.round_number < 1 or state.round_number > MAX_ROUNDS or state.combatants.is_empty() or state.combatants.size() > MAX_COMBATANTS:
 		return {"ok":false,"reason":"invalid_checkpoint_round_or_roster"}
-	if bool(simulator.round_in_progress) or not state.pending_events.is_empty() or not orchestrator.deferred_events.is_empty() or not orchestrator.movement_requests.is_empty() or not simulator.controller.engagement.pending_requests.is_empty():
+	if bool(simulator.round_in_progress) or int(simulator.last_completed_round) != state.round_number or not state.pending_events.is_empty() or not orchestrator.deferred_events.is_empty() or not orchestrator.movement_requests.is_empty() or not simulator.controller.engagement.pending_requests.is_empty():
 		return {"ok":false,"reason":"round_not_fully_resolved"}
 	if orchestrator.zone_state != null:
 		return {"ok":false,"reason":"spatial_checkpoint_not_supported_v1"}
@@ -274,6 +274,7 @@ static func _restore_simulator(payload: Dictionary):
 		persistent.append(Dictionary(raw_action).duplicate(true))
 	simulator.orchestrator.persistent_actions = persistent
 	simulator.max_rounds = int(payload["max_rounds"])
+	simulator.last_completed_round = state.round_number
 	return simulator
 
 static func _whole(value: Variant, minimum: int = 0, maximum: int = 2147483647) -> bool:
