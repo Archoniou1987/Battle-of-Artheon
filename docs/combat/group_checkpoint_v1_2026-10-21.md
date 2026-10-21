@@ -32,7 +32,7 @@ This contract saves **one active world/group combat encounter** after a complete
 - `tests/combat/group_combat_checkpoint_runner.gd`: two real 1-vs-2 NPC map encounters, 3 rounds then process-style reload using a fresh map roster, 6 more rounds. Every post-reload round is compared against an uninterrupted matching CombatEngine stream, including real ABI003 / ABI004, EFF003 / EFF004, RNG, event ancestry, active opponents, cooldown and effect sequence. Corruption, wrong encounter and wrong roster signature cannot silently restart a fight.
 - `tests/combat/group_combat_terminal_checkpoint_runner.gd`: real end-of-round combat victory, terminal checkpoint retained on disk, restored terminal state refuses further combat, explicit acknowledgement clears it, checks schema version mismatch and rejects an in-progress-round checkpoint.
 
-CI is **pending** for this update until the single manual `ABI Branch Tests` run completes. Do not call these tests passing before then.
+**Verified:** ABI Branch Tests run [#39582768207](https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/39582768207) completed successfully on commit `d4d43dae0359575772665d72e2c9333ad5dd5500` (2026-10-21). Newer atomic world snapshot tests are a separate pending CI package.
 
 ## Compatibility notes
 
