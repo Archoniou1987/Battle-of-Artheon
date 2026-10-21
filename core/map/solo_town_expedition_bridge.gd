@@ -5,7 +5,7 @@ extends RefCounted
 ## of the same player's inventory. This bridge only seeds an expedition
 ## once and returns the canonical saved owners on subsequent launches.
 const ORIGIN_KEY := "solo_town_origin_v1"
-const START_CELL_KEY := "solo_start_cell_v1"
+const START_CELL_KEY := ExpeditionState.SOLO_START_CELL_KEY
 
 static func expedition_id_for_player(player_id: String) -> String:
 	if not MapWorldCommitService._valid_id(player_id):
