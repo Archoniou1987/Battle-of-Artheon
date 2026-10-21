@@ -16,10 +16,34 @@ static func open(path: String, manifest: String, expedition_id: String, player_i
 	var verified := SoloTownExpeditionBridge.open_existing(path,expedition_id,player_id,manifest)
 	if not bool(verified.get("ok",false)):
 		return verified
+	return _mount(path,manifest,verified["expedition"],verified["character"],verified["repository"])
+
+## Mount an already independently validated expedition snapshot for
+## checkpoint recovery. Never grant movement while a manifest exists.
+static func open_pending(path: String, manifest: String, expedition_id: String, player_id: String) -> Dictionary:
+	var pending := SoloCombatSessionManifest.read(manifest)
+	if not bool(pending.get("ok",false)):
+		return pending
+	var data: Dictionary = pending["data"]
+	if String(data.get("expedition_path","")) != path or String(data.get("expedition_id","")) != expedition_id or String(data.get("player_id","")) != player_id:
+		return {"ok":false,"reason":"pending_owner_mismatch"}
+	if FileAccess.file_exists(String(data["terminal_path"])):
+		return {"ok":false,"reason":"pending_terminal_requires_recovery"}
+	var verified := ExpeditionSaveService.read(path,expedition_id,player_id)
+	if not bool(verified.get("ok",false)):
+		return verified
+	if not verified["expedition"].is_active():
+		return {"ok":false,"reason":"pending_world_closed"}
+	var base := ExpeditionSaveService._read_payload_envelope(path)
+	if not bool(base.get("ok",false)) or String(base.get("sha256","")) != String(data["base_sha256"]):
+		return {"ok":false,"reason":"pending_world_revision_changed"}
+	return _mount(path,manifest,verified["expedition"],verified["character"],verified["repository"])
+
+static func _mount(path: String, manifest: String, saved_expedition: ExpeditionState, saved_character: CharacterState, saved_repository: ItemRepository) -> Dictionary:
 	var session := SoloLiveMapSession.new()
-	session.expedition = verified["expedition"]
-	session.character = verified["character"]
-	session.repository = verified["repository"]
+	session.expedition = saved_expedition
+	session.character = saved_character
+	session.repository = saved_repository
 	session.save_path = path
 	session.manifest_path = manifest
 	session.map = TacticalMapState.new(WIDTH,HEIGHT)
