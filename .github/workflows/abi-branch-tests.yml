@@ -44,8 +44,21 @@ jobs:
       - name: Validate Solo expedition save before combat and after multiple encounters
         run: bash tools/run_godot_check.sh tests/map/expedition_save_runner.gd
 
-      - name: Resume Solo live battle from exact checkpoint after simulated restart
-        run: bash tools/run_godot_check.sh tests/map/solo_live_combat_resume_runner.gd
+      - name: Resume Solo NPC combat and settle terminal checkpoints without duplicate rewards
+        run: |
+          status=0
+          for script in \
+            tests/map/solo_live_combat_resume_runner.gd \
+            tests/map/solo_live_terminal_resume_runner.gd
+          do
+            echo "::group::Solo resume: $script"
+            if ! bash tools/run_godot_check.sh "$script"; then
+              echo "::error::Solo resume regression: $script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
 
       - name: Start real Solo NPC combat and persist its first engine round
         run: bash tools/run_godot_check.sh tests/map/solo_live_npc_combat_runner.gd
