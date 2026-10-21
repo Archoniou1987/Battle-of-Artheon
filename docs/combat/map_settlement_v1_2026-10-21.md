@@ -32,8 +32,11 @@ checkpoint and `ExpeditionState`, exposed through `HexMapTurnService`.
 1. Verify envelope integrity, identity of expedition, character, NPC cohort,
    saved positions, rolled reward instances and ownership.
 2. Reject missing/moved/coincident NPC IDs *before* any world mutation.
-3. Restore only missing reward item instance definitions, without overwriting
-   current item durability, ownership, upgrades or inventory data.
+3. Restore only missing instance definitions for **still-unclaimed** rewards,
+   without overwriting current item durability, ownership, upgrades or
+   inventory data. Never recreate items already claimed or expired: if an
+   expedition already has the immutable settlement marker, its current
+   outstanding loot pool (not the original journal) controls what can return.
 4. Resolve living NPC deaths through `MapNpcBridge.resolve_death`; if they are
    already dead, do not attempt to kill them again.
 5. Persist the loot pool in `ExpeditionState.world_state.encounter_loot_pools`
@@ -99,7 +102,7 @@ Existing non-persistent `resolve_group_victory` remains untouched.
 terminal battle; staging before and after victory; no world mutation before
 staging; crash reconstruction before commit; restoring missing item instances;
 strict one-time loot ownership; replay after expedition snapshot reload with
-respawned NPC map; replay after one claimed item; rejected wrong
+respawned NPC map; replay after one claimed item and after the remaining pool expires; rejected wrong
 encounter/expedition/player and corrupted receipt. It runs near the start
 of the manually triggered `ABI Branch Tests` workflow.
 
