@@ -71,6 +71,7 @@ func _initialize() -> void:
 	if bool(broken_session.get("ok",false)):
 		var broken := SoloLiveNpcCombat.resume(broken_session["session"])
 		check(not bool(broken.get("ok",false)) and String(broken.get("reason",""))=="resume_checkpoint_rejected","corrupt_checkpoint_fails_closed")
+		check(String(broken.get("detail",""))=="checkpoint_invalid_envelope","invalid_outer_json_reports_specific_reason")
 		check(broken_session["session"].map.entity_positions.get("player",Vector2i(-1,-1))==Vector2i(6,5),"rejected_resume_restores_in_memory_player_position")
 	check(FileAccess.file_exists(MANIFEST),"corrupt_checkpoint_keeps_manifest")
 	# The outer file can be valid JSON with a matching checksum, yet the
@@ -88,6 +89,7 @@ func _initialize() -> void:
 	if bool(nested_session.get("ok",false)):
 		var nested := SoloLiveNpcCombat.resume(nested_session["session"])
 		check(not bool(nested.get("ok",false)) and String(nested.get("reason",""))=="resume_checkpoint_rejected","nested_corrupt_checkpoint_fails_closed")
+		check(String(nested.get("detail",""))=="checkpoint_invalid_payload","invalid_nested_json_reports_specific_reason")
 		check(nested_session["session"].map.entity_positions.get("player",Vector2i(-1,-1))==Vector2i(6,5),"nested_corrupt_does_not_move_player")
 	check(FileAccess.file_exists(MANIFEST),"nested_corrupt_keeps_manifest")
 	check(not FileAccess.file_exists(combat.receipt_path) and not FileAccess.file_exists(combat.terminal_path),"invalid_resume_never_mints_rewards")
