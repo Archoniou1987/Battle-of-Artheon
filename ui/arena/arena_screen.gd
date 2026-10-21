@@ -1141,7 +1141,13 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 	var result: Dictionary = combat_session.play_round(targets, blocks)
 	if not bool(result.get("ok", false)):
 		_prepend_combat_log("Команда отклонена: %s" % String(result.get("reason", "unknown")))
-		set_combat_ready(true)
+		# A rejected command must never re-enable End Turn after defeat,
+		# victory or a zero-HP lockout. Re-enable only a playable duel.
+		set_combat_ready(
+			combat_session.orchestrator.battle_outcome() == "ongoing"
+			and combat_session.fighter(true).hp > 0
+			and not combat_session.fighter(true).is_death_finalized()
+		)
 		return
 	# A successful round has already finalized HP and mana. Keep persistent
 	# character resources in step with the live Arena combatant before the
