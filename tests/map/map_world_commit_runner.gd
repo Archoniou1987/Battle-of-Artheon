@@ -114,6 +114,23 @@ func _run() -> void:
 	_check(not bool(MapWorldCommitService.read(SNAPSHOT,"different_encounter",EXPEDITION_ID,"PLAYER").get("ok",false)),"wrong_encounter_cannot_reuse_snapshot")
 	_check(not bool(MapWorldCommitService.read(SNAPSHOT,ENCOUNTER,EXPEDITION_ID,"OTHER").get("ok",false)),"wrong_character_cannot_reuse_snapshot")
 
+	# A truncated/modified world snapshot must never authorize cleanup,
+	# even if both old combat journals are still perfectly valid.
+	var unmodified_world := FileAccess.get_file_as_string(SNAPSHOT)
+	var before_ack_bad: Variant = JSON.parse_string(unmodified_world)
+	if before_ack_bad is Dictionary:
+		before_ack_bad["sha256"] = "corrupted"
+		var bad_writer := FileAccess.open(SNAPSHOT,FileAccess.WRITE)
+		if bad_writer != null:
+			bad_writer.store_string(JSON.stringify(before_ack_bad))
+			bad_writer.close()
+		_check(not bool(MapWorldCommitService.acknowledge(SNAPSHOT,RECEIPT,CHECKPOINT,ENCOUNTER,EXPEDITION_ID,"PLAYER").get("ok",false)),"corrupted_bundle_cannot_acknowledge")
+		_check(FileAccess.file_exists(RECEIPT) and FileAccess.file_exists(CHECKPOINT),"failed_ack_preserves_source_journals")
+		var restored_writer := FileAccess.open(SNAPSHOT,FileAccess.WRITE)
+		if restored_writer != null:
+			restored_writer.store_string(unmodified_world)
+			restored_writer.close()
+
 	# Acknowledge only after a FULL independent disk read.
 	var ack := MapWorldCommitService.acknowledge(SNAPSHOT,RECEIPT,CHECKPOINT,ENCOUNTER,EXPEDITION_ID,"PLAYER")
 	_check(bool(ack.get("ok",false)),"verified_world_allows_ack")
@@ -135,6 +152,12 @@ func _run() -> void:
 	var persisted_repo: ItemRepository = restored["repository"]
 	_check(MapWorldCommitService.is_defeated_spawn(persisted_expedition,"PERSIST_BANDIT_01") and MapWorldCommitService.is_defeated_spawn(persisted_expedition,"PERSIST_BANDIT_02"),"spawn_guard_remembers_completed_cohort")
 	_check(not MapWorldCommitService.is_defeated_spawn(persisted_expedition,"OTHER_NPC"),"unrelated_npc_still_spawnable")
+	# A wrong NPC location must reject ALL mutations, not half-kill a group.
+	new_world["map"].entity_positions["PERSIST_BANDIT_02"] = Vector2i(6,5)
+	var wrong_location := MapWorldCommitService.reconcile_map(persisted_expedition,new_world["map"],new_world["bridge"])
+	_check(not bool(wrong_location.get("ok",false)),"relocated_npc_rejected")
+	_check(new_world["npcs"][0].is_alive() and new_world["npcs"][1].is_alive(),"failed_reconcile_never_partially_kills")
+	new_world["map"].entity_positions["PERSIST_BANDIT_02"] = CELL
 	var recovered := MapWorldCommitService.reconcile_map(persisted_expedition,new_world["map"],new_world["bridge"])
 	_check(bool(recovered.get("ok",false)) and int(recovered.get("deaths_applied",-1)) == 2,"regenerated_npcs_killed_from_snapshot")
 	_check(new_world["bridge"].npc_at(new_world["map"],CELL).is_empty(),"dead_npcs_never_retrigger")
@@ -179,6 +202,26 @@ func _run() -> void:
 			repaired.store_string(original)
 			repaired.close()
 	_check(bool(MapWorldCommitService.read(SNAPSHOT,ENCOUNTER,EXPEDITION_ID,"PLAYER").get("ok",false)),"valid_snapshot_restored")
+	# Recomputing an envelope checksum must not bypass structure checks:
+	# a malformed receipt roster is rejected before any map is loaded.
+	var rewritten: Variant = JSON.parse_string(original)
+	if rewritten is Dictionary:
+		var altered_payload: Variant = JSON.parse_string(String(rewritten["payload_json"]))
+		if altered_payload is Dictionary:
+			altered_payload["receipt"]["npc_ids"] = "not_an_array"
+			var new_raw := JSON.stringify(altered_payload)
+			rewritten["payload_json"] = new_raw
+			rewritten["sha256"] = new_raw.sha256_text()
+			var mutation := FileAccess.open(SNAPSHOT,FileAccess.WRITE)
+			if mutation != null:
+				mutation.store_string(JSON.stringify(rewritten))
+				mutation.close()
+			_check(not bool(MapWorldCommitService.read(SNAPSHOT,ENCOUNTER,EXPEDITION_ID,"PLAYER").get("ok",false)),"rehashed_malformed_roster_rejected")
+			var rollback := FileAccess.open(SNAPSHOT,FileAccess.WRITE)
+			if rollback != null:
+				rollback.store_string(original)
+				rollback.close()
+	_check(bool(MapWorldCommitService.read(SNAPSHOT,ENCOUNTER,EXPEDITION_ID,"PLAYER").get("ok",false)),"valid_snapshot_survives_negative_tests")
 	_delete(SNAPSHOT)
 	GroupCombatCheckpointService.clear(CHECKPOINT)
 	_delete(RECEIPT)
