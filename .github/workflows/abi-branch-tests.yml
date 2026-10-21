@@ -44,6 +44,9 @@ jobs:
       - name: Validate Solo expedition save before combat and after multiple encounters
         run: bash tools/run_godot_check.sh tests/map/expedition_save_runner.gd
 
+      - name: Verify two real Solo battles share one expedition save and unique ground loot
+        run: bash tools/run_godot_check.sh tests/map/expedition_two_real_fights_runner.gd
+
       - name: Validate atomic world snapshot and safe journal acknowledgement
         run: bash tools/run_godot_check.sh tests/map/map_world_commit_runner.gd
 
