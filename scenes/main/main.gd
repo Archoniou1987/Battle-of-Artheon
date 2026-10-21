@@ -463,11 +463,14 @@ func _open_solo_map_gate() -> void:
 	var state := String(gate.get("state","blocked"))
 	match state:
 		"new_expedition_required":
-			popup_description.text = "Экспедиция ещё не начата. Создание игрового мира будет подключено следующим этапом."
+			popup_description.text = "Создать экспедицию с текущими предметами и перейти на карту."
+			_add_solo_map_button("Начать экспедицию",true)
+
 		"resume_combat_checkpoint":
 			popup_description.text = "Незавершённый бой. Продолжение с checkpoint требуется до открытия карты."
 		"ready", "ready_after_recovery":
-			popup_description.text = "Сохранение экспедиции проверено. Игровая сцена карты ещё не подключена; запуск заблокирован."
+			popup_description.text = "Продолжить сохранённую экспедицию с последней клетки."
+			_add_solo_map_button("Продолжить экспедицию",false)
 		"expedition_closed":
 			popup_description.text = "Экспедиция завершена. Перенос сохранённого персонажа в деревню требует подключения единого городского сохранения; старый инвентарь не перезаписывается."
 		_:
@@ -475,6 +478,36 @@ func _open_solo_map_gate() -> void:
 	popup.visible = true
 	popup.reset_size()
 	popup.position = (size - popup.size) * 0.5
+
+func _add_solo_map_button(title: String, create: bool) -> void:
+	var button := Button.new()
+	button.text = title
+	button.pressed.connect(_enter_solo_map.bind(create))
+	popup_actions.add_child(button)
+
+func _enter_solo_map(create: bool) -> void:
+	if _town_storage_blocked or player_character.in_combat:
+		return
+	var id := SoloTownExpeditionBridge.expedition_id_for_player(player_character.character_id)
+	if create:
+		# City must be saved first, otherwise the one-time fingerprint
+		# could represent progress never persisted to the canonical town.
+		_save_canonical_town()
+		if _town_storage_blocked:
+			return
+		var seed := randi_range(1,999999)
+		var started := SoloTownExpeditionBridge.create_from_town(ExpeditionSaveService.DEFAULT_PATH,id,seed,Vector2i(5,5),player_character,item_repository,SoloCombatSessionManifest.PATH)
+		if not bool(started.get("ok",false)):
+			popup_description.text = "Экспедиция не создана: "+String(started.get("reason","unknown"))
+			return
+	else:
+		var verified := SoloTownExpeditionBridge.open_existing(ExpeditionSaveService.DEFAULT_PATH,id,player_character.character_id,SoloCombatSessionManifest.PATH)
+		if not bool(verified.get("ok",false)):
+			popup_description.text = "Экспедиция не открыта: "+String(verified.get("reason","unknown"))
+			return
+	var change_error := get_tree().change_scene_to_file("res://scenes/main/solo_live_map.tscn")
+	if change_error != OK:
+		popup_description.text = "Не удалось открыть игровую карту."
 
 func _add_debug_button(title: String, path: String) -> void:
 	var button := Button.new()
