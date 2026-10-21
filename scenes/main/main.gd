@@ -420,7 +420,7 @@ func _open_solo_map_gate() -> void:
 		"ready", "ready_after_recovery":
 			popup_description.text = "Сохранение экспедиции проверено. Игровая сцена карты ещё не подключена; запуск заблокирован."
 		"expedition_closed":
-			popup_description.text = "Экспедиция завершена. Для продолжения нужна новая экспедиция."
+			popup_description.text = "Экспедиция завершена. Перенос сохранённого персонажа в деревню требует подключения единого городского сохранения; старый инвентарь не перезаписывается."
 		_:
 			popup_description.text = "Вход заблокирован: " + String(gate.get("reason","unknown")) + ". Прогресс не изменён."
 	popup.visible = true
