@@ -112,7 +112,15 @@ func finalize_group_victory_atomic(session: Dictionary, encounter_key: String, e
 	var winner: CombatantState = simulator.state.get_combatant(player.character_id)
 	if winner == null or not player.commit_combat_resources(winner,repository):
 		return {"ok":false,"reason":"combat_resource_commit_failed"}
+	# The authoritative expedition snapshot must include the actual player
+	# hex. Without this, a verified world cannot be mounted after restart.
+	if not map.entity_positions.has(player.character_id):
+		return {"ok":false,"reason":"atomic_player_not_on_map"}
+	var old_position: Vector2i = expedition.player_position
+	expedition.player_position = map.entity_positions[player.character_id]
 	var stored := MapWorldCommitService.commit(session,encounter_key,expedition,map,bridge,player,repository,receipt_path,checkpoint_path,world_snapshot_path)
+	if not bool(stored.get("ok",false)):
+		expedition.player_position = old_position
 	if not bool(stored.get("ok",false)):
 		return {"ok":false,"reason":"atomic_world_commit_failed","detail":String(stored.get("reason","unknown"))}
 	var acknowledgement := MapWorldCommitService.acknowledge(world_snapshot_path,receipt_path,checkpoint_path,encounter_key,expedition.expedition_id,player.character_id)
