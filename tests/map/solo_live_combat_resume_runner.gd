@@ -71,6 +71,7 @@ func _initialize() -> void:
 	if bool(broken_session.get("ok",false)):
 		var broken := SoloLiveNpcCombat.resume(broken_session["session"])
 		check(not bool(broken.get("ok",false)) and String(broken.get("reason",""))=="resume_checkpoint_rejected","corrupt_checkpoint_fails_closed")
+		check(broken_session["session"].map.entity_positions.get("player",Vector2i(-1,-1))==Vector2i(6,5),"rejected_resume_restores_in_memory_player_position")
 	check(FileAccess.file_exists(MANIFEST),"corrupt_checkpoint_keeps_manifest")
 	check(not FileAccess.file_exists(combat.receipt_path) and not FileAccess.file_exists(combat.terminal_path),"invalid_resume_never_mints_rewards")
 	check(String(ExpeditionSaveService._read_payload_envelope(EXP).get("sha256",""))==base_sha,"invalid_resume_does_not_mutate_world")
