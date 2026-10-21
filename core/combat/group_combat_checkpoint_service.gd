@@ -126,7 +126,10 @@ static func _roster_scheduler_entries(source: Dictionary, state: CombatState) ->
 	ids.sort()
 	for id in ids:
 		var value: Variant = source[id]
-		result[id] = value.duplicate(true) if value is Dictionary or value is Array else value
+		if value is Dictionary or value is Array:
+			result[id] = value.duplicate(true)
+		else:
+			result[id] = value
 	return result
 
 static func save(simulator, path: String, encounter_key: String, roster_fingerprint: String) -> Dictionary:
