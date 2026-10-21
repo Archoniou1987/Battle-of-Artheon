@@ -68,7 +68,10 @@ func _signature(sim: GroupCombatSimulator, encounter_key: String, fingerprint: S
 	if not bool(captured.get("ok",false)):
 		_check(false, "signature_capture_" + String(captured.get("reason","")))
 		return ""
-	return JSON.stringify(captured["payload"])
+	# Normalize number representations through the exact JSON serialization
+	# boundary used by the disk codec before comparing both simulations.
+	var normalized: Variant = JSON.parse_string(JSON.stringify(captured["payload"]))
+	return JSON.stringify(normalized)
 
 func _read_original() -> String:
 	return FileAccess.get_file_as_string(PATH) if FileAccess.file_exists(PATH) else ""
