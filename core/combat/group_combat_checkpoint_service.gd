@@ -90,6 +90,7 @@ static func capture(simulator, encounter_key: String, roster_fingerprint: String
 		"engine":{
 			"rng_state":str(simulator.engine.combat_rng.state),
 			"next_effect_stack_id":simulator.engine._next_effect_stack_id,
+			"canonical_effects_sha256":JSON.stringify(simulator.engine.canonical_effects).sha256_text(),
 			"physical_balance":simulator.engine.physical_balance.duplicate(true)
 		},
 		"orchestrator":{
@@ -363,6 +364,10 @@ static func _validate_payload(p: Dictionary, expected_key: String, expected_fing
 			return "checkpoint_invalid_engagement_lock"
 	if not e.get("physical_balance") is Dictionary or not e["physical_balance"].get("hit_by_level_difference") is Dictionary or not e["physical_balance"].get("armour_reduction_curve") is Array:
 		return "checkpoint_invalid_physical_balance"
+	# A newly released EFF catalog must not silently change the remaining
+	# ticks or future casts of an interrupted battle from an older version.
+	if not e.get("canonical_effects_sha256") is String or String(e["canonical_effects_sha256"]) != JSON.stringify(EffectCatalog.load_json()).sha256_text():
+		return "checkpoint_effect_catalog_mismatch"
 	var rng: Variant = e.get("rng_state",null)
 	if not rng is String or rng.length() > 22 or not rng.is_valid_int() or not _whole(e.get("next_effect_stack_id",null),1,2147483647):
 		return "checkpoint_invalid_rng"
