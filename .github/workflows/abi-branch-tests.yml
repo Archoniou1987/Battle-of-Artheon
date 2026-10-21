@@ -44,6 +44,9 @@ jobs:
       - name: Validate Solo expedition save before combat and after multiple encounters
         run: bash tools/run_godot_check.sh tests/map/expedition_save_runner.gd
 
+      - name: Migrate town to canonical save without stale writes and keep Arena resource persistence
+        run: bash tools/run_godot_check.sh tests/map/solo_town_canonical_migration_runner.gd
+
       - name: Adopt closed Solo expedition into single atomic town save without duplicating loot
         run: bash tools/run_godot_check.sh tests/map/solo_town_save_adoption_runner.gd
 
