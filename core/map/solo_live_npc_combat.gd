@@ -151,7 +151,10 @@ func play_round() -> Dictionary:
 	if not simulator.controller.combat_finished():
 		return {"ok":true,"state":"ongoing","round":simulator.state.round_number}
 	if simulator.controller.winning_team() != "players":
-		var staged := SoloCombatDefeatService.stage(owner,battle,encounter_key,checkpoint_path,terminal_path)
+		var manifest_record := SoloCombatSessionManifest.read(owner.manifest_path)
+		if not bool(manifest_record.get("ok",false)):
+			return {"ok":false,"state":"defeat_pending_resolution","reason":"defeat_manifest_invalid","detail":String(manifest_record.get("reason","unknown"))}
+		var staged := SoloCombatDefeatService.stage(owner,battle,encounter_key,checkpoint_path,terminal_path,manifest_record["data"])
 		if not bool(staged.get("ok",false)):
 			return {"ok":false,"state":"defeat_pending_resolution","reason":"defeat_staging_failed","detail":String(staged.get("reason","unknown"))}
 		var published := SoloCombatSessionManifest.recover_on_launch(owner.manifest_path)
