@@ -151,6 +151,8 @@ func _run() -> void:
 	_check(bool(after_claim.get("ok",false)) and after_claim["character"].inventory.owns("PERSIST_DAGGER_01"),"claim_survives_full_process_restart")
 	_check(after_claim["expedition"].restore_loot_pool(ENCOUNTER).available_for("PLAYER") == ["PERSIST_DAGGER_02"],"claim_not_duplicated")
 	_check(after_claim["repository"].size() == 2,"claim_retains_original_item_instances")
+	var before_expiry_expedition := ExpeditionState.from_dict(after_claim["expedition"].to_dict())
+	var before_expiry_repository := ItemRepository.from_dict(after_claim["repository"].to_dict())
 
 	# The remaining coin expires (15-minute TTL), and the permanent marker
 	# survives even when the pool disappears from the expedition entirely.
@@ -160,7 +162,7 @@ func _run() -> void:
 	var after_expiry := MapWorldCommitService.read(SNAPSHOT,ENCOUNTER,EXPEDITION_ID,"PLAYER")
 	_check(bool(after_expiry.get("ok",false)) and after_expiry["expedition"].restore_loot_pool(ENCOUNTER) == null,"expired_reward_not_recreated")
 	_check(after_expiry["character"].inventory.owns("PERSIST_DAGGER_01") and after_expiry["repository"].size() == 1,"claimed_item_survives_expired_coin")
-	_check(not bool(MapWorldCommitService.save_progress(SNAPSHOT,ENCOUNTER,after_claim["expedition"],after_claim["character"],after_claim["repository"]).get("ok",false)),"expired_pool_cannot_return")
+	_check(not bool(MapWorldCommitService.save_progress(SNAPSHOT,ENCOUNTER,before_expiry_expedition,after_claim["character"],before_expiry_repository).get("ok",false)),"expired_pool_cannot_return")
 
 	# An altered snapshot is rejected; it never silently creates a new world.
 	var original := FileAccess.get_file_as_string(SNAPSHOT)
