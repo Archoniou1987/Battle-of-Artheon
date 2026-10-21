@@ -22,6 +22,7 @@ func _initialize() -> void:
 	var city_repo := ItemRepository.new()
 	check(city_repo.add_item({"instance_id":"OLD_BLADE","weight":1.0}),"town_item")
 	check(city.inventory.add_instance("OLD_BLADE",city_repo),"town_owns_item")
+	check(bool(SoloTownSaveService.save(TOWN,city,city_repo).get("ok",false)),"city_snapshot_exists_before_departure")
 	var created := SoloTownExpeditionBridge.create_from_town(EXPEDITION,ID,77,Vector2i(2,2),city,city_repo,MANIFEST)
 	check(bool(created.get("ok",false)),"expedition_started")
 	if not bool(created.get("ok",false)):
@@ -38,6 +39,8 @@ func _initialize() -> void:
 	check(bool(ExpeditionSaveService.save(EXPEDITION,expedition,hero,repo).get("ok",false)),"expedition_saved")
 	check(not bool(SoloTownSaveService.adopt_closed_expedition(TOWN,EXPEDITION,ID,"player",MANIFEST).get("ok",false)),"not_closed_cannot_adopt")
 	check(bool(SoloTownReturnService.close_for_town(EXPEDITION,ID,"player",MANIFEST).get("ok",false)),"expedition_closed")
+	var city_before: Dictionary = SoloTownSaveService.read(TOWN,"player")
+	check(bool(city_before.get("ok",false)) and city_before["repository"].size()==1,"city_unchanged_during_expedition")
 	var adopted := SoloTownSaveService.adopt_closed_expedition(TOWN,EXPEDITION,ID,"player",MANIFEST)
 	check(bool(adopted.get("ok",false)) and not bool(adopted.get("already_adopted",true)),"first_adoption")
 	var previous := SoloTownSaveService.read(TOWN,"player")
