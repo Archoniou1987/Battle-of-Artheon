@@ -60,6 +60,7 @@ func _run() -> void:
 	_check(victory_session.state.round_number == 1, "victory_commits_exactly_one_round")
 	_check(victory_session.orchestrator.battle_outcome() == "winner:player", "real_player_victory")
 	_check(npc.is_death_finalized(), "victory_finalizes_npc_death")
+	_check(bool(CombatDiagnostics.round_trace(victory_session.state, 1).get("valid_event_lineage", false)), "victory_engine_event_lineage")
 	_check(arena.round_button.disabled, "victory_disables_end_turn")
 	var victory_hp := player.visible_hp()
 	var victory_mana := player.mana
@@ -112,6 +113,7 @@ func _run() -> void:
 	_check(second_player.is_death_finalized() and second_player.visible_hp() == 0, "defeat_finalizes_player_death")
 	_check(second_arena.combat_session.orchestrator.battle_outcome() == "winner:enemy", "real_npc_victory")
 	_check(restored.current_hp == 0, "defeat_writes_zero_hp_back")
+	_check(bool(CombatDiagnostics.round_trace(second_arena.combat_session.state, 1).get("valid_event_lineage", false)), "defeat_engine_event_lineage")
 	_check(second_arena.round_button.disabled, "defeat_disables_end_turn")
 	_check((second_arena.hp_overlays["player"] as Label).text == "0 / %d" % second_player.max_hp, "defeat_overlay_shows_zero")
 	_check(second_arena.log_view.text.contains("Бой завершён: winner:enemy"), "defeat_outcome_visible_in_journal")
