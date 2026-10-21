@@ -10,7 +10,7 @@ check, NPC removal, loot rolling, expedition save and inventory save.
 The existing `MapCombatOutcomeService.resolve_group_victory` is intentionally
 unchanged in this phase to preserve existing contracts and prior CI behavior.
 A new explicit, opt-in, staged settlement adapter sits between the combat
-checkpoint and `ExpeditionState`.
+checkpoint and `ExpeditionState`, exposed through `HexMapTurnService`.
 
 ## Transaction boundary
 
@@ -48,6 +48,13 @@ checkpoint and `ExpeditionState`.
 `settle(...)` combines stage and apply for the normal path. Crash recovery
 can call `apply(...)` directly with fresh ExpeditionState, ItemRepository
 and MapNpcBridge objects.
+
+The live hex-map orchestration entry point is `HexMapTurnService`:
+- `move_player(...)` still triggers contact using `HexEncounterCoordinator` and pauses patrol/turn movement.
+- `begin_resumable_group_combat(encounter,...)` opens that existing encounter via `MapEncounterCombatService.begin_resumable`, or resumes a saved checkpoint after map regeneration.
+- `resolve_group_victory_durable(session,...)` stages+applies the actual world settlement and only then releases the coordinator's combat pause.
+- `recover_settled_group_victory(...)` reapplies a previously persisted journal on a regenerated map before gameplay continues.
+Existing non-persistent `resolve_group_victory` remains untouched.
 
 ## Recovery matrix
 
