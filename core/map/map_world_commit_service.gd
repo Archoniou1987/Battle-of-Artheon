@@ -267,27 +267,73 @@ static func commit(session: Dictionary, encounter_key: String, expedition: Exped
 		var prior: Dictionary = previous["payload"]
 		if String(prior.get("encounter_key","")) != encounter_key or String(prior.get("expedition_id","")) != expedition.expedition_id or String(prior.get("player_id","")) != player.character_id or String(prior.get("receipt_sha256","")) != receipt_hash:
 			return {"ok":false,"reason":"world_commit_existing_snapshot_conflict"}
+	var written := _write_verified_payload(data,snapshot_path)
+	if not bool(written.get("ok",false)):
+		return written
+	# In-memory world becomes authoritative only after the disk snapshot
+	# can be independently read and fully reconstructed.
+	expedition.world_state[TOMBSTONES_KEY] = completed
+	return {"ok":true,"snapshot_path":snapshot_path,"receipt_sha256":receipt_hash,"checkpoint_round":disk_sim.state.round_number}
+
+## Validate a complete reconstructable TEMP snapshot before atomically
+## replacing the authoritative file. This prevents malformed new data from
+## destroying a previously valid world snapshot.
+static func _write_verified_payload(data: Dictionary, path: String) -> Dictionary:
+	if not _valid_path(path):
+		return {"ok":false,"reason":"invalid_world_commit_path"}
 	var raw := JSON.stringify(data)
 	var wrapper := JSON.stringify({"format":FORMAT,"payload_json":raw,"sha256":raw.sha256_text()})
 	if wrapper.to_utf8_buffer().size() > MAX_BYTES:
 		return {"ok":false,"reason":"world_commit_too_large"}
-	var temp := snapshot_path + ".tmp"
+	var temp := path + ".tmp"
 	var file := FileAccess.open(temp,FileAccess.WRITE)
 	if file == null:
 		return {"ok":false,"reason":"world_commit_temp_open_failed"}
 	file.store_string(wrapper)
 	file.flush()
 	file.close()
-	var renamed := DirAccess.rename_absolute(ProjectSettings.globalize_path(temp),ProjectSettings.globalize_path(snapshot_path))
+	var prepared := read(temp,String(data["encounter_key"]),String(data["expedition_id"]),String(data["player_id"]))
+	if not bool(prepared.get("ok",false)):
+		return {"ok":false,"reason":"world_commit_temp_verification_failed","detail":String(prepared.get("reason","unknown"))}
+	var renamed := DirAccess.rename_absolute(ProjectSettings.globalize_path(temp),ProjectSettings.globalize_path(path))
 	if renamed != OK:
 		return {"ok":false,"reason":"world_commit_atomic_replace_failed","error":renamed}
-	var verified := read(snapshot_path,encounter_key,expedition.expedition_id,player.character_id)
-	if not bool(verified.get("ok",false)) or String(verified.get("receipt_sha256","")) != receipt_hash:
-		return {"ok":false,"reason":"world_commit_verification_failed","detail":String(verified.get("reason","unknown"))}
-	# In-memory world becomes authoritative only after the disk snapshot
-	# can be independently read and fully reconstructed.
-	expedition.world_state[TOMBSTONES_KEY] = completed
-	return {"ok":true,"snapshot_path":snapshot_path,"receipt_sha256":receipt_hash,"checkpoint_round":disk_sim.state.round_number}
+	return {"ok":true,"snapshot_path":path,"snapshot_sha256":raw.sha256_text()}
+
+## Persist subsequent item claims, expiry cleanup, or normal character changes
+## into the SAME atomic world snapshot after receipt acknowledgement. All
+## claimed/expired loot must only disappear; no old drop can be resurrected.
+static func save_progress(path: String, encounter_key: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
+	if expedition == null or player == null or repository == null:
+		return {"ok":false,"reason":"world_progress_missing_dependencies"}
+	var previous := read(path,encounter_key,expedition.expedition_id,player.character_id)
+	if not bool(previous.get("ok",false)):
+		return {"ok":false,"reason":"world_progress_snapshot_not_verified","detail":String(previous.get("reason","unknown"))}
+	var envelope := _read_envelope(path)
+	if not bool(envelope.get("ok",false)):
+		return envelope
+	var original: Dictionary = envelope["payload"]
+	var old_expedition: Dictionary = original["expedition"]
+	var previous_world: Dictionary = old_expedition["world_state"]
+	var next_expedition: Dictionary = expedition.to_dict()
+	var next_world: Dictionary = next_expedition["world_state"]
+	if JSON.stringify(next_world.get(TOMBSTONES_KEY,{})) != JSON.stringify(previous_world.get(TOMBSTONES_KEY,{})):
+		return {"ok":false,"reason":"world_progress_tombstones_changed"}
+	if String(Dictionary(next_world.get(MapCombatSettlementService.MARKER_KEY,{})).get(encounter_key,"")) != String(original["receipt_sha256"]):
+		return {"ok":false,"reason":"world_progress_marker_missing"}
+	var old_pool: EncounterLootPool = ExpeditionState.from_dict(old_expedition).restore_loot_pool(encounter_key)
+	var new_pool: EncounterLootPool = expedition.restore_loot_pool(encounter_key)
+	if old_pool == null and new_pool != null:
+		return {"ok":false,"reason":"world_progress_loot_resurrected"}
+	if old_pool != null and new_pool != null:
+		for id in new_pool.item_ids():
+			if not old_pool.item_ids().has(id):
+				return {"ok":false,"reason":"world_progress_new_reward_in_old_pool","item_id":id}
+	var updated := original.duplicate(true)
+	updated["expedition"] = next_expedition
+	updated["repository"] = repository.to_dict()
+	updated["character"] = _character_to_dict(player)
+	return _write_verified_payload(updated,path)
 
 ## After a verified world snapshot, the receipt/checkpoint are redundant.
 ## If app death happens between the two deletes, rerunning is safe:
