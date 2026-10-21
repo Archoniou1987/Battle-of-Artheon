@@ -126,8 +126,10 @@ static func _roster_scheduler_entries(source: Dictionary, state: CombatState) ->
 	ids.sort()
 	for id in ids:
 		var value: Variant = source[id]
-		if value is Dictionary or value is Array:
-			result[id] = value.duplicate(true)
+		if value is Dictionary:
+			result[id] = Dictionary(value).duplicate(true)
+		elif value is Array:
+			result[id] = Array(value).duplicate(true)
 		else:
 			result[id] = value
 	return result
