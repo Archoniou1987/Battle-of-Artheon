@@ -121,6 +121,8 @@ func _save_canonical_town() -> void:
 		push_error("Town save revision conflict or write failure: "+String(saved.get("reason","unknown")))
 
 func _process(_delta: float) -> void:
+	if _town_storage_blocked:
+		return
 	if player_character == null or item_repository == null:
 		return
 	var now_unix := Time.get_unix_time_from_system()
