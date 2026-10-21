@@ -9,6 +9,22 @@ var orchestrator:RoundOrchestrator
 var attack_pipeline:CombatAttackPipeline
 var max_rounds:int=999
 
+## Empty by default: legacy tests and Arena never persist implicitly.
+var checkpoint_path := ""
+var checkpoint_encounter_key := ""
+var checkpoint_roster_fingerprint := ""
+var round_in_progress := false
+
+func enable_checkpoint(encounter_key: String, roster_fingerprint: String, path: String = GroupCombatCheckpointService.DEFAULT_PATH) -> Dictionary:
+	if not GroupCombatCheckpointService._valid_identity(encounter_key,roster_fingerprint) or not GroupCombatCheckpointService._valid_path(path):
+		return {"ok":false,"reason":"invalid_checkpoint_configuration"}
+	if state.round_number == 0 and GroupCombatCheckpointService.initial_roster_fingerprint(state) != roster_fingerprint:
+		return {"ok":false,"reason":"checkpoint_initial_roster_mismatch"}
+	checkpoint_path = path
+	checkpoint_encounter_key = encounter_key
+	checkpoint_roster_fingerprint = roster_fingerprint
+	return {"ok":true}
+
 func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Dictionary={}) -> void:
 	state=combat_state
 	group=group_state
@@ -21,13 +37,20 @@ func _init(combat_state:CombatState,group_state:GroupCombatState,balance:Diction
 
 func run() -> Dictionary:
 	while not controller.combat_finished() and state.round_number<max_rounds:
-		run_round()
+		var step: Dictionary = run_round()
+		if not bool(step.get("ok",false)):
+			return {"outcome":"round_failed","reason":String(step.get("reason","unknown")),"winning_team":"","rounds":state.round_number,"dead_ids":_finalized_dead_ids()}
+		if step.has("checkpoint_ok") and not bool(step["checkpoint_ok"]):
+			# An in-memory round succeeded, but its persistence did not.
+			# Never advertise a rewardable winner after a failed commit.
+			return {"outcome":"checkpoint_write_failed","reason":String(step.get("checkpoint_reason","unknown")),"winning_team":"","rounds":state.round_number,"dead_ids":_finalized_dead_ids()}
 	var winner:=controller.winning_team()
 	return {"outcome":"timeout" if not controller.combat_finished() else ("draw" if winner.is_empty() else "winner:"+winner),"winning_team":winner,"rounds":state.round_number,"dead_ids":_finalized_dead_ids()}
 
 func run_round() -> Dictionary:
 	if controller.combat_finished():
 		return {"ok":false,"reason":"combat_finished","battle_outcome":"winner:"+controller.winning_team()}
+	round_in_progress = true
 	var round:=orchestrator.begin_round()
 	var round_targets:Dictionary={}
 	var actors:Array[String]=[]
@@ -60,7 +83,14 @@ func run_round() -> Dictionary:
 	orchestrator.resolve_locked_actions(round)
 	var summary:=orchestrator.end_round()
 	var sync:=controller.after_end_round(summary)
-	return {"ok":true,"round":state.round_number,"summary":summary,"sync":sync,"battle_outcome":"winner:"+controller.winning_team() if controller.combat_finished() and not controller.winning_team().is_empty() else ("draw" if controller.combat_finished() else "ongoing")}
+	round_in_progress = false
+	var result: Dictionary = {"ok":true,"round":state.round_number,"summary":summary,"sync":sync,"battle_outcome":"winner:"+controller.winning_team() if controller.combat_finished() and not controller.winning_team().is_empty() else ("draw" if controller.combat_finished() else "ongoing")}
+	if not checkpoint_path.is_empty():
+		var stored: Dictionary = GroupCombatCheckpointService.save(self, checkpoint_path, checkpoint_encounter_key, checkpoint_roster_fingerprint)
+		result["checkpoint_ok"] = bool(stored.get("ok",false))
+		if not bool(stored.get("ok",false)):
+			result["checkpoint_reason"] = String(stored.get("reason","checkpoint_failed"))
+	return result
 
 func _finalized_dead_ids()->Array[String]:
 	var result:Array[String]=[]
