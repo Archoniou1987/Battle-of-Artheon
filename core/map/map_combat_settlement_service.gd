@@ -153,6 +153,8 @@ static func stage(session: Dictionary, expedition: ExpeditionState, map, bridge:
 		seen[npc.instance_id] = true
 		if not npc.is_alive() or not bridge.instances.has(npc.instance_id) or not map.entity_positions.has(npc.instance_id):
 			return {"ok":false,"reason":"terminal_npc_already_resolved"}
+		if bridge.instances[npc.instance_id] != npc:
+			return {"ok":false,"reason":"terminal_npc_instance_mismatch"}
 		var victim := disk_sim.state.get_combatant(npc.instance_id)
 		if victim == null or not victim.is_death_finalized():
 			return {"ok":false,"reason":"npc_not_finalized_in_checkpoint"}
@@ -243,15 +245,20 @@ static func apply(receipt_path: String, encounter_key: String, expedition: Exped
 		elif map.entity_positions.has(id):
 			return {"ok":false,"reason":"dead_npc_still_on_map","npc_id":id}
 	var pool := EncounterLootPool.from_dict(receipt["loot_pool"])
-	# A brand-new world rebuild might not yet have reinstated the original
-	# NPC item definitions. Restore only missing immutable instance IDs.
-	for item_id in pool.item_ids():
-		var stored: Dictionary = Dictionary(receipt["item_snapshots"][item_id])
-		if repository.has_item(item_id):
-			# Never overwrite current item durability, ownership, or upgrades.
-			continue
-		if not repository.add_item(stored):
-			return {"ok":false,"reason":"receipt_item_restore_failed","item_id":item_id}
+	# The persisted expedition ledger is authoritative after a successful
+	# apply. Do NOT resurrect items which have already been claimed/expired.
+	# Only recover repository instances for loot still awaiting a claim.
+	var pending_pool: EncounterLootPool = expedition.restore_loot_pool(encounter_key) if already_applied else pool
+	if pending_pool != null:
+		for item_id in pending_pool.item_ids():
+			if not pool.item_ids().has(item_id):
+				return {"ok":false,"reason":"unrecognized_persisted_reward","item_id":item_id}
+			if repository.has_item(item_id):
+				# Never overwrite existing item condition or ownership.
+				continue
+			var stored: Dictionary = Dictionary(receipt["item_snapshots"][item_id])
+			if not repository.add_item(stored):
+				return {"ok":false,"reason":"receipt_item_restore_failed","item_id":item_id}
 	for raw_id in ids:
 		var id := String(raw_id)
 		var npc: NpcInstance = bridge.instances[id]
