@@ -96,7 +96,10 @@ func _select(entry: Dictionary) -> void:
 	var id := String(entry.get("id",""))
 	var display_name := String(entry.get("name",id))
 	var actions: Array = entry.get("actions",[])
-	details.text = display_name + "  ·  " + ", ".join(actions)
+	var action_names: PackedStringArray = []
+	for action in actions:
+		action_names.append(String(action))
+	details.text = display_name + "  ·  " + ", ".join(action_names)
 	# Emit a selection request only. The world owner must revalidate.
 	entry_selected.emit(kind,id,String(actions[0]) if not actions.is_empty() else "inspect")
 
