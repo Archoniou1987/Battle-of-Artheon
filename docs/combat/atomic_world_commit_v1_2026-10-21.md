@@ -25,6 +25,21 @@ snapshot as authoritative for this expedition, rather than immediately
 overwriting it with stale legacy files. No world-map player-facing scene is
 wired in this package.
 
+## Recommended map runtime entry point
+
+`HexMapTurnService.finalize_group_victory_atomic(session, encounter_key,
+expedition, map, bridge, character, repository, loot_service, chances,
+receipt_path, checkpoint_path, world_snapshot_path, now_unix)` is the
+**preferred single-call path** for actual gameplay. While the coordinator's
+combat pause remains active, it stages and applies the once-only settlement,
+commits the canonical winner's HP/mana, writes and verifies the atomic bundle,
+acknowledges the old receipt/checkpoint, and **only then** releases movement.
+On failure it returns a specific reason without unpausing; the staged
+receipt/battle remains recoverable.
+
+The multi-step API below remains useful for targeted tests, recovery and
+older callers that explicitly manage the map's pause themselves.
+
 ## Required completion sequence
 
 1. Actual NPC map contact through `HexMapTurnService`, opening a resumable
@@ -60,10 +75,11 @@ wired in this package.
    idempotent.
 
 **Map activity must remain blocked from saving an older competing state
-between steps 3 and 6.** The scene owner orchestrates this sequence;
-`HexMapTurnService.resolve_group_victory_durable` currently releases its
-combat-active flag after settlement and does not independently trigger
-the snapshot/acknowledgement.
+between steps 3 and 6.** For the normal path use
+`HexMapTurnService.finalize_group_victory_atomic`, which keeps the pause.
+The older `resolve_group_victory_durable` is a lower-level API and still
+releases the coordinator flag after settlement, so callers using it must
+enforce their own write/movement barrier.
 
 ## After journal cleanup: claiming and expiring loot
 
@@ -121,7 +137,9 @@ real terminal group fight, refusal of premature acknowledgement, rejection of
 uncommitted player resources, one atomic disk bundle, standalone restoration
 after receipt/checkpoint cleanup, NPC respawn suppression, once-only claim and
 TTL expiry across snapshot updates, stale loot rollback prevention and
-corrupted snapshot rejection.
+corrupted snapshot rejection, wrong NPC positions before reconciliation,
+and the single-call hex map finalize/ack path with movement paused until
+all persistence boundaries have committed.
 
 **The new bundle package has not passed Godot CI yet.** Only the preceding
 settlement and combat packages were green on run #39582768207.
