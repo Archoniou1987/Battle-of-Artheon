@@ -47,7 +47,16 @@ func _run() -> void:
 	var result: Dictionary = {}
 	for i in range(1,11):
 		result = sim.run_round()
-		_check(bool(result.get("ok",false)) and bool(result.get("checkpoint_ok",false)), "end_round_checkpoint_%d" % i)
+		var persisted := bool(result.get("ok",false)) and bool(result.get("checkpoint_ok",false))
+		if not persisted:
+			var inspected: Dictionary = GroupCombatCheckpointService.capture(sim,ENCOUNTER,signature)
+			_check(false,"end_round_checkpoint_%d reason=%s direct=%s" % [i,String(result.get("checkpoint_reason",result.get("reason","unknown"))),String(inspected.get("reason","unknown"))])
+		else:
+			_check(true,"end_round_checkpoint_%d" % i)
+			var scoped: Dictionary = GroupCombatCheckpointService.capture(sim,ENCOUNTER,signature)
+			if bool(scoped.get("ok",false)):
+				var saved_loadouts: Dictionary = Dictionary(scoped["payload"]["ability"]).get("loadouts",{})
+				_check(not saved_loadouts.has("TEST_DAGGER_FIGHTER") and not saved_loadouts.has("TEST_SHIELD_FIGHTER"),"unrelated_global_test_loadouts_not_serialized")
 		if i == 1:
 			sim.round_in_progress = true
 			_check(String(GroupCombatCheckpointService.capture(sim,ENCOUNTER,signature).get("reason","")) == "round_not_fully_resolved", "cannot_save_partial_round")
