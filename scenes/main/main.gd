@@ -3,6 +3,7 @@ extends Control
 const LOCATION_NAME := "Стартовая деревня"
 const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
+const CANONICAL_TOWN_PATH := SoloTownSaveService.DEFAULT_PATH
 # Temporary browser preview fixture; disable before public gameplay release.
 const ENABLE_INVENTORY_PREVIEW_ITEMS := false
 const INVENTORY_RESET_MARKER_PATH := "user://inventory_reset_empty_v1.marker"
@@ -53,33 +54,71 @@ var _regen_saved_paused := false
 var _regen_clock_unix: float = 0.0
 var _regen_save_accumulator := 0.0
 var landscape_nav: HBoxContainer
+var _canonical_town_active := false
+var _canonical_town_revision := ""
+var _town_storage_blocked := false
 
 
 func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
-	_load_saved_progression()
 	item_repository = ItemRepository.new()
-	var inventory_loaded := _load_saved_inventory()
-	# Legacy saves had no current HP/mana. Migrate once at the restored
-	# equipment maximum, then persist explicit current values.
-	if not _resources_loaded_from_save:
-		if player_character.reset_resources_to_full(item_repository):
-			_save_progression()
+	var has_canonical := FileAccess.file_exists(CANONICAL_TOWN_PATH)
+	if has_canonical:
+		var restored: Dictionary = SoloTownSaveService.read(CANONICAL_TOWN_PATH,player_character.character_id)
+		if bool(restored.get("ok",false)):
+			_activate_canonical_owner(restored)
+		else:
+			# A broken canonical save must NEVER fall through to stale
+			# legacy files. Keep the scene inspectable but read-only.
+			_town_storage_blocked = true
+			push_error("Canonical town save rejected: "+String(restored.get("reason","unknown")))
 	else:
-		player_character.resource_snapshot(item_repository)
-	# Apply unlimited offline elapsed time only when the previous session
-	# actually ended in a non-combat state.
+		_load_saved_progression()
+		_load_saved_inventory()
+		if not _resources_loaded_from_save:
+			player_character.reset_resources_to_full(item_repository)
+		else:
+			player_character.resource_snapshot(item_repository)
+		# The existing preview seed sequence belongs to legacy migration,
+		# and must not run again after the canonical save is initialized.
+		_reset_preview_inventory_once()
+		_grant_combat_test_items_once()
+		_grant_combat_test_elixirs_once()
+		var initial: Dictionary = SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository)
+		if bool(initial.get("ok",false)):
+			_activate_canonical_owner(SoloTownSaveService.read(CANONICAL_TOWN_PATH,player_character.character_id))
+		else:
+			_town_storage_blocked = true
+			push_error("Canonical town migration failed: "+String(initial.get("reason","unknown")))
 	var now_unix := Time.get_unix_time_from_system()
-	if _resources_loaded_from_save and not _regen_saved_paused and _regen_saved_unix > 0.0:
-		OutOfCombatRegenerationService.advance(player_character, item_repository, maxf(0.0, now_unix - _regen_saved_unix))
+	if _canonical_town_active and _resources_loaded_from_save and not _regen_saved_paused and _regen_saved_unix > 0.0:
+		OutOfCombatRegenerationService.advance(player_character,item_repository,maxf(0.0,now_unix-_regen_saved_unix))
 	_regen_clock_unix = now_unix
-	_reset_preview_inventory_once()
-	_grant_combat_test_items_once()
-	_grant_combat_test_elixirs_once()
-	_save_progression()
+	if _canonical_town_active:
+		_save_progression()
 	_build_screen()
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
+
+func _activate_canonical_owner(restored: Dictionary) -> void:
+	if not bool(restored.get("ok",false)):
+		_town_storage_blocked = true
+		return
+	player_character = restored["character"]
+	item_repository = restored["repository"]
+	_canonical_town_revision = String(restored["sha256"])
+	_canonical_town_active = true
+	_resources_loaded_from_save = true
+
+func _save_canonical_town() -> void:
+	if _town_storage_blocked or not _canonical_town_active:
+		return
+	var saved := SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository,_canonical_town_revision)
+	if bool(saved.get("ok",false)):
+		_canonical_town_revision = String(saved["sha256"])
+	else:
+		_town_storage_blocked = true
+		push_error("Town save revision conflict or write failure: "+String(saved.get("reason","unknown")))
 
 func _process(_delta: float) -> void:
 	if player_character == null or item_repository == null:
@@ -322,6 +361,8 @@ func _shift_panorama(value: float) -> void:
 
 
 func _open_character_screen() -> void:
+	if _town_storage_blocked:
+		return
 	if character_screen == null:
 		character_screen = CharacterScreen.new(player_character)
 		character_screen.item_repository = item_repository
@@ -334,6 +375,8 @@ func _open_character_screen() -> void:
 
 
 func _open_inventory_screen() -> void:
+	if _town_storage_blocked:
+		return
 	if inventory_screen == null:
 		inventory_screen = InventoryScreen.new(player_character, item_repository)
 		inventory_screen.name = "InventoryScreen"
@@ -345,6 +388,8 @@ func _open_inventory_screen() -> void:
 
 
 func _open_arena_screen() -> void:
+	if _town_storage_blocked:
+		return
 	# Each entry starts a fresh training duel using the current equipment.
 	# Pause the out-of-combat clock before creating the live combat snapshot.
 	_sync_out_of_combat_before_arena()
@@ -405,6 +450,8 @@ func _open_panel(section: String) -> void:
 ## The real Solo map is not yet a playable scene. Keep this entry
 ## fail-closed while honoring pending combat manifests on startup.
 func _open_solo_map_gate() -> void:
+	if _town_storage_blocked:
+		return
 	popup_title.text = "Карта — экспедиция"
 	for child in popup_actions.get_children():
 		popup_actions.remove_child(child)
@@ -494,6 +541,11 @@ func _seed_inventory_preview() -> void:
 
 
 func _save_progression() -> void:
+	if _town_storage_blocked:
+		return
+	if _canonical_town_active:
+		_save_canonical_town()
+		return
 	if player_character == null:
 		return
 	var file := FileAccess.open(PROGRESSION_SAVE_PATH, FileAccess.WRITE)
@@ -540,6 +592,11 @@ func _load_saved_progression() -> void:
 
 
 func _save_inventory() -> void:
+	if _town_storage_blocked:
+		return
+	if _canonical_town_active:
+		_save_canonical_town()
+		return
 	if player_character == null or item_repository == null:
 		return
 	var file := FileAccess.open(INVENTORY_SAVE_PATH, FileAccess.WRITE)
