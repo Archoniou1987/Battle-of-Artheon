@@ -140,7 +140,7 @@ static func _write(path: String, expedition: ExpeditionState, player: CharacterS
 	return {"ok":true,"path":path}
 
 static func _ledgers_monotonic(previous: ExpeditionState, next: ExpeditionState) -> String:
-	for name in [TOMBSTONES_KEY,MARKERS_KEY,GroundLootSettlementAdapter.MIGRATED_KEY]:
+	for name in [TOMBSTONES_KEY,MARKERS_KEY,GroundLootSettlementAdapter.MIGRATED_KEY,ExpeditionState.SOLO_DEFEAT_LEDGER_KEY]:
 		var old: Dictionary = previous.world_state.get(name,{})
 		var now: Dictionary = next.world_state.get(name,{})
 		for id in old:
