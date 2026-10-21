@@ -252,7 +252,7 @@ static func _restore_simulator(payload: Dictionary):
 				return null
 	# Runtime load avoids a compile-time type cycle: GroupCombatSimulator uses
 	# this checkpoint codec after each committed round.
-	var simulator_script := load("res://core/combat/group_combat_simulator.gd")
+	var simulator_script = load("res://core/combat/group_combat_simulator.gd")
 	if simulator_script == null:
 		return null
 	var simulator = simulator_script.new(state,group,Dictionary(saved_engine["physical_balance"]))
@@ -268,7 +268,10 @@ static func _restore_simulator(payload: Dictionary):
 	simulator.attack_pipeline.ability_scheduler = scheduler
 	group.active_opponent_by_combatant = Dictionary(saved_group["active_opponents"]).duplicate(true)
 	simulator.controller.engagement.lock_until_round = Dictionary(saved_group["engagement_lock_until_round"]).duplicate(true)
-	simulator.orchestrator.persistent_actions = Array(Dictionary(payload["orchestrator"]).get("persistent_actions",[])).duplicate(true)
+	var persistent: Array[Dictionary] = []
+	for raw_action in Array(Dictionary(payload["orchestrator"]).get("persistent_actions",[])):
+		persistent.append(Dictionary(raw_action).duplicate(true))
+	simulator.orchestrator.persistent_actions = persistent
 	simulator.max_rounds = int(payload["max_rounds"])
 	return simulator
 
