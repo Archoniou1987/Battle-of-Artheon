@@ -106,4 +106,4 @@ respawned NPC map; replay after one claimed item and after the remaining pool ex
 encounter/expedition/player and corrupted receipt. It runs near the start
 of the manually triggered `ABI Branch Tests` workflow.
 
-**CI for this new settlement package is pending** until manually run.
+**Verified:** ABI Branch Tests run [#39582768207](https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/39582768207) completed successfully on commit `d4d43dae0359575772665d72e2c9333ad5dd5500` (2026-10-21). Newer atomic world snapshot tests are a separate pending CI package.
