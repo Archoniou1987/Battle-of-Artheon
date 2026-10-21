@@ -66,6 +66,8 @@ func _run() -> void:
 	if simulator.controller.winning_team() != "players":
 		return
 	check(FileAccess.file_exists(checkpoint) and FileAccess.file_exists(MANIFEST),"terminal_round_persisted_before_publish")
+	var pending_gate := SoloExpeditionLaunchGate.inspect(EXP,MANIFEST,ID,PLAYER)
+	check(String(pending_gate.get("state",""))=="resume_combat_checkpoint","terminal_checkpoint_uses_resume_gate")
 	check(not FileAccess.file_exists(receipt) and not FileAccess.file_exists(terminal),"no_premature_reward_publication")
 	var pending := SoloLiveMapSession.open_pending(EXP,MANIFEST,ID,PLAYER)
 	check(bool(pending.get("ok",false)),"reopen_prebattle_world_for_terminal_resume")
@@ -89,6 +91,8 @@ func _run() -> void:
 		return
 	check(recovered.battle["simulator"].state.round_number==old_round and recovered.battle["simulator"].state.next_event_id==old_event_id,"terminal_publication_does_not_replay_round")
 	check(not FileAccess.file_exists(MANIFEST),"manifest_cleared_after_publish")
+	var published_gate := SoloExpeditionLaunchGate.inspect(EXP,MANIFEST,ID,PLAYER)
+	check(String(published_gate.get("state",""))=="ready","village_gate_reopens_after_publish")
 	var world := ExpeditionSaveService.read(EXP,ID,PLAYER)
 	check(bool(world.get("ok",false)),"published_world_readable")
 	if not bool(world.get("ok",false)):
