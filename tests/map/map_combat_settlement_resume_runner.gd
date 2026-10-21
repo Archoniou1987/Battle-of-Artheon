@@ -67,7 +67,13 @@ func _run() -> void:
 		return
 	var character := CharacterState.new("PLAYER","Map Hero",30)
 	var expedition := _expedition()
-	var session := MapEncounterCombatService.begin_resumable(world["bridge"].encounter_at(world["map"],CELL),world["catalog"],_hero(),ENCOUNTER,CHECKPOINT)
+	var turns := HexMapTurnService.new()
+	var moved: Dictionary = turns.move_player(world["map"],world["bridge"],"PLAYER",CELL,RandomNumberGenerator.new())
+	_check(bool(moved.get("ok",false)) and moved.has("encounter"),"real_map_contact_opens_encounter")
+	_check(turns.coordinator.combat_active,"map_paused_during_active_encounter")
+	if not moved.has("encounter"):
+		return
+	var session := turns.begin_resumable_group_combat(moved["encounter"],world["catalog"],_hero(),ENCOUNTER,CHECKPOINT)
 	_check(bool(session.get("ok",false)),"battle_opens_resumable")
 	if not bool(session.get("ok",false)):
 		return
@@ -94,12 +100,20 @@ func _run() -> void:
 	# Crash window A: reconstructed world uses ONLY the durable receipt.
 	var after_crash := _world(false)
 	var blank_expedition := _expedition()
-	var replay := MapCombatSettlementService.apply(RECEIPT,ENCOUNTER,blank_expedition,after_crash["map"],after_crash["bridge"],character,after_crash["repo"])
+	var recovered_turns := HexMapTurnService.new()
+	var replay := recovered_turns.recover_settled_group_victory(RECEIPT,ENCOUNTER,blank_expedition,after_crash["map"],after_crash["bridge"],character,after_crash["repo"])
 	_check(bool(replay.get("ok",false)) and not bool(replay.get("already_applied",true)),"replay_preapply_crash")
 	if not bool(replay.get("ok",false)):
 		_check(false,"replay_reason_"+String(replay.get("reason","unknown")))
 		return
 	_check_dead(after_crash,"replay_death")
+	_check(not recovered_turns.coordinator.combat_active,"recovery_releases_map_pause")
+	# Normal caller can also settle the already staged outcome without
+	# rerolling, and releases the same map's encounter pause.
+	var normal_commit := turns.resolve_group_victory_durable(session,expedition,world["map"],world["bridge"],character,world["repo"],NpcPossessionLootService.new(9999),{"common":0.0},ENCOUNTER,RECEIPT,2000)
+	_check(bool(normal_commit.get("ok",false)) and bool(normal_commit.get("already_staged",false)) and not turns.coordinator.combat_active,"real_hex_turn_lifecycle_finishes_after_durable_receipt")
+	_check_dead(world,"normal_flow_death")
+	_check(expedition.restore_loot_pool(ENCOUNTER) != null and expedition.restore_loot_pool(ENCOUNTER).item_ids().size() == 2,"normal_flow_reward_reuses_staged_roll")
 	_check(after_crash["repo"].has_item("WORLD_DAGGER_01") and after_crash["repo"].has_item("WORLD_DAGGER_02"),"restore_missing_reward_item_instances")
 	var recovered_pool := blank_expedition.restore_loot_pool(ENCOUNTER)
 	_check(recovered_pool != null,"replay_restores_claimable_pool")
@@ -117,7 +131,8 @@ func _run() -> void:
 	var after_reload := _world(false)
 	var continued_exp := ExpeditionState.from_dict(saved_expedition)
 	var continued_repo := ItemRepository.from_dict(saved_repo)
-	var replay_again := MapCombatSettlementService.apply(RECEIPT,ENCOUNTER,continued_exp,after_reload["map"],after_reload["bridge"],character,continued_repo)
+	var restarted_turns := HexMapTurnService.new()
+	var replay_again := restarted_turns.recover_settled_group_victory(RECEIPT,ENCOUNTER,continued_exp,after_reload["map"],after_reload["bridge"],character,continued_repo)
 	_check(bool(replay_again.get("ok",false)) and bool(replay_again.get("already_applied",false)),"restore_after_world_snapshot")
 	_check_dead(after_reload,"reloaded_map_suppresses_npcs")
 	_check(continued_exp.restore_loot_pool(ENCOUNTER).available_for("PLAYER").size()==2,"persisted_rewards_are_not_rerolled")
