@@ -57,7 +57,7 @@ func _set_status(value: String) -> void:
 func _refresh() -> void:
 	if session == null:
 		return
-	_set_status("Позиция: %s   •   Персонаж: %s" % [str(session.expedition.player_position),session.character.character_name])
+	_set_status("Позиция: %s   •   Персонаж: %s" % [str(session.expedition.player_position),session.character.display_name])
 	for n in tile_container.get_children():
 		tile_container.remove_child(n)
 		n.queue_free()
