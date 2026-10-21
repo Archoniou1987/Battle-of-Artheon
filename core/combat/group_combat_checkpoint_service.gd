@@ -171,13 +171,22 @@ static func read(path: String, encounter_key: String, roster_fingerprint: String
 		return {"ok":false,"reason":"checkpoint_invalid_size"}
 	var serialized := file.get_as_text()
 	file.close()
-	var outer: Variant = JSON.parse_string(serialized)
+	# JSON.parse_string emits an engine ERROR for malformed user saves.
+	# That is expected invalid input, not a fatal script diagnostic.
+	# JSON.parse reports a recoverable error code without engine logging.
+	var decoder := JSON.new()
+	if decoder.parse(serialized) != OK:
+		return {"ok":false,"reason":"checkpoint_invalid_envelope"}
+	var outer: Variant = decoder.data
 	if not outer is Dictionary or String(outer.get("format","")) != FORMAT:
 		return {"ok":false,"reason":"checkpoint_invalid_envelope"}
 	var raw: Variant = outer.get("payload_json",null)
 	if not raw is String or raw.is_empty() or raw.sha256_text() != String(outer.get("sha256","")):
 		return {"ok":false,"reason":"checkpoint_integrity_failed"}
-	var decoded: Variant = JSON.parse_string(raw)
+	decoder = JSON.new()
+	if decoder.parse(raw) != OK:
+		return {"ok":false,"reason":"checkpoint_invalid_payload"}
+	var decoded: Variant = decoder.data
 	if not decoded is Dictionary:
 		return {"ok":false,"reason":"checkpoint_invalid_payload"}
 	var error := _validate_payload(decoded, encounter_key, roster_fingerprint)
