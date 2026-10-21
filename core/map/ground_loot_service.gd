@@ -137,12 +137,19 @@ func finish_pickup(ticket: String, expedition: ExpeditionState, map: TacticalMap
 	if not map.entity_positions.has(player.character_id):
 		return {"ok":false,"reason":"player_not_on_map"}
 	var at: Vector2i = map.entity_positions[player.character_id]
-	if [at.x,at.y] != action["cell"]:
+	# JSON-loaded coordinates may contain floats (3.0 instead of 3).
+	# Compare canonical hex coordinates, never raw Array identity/types.
+	var started_cell: Array = action.get("cell",[])
+	if started_cell.size() != 2:
+		return {"ok":false,"reason":"pickup_invalid_started_cell"}
+	var original_cell := Vector2i(int(started_cell[0]),int(started_cell[1]))
+	if at != original_cell:
 		return {"ok":false,"reason":"pickup_interrupted_by_movement"}
 	var item_id := String(action["item_id"])
 	var registry := _registry(expedition)
 	var entry: Dictionary = registry.get(item_id,{})
-	if entry.is_empty() or entry.get("cell",[]) != action["cell"]:
+	var live_cell: Array = entry.get("cell",[])
+	if live_cell.size() != 2 or Vector2i(int(live_cell[0]),int(live_cell[1])) != original_cell:
 		return {"ok":false,"reason":"pickup_item_unavailable"}
 	if String(entry.get("owner_id","")) != "" and String(entry.get("owner_id","")) != player.character_id:
 		return {"ok":false,"reason":"pickup_access_revoked"}
