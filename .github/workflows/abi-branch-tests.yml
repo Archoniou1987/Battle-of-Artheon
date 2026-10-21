@@ -19,6 +19,22 @@ jobs:
           bash tools/run_godot_check.sh tests/parameters/rating_matrix_runner.gd
           bash tools/run_godot_check.sh tests/parameters/final_par_combat_runner.gd
           bash tools/run_godot_check.sh tests/combat/magic_abi_scaling_runner.gd
+      - name: Validate round-boundary group-combat checkpoints and deterministic resume
+        run: |
+          status=0
+          for script in \
+            tests/combat/group_combat_checkpoint_runner.gd \
+            tests/combat/group_combat_terminal_checkpoint_runner.gd
+          do
+            echo "::group::Checkpoint: $script"
+            if ! bash tools/run_godot_check.sh "$script"; then
+              echo "::error::Checkpoint regression: $script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
+
       - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
         run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
       - name: Validate isolated ABI Test Lab physical and magical PAR calculations
@@ -168,22 +184,6 @@ jobs:
 
       - name: Cast ABI during group combat
         run: bash tools/run_godot_check.sh tests/combat/group_combat_ability_runner.gd
-
-      - name: Validate round-boundary group-combat checkpoints and deterministic resume
-        run: |
-          status=0
-          for script in \
-            tests/combat/group_combat_checkpoint_runner.gd \
-            tests/combat/group_combat_terminal_checkpoint_runner.gd
-          do
-            echo "::group::Checkpoint: $script"
-            if ! bash tools/run_godot_check.sh "$script"; then
-              echo "::error::Checkpoint regression: $script"
-              status=1
-            fi
-            echo "::endgroup::"
-          done
-          exit "$status"
 
       - name: Resolve square map group combat outcome
         run: bash tools/run_godot_check.sh tests/map/square_map_group_combat_outcome_runner.gd
