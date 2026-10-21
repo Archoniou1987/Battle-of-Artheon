@@ -318,11 +318,13 @@ static func _validate_payload(p: Dictionary, expected_key: String, expected_fing
 		for key in ["hp","mana","action_points","tempo_stun_round","tempo_immunity_until_round"]:
 			if not _whole(c.get(key,null),-1000000000,1000000000):
 				return "checkpoint_invalid_combatant_counter_" + key
-		if int(c["mana"]) > int(c["max_mana"]) or int(c["action_points"]) > int(c["max_action_points"]):
+		if int(c["mana"]) < 0 or int(c["mana"]) > int(c["max_mana"]) or int(c["action_points"]) < 0 or int(c["action_points"]) > int(c["max_action_points"]):
 			return "checkpoint_invalid_combatant_resource_bounds"
 		for key in ["tempo","base_tempo","max_tempo","tempo_regen"]:
 			if not _finite(c.get(key,null)):
 				return "checkpoint_invalid_tempo"
+		if float(c["max_tempo"]) < 0.0 or float(c["base_tempo"]) < 0.0 or float(c["base_tempo"]) > float(c["max_tempo"]) or float(c["tempo_regen"]) < 0.0 or float(c["tempo"]) > float(c["max_tempo"]):
+			return "checkpoint_invalid_tempo_bounds"
 		for key in ["stats","combat_stats","armour","magic_resists","weapon_skills","weapon_xp","combat_loadout"]:
 			if not c.get(key) is Dictionary:
 				return "checkpoint_invalid_combatant_" + key
