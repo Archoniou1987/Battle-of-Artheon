@@ -4,7 +4,7 @@
 
 This contract saves **one active world/group combat encounter** after a completed round. It is an optional feature of `GroupCombatSimulator`, enabled by `MapEncounterCombatService.begin_resumable(...)`. It does NOT change Arena training-session semantics, UI geometry, normal CharacterState progression/inventory saves, loot rules or the legacy `CombatSimulator.run_duel` loop.
 
-**Restore boundary:** finish End Round (including timed EFF, deferred actions, death finalization, Tempo bookkeeping and active-target reassignment) -> persist -> begin the NEXT round after process restart. No checkpoint of uncommitted selections, queued events, ongoing `CombatRound` or UI Mind Game clicks. `run_round()` returns `checkpoint_ok` when persistence is enabled; `run()` halts with `checkpoint_write_failed` rather than reporting a rewardable winner if the disk commit failed. Each saved checkpoint is a single file in `user://`.
+**Restore boundary:** finish End Round (including timed EFF, deferred actions, death finalization, Tempo bookkeeping and active-target reassignment) -> persist -> begin the NEXT round after process restart. The simulator's `last_completed_round` watermark must match `CombatState.round_number` before capture; an empty event queue alone is not evidence of a finished round. No checkpoint of uncommitted selections, queued events, ongoing `CombatRound` or UI Mind Game clicks. `run_round()` returns `checkpoint_ok` when persistence is enabled; `run()` halts with `checkpoint_write_failed` rather than reporting a rewardable winner if the disk commit failed. Each saved checkpoint is a single file in `user://`.
 
 ### Stored state
 
