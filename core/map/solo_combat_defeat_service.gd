@@ -28,24 +28,21 @@ static func inspect_terminal_type(path: String) -> Dictionary:
 	return {"ok":true,"format":String(envelope["format"])}
 
 static func _starting_cell(expedition: ExpeditionState) -> Vector2i:
-	var raw: Variant = expedition.world_state.get(SoloTownExpeditionBridge.START_CELL_KEY,null)
+	var raw: Variant = expedition.world_state.get(ExpeditionState.SOLO_START_CELL_KEY,null)
 	if raw is Array and Array(raw).size() == 2 and CharacterProgression._is_whole_number(raw[0]) and CharacterProgression._is_whole_number(raw[1]):
 		return Vector2i(int(raw[0]),int(raw[1]))
 	# Historical expeditions did not record a start cell. Never invent a
 	# different teleport destination for those existing saves.
 	return expedition.player_position
 
-static func stage(session: SoloLiveMapSession, battle: Dictionary, encounter_key: String, checkpoint_path: String, terminal_path: String) -> Dictionary:
+static func stage(session, battle: Dictionary, encounter_key: String, checkpoint_path: String, terminal_path: String, manifest: Dictionary) -> Dictionary:
 	if session == null or session.expedition == null or session.character == null or session.repository == null:
 		return {"ok":false,"reason":"defeat_invalid_owner"}
 	if not MapWorldCommitService._valid_id(encounter_key) or not GroupCombatCheckpointService._valid_path(checkpoint_path) or not GroupCombatCheckpointService._valid_path(terminal_path):
 		return {"ok":false,"reason":"defeat_invalid_paths"}
 	if FileAccess.file_exists(terminal_path):
 		return {"ok":false,"reason":"defeat_terminal_already_exists"}
-	var record := SoloCombatSessionManifest.read(session.manifest_path)
-	if not bool(record.get("ok",false)):
-		return record
-	var manifest: Dictionary = record["data"]
+	# The caller has already verified the pending manifest before staging.
 	if String(manifest.get("encounter_key","")) != encounter_key or String(manifest.get("checkpoint_path","")) != checkpoint_path or String(manifest.get("terminal_path","")) != terminal_path or String(manifest.get("expedition_path","")) != session.save_path or String(manifest.get("expedition_id","")) != session.expedition.expedition_id or String(manifest.get("player_id","")) != session.character.character_id:
 		return {"ok":false,"reason":"defeat_manifest_mismatch"}
 	var simulator: GroupCombatSimulator = battle.get("simulator") as GroupCombatSimulator
@@ -81,7 +78,7 @@ static func stage(session: SoloLiveMapSession, battle: Dictionary, encounter_key
 	if ledger.has(encounter_key):
 		return {"ok":false,"reason":"defeat_attempt_already_published"}
 	var spawn := _starting_cell(expedition)
-	if spawn.x < 0 or spawn.y < 0 or spawn.x >= SoloLiveMapSession.WIDTH or spawn.y >= SoloLiveMapSession.HEIGHT:
+	if not session.map.in_bounds(spawn):
 		return {"ok":false,"reason":"defeat_spawn_out_of_bounds"}
 	if not character.reset_resources_to_full(repository):
 		return {"ok":false,"reason":"defeat_revival_resources_invalid"}
