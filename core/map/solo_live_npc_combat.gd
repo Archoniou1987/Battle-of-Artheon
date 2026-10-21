@@ -13,10 +13,24 @@ var receipt_path: String
 var terminal_path: String
 var target_cell: Vector2i
 
-static func _paths(expedition_id: String, npc_id: String) -> Dictionary:
+static func _paths(expedition_id: String, npc_id: String, attempt: int = 1) -> Dictionary:
 	var key := "solo:live:" + expedition_id + ":" + npc_id
+	if attempt > 1:
+		key += ":attempt_" + str(attempt)
 	var digest := key.sha256_text().substr(0,24)
 	return {"encounter_key":key,"checkpoint":"user://solo_live_fight_"+digest+".json","receipt":"user://solo_live_receipt_"+digest+".json","terminal":"user://solo_live_world_"+digest+".json"}
+
+## Losing to a living NPC must not mark the NPC dead. A retry uses a
+## different durable encounter key, preserving every earlier defeat record.
+static func _next_attempt(session: SoloLiveMapSession, npc_id: String) -> int:
+	var key := "solo:live:" + session.expedition.expedition_id + ":" + npc_id
+	var previous: Dictionary = session.expedition.world_state.get(SoloCombatDefeatService.LEDGER_KEY,{})
+	var count := 0
+	for old_key in previous.keys():
+		var old := String(old_key)
+		if old == key or old.begins_with(key + ":attempt_"):
+			count += 1
+	return count + 1
 
 ## Failed contact reconstruction must not leave a ghost player on the NPC
 ## tile. The persisted expedition position always remains authoritative.
@@ -37,7 +51,7 @@ static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 	var ids: Array = contact.get("npc_instance_ids",[])
 	if ids.is_empty():
 		return {"ok":false,"reason":"empty_npc_cohort"}
-	var files := _paths(session.expedition.expedition_id,String(ids[0]))
+	var files := _paths(session.expedition.expedition_id,String(ids[0]),_next_attempt(session,String(ids[0])))
 	if FileAccess.file_exists(String(files["terminal"])) or FileAccess.file_exists(String(files["receipt"])) or FileAccess.file_exists(String(files["checkpoint"])):
 		return {"ok":false,"reason":"old_combat_artifact_requires_reconciliation"}
 	var manifest := SoloCombatSessionManifest.begin(session.manifest_path,session.save_path,String(files["terminal"]),String(files["checkpoint"]),String(files["encounter_key"]),session.expedition.expedition_id,session.character.character_id)
@@ -91,7 +105,7 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	var match_cell := Vector2i(-1,-1)
 	var npc_id := ""
 	for id in session.npc_bridge.instances:
-		var expected := _paths(session.expedition.expedition_id,String(id))
+		var expected := _paths(session.expedition.expedition_id,String(id),_next_attempt(session,String(id)))
 		if String(expected["encounter_key"]) == String(data["encounter_key"]) and String(expected["checkpoint"]) == checkpoint and String(expected["terminal"]) == String(data["terminal_path"]):
 			npc_id = String(id)
 			match_cell = session.map.entity_positions.get(npc_id,Vector2i(-1,-1))
@@ -123,7 +137,7 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	instance.battle = opened
 	instance.encounter_key = String(data["encounter_key"])
 	instance.checkpoint_path = checkpoint
-	instance.receipt_path = String(_paths(session.expedition.expedition_id,npc_id)["receipt"])
+	instance.receipt_path = String(_paths(session.expedition.expedition_id,npc_id,_next_attempt(session,npc_id))["receipt"])
 	instance.terminal_path = String(data["terminal_path"])
 	instance.target_cell = match_cell
 	return {"ok":true,"combat":instance,"round":opened["simulator"].state.round_number}
@@ -137,7 +151,13 @@ func play_round() -> Dictionary:
 	if not simulator.controller.combat_finished():
 		return {"ok":true,"state":"ongoing","round":simulator.state.round_number}
 	if simulator.controller.winning_team() != "players":
-		return {"ok":false,"state":"defeat_pending_resolution","reason":"defeat_requires_explicit_map_outcome"}
+		var staged := SoloCombatDefeatService.stage(owner,battle,encounter_key,checkpoint_path,terminal_path)
+		if not bool(staged.get("ok",false)):
+			return {"ok":false,"state":"defeat_pending_resolution","reason":"defeat_staging_failed","detail":String(staged.get("reason","unknown"))}
+		var published := SoloCombatSessionManifest.recover_on_launch(owner.manifest_path)
+		if not bool(published.get("ok",false)):
+			return {"ok":false,"state":"defeat_pending_resolution","reason":"defeat_publish_failed","detail":String(published.get("reason","unknown"))}
+		return {"ok":true,"state":"defeat","round":simulator.state.round_number,"return_cell":staged["return_cell"]}
 	var committed := turns.finalize_group_victory_atomic(battle,encounter_key,owner.expedition,owner.map,owner.npc_bridge,owner.character,owner.repository,NpcPossessionLootService.new(1),{"common":100.0},receipt_path,checkpoint_path,terminal_path,int(Time.get_unix_time_from_system()),true)
 	if not bool(committed.get("ok",false)):
 		return {"ok":false,"reason":"world_commit_failed","detail":String(committed.get("reason","unknown"))}
