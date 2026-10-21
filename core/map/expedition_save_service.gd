@@ -158,6 +158,52 @@ static func import_committed_world(path: String, old_snapshot: String, encounter
 		return {"ok":false,"reason":"legacy_world_not_verified","detail":String(legacy.get("reason","unknown"))}
 	return save(path,legacy["expedition"],legacy["character"],legacy["repository"])
 
+## Publish a terminal encounter ONLY from a verified battle-world snapshot.
+## An expected expedition checksum prevents a stale battle from replacing
+## an expedition that was modified by another action in the meantime.
+static func publish_verified_combat(path: String, combat_snapshot: String, encounter_key: String, expedition_id: String, player_id: String, expected_base_sha256: String) -> Dictionary:
+	if expected_base_sha256.length() != 64:
+		return {"ok":false,"reason":"invalid_expected_expedition_revision"}
+	var original: Dictionary = read(path,expedition_id,player_id)
+	if not bool(original.get("ok",false)):
+		return original
+	var envelope: Dictionary = _read_payload_envelope(path)
+	if not bool(envelope.get("ok",false)):
+		return envelope
+	if String(envelope.get("sha256","")) != expected_base_sha256:
+		return {"ok":false,"reason":"stale_expedition_save"}
+	var terminal: Dictionary = MapWorldCommitService.read(combat_snapshot,encounter_key,expedition_id,player_id)
+	if not bool(terminal.get("ok",false)):
+		return {"ok":false,"reason":"combat_world_not_verified","detail":String(terminal.get("reason","unknown"))}
+	var current: ExpeditionState = original["expedition"]
+	var next: ExpeditionState = terminal["expedition"]
+	if not next.is_active() or not current.is_active():
+		return {"ok":false,"reason":"expedition_not_active"}
+	if Dictionary(current.world_state.get(MARKERS_KEY,{})).has(encounter_key):
+		return {"ok":false,"reason":"encounter_already_published"}
+	var hash := String(terminal["receipt_sha256"])
+	if String(Dictionary(next.world_state.get(MARKERS_KEY,{})).get(encounter_key,"")) != hash:
+		return {"ok":false,"reason":"combat_marker_missing"}
+	if not Dictionary(next.world_state.get(TOMBSTONES_KEY,{})).has(encounter_key):
+		return {"ok":false,"reason":"combat_tombstone_missing"}
+	return save(path,next,terminal["character"],terminal["repository"])
+
+static func _read_payload_envelope(path: String) -> Dictionary:
+	if not MapWorldCommitService._valid_path(path) or not FileAccess.file_exists(path):
+		return {"ok":false,"reason":"expedition_envelope_not_found"}
+	var file := FileAccess.open(path,FileAccess.READ)
+	if file == null:
+		return {"ok":false,"reason":"expedition_envelope_open_failed"}
+	var raw := file.get_as_text()
+	file.close()
+	var envelope: Variant = JSON.parse_string(raw)
+	if not envelope is Dictionary or String(envelope.get("format","")) != FORMAT or not envelope.get("payload_json") is String:
+		return {"ok":false,"reason":"expedition_envelope_invalid"}
+	var payload_json := String(envelope["payload_json"])
+	if payload_json.sha256_text() != String(envelope.get("sha256","")):
+		return {"ok":false,"reason":"expedition_envelope_integrity_failed"}
+	return {"ok":true,"sha256":String(envelope["sha256"])}
+
 static func save(path: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
 	if not _valid_identity(expedition,player,repository) or not MapWorldCommitService._valid_path(path):
 		return {"ok":false,"reason":"expedition_save_invalid_context"}
