@@ -41,6 +41,9 @@ jobs:
       - name: Replay terminal map combat settlement without duplicate world rewards
         run: bash tools/run_godot_check.sh tests/map/map_combat_settlement_resume_runner.gd
 
+      - name: Validate Solo expedition save before combat and after multiple encounters
+        run: bash tools/run_godot_check.sh tests/map/expedition_save_runner.gd
+
       - name: Validate atomic world snapshot and safe journal acknowledgement
         run: bash tools/run_godot_check.sh tests/map/map_world_commit_runner.gd
 
