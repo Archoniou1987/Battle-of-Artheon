@@ -21,6 +21,7 @@ func _initialize() -> void:
 	var repo := ItemRepository.new()
 	check(repo.add_item({"instance_id":"TOWN_SWORD","weight":1.0}),"town_sword_registered")
 	check(town.inventory.add_instance("TOWN_SWORD",repo),"town_sword_owned")
+	check(SoloTownExpeditionBridge.expedition_id_for_player(town.character_id)=="solo_exp_player","stable_town_expedition_id")
 	var origin_ids := town.inventory.instance_ids().duplicate()
 	var first := SoloTownExpeditionBridge.create_from_town(SAVE,EXP,321,Vector2i(3,4),town,repo,MANIFEST)
 	check(bool(first.get("ok",false)),"first_seed_success")
