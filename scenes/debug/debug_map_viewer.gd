@@ -31,6 +31,34 @@ var battle_combat_state:CombatState
 var battle_active:=false
 var battle_defeat_button:Button
 var chase_entity_id:String=""
+var cell_content_panel:CellContentPanel
+var cell_content_bridge:MapNpcBridge=MapNpcBridge.new()
+var cell_content_expedition:ExpeditionState
+var cell_content_character:CharacterState
+
+## The viewer can be given the SAME live owners as a playable expedition.
+## If none are supplied, its read-only panel still lists map objects.
+func set_cell_content_context(expedition:ExpeditionState,character:CharacterState,bridge:MapNpcBridge)->void:
+	cell_content_expedition=expedition
+	cell_content_character=character
+	cell_content_bridge=bridge if bridge!=null else MapNpcBridge.new()
+	refresh_cell_content()
+
+func refresh_cell_content()->void:
+	if cell_content_panel==null or playable_map==null:
+		return
+	if cell_content_character==null:
+		cell_content_character=CharacterState.new("PLAYER","Explorer",1)
+	if cell_content_expedition==null:
+		cell_content_expedition=ExpeditionState.new("DEBUG_CELL_CONTENT")
+	cell_content_panel.set_projection(CellContentService.inspect_current_cell(playable_map,cell_content_bridge,cell_content_expedition,cell_content_character,int(Time.get_unix_time_from_system())))
+
+func _on_cell_content_selected(kind:String,id:String,action:String)->void:
+	# Selection is read-only until the interaction resolver authorizes
+	# live pickup, attack, hunting and quest actions.
+	if move_status!=null:
+		move_status.text="На клетке: "+kind+" / "+id+" ("+action+")"
+
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -168,6 +196,10 @@ func _ready()->void:
 	canvas.set_debug_reveal_all(true)
 	_build_movement_panel()
 	_build_game_navigation()
+	cell_content_panel=CellContentPanel.new()
+	$Root/Sidebar.add_child(cell_content_panel)
+	$Root/Sidebar.move_child(cell_content_panel,4)
+	cell_content_panel.entry_selected.connect(_on_cell_content_selected)
 	_loot_refresh_timer=Timer.new()
 	_loot_refresh_timer.wait_time=1.0
 	_loot_refresh_timer.timeout.connect(_on_loot_refresh)
@@ -228,6 +260,7 @@ func _regenerate()->void:
 		move_status.text="Выберите клетку"
 	_update_movement_panel()
 	refresh_loot_markers()
+	refresh_cell_content()
 	var map:TacticalMapState=generated.map
 	var blocked:=0
 	for pos in map.cells.keys():
@@ -381,6 +414,7 @@ func _process(delta:float)->void:
 		return
 	player_hex=_next_hex
 	planned_path.remove_at(0)
+	refresh_cell_content()
 	var encountered_id:=_npc_at(player_hex)
 	if not encountered_id.is_empty():
 		canvas.set_player_view(player_hex,target_hex,planned_path)
