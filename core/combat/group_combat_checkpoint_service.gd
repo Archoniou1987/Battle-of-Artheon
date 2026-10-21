@@ -242,7 +242,12 @@ static func _restore_simulator(payload: Dictionary):
 	var group := GroupCombatState.new(state)
 	for raw_team in Dictionary(saved_group["teams"]).keys():
 		var team_id := String(raw_team)
-		for raw_id in Array(saved_group["teams"][raw_team]):
+		# Preserve defeated teams with zero active members; they remain
+		# meaningful to the terminal outcome and the read-only group view.
+		var members: Array = saved_group["teams"][raw_team]
+		if members.is_empty():
+			group.teams[team_id] = []
+		for raw_id in members:
 			if not group.add_member(team_id,String(raw_id)):
 				return null
 	# Runtime load avoids a compile-time type cycle: GroupCombatSimulator uses
