@@ -6,7 +6,7 @@ extends RefCounted
 ## retreat and a durable defeat marker become authoritative.
 ## The staged terminal is a FULL verified ExpeditionSaveService snapshot,
 ## never a MapWorldCommitService victory receipt.
-const LEDGER_KEY := "solo_combat_defeats_v1"
+const LEDGER_KEY := ExpeditionState.SOLO_DEFEAT_LEDGER_KEY
 
 static func inspect_terminal_type(path: String) -> Dictionary:
 	if not MapWorldCommitService._valid_path(path) or not FileAccess.file_exists(path):
