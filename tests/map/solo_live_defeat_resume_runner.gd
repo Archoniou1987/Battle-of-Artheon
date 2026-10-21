@@ -133,7 +133,11 @@ func _run() -> void:
 	check(second_combat.encounter_key==String(attempt2["encounter_key"]) and second_combat.checkpoint_path!=combat.checkpoint_path,"second_attempt_distinct_checkpoint")
 	if not _terminal_loss(second_combat,"second"):
 		return
-	var durable := SoloCombatDefeatService.stage(second_combat.owner,second_combat.battle,second_combat.encounter_key,second_combat.checkpoint_path,second_combat.terminal_path)
+	var second_manifest := SoloCombatSessionManifest.read(MANIFEST)
+	check(bool(second_manifest.get("ok",false)),"second_manifest_verified")
+	if not bool(second_manifest.get("ok",false)):
+		return
+	var durable := SoloCombatDefeatService.stage(second_combat.owner,second_combat.battle,second_combat.encounter_key,second_combat.checkpoint_path,second_combat.terminal_path,second_manifest["data"])
 	check(bool(durable.get("ok",false)) and FileAccess.file_exists(second_combat.terminal_path),"second_terminal_staged_before_crash")
 	if not bool(durable.get("ok",false)):
 		print("SECOND_DEFEAT_STAGE_REASON=",durable.get("reason","unknown"),":",durable.get("detail",""))
