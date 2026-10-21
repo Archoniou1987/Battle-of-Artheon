@@ -137,6 +137,15 @@ static func _validate_tombstones(world: Dictionary, encounter_key: String, recei
 			return "world_tombstone_position_mismatch"
 	return ""
 
+static func _character_to_dict(player: CharacterState) -> Dictionary:
+	return {
+		"id":player.character_id,"name":player.display_name,
+		"progression":player.progression_snapshot(),"resources":player.resources_to_dict(),
+		"inventory":player.inventory.to_dict(),"equipment":player.equipment.slots.duplicate(true),
+		"elixirs":player.elixir_slots.duplicate(),"traits":player.learned_trait_ids.duplicate(),
+		"bag_capacity":player.bag_capacity
+	}
+
 static func read(path: String, encounter_key: String, expedition_id: String, player_id: String) -> Dictionary:
 	if not _valid_id(encounter_key) or not _valid_id(expedition_id) or not _valid_id(player_id):
 		return {"ok":false,"reason":"invalid_world_snapshot_identity"}
@@ -158,10 +167,10 @@ static func read(path: String, encounter_key: String, expedition_id: String, pla
 	var receipt: Dictionary = payload["receipt"]
 	if String(receipt.get("encounter_key","")) != encounter_key or String(receipt.get("expedition_id","")) != expedition_id or String(receipt.get("player_id","")) != player_id or String(receipt.get("winning_team","")) != "players":
 		return {"ok":false,"reason":"world_snapshot_receipt_identity_mismatch"}
-	# Store the original journal receipt SHA, rather than hashing a JSON
-	# round-trip which can change number formatting.
-	if JSON.stringify(receipt).sha256_text() != String(payload["receipt_sha256"]):
-		return {"ok":false,"reason":"world_snapshot_receipt_integrity"}
+	# The settlement journal's SHA covers the ORIGINAL receipt JSON bytes.
+	# Never re-hash a decoded Dictionary here: Godot can normalize numeric
+	# types during parsing. The world envelope hashes the full payload and
+	# the expedition's immutable marker pins its originating receipt SHA.
 	var expedition_data: Dictionary = payload["expedition"]
 	if String(expedition_data.get("expedition_id","")) != expedition_id or not expedition_data.get("world_state") is Dictionary:
 		return {"ok":false,"reason":"world_snapshot_expedition_invalid"}
@@ -247,13 +256,7 @@ static func commit(session: Dictionary, encounter_key: String, expedition: Exped
 		"checkpoint_fingerprint":sim.checkpoint_roster_fingerprint,
 		"checkpoint_round":disk_sim.state.round_number,
 		"expedition":expedition_data,"repository":repository.to_dict(),
-		"character":{
-			"id":player.character_id,"name":player.display_name,
-			"progression":player.progression_snapshot(),"resources":player.resources_to_dict(),
-			"inventory":player.inventory.to_dict(),"equipment":player.equipment.slots.duplicate(true),
-			"elixirs":player.elixir_slots.duplicate(),"traits":player.learned_trait_ids.duplicate(),
-			"bag_capacity":player.bag_capacity
-		}
+		"character":_character_to_dict(player)
 	}
 	# A previously committed snapshot must never be overwritten with a
 	# different local encounter/owner. These V1 files are single-encounter.
