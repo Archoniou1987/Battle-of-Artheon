@@ -46,7 +46,7 @@ func _initialize() -> void:
 	var combat: SoloLiveNpcCombat = begun["combat"]
 	var progressed := combat.play_round()
 	check(bool(progressed.get("ok",false)),"first_combat_round_checkpointed")
-	var last_round := combat.battle["simulator"].state.round_number
+	var last_round: int = int(combat.battle["simulator"].state.round_number)
 	check(last_round == 1,"first_round_number")
 	check(FileAccess.file_exists(combat.checkpoint_path),"round_checkpoint_exists")
 	var checkpoint_text := FileAccess.get_file_as_string(combat.checkpoint_path)
