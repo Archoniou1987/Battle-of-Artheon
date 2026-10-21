@@ -199,6 +199,9 @@ jobs:
       - name: Resolve map combat victory into death and loot
         run: bash tools/run_godot_check.sh tests/map/map_combat_outcome_runner.gd
 
+      - name: Bind real combat verdict to one-time map reward
+        run: bash tools/run_godot_check.sh tests/map/map_real_duel_reward_chain_runner.gd
+
       - name: Validate fixed resource definitions and level ranges
         run: bash tools/run_godot_check.sh tests/resources/resource_definition_runner.gd
 
