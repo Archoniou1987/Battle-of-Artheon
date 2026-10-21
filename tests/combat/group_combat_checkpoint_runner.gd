@@ -93,14 +93,15 @@ func _execute() -> void:
 	if not bool(baseline_open.get("ok",false)) or not bool(checkpoint_open.get("ok",false)):
 		GroupCombatCheckpointService.clear(PATH)
 		return
+	var fingerprint := GroupCombatCheckpointService.initial_roster_fingerprint(baseline_open["state"])
 	var baseline := GroupCombatSimulator.new(baseline_open["state"],baseline_open["group"])
 	var paused: GroupCombatSimulator = checkpoint_open["simulator"]
+	_check(fingerprint == paused.checkpoint_roster_fingerprint, "baseline_and_suspended_roster_fingerprints_match")
 	_configure(baseline)
 	_configure(paused)
 	_check(baseline.group.active_opponent("PLAYER") == "PATROL_01", "group_primary_target")
 	_check(not bool(checkpoint_open.get("resumed",true)), "first_open_starts_new_battle")
-	var fingerprint := GroupCombatCheckpointService.initial_roster_fingerprint(baseline_open["state"])
-	_check(fingerprint == GroupCombatCheckpointService.initial_roster_fingerprint(seed_b.get("initial_state",checkpoint_open["state"])) or not fingerprint.is_empty(), "fingerprint_generated")
+	_check(not fingerprint.is_empty(), "fingerprint_generated")
 
 	for i in range(3):
 		var continuous: Dictionary = baseline.run_round()
@@ -166,7 +167,6 @@ func _execute() -> void:
 		_check(resumed.state.pending_events.is_empty() and resumed.orchestrator.deferred_events.is_empty(), "round_boundary_empty_queues_%d" % (i+1))
 		if not bool(restarted.get("ok",false)) or not bool(restarted.get("checkpoint_ok",false)):
 			break
-	var nonempty_eff := 0
 	var abi_events := 0
 	var periodic_events := 0
 	for event in resumed.state.event_log:
@@ -174,8 +174,6 @@ func _execute() -> void:
 			abi_events += 1
 		if String(event.payload.get("source","")) == "effect":
 			periodic_events += 1
-	for fighter in resumed.state.combatants.values():
-		nonempty_eff += fighter.active_effects.size()
 	_check(abi_events > 0 and periodic_events > 0, "actual_abi_and_eff_through_checkpoint")
-	_check(resumed.state.round_number == 9 and nonempty_eff >= 0, "nine_rounds_completed")
+	_check(resumed.state.round_number == 9, "nine_rounds_completed")
 	_check(GroupCombatCheckpointService.clear(PATH) and not FileAccess.file_exists(PATH), "checkpoint_explicit_cleanup")
