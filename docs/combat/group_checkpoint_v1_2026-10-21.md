@@ -12,7 +12,8 @@ This contract saves **one active world/group combat encounter** after a complete
 - Both alive and finalized-dead combatants: canonical PAR/combat stats, equipment-derived attack profiles, HP/mana/AP, armour/resistances, active EFF records, source/stack IDs, duration and reveal state, Tempo/debt/stun/immunity, weapon skills, persistent combat loadouts.
 - Combat round index, next unique event ID, complete resolved `CombatEvent` log with lineage/result, damage attribution, current team membership and active opponents, engagement locks.
 - Engine PRNG `RandomNumberGenerator.state` encoded as a decimal STRING (never JSON float), next EFF stack ID, physical balance and test-only EFF overrides; shared RNG used by `CombatAttackPipeline`. A SHA-256 fingerprint of the canonical EFF catalog rejects outdated definitions after an incompatible content update.
-- ABI scheduler definitions/loadouts, per-combatant cooldown and one-cast-per-round ledger; remaining persistent action schedule; simulator maximum rounds.
+- ABI scheduler definitions/loadouts, per-combatant cooldown and one-cast-per-round ledger; remaining persistent action schedule; simulator maximum rounds. Persist **only the present roster's actor-scoped scheduler entries**. The default fixture scheduler may contain ability loadouts belonging to unrelated TEST_* fighters, which must not invalidate a terminal checkpoint.
+- The JSON persistence boundary can normalize integral numeric Variants to floating-point JSON values. Regression comparisons use JSON-round-tripped canonical values **plus** full-round deterministic simulation comparisons, not raw Dictionary variant-type equality.
 - `terminal` flag. A terminal saved combat can be inspected after restart and cannot execute another round. It is retained until external world consequences have been durably committed and acknowledged.
 
 ### File and trust boundary
