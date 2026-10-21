@@ -46,6 +46,11 @@ func _run() -> void:
 	TestFixtureLoader.set_weapon_profiles(player, [{
 		"damage_min": 500.0, "damage_max": 500.0, "damage_type": "slashing"
 	}])
+	# CombatantState uses combatant_id, while CharacterState uses
+	# character_id. The game must pair the two before awarding rewards.
+	_check(player.combatant_id == player_character.character_id, "runtime_and_persistent_player_identity_match")
+	if not failures.is_empty():
+		return
 	var battle: Dictionary = MapEncounterCombatService.begin(encounter, npc_catalog, player)
 	_check(bool(battle.get("ok", false)), "encounter_starts_canonical_battle")
 	if not bool(battle.get("ok", false)):
@@ -58,7 +63,7 @@ func _run() -> void:
 		TestFixtureLoader.load_json("res://data/balance/physical_combat.json"), 6711)
 	sim.max_rounds = 25
 	var verdict: Dictionary = sim.run_duel(player.combatant_id, npc.instance_id)
-	_check(String(verdict.get("winner_id", "")) == player.character_id, "engine_declares_player_winner")
+	_check(String(verdict.get("winner_id", "")) == player.combatant_id, "engine_declares_player_winner")
 	_check(String(verdict.get("loser_id", "")) == npc.instance_id, "engine_declares_correct_npc_loser")
 	_check(state.get_combatant(npc.instance_id).is_death_finalized(), "engine_finalized_npc_death")
 	_check(state.round_number > 0 and state.event_log.size() > 0, "real_engine_events")
@@ -68,7 +73,7 @@ func _run() -> void:
 	if not failures.is_empty():
 		return
 
-	var fake_loss: Dictionary = {"winner_id": npc.instance_id, "loser_id": player.character_id}
+	var fake_loss: Dictionary = {"winner_id": npc.instance_id, "loser_id": player.combatant_id}
 	var rejected := MapCombatOutcomeService.resolve_victory(fake_loss, map, bridge, npc, player_character,
 		item_repo, NpcPossessionLootService.new(1), {"common": 100.0})
 	_check(not bool(rejected.get("ok", false)), "npc_victory_cannot_award_player")
@@ -87,7 +92,7 @@ func _run() -> void:
 	_check(pool != null, "reward_pool_created")
 	if pool == null:
 		return
-	_check(pool.available_for(player.character_id) == ["REAL_REWARD_DAGGER"], "only_winner_sees_reward")
+	_check(pool.available_for(player.combatant_id) == ["REAL_REWARD_DAGGER"], "only_winner_sees_reward")
 	_check(not player_character.inventory.owns("REAL_REWARD_DAGGER"), "loot_requires_explicit_claim")
 	var repo_after := item_repo.size()
 	_check(repo_after >= repo_before, "reward_does_not_remove_npc_item")
@@ -99,7 +104,7 @@ func _run() -> void:
 	_check(item_repo.size() == repo_after and pool.entries.size() == 1, "duplicate_does_not_create_drops")
 	var persisted: Dictionary = pool.to_dict()
 	var restored := EncounterLootPool.from_dict(persisted)
-	_check(restored.available_for(player.character_id) == ["REAL_REWARD_DAGGER"], "loot_survives_pool_serialization")
+	_check(restored.available_for(player.combatant_id) == ["REAL_REWARD_DAGGER"], "loot_survives_pool_serialization")
 	_check(restored.claim("REAL_REWARD_DAGGER", player_character, item_repo), "winner_claims_once")
 	_check(player_character.inventory.owns("REAL_REWARD_DAGGER"), "item_added_to_real_inventory")
 	_check(not restored.claim("REAL_REWARD_DAGGER", player_character, item_repo), "duplicate_claim_refused")
