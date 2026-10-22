@@ -74,3 +74,12 @@ ABI #319 succeeded on `18dde95d96cf304cb88f30abe1ae3bbfeed46bc6`: the Solo mobil
 The touch-selection layer now holds exactly the number of manual block zones permitted by `CombatModifierService.manual_block_zone_capacity` / PAR073. At full capacity, selecting another zone deselects an earlier one; tapping to remove a necessary last selection restores it. When capacity is zero, all defense choices are disabled. This prevents avoidable rejected orders from normal touch interaction, but **does not bypass** the existing `CombatCommandApi` authoritative server-side validation.
 
 The existing Godot scene smoke runner now tests 2-zone switching and deselection. These modifications await the next ABI CI check; no combat math or item persistence changed.
+
+
+## ABI #320 and HP visualization
+
+ABI #320 passed on `c6e7200bf68c3eb05db8e5409d8d1a31e45b3f8c`. Mobile defense-zone switching is confirmed.
+
+The next UI layer adds a live hero HP ProgressBar and a separate row for **each** NPC from `SoloLiveNpcCombat.combat_view()`. Progress bars only render `hp` and `max_hp` supplied by the canonical combat snapshot; they never independently compute injuries or death. The UI clamps display into 0..maximum and shows numeric values via tooltip, alongside the existing combat summary. Old NPC rows are removed on refresh, avoiding stale opponents.
+
+The existing headless scene smoke runner covers two NPC bars, zero HP, a new snapshot with no NPCs, and HP clamping. This visualization layer awaits the next CI run. Avatar illustrations, equipment portraits and full arena layout are separate remaining presentation tasks.
