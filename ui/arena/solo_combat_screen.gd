@@ -24,7 +24,13 @@ var potion_buttons: Array[Button] = []
 var attack_buttons: Array[Button] = []
 var block_buttons: Array[Button] = []
 var arena_layout: BoxContainer
-var fighters_column: VBoxContainer
+var square_host: Control
+var square_content: Control
+var roster_allies: VBoxContainer
+var roster_enemies: VBoxContainer
+var roster_page: HBoxContainer
+var tab_container: TabContainer
+var log_view: RichTextLabel
 var actions_column: VBoxContainer
 var scroll: ScrollContainer
 var round_button: Button
@@ -33,6 +39,8 @@ var instruction_label: Label
 var detail_popup: AcceptDialog
 var detail_text: Label
 var zone_atlas: Texture2D
+
+const SQUARE_EDGE := 480.0
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -51,7 +59,7 @@ func _ready() -> void:
 	var title_row := HBoxContainer.new()
 	top.add_child(title_row)
 	var title := Label.new()
-	title.text = "BATTLE OF ARTHEON   •   БОЙ"
+	title.text = "BATTLE OF ARTHEON  •  БОЙ"
 	title.add_theme_color_override("font_color", Color("#ead9b9"))
 	title.add_theme_font_size_override("font_size", 19)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -59,23 +67,71 @@ func _ready() -> void:
 	round_label = Label.new()
 	round_label.text = "Раунд —"
 	title_row.add_child(round_label)
+
+	# The battle tab always holds ONE 1:1 Face to Face arena. A group roster
+	# never causes additional fighter cards to appear in the main arena.
+	tab_container = TabContainer.new()
+	tab_container.name = "CombatTabs"
+	tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shell.add_child(tab_container)
+	arena_layout = BoxContainer.new()
+	arena_layout.name = "Поединок"
+	arena_layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	arena_layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	arena_layout.add_theme_constant_override("separation", 6)
+	tab_container.add_child(arena_layout)
+	square_host = Control.new()
+	square_host.name = "FaceToFaceSquare"
+	square_host.clip_contents = true
+	arena_layout.add_child(square_host)
+	square_content = Control.new()
+	square_content.name = "FaceToFaceContent"
+	square_content.size = Vector2.ONE * SQUARE_EDGE
+	square_host.add_child(square_content)
+	# Actions are scrollable but the square remains visible as one entity.
 	scroll = ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	shell.add_child(scroll)
-	arena_layout = BoxContainer.new()
-	arena_layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	arena_layout.add_theme_constant_override("separation", 8)
-	scroll.add_child(arena_layout)
-	fighters_column = VBoxContainer.new()
-	fighters_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fighters_column.add_theme_constant_override("separation", 6)
-	arena_layout.add_child(fighters_column)
+	arena_layout.add_child(scroll)
 	actions_column = VBoxContainer.new()
 	actions_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions_column.add_theme_constant_override("separation", 6)
-	arena_layout.add_child(actions_column)
+	actions_column.add_theme_constant_override("separation", 7)
+	scroll.add_child(actions_column)
+
+	roster_page = HBoxContainer.new()
+	roster_page.name = "Участники"
+	roster_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	roster_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	roster_page.add_theme_constant_override("separation", 8)
+	tab_container.add_child(roster_page)
+	for is_ally in [true, false]:
+		var side := ScrollContainer.new()
+		side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		side.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		side.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		roster_page.add_child(side)
+		var column := VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_theme_constant_override("separation", 5)
+		side.add_child(column)
+		if is_ally:
+			roster_allies = column
+		else:
+			roster_enemies = column
+
+	var log_page := VBoxContainer.new()
+	log_page.name = "Журнал"
+	log_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	log_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab_container.add_child(log_page)
+	log_view = RichTextLabel.new()
+	log_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	log_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	log_view.add_theme_font_size_override("normal_font_size", 18)
+	log_page.add_child(log_view)
+
 	var footer := PanelContainer.new()
 	_panel_style(footer)
 	shell.add_child(footer)
@@ -95,6 +151,7 @@ func _ready() -> void:
 	round_button.add_theme_font_size_override("font_size", 18)
 	round_button.pressed.connect(_submit)
 	footer_row.add_child(round_button)
+
 	detail_popup = AcceptDialog.new()
 	detail_popup.title = "Информация"
 	detail_popup.min_size = Vector2i(300, 180)
@@ -104,6 +161,7 @@ func _ready() -> void:
 	detail_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_popup.add_child(detail_text)
 	resized.connect(_apply_orientation)
+	tab_container.resized.connect(_apply_orientation)
 	_apply_orientation()
 
 func _panel_style(panel: PanelContainer) -> void:
@@ -116,11 +174,22 @@ func _panel_style(panel: PanelContainer) -> void:
 	panel.add_theme_stylebox_override("panel", style)
 
 func _apply_orientation() -> void:
-	if arena_layout == null:
+	if arena_layout == null or square_host == null:
 		return
-	arena_layout.vertical = size.y >= size.x
-	fighters_column.custom_minimum_size.x = 0 if arena_layout.vertical else maxf(320.0, size.x * 0.52)
-	actions_column.custom_minimum_size.x = 0 if arena_layout.vertical else maxf(300.0, size.x * 0.38)
+	var portrait := size.y >= size.x
+	arena_layout.vertical = portrait
+	# Retain the same 480x480 logical composition, with one uniform scale.
+	# On landscape a separate scrollable command column sits alongside it.
+	var room: Vector2 = tab_container.size
+	var edge: float = minf(room.x - (0.0 if portrait else 340.0), room.y * (0.66 if portrait else 1.0))
+	edge = floorf(maxf(1.0, edge))
+	if portrait:
+		edge = minf(edge, room.x - 4.0)
+	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
+	# The scroll pane fills the remaining area; no long group roster in combat.
+	scroll.custom_minimum_size = Vector2.ZERO
+	if not portrait:
+		scroll.custom_minimum_size.x = 330.0
 
 func present(view: Dictionary) -> void:
 	snapshot = view.duplicate(true)
@@ -133,10 +202,12 @@ func present(view: Dictionary) -> void:
 	potion_buttons.clear()
 	attack_buttons.clear()
 	block_buttons.clear()
-	for column in [fighters_column, actions_column]:
-		for child in column.get_children():
-			column.remove_child(child)
-			child.queue_free()
+	for child in actions_column.get_children():
+		actions_column.remove_child(child)
+		child.queue_free()
+	for child in square_content.get_children():
+		square_content.remove_child(child)
+		child.queue_free()
 	var controls: Dictionary = snapshot.get("controls", {})
 	if not bool(controls.get("stunned", false)):
 		if int(controls.get("attack_count", 0)) > 0:
@@ -147,103 +218,237 @@ func present(view: Dictionary) -> void:
 				break
 			chosen_blocks.append(zone)
 	round_label.text = "Раунд %d" % (int(snapshot.get("round", 0)) + 1)
-	var hero: Dictionary = snapshot.get("player", {})
-	fighters_column.add_child(_fighter_card(hero, true, Array(snapshot.get("equipment_slots", []))))
-	var enemies: Array = snapshot.get("enemies", [])
-	var active_target := String(controls.get("target_id", ""))
-	for raw_enemy in enemies:
-		if raw_enemy is Dictionary:
-			var enemy: Dictionary = raw_enemy
-			fighters_column.add_child(_fighter_card(enemy, false, [], String(enemy.get("id", "")) == active_target))
-	if enemies.is_empty():
-		var none := Label.new()
-		none.text = "Противники отсутствуют"
-		fighters_column.add_child(none)
+	_build_face_to_face()
+	_build_roster()
 	_build_actions()
+	_build_log()
 	_apply_orientation()
 	_update_selection()
 	if scroll != null:
 		scroll.scroll_vertical = 0
 
-func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: bool = false) -> Control:
-	var panel := PanelContainer.new()
-	_panel_style(panel)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 3)
-	panel.add_child(column)
-	var name := Label.new()
-	var level := int(fighter.get("level", 0))
-	name.text = "%s%s%s" % [String(fighter.get("name", "Герой" if hero else "NPC")), (" [%d]" % level if level > 0 else ""), ("  ◀ ЦЕЛЬ" if targeted else "")]
-	name.add_theme_font_size_override("font_size", 20)
-	name.add_theme_color_override("font_color", Color("#f0dcb6") if hero else Color("#e2b5a5"))
-	column.add_child(name)
-	_add_bar(column, int(fighter.get("hp", 0)), int(fighter.get("max_hp", 1)), Color("#b63b48"), "HP")
-	if hero or int(fighter.get("max_mana", 0)) > 0:
-		_add_bar(column, int(fighter.get("mana", 0)), int(fighter.get("max_mana", 0)), Color("#367eb6"), "MP")
-	if fighter.has("max_ap"):
-		var ap := Label.new()
-		ap.text = "AP %d / %d" % [int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0))]
-		ap.add_theme_font_size_override("font_size", 16)
-		column.add_child(ap)
-	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 6)
-	column.add_child(body)
+func _build_face_to_face() -> void:
+	var background := TextureRect.new()
+	background.position = Vector2.ZERO
+	background.size = Vector2.ONE * SQUARE_EDGE
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_SCALE
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if ResourceLoader.exists(BACKGROUND):
+		background.texture = load(BACKGROUND) as Texture2D
+	square_content.add_child(background)
+	var hero: Dictionary = snapshot.get("player", {})
+	var enemies: Array = snapshot.get("enemies", [])
+	var controls: Dictionary = snapshot.get("controls", {})
+	var active_id := String(controls.get("target_id", ""))
+	var enemy: Dictionary = {}
+	for raw_enemy in enemies:
+		if raw_enemy is Dictionary and String(raw_enemy.get("id", "")) == active_id:
+			enemy = raw_enemy
+			break
+	if enemy.is_empty():
+		for raw_enemy in enemies:
+			if raw_enemy is Dictionary and not bool(raw_enemy.get("dead", false)):
+				enemy = raw_enemy
+				break
+	if enemy.is_empty() and not enemies.is_empty() and enemies[0] is Dictionary:
+		enemy = enemies[0]
+	_build_face_actor(Vector2(4, 8), hero, true, Array(snapshot.get("equipment_slots", [])))
+	_build_face_actor(Vector2(244, 8), enemy, false, [])
+	var separator := Label.new()
+	separator.text = "VS"
+	separator.position = Vector2(224, 164)
+	separator.add_theme_font_size_override("font_size", 16)
+	separator.add_theme_color_override("font_color", Color("#ebc58b"))
+	separator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	square_content.add_child(separator)
+	var commands := Label.new()
+	commands.name = "PreparedActions"
+	commands.position = Vector2(14, 346)
+	commands.size = Vector2(452, 36)
+	commands.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	commands.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	commands.add_theme_font_size_override("font_size", 14)
+	commands.add_theme_color_override("font_color", Color("#ecd5b0"))
+	square_content.add_child(commands)
+	# These strips echo Arena's slots without duplicating command handlers.
+	# The larger actual touch controls live in the action column.
+	var abi_caption := Label.new()
+	abi_caption.text = "ABI  1     2     3     4     5"
+	abi_caption.position = Vector2(135, 395)
+	abi_caption.size = Vector2(210, 25)
+	abi_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	abi_caption.add_theme_font_size_override("font_size", 14)
+	square_content.add_child(abi_caption)
+	var status := Label.new()
+	status.text = "ДЕЙСТВИЯ — справа или ниже"
+	status.position = Vector2(90, 433)
+	status.size = Vector2(300, 28)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.add_theme_font_size_override("font_size", 13)
+	status.add_theme_color_override("font_color", Color("#b5c1d0"))
+	square_content.add_child(status)
+
+## 232 logical px per fighter. Only the selected NPC appears opposite
+## the hero; all other participants live in the separate roster tab.
+func _build_face_actor(origin: Vector2, actor: Dictionary, hero: bool, equipment: Array) -> void:
+	var panel := Panel.new()
+	panel.position = origin
+	panel.size = Vector2(232, 331)
+	var border := StyleBoxFlat.new()
+	border.bg_color = Color("#19283b", 0.76)
+	border.border_color = Color("#5d7691") if hero else Color("#895e65")
+	border.set_border_width_all(1)
+	border.set_corner_radius_all(4)
+	panel.add_theme_stylebox_override("panel", border)
+	square_content.add_child(panel)
+	var actor_name := String(actor.get("name", "Герой" if hero else "Нет цели"))
+	var level := int(actor.get("level", 0))
+	var label := Label.new()
+	label.position = Vector2(6, 5)
+	label.size = Vector2(220, 21)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 13)
+	label.text = "%s%s" % [actor_name, " [%d]" % level if level > 0 else ""]
+	label.clip_text = true
+	label.tooltip_text = actor_name
+	panel.add_child(label)
+	_face_bar(panel, 8, 28, int(actor.get("hp", 0)), int(actor.get("max_hp", 1)), "#bc4350", "HP")
+	_face_bar(panel, 8, 48, int(actor.get("mana", 0)), int(actor.get("max_mana", 0)), "#367eb6", "MP")
+	var ap := Label.new()
+	ap.position = Vector2(12, 69)
+	ap.size = Vector2(210, 18)
+	ap.add_theme_font_size_override("font_size", 11)
+	ap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if actor.has("max_ap"):
+		ap.text = "AP  %d / %d" % [int(actor.get("ap", 0)), int(actor.get("max_ap", 0))]
+	elif bool(actor.get("dead", false)):
+		ap.text = "ПОБЕЖДЁН"
+	else:
+		ap.text = " " if hero else "ПРОТИВНИК"
+	panel.add_child(ap)
 	var avatar := Control.new()
-	avatar.custom_minimum_size = Vector2(142, 166 if hero else 116)
-	body.add_child(avatar)
-	var portrait := TextureRect.new()
-	portrait.position = Vector2.ZERO
-	portrait.size = avatar.custom_minimum_size
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	avatar.position = Vector2(46, 92)
+	avatar.custom_minimum_size = Vector2(140, 217)
+	panel.add_child(avatar)
+	var art := TextureRect.new()
+	art.size = Vector2(140, 217)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if hero and ResourceLoader.exists(HERO_AVATAR):
-		portrait.texture = load(HERO_AVATAR) as Texture2D
-	elif ResourceLoader.exists(BACKGROUND):
-		portrait.texture = load(BACKGROUND) as Texture2D
-	avatar.add_child(portrait)
+		art.texture = load(HERO_AVATAR) as Texture2D
+	avatar.add_child(art)
 	if not hero:
-		var unknown := Label.new()
-		unknown.text = "?" if not bool(fighter.get("dead", false)) else "†"
-		unknown.position = Vector2(55, 27)
-		unknown.add_theme_font_size_override("font_size", 43)
-		avatar.add_child(unknown)
-	_add_effect_rows(avatar, Array(fighter.get("effects", [])))
+		var silhouette := Label.new()
+		silhouette.text = "†" if bool(actor.get("dead", false)) else "?"
+		silhouette.position = Vector2(53, 65)
+		silhouette.add_theme_font_size_override("font_size", 36)
+		avatar.add_child(silhouette)
+	_add_effect_rows(avatar, Array(actor.get("effects", [])))
 	if hero:
-		var gear := GridContainer.new()
-		gear.columns = 5
-		gear.add_theme_constant_override("h_separation", 3)
-		gear.add_theme_constant_override("v_separation", 3)
-		gear.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		body.add_child(gear)
 		var indexed: Dictionary = {}
-		for raw_slot in equipment:
-			if raw_slot is Dictionary:
-				var equipped: Dictionary = raw_slot
-				indexed[String(equipped.get("slot", ""))] = equipped
-		for slot in EQUIPMENT:
+		for raw in equipment:
+			if raw is Dictionary:
+				indexed[String(raw.get("slot", ""))] = raw
+		for index in range(EQUIPMENT.size()):
+			var slot := String(EQUIPMENT[index])
 			var entry: Dictionary = indexed.get(slot, {})
 			var icon := ItemIcon.new()
-			icon.custom_minimum_size = Vector2(56, 56)
+			icon.position = Vector2(6 if index < 5 else 195, 97 + (index % 5) * 40)
+			icon.custom_minimum_size = Vector2(34, 34)
 			icon.set_empty_placeholder_icon_visible(false)
-			gear.add_child(icon)
+			panel.add_child(icon)
 			var item: Dictionary = entry.get("item", {})
-			# The fighter card is assembled before insertion into the scene tree.
-			# ItemIcon._ready() rebuilds its children; defer the item binding
-			# until after _ready, otherwise it silently resets to empty.
 			icon.call_deferred("set_item", item.duplicate(true), slot, not String(entry.get("instance_id", "")).is_empty())
 			if not bool(entry.get("active", true)) and not item.is_empty():
 				icon.modulate = Color("#a66f77")
-			var item_name := String(entry.get("name", "Пусто"))
-			icon.tooltip_text = SquareUiGeometry.equipment_name(slot) + ": " + (item_name if not item_name.is_empty() else "Пусто")
-			icon.pressed.connect(_show_item.bind(icon.tooltip_text))
-	else:
-		var info := Label.new()
-		info.text = "Выбрана движком" if targeted else "Участник группы"
-		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		info.add_theme_font_size_override("font_size", 16)
-		body.add_child(info)
+			var item_name := String(entry.get("name", ""))
+			var description := SquareUiGeometry.equipment_name(slot) + ": " + (item_name if not item_name.is_empty() else "Пусто")
+			icon.tooltip_text = description
+			icon.pressed.connect(_show_item.bind(description))
+
+func _face_bar(panel: Control, x: float, y: float, current: int, maximum: int, color: String, kind: String) -> void:
+	var bar := ProgressBar.new()
+	bar.position = Vector2(x, y)
+	bar.size = Vector2(216, 17)
+	bar.max_value = maxi(1, maximum)
+	bar.value = clampi(current, 0, maxi(1, maximum))
+	bar.show_percentage = false
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(color)
+	bar.add_theme_stylebox_override("fill", fill)
+	panel.add_child(bar)
+	var text := Label.new()
+	text.position = Vector2(x, y)
+	text.size = Vector2(216, 17)
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.add_theme_font_size_override("font_size", 11)
+	text.text = "%d / %d %s" % [current, maximum, kind]
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(text)
+
+## This is an information-only tab. Viewing another participant never
+## changes GroupCombatSimulator's authoritative active opponent.
+func _build_roster() -> void:
+	for column in [roster_allies, roster_enemies]:
+		for child in column.get_children():
+			column.remove_child(child)
+			child.queue_free()
+	var hero: Dictionary = snapshot.get("player", {})
+	var allies: Array = [hero]
+	for member in Array(snapshot.get("allies", [])):
+		if member is Dictionary and String(member.get("id", "")) != String(hero.get("id", "")):
+			allies.append(member)
+	var enemies: Array = snapshot.get("enemies", [])
+	var title_left := Label.new()
+	title_left.text = "СОЮЗНИКИ (%d)" % allies.size()
+	title_left.add_theme_font_size_override("font_size", 18)
+	roster_allies.add_child(title_left)
+	var title_right := Label.new()
+	title_right.text = "ПРОТИВНИКИ (%d)" % enemies.size()
+	title_right.add_theme_font_size_override("font_size", 18)
+	roster_enemies.add_child(title_right)
+	var controls: Dictionary = snapshot.get("controls", {})
+	var target := String(controls.get("target_id", ""))
+	for raw in allies:
+		if raw is Dictionary:
+			roster_allies.add_child(_roster_card(raw, false))
+	for raw in enemies:
+		if raw is Dictionary:
+			roster_enemies.add_child(_roster_card(raw, String(raw.get("id", "")) == target))
+
+func _roster_card(actor: Dictionary, targeted: bool) -> Control:
+	var panel := PanelContainer.new()
+	_panel_style(panel)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 4)
+	panel.add_child(stack)
+	var name := Button.new()
+	var actor_name := String(actor.get("name", "?"))
+	name.text = actor_name + ("  ◀" if targeted else "")
+	name.clip_text = true
+	name.tooltip_text = actor_name + " • Просмотр участника, без смены цели"
+	name.add_theme_font_size_override("font_size", 16)
+	name.pressed.connect(_show_item.bind("%s\nHP %d/%d • MP %d/%d" % [
+		actor_name, int(actor.get("hp", 0)), int(actor.get("max_hp", 1)),
+		int(actor.get("mana", 0)), int(actor.get("max_mana", 0))
+	]))
+	stack.add_child(name)
+	_add_bar(stack, int(actor.get("hp", 0)), int(actor.get("max_hp", 1)), Color("#b63b48"), "HP")
+	var effects: Array = actor.get("effects", [])
+	if not effects.is_empty():
+		var label := Label.new()
+		label.text = "Эффекты: %d" % effects.size()
+		label.add_theme_font_size_override("font_size", 13)
+		stack.add_child(label)
 	return panel
+
+func _build_log() -> void:
+	var lines: PackedStringArray = []
+	for line in Array(snapshot.get("last_round_log", [])):
+		lines.append(String(line))
+	log_view.text = "\n".join(lines) if not lines.is_empty() else "Боевые события появятся после первого раунда."
 
 func _add_bar(parent: Control, current: int, maximum: int, fill: Color, resource_name: String) -> void:
 	var holder := Control.new()
@@ -334,21 +539,6 @@ func _build_actions() -> void:
 		button.pressed.connect(_choose_elixir.bind(index))
 		potions.add_child(button)
 		potion_buttons.append(button)
-	var log_title := Label.new()
-	log_title.text = "ЖУРНАЛ • последний раунд"
-	log_title.add_theme_font_size_override("font_size", 19)
-	log_title.add_theme_color_override("font_color", Color("#e2d0ab"))
-	actions_column.add_child(log_title)
-	var log := RichTextLabel.new()
-	log.fit_content = true
-	log.add_theme_font_size_override("normal_font_size", 18)
-	log.scroll_active = false
-	log.custom_minimum_size.y = 136
-	var lines: PackedStringArray = []
-	for line in Array(snapshot.get("last_round_log", [])):
-		lines.append(String(line))
-	log.text = "\n".join(lines) if not lines.is_empty() else "Боевые события появятся после первого раунда."
-	actions_column.add_child(log)
 
 func _section(title: String) -> void:
 	var heading := Label.new()
@@ -484,6 +674,14 @@ func _update_selection() -> void:
 		var availability: Array = snapshot.get("elixir_availability", [])
 		potion_buttons[index].disabled = finished or index >= availability.size() or not bool(availability[index])
 		_style_button(potion_buttons[index], chosen_elixir == index, Color("#66ab8b"))
+	var description := square_content.get_node_or_null("PreparedActions") as Label
+	if description != null:
+		var selected_attacks := ", ".join(chosen_attack)
+		var selected_defense := ", ".join(chosen_blocks)
+		description.text = "АТАКА  %s    |    БЛОК  %s" % [
+			selected_attacks if not selected_attacks.is_empty() else "—",
+			selected_defense if not selected_defense.is_empty() else "—"
+		]
 	var count := int(controls.get("attack_count", 0))
 	var block_count := int(controls.get("block_capacity", 0))
 	var valid := bool(controls.get("ok", false)) and (stunned or (not chosen_attack.is_empty() and count > 0 and chosen_blocks.size() == block_count))
