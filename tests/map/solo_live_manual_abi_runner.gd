@@ -126,9 +126,20 @@ func _run() -> void:
 	check(simulator.state.get_combatant(PLAYER).mana < mana_before,"cast_deducted_mana")
 	check(FileAccess.file_exists(live.checkpoint_path),"ability_round_checkpoint_saved")
 	check(int(scheduler.cooldowns_by_combatant.get(PLAYER,{}).get("ABI004",0))==3,"healing_ability_cooldown_recorded")
+	var applied_healing_eff := false
+	for raw_effect in simulator.state.get_combatant(PLAYER).active_effects:
+		if String(Dictionary(raw_effect).get("effect_id",""))=="EFF004":
+			applied_healing_eff = true
+	check(applied_healing_eff,"production_abi004_applies_real_eff004")
 	var after_first := live.combat_view()
 	check(bool(after_first.get("ok",false)) and int(after_first.get("round",-1))==1,"real_abi_log_projection")
 	check(Array(after_first.get("last_round_log",[])).size()>0,"real_abi_log_not_empty")
+	var healing_effect_visible := false
+	var first_player: Dictionary = after_first.get("player",{})
+	for raw_effect in Array(first_player.get("effects",[])):
+		if String(Dictionary(raw_effect).get("id",""))=="EFF004":
+			healing_effect_visible = true
+	check(healing_effect_visible,"live_view_discloses_real_eff004")
 	if String(first.get("state",""))!="ongoing":
 		check(false,"healing_round_must_remain_active_for_resume")
 		return
@@ -147,6 +158,11 @@ func _run() -> void:
 	check(_player_cast_count(sim2,1)==1 and _player_cast_id(sim2,1)=="ABI004","abi_action_history_not_recast_on_resume")
 	check(AbilityCatalog.assigned_abilities(sim2.attack_pipeline.ability_scheduler.loadouts,PLAYER)==["ABI003","ABI004"],"equipped_abi_loadout_persisted")
 	check(int(sim2.attack_pipeline.ability_scheduler.cooldowns_by_combatant.get(PLAYER,{}).get("ABI004",0))==3,"abi_cooldown_survives_restart")
+	var restored_healing_eff := false
+	for raw_effect in sim2.state.get_combatant(PLAYER).active_effects:
+		if String(Dictionary(raw_effect).get("effect_id",""))=="EFF004":
+			restored_healing_eff = true
+	check(restored_healing_eff,"eff004_survives_same_checkpoint")
 	var resumed_view := recovered.combat_view()
 	check(bool(resumed_view.get("ok",false)) and Array(resumed_view.get("ability_slots",[])).size()==5,"abi_slots_survive_restart")
 	var round2_controls: Dictionary = resumed_view.get("controls",{})
@@ -166,5 +182,16 @@ func _run() -> void:
 	check(int(sim2.attack_pipeline.ability_scheduler.cooldowns_by_combatant.get(PLAYER,{}).get("ABI004",0))==3,"skip_preserves_cooldown")
 	var second_view := recovered.combat_view()
 	check(bool(second_view.get("ok",false)) and int(second_view.get("round",-1))==2,"current_round_readout_updated")
+	# The other real equipped slot is an offensive spell. Exercise its
+	# dispatch only if battle is still active; no spell gets fabricated
+	# or auto-cast if the previous round has already ended the encounter.
+	if bool(second_view.get("ok",false)) and not bool(second_view.get("finished",true)):
+		var third_controls: Dictionary = second_view.get("controls",{})
+		check(bool(_option(third_controls,"ABI003").get("available",false)),"fireball_remains_equipped_and_ready")
+		if bool(_option(third_controls,"ABI003").get("available",false)):
+			var third := recovered.play_round(_orders(third_controls,"ABI003"))
+			check(bool(third.get("ok",false)),"manual_fireball_round_resolved")
+			if bool(third.get("ok",false)):
+				check(_player_cast_count(sim2,3)==1 and _player_cast_id(sim2,3)=="ABI003","offensive_abi003_resolved_through_same_engine")
 	for path in [EXP,TOWN,MANIFEST,String(artifacts["checkpoint"]),String(artifacts["receipt"]),String(artifacts["terminal"])]:
 		wipe(path)
