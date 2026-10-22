@@ -1193,7 +1193,6 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 		round_lines.append(String(line))
 	if String(result.get("outcome", "ongoing")) == "ongoing":
 		set_combat_ready(true)
-	_refresh_effect_display()
 	else:
 		round_lines.append("Бой завершён: " + String(result.get("outcome", "")))
 	_prepend_combat_log("\n".join(round_lines))
