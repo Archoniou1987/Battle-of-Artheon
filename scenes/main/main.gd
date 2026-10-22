@@ -57,6 +57,7 @@ var landscape_nav: HBoxContainer
 var _canonical_town_active := false
 var _canonical_town_revision := ""
 var _town_storage_blocked := false
+var _town_storage_issue := ""
 
 
 func _ready() -> void:
@@ -71,7 +72,8 @@ func _ready() -> void:
 			# A broken canonical save must NEVER fall through to stale
 			# legacy files. Keep the scene inspectable but read-only.
 			_town_storage_blocked = true
-			push_error("Canonical town save rejected: "+String(restored.get("reason","unknown")))
+			_town_storage_issue = "read: " + String(restored.get("reason","unknown")) + " / " + String(restored.get("detail",""))
+			push_error("Canonical town save rejected: " + _town_storage_issue)
 	else:
 		_load_saved_progression()
 		_load_saved_inventory()
@@ -89,7 +91,8 @@ func _ready() -> void:
 			_activate_canonical_owner(SoloTownSaveService.read(CANONICAL_TOWN_PATH,player_character.character_id))
 		else:
 			_town_storage_blocked = true
-			push_error("Canonical town migration failed: "+String(initial.get("reason","unknown")))
+			_town_storage_issue = "init: " + String(initial.get("reason","unknown")) + " / " + String(initial.get("detail",""))
+			push_error("Canonical town migration failed: " + _town_storage_issue)
 	var now_unix := Time.get_unix_time_from_system()
 	if _canonical_town_active and _resources_loaded_from_save and not _regen_saved_paused and _regen_saved_unix > 0.0:
 		OutOfCombatRegenerationService.advance(player_character,item_repository,maxf(0.0,now_unix-_regen_saved_unix))
@@ -97,6 +100,8 @@ func _ready() -> void:
 	if _canonical_town_active:
 		_save_progression()
 	_build_screen()
+	if _town_storage_blocked:
+		call_deferred("_show_town_storage_problem")
 	get_viewport().size_changed.connect(_layout_panorama)
 	call_deferred("_layout_panorama")
 
@@ -118,7 +123,9 @@ func _save_canonical_town() -> void:
 		_canonical_town_revision = String(saved["sha256"])
 	else:
 		_town_storage_blocked = true
-		push_error("Town save revision conflict or write failure: "+String(saved.get("reason","unknown")))
+		_town_storage_issue = "write: " + String(saved.get("reason","unknown")) + " / " + String(saved.get("detail",""))
+		push_error("Town save revision conflict or write failure: " + _town_storage_issue)
+		call_deferred("_show_town_storage_problem")
 
 func _process(_delta: float) -> void:
 	if _town_storage_blocked:
@@ -362,8 +369,23 @@ func _shift_panorama(value: float) -> void:
 
 
 
+func _show_town_storage_problem() -> void:
+	if not _town_storage_blocked or popup == null:
+		return
+	popup_title.text = "Сохранение города недоступно"
+	popup_description.text = "Разделы Персонаж, Инвентарь, Арена и Карта заблокированы для защиты прогресса. Причина: " + (_town_storage_issue if not _town_storage_issue.is_empty() else "unknown") + ". Данные не удалены. Не очищайте данные сайта."
+	popup_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for child in popup_actions.get_children():
+		popup_actions.remove_child(child)
+		child.queue_free()
+	popup.visible = true
+	popup.reset_size()
+	popup.position = (size - popup.size) * 0.5
+
+
 func _open_character_screen() -> void:
 	if _town_storage_blocked:
+		_show_town_storage_problem()
 		return
 	if character_screen == null:
 		character_screen = CharacterScreen.new(player_character)
@@ -378,6 +400,7 @@ func _open_character_screen() -> void:
 
 func _open_inventory_screen() -> void:
 	if _town_storage_blocked:
+		_show_town_storage_problem()
 		return
 	if inventory_screen == null:
 		inventory_screen = InventoryScreen.new(player_character, item_repository)
@@ -391,6 +414,7 @@ func _open_inventory_screen() -> void:
 
 func _open_arena_screen() -> void:
 	if _town_storage_blocked:
+		_show_town_storage_problem()
 		return
 	# Each entry starts a fresh training duel using the current equipment.
 	# Pause the out-of-combat clock before creating the live combat snapshot.
@@ -453,6 +477,7 @@ func _open_panel(section: String) -> void:
 ## fail-closed while honoring pending combat manifests on startup.
 func _open_solo_map_gate() -> void:
 	if _town_storage_blocked:
+		_show_town_storage_problem()
 		return
 	popup_title.text = "Карта — экспедиция"
 	for child in popup_actions.get_children():
