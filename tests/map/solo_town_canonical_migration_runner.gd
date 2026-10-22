@@ -15,7 +15,19 @@ func _initialize() -> void:
 	var legacy_items := ItemRepository.new()
 	check(legacy_items.add_item({"instance_id":"MIGRATED_ITEM","weight":1.0}),"old_item_register")
 	check(legacy_owner.inventory.add_instance("MIGRATED_ITEM",legacy_items),"old_item_owned")
-	var initial := SoloTownSaveService.save(PATH,legacy_owner,legacy_items)
+	# Browser legacy migration: reject orphan repository entries from the
+	# canonical snapshot without modifying the old repository itself.
+	check(legacy_items.add_item({"instance_id":"ORPHAN_DEMO_ITEM","weight":0.2}),"legacy_orphan_fixture_registered")
+	var filtered := SoloTownSaveService.prepare_legacy_inventory_migration(legacy_owner,legacy_items)
+	check(bool(filtered.get("ok",false)),"legacy_owned_projection_ready")
+	check(int(filtered.get("orphan_count",-1))==1,"legacy_orphan_count_detected")
+	check(legacy_items.has_item("ORPHAN_DEMO_ITEM"),"original_legacy_repository_preserved")
+	if not bool(filtered.get("ok",false)):
+		quit(1)
+		return
+	var prepared_repo: ItemRepository = filtered["repository"]
+	check(prepared_repo.has_item("MIGRATED_ITEM") and not prepared_repo.has_item("ORPHAN_DEMO_ITEM"),"canonical_projection_contains_only_owned_items")
+	var initial := SoloTownSaveService.save(PATH,legacy_owner,prepared_repo)
 	check(bool(initial.get("ok",false)),"one_time_canonical_initialization")
 	if not bool(initial.get("ok",false)):
 		quit(1)
