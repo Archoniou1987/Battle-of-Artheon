@@ -49,9 +49,71 @@ func run() -> Dictionary:
 	var winner:=controller.winning_team()
 	return {"outcome":"timeout" if not controller.combat_finished() else ("draw" if winner.is_empty() else "winner:"+winner),"winning_team":winner,"rounds":state.round_number,"dead_ids":_finalized_dead_ids()}
 
-func run_round() -> Dictionary:
+## Validate the WHOLE player's submission before begin_round(), RNG
+## consumption or any checkpoint mutation. Auto callers use empty orders
+## and retain their previous simulator behavior.
+func player_controls(player_id: String) -> Dictionary:
+	var player := state.get_combatant(player_id)
+	if player == null or group.team_of(player_id) != "players" or player.is_death_finalized():
+		return {"ok":false,"reason":"player_controls_unavailable"}
+	var capacity := CombatModifierService.manual_block_zone_capacity(player)
+	if capacity < 1 or capacity > 4 or not player.can_manual_block():
+		capacity = 0
+	return {
+		"ok":true,
+		"attack_count":attack_pipeline.basic_hit_count(player),
+		"block_capacity":capacity,
+		"stunned":CombatTempoService.is_stunned(player,state.round_number + 1),
+		"zones":CombatCommandApi.BODY_ZONES.duplicate(),
+		"target_id":group.active_opponent(player_id)
+	}
+
+func _validate_player_orders(orders: Dictionary) -> Dictionary:
+	var player_id := String(orders.get("player_id",""))
+	var controls := player_controls(player_id)
+	if not bool(controls.get("ok",false)) or controller.combat_finished():
+		return {"ok":false,"reason":"invalid_player_orders_owner"}
+	var attack_value: Variant = orders.get("attack_zones",null)
+	var block_value: Variant = orders.get("block_zones",null)
+	if not attack_value is Array or not block_value is Array:
+		return {"ok":false,"reason":"invalid_player_order_format"}
+	var attacks: Array[String] = []
+	var blocks: Array[String] = []
+	for raw in attack_value:
+		if not raw is String or not CombatCommandApi.BODY_ZONES.has(raw):
+			return {"ok":false,"reason":"invalid_attack_zone"}
+		attacks.append(String(raw))
+	for raw in block_value:
+		if not raw is String or not CombatCommandApi.BODY_ZONES.has(raw) or blocks.has(String(raw)):
+			return {"ok":false,"reason":"invalid_block_zone"}
+		blocks.append(String(raw))
+	if not bool(controls["stunned"]):
+		if attacks.size() != int(controls["attack_count"]):
+			return {"ok":false,"reason":"invalid_attack_zone_count","expected":int(controls["attack_count"])}
+		if blocks.size() != int(controls["block_capacity"]):
+			return {"ok":false,"reason":"invalid_block_zone_count","expected":int(controls["block_capacity"])}
+	return {"ok":true,"player_id":player_id,"attack_zones":attacks,"block_zones":blocks,"stunned":bool(controls["stunned"])}
+
+func run_round(player_orders: Dictionary = {}) -> Dictionary:
 	if controller.combat_finished():
 		return {"ok":false,"reason":"combat_finished","battle_outcome":"winner:"+controller.winning_team()}
+	var selected: Dictionary = {}
+	if not player_orders.is_empty():
+		selected = _validate_player_orders(player_orders)
+		if not bool(selected.get("ok",false)):
+			return selected
+		# The existing CombatCommandApi is the only authority for manually
+		# defended zones, including the equipped PAR073 capacity.
+		var commands := CombatCommandApi.new(state,group,null,orchestrator,attack_pipeline.ability_scheduler)
+		var owner_id := String(selected["player_id"])
+		var manual_result: Dictionary
+		if bool(selected["stunned"]) or Array(selected["block_zones"]).is_empty():
+			manual_result = commands.clear_manual_block(owner_id)
+		else:
+			var selected_blocks: Array[String] = selected["block_zones"]
+			manual_result = commands.set_manual_block(owner_id,selected_blocks)
+		if not bool(manual_result.get("ok",false)):
+			return {"ok":false,"reason":"manual_block_rejected","detail":String(manual_result.get("reason","unknown"))}
 	round_in_progress = true
 	var round:=orchestrator.begin_round()
 	var round_targets:Dictionary={}
@@ -68,7 +130,11 @@ func run_round() -> Dictionary:
 		if target==null or target.is_death_finalized():
 			continue
 		round_targets[actor_id]=target_id
-		attack_pipeline.lock_basic_attack(round,actor,target)
+		if not selected.is_empty() and actor_id == String(selected["player_id"]):
+			var chosen_zones: Array[String] = selected["attack_zones"]
+			attack_pipeline.lock_basic_attack(round,actor,target,chosen_zones)
+		else:
+			attack_pipeline.lock_basic_attack(round,actor,target)
 	# All combat intents are sealed before any action is resolved. Preparation
 	# ABI are the only actions which modify stats before shared combat resolution.
 	for actor_id in actors:
