@@ -148,3 +148,51 @@ static func adopt_closed_expedition(town_path: String, expedition_path: String, 
 	if not bool(done.get("ok",false)):
 		return done
 	return {"ok":true,"already_adopted":false}
+
+## Explicit conflict recovery, NEVER the ordinary automatic return.
+## Archive the exact pre-existing town bytes before accepting the closed
+## expedition. The archive stays readable with the same canonical contract.
+## The user must explicitly opt into expedition ownership in the UI.
+static func adopt_closed_expedition_preserving_town(town_path: String, expedition_path: String, expedition_id: String, player_id: String, manifest_path: String = SoloCombatSessionManifest.PATH) -> Dictionary:
+	var normal := adopt_closed_expedition(town_path,expedition_path,expedition_id,player_id,manifest_path)
+	if bool(normal.get("ok",false)) or String(normal.get("reason","")) != "town_snapshot_conflict":
+		return normal
+	var town_before := read(town_path,player_id)
+	if not bool(town_before.get("ok",false)):
+		return town_before
+	var returned := SoloTownReturnService.load_returned_owner(expedition_path,expedition_id,player_id,manifest_path)
+	if not bool(returned.get("ok",false)):
+		return returned
+	var closed := ExpeditionSaveService._read_payload_envelope(expedition_path)
+	if not bool(closed.get("ok",false)):
+		return closed
+	var raw := FileAccess.get_file_as_string(town_path)
+	var town_hash := String(town_before["sha256"])
+	var backup_path := town_path + ".conflict_" + town_hash.substr(0,24)
+	if FileAccess.file_exists(backup_path):
+		if FileAccess.get_file_as_string(backup_path) != raw:
+			return {"ok":false,"reason":"town_conflict_backup_collision"}
+	else:
+		var backup := FileAccess.open(backup_path,FileAccess.WRITE)
+		if backup == null:
+			return {"ok":false,"reason":"town_conflict_backup_unwritable"}
+		backup.store_string(raw)
+		backup.flush()
+		backup.close()
+		if FileAccess.get_file_as_string(backup_path) != raw:
+			return {"ok":false,"reason":"town_conflict_backup_unverified"}
+	var backup_checked := read(backup_path,player_id)
+	if not bool(backup_checked.get("ok",false)) or String(backup_checked.get("sha256","")) != town_hash:
+		return {"ok":false,"reason":"town_conflict_backup_invalid"}
+	# Recheck the original revision before any change. Never overwrite a
+	# concurrent update made while the conflict was being diagnosed.
+	var latest := read(town_path,player_id)
+	if not bool(latest.get("ok",false)) or String(latest.get("sha256","")) != town_hash:
+		return {"ok":false,"reason":"town_conflict_changed_during_recovery"}
+	var receipt := {"expedition_id":expedition_id,"snapshot_sha256":String(closed["sha256"])}
+	var published := _write(town_path,returned["character"],returned["repository"],receipt)
+	if not bool(published.get("ok",false)):
+		return published
+	return {"ok":true,"conflict_recovered":true,"city_backup_path":backup_path,"already_adopted":false}
+
+
