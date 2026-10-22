@@ -18,6 +18,7 @@ var combat_summary: Label
 var hero_hp_bar: ProgressBar
 var hero_effect_row: HFlowContainer
 var enemy_hp_rows: VBoxContainer
+var equipment_grid: GridContainer
 var combat_log_label: Label
 var attack_zone_row: VBoxContainer
 var block_zone_row: GridContainer
@@ -103,6 +104,12 @@ func _build_view() -> void:
 	enemy_hp_rows = VBoxContainer.new()
 	enemy_hp_rows.add_theme_constant_override("separation",6)
 	combat_panel.add_child(enemy_hp_rows)
+	var gear_heading := Label.new()
+	gear_heading.text = "Экипировка героя"
+	combat_panel.add_child(gear_heading)
+	equipment_grid = GridContainer.new()
+	equipment_grid.columns = 5
+	combat_panel.add_child(equipment_grid)
 	var attack_label := Label.new()
 	attack_label.text = "Атака — зона каждого удара"
 	combat_panel.add_child(attack_label)
@@ -274,6 +281,37 @@ func _set_hp_bar(bar: ProgressBar, snapshot: Dictionary) -> void:
 	bar.value = current
 	bar.tooltip_text = "%d / %d HP" % [current,maximum]
 
+## The ten equipment cells are a display of permanent character slots
+## and the actual repository's item identities; nothing here equips items.
+func _update_equipment_grid(entries: Array) -> void:
+	if equipment_grid == null:
+		return
+	for old in equipment_grid.get_children():
+		equipment_grid.remove_child(old)
+		old.queue_free()
+	var captions := {
+		"head":"Голова","chest":"Грудь","hands":"Руки","waist":"Пояс",
+		"legs":"Ноги","main_hand":"Правая","off_hand":"Левая",
+		"ring1":"Кольцо 1","ring2":"Кольцо 2","feet":"Обувь"
+	}
+	for raw in entries:
+		if not raw is Dictionary:
+			continue
+		var part: Dictionary = raw
+		var slot := String(part.get("slot",""))
+		if not captions.has(slot):
+			continue
+		var instance_id := String(part.get("instance_id",""))
+		var name := String(part.get("name",instance_id))
+		var active := bool(part.get("active",false))
+		var cell := Button.new()
+		cell.custom_minimum_size = Vector2(58,54)
+		cell.disabled = true
+		cell.text = String(captions[slot]) + ("\n●" if not instance_id.is_empty() else "\n—")
+		cell.tooltip_text = String(captions[slot]) + ": " + (("Пусто" if instance_id.is_empty() else name) + ("" if active or instance_id.is_empty() else " (неактивно)"))
+		cell.modulate = Color("#ad6271") if not active and not instance_id.is_empty() else Color.WHITE
+		equipment_grid.add_child(cell)
+
 ## Read-only widgets for the real checkpointed combatant and log.
 ## Display never creates another CombatEngine or overwrites saved stats.
 func _refresh_combat_controls() -> void:
@@ -293,6 +331,7 @@ func _refresh_combat_controls() -> void:
 		return
 	var hero: Dictionary = view["player"]
 	_update_combat_hp_bars(hero,Array(view.get("enemies",[])))
+	_update_equipment_grid(Array(view.get("equipment_slots",[])))
 	var elixir_view: Dictionary = view.get("elixir_loadout",{})
 	var elixir_lines: Array[String] = []
 	if bool(elixir_view.get("ok",false)):
