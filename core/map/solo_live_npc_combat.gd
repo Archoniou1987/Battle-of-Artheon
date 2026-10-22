@@ -315,7 +315,7 @@ func play_round(player_orders: Dictionary = {}) -> Dictionary:
 	if not bool(baseline.get("ok",false)):
 		return {"ok":false,"reason":"victory_elixir_baseline_missing"}
 	var elixir_verified := SoloCombatElixirJournal.apply_to_baseline(simulator.state,baseline["character"],baseline["repository"])
-	if not bool(elixir_verified.get("ok",false)) or JSON.stringify(elixir_verified["repository"].to_dict()) != JSON.stringify(owner.repository.to_dict()):
+	if not bool(elixir_verified.get("ok",false)) or not SoloCombatElixirJournal.same_repository(elixir_verified["repository"],owner.repository):
 		return {"ok":false,"reason":"victory_elixir_journal_mismatch","detail":String(elixir_verified.get("reason","changed"))}
 	var committed := turns.finalize_group_victory_atomic(battle,encounter_key,owner.expedition,owner.map,owner.npc_bridge,owner.character,owner.repository,NpcPossessionLootService.new(1),{"common":100.0},receipt_path,checkpoint_path,terminal_path,int(Time.get_unix_time_from_system()),true)
 	if not bool(committed.get("ok",false)):
