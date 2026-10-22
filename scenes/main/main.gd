@@ -86,7 +86,15 @@ func _ready() -> void:
 		_reset_preview_inventory_once()
 		_grant_combat_test_items_once()
 		_grant_combat_test_elixirs_once()
-		var initial: Dictionary = SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository)
+		# The legacy repository can contain orphan records from old demo
+		# grants. Only items proven owned by this character enter the first
+		# canonical save; the legacy save itself remains untouched.
+		var migration := SoloTownSaveService.prepare_legacy_inventory_migration(player_character,item_repository)
+		if bool(migration.get("ok",false)):
+			if int(migration.get("orphan_count",0)) > 0:
+				push_warning("Legacy town migration excluded %d orphan item record(s); legacy file preserved." % int(migration["orphan_count"]))
+			item_repository = migration["repository"]
+		var initial: Dictionary = SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository) if bool(migration.get("ok",false)) else migration
 		if bool(initial.get("ok",false)):
 			_activate_canonical_owner(SoloTownSaveService.read(CANONICAL_TOWN_PATH,player_character.character_id))
 		else:
