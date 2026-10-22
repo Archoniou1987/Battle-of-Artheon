@@ -103,7 +103,7 @@ func _build_view() -> void:
 	round_button.text = "Следующий раунд"
 	round_button.visible = false
 	round_button.pressed.connect(_play_combat_round)
-	root.add_child(round_button)
+	combat_panel.add_child(round_button)
 	return_button = Button.new()
 	return_button.text = "Завершить экспедицию и вернуться в деревню"
 	return_button.pressed.connect(_return_town)
