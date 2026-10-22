@@ -157,7 +157,7 @@ static func recover(manifest: Dictionary) -> Dictionary:
 	var valid_elixirs := SoloCombatElixirJournal.apply_to_baseline(simulator.state,current["character"],current["repository"])
 	if not bool(valid_elixirs.get("ok",false)):
 		return {"ok":false,"reason":"defeat_elixir_journal_invalid"}
-	if JSON.stringify(valid_elixirs["repository"].to_dict()) != JSON.stringify(next_repo.to_dict()):
+	if not SoloCombatElixirJournal.same_repository(valid_elixirs["repository"],next_repo):
 		return {"ok":false,"reason":"defeat_repository_changed"}
 	var before_character := MapWorldCommitService._character_to_dict(current["character"])
 	var after_character := MapWorldCommitService._character_to_dict(next_player)
