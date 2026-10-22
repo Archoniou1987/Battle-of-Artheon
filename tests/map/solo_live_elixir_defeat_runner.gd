@@ -77,7 +77,6 @@ func _run() -> void:
 		check(nested.update_item(nested_item),"nested_component_tamper_fixture")
 		check(not SoloCombatElixirJournal.same_repository(repo,nested),"nested_elixir_effect_mutation_rejected")
 		var replacement_repo := ItemRepository.from_dict(restored_repo.to_dict())
-		var spare: Dictionary = replacement_repo.get_item("elixir_test_mana_v1")
 		check(replacement_repo.remove_item("elixir_test_mana_v1"),"removed_unrelated_item_fixture")
 		check(not SoloCombatElixirJournal.same_repository(repo,replacement_repo),"removed_item_rejected")
 	check(bool(SoloTownSaveService.save(TOWN,hero,repo).get("ok",false)),"town_saved")
