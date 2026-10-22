@@ -217,7 +217,7 @@ func _refresh_combat_controls() -> void:
 		if String(slot.get("instance_id","")).is_empty():
 			caption = str(slot_index+1)+". Пусто"
 		elixir_selector.add_item(caption,slot_index+1)
-		if not bool(slot.get("valid",false)) or not bool(slot.get("unlocked",false)) or int(slot.get("charges",0)) <= 0 or not bool(journal.get("ok",false)) or next_round < cooldown_until or bool(view.get("finished",false)):
+		if not bool(slot.get("valid",false)) or not bool(slot.get("unlocked",false)) or int(slot.get("charges",0)) <= 0 or not bool(journal.get("ok",false)) or next_round < cooldown_until or bool(view.get("finished",false)) or bool(Dictionary(view.get("controls",{})).get("stunned",false)):
 			elixir_selector.set_item_disabled(slot_index+1,true)
 	elixir_selector.select(0)
 	elixir_selector.disabled = bool(view.get("finished",false))
