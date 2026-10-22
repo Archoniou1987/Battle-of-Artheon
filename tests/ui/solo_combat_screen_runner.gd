@@ -74,6 +74,16 @@ func _run() -> void:
 	check(screen.square_content.get_child_count() == 1 and screen.square_content.get_child(0) == arena, "host holds only the original Arena, no trial layers")
 	check(arena.player_slots.size() == 14 and arena.enemy_slots.size() == 14, "actual Arena equipment slots reused")
 	check(arena.ability_buttons.size() == 5 and arena.player_elixir_slots.size() == 4, "real Arena ABI and elixirs reused")
+	# The original Arena background and five ABI slots remain one stable
+	# 480x480 composition; long ability labels cannot widen individual cells.
+	check(arena.arena_background.position.is_equal_approx(Vector2.ZERO), "Arena background anchored to top-left")
+	check(arena.arena_background.size.is_equal_approx(Vector2(480, 480)), "Arena background covers native square exactly")
+	arena.ability_buttons[0].text = "ABILITY_WITH_VERY_LONG_DISPLAY_NAME"
+	await process_frame
+	for abi in arena.ability_buttons:
+		check(absf(abi.size.x - 34.0) <= 1.0 and absf(abi.size.y - 34.0) <= 1.0, "all ABI touch cells stay precisely 34x34")
+	screen.present(fixture)
+
 	check(arena.attack_buttons.size() == 5 and arena.defense_buttons.size() == 5, "real Arena zone selectors reused")
 	check(screen.attack_buttons.is_empty() and screen.abi_buttons.is_empty(), "temporary Solo input widgets no longer mounted")
 	check(screen.chosen_attack == ["chest"] and screen.chosen_blocks.size() == 2, "live round choices initialized")
@@ -121,12 +131,15 @@ func _run() -> void:
 	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "landscape retains native Arena geometry")
 	check(screen.square_content.scale.is_equal_approx(Vector2.ONE * (screen.square_host.custom_minimum_size.x / 480.0)), "outer host is the only active scaler")
 	check(screen.square_host.custom_minimum_size.y <= screen.arena_layout.size.y + 1.0, "landscape Arena does not extend below available area")
+	check(screen.square_host.get_global_rect().end.y <= screen.get_global_rect().end.y + 1.0, "landscape bottom edge, including End Turn, remains within visible screen")
+	check(screen.square_host.get_global_rect().end.x <= screen.get_global_rect().end.x + 1.0, "landscape Arena right edge remains within screen")
+
 	check(screen.info_column.get_parent() == screen.arena_layout, "secondary tabs and header share outside-square host")
 	check(screen.tab_container.get_parent() == screen.info_column, "info tabs do not overlap Arena square")
 	check(screen.square_host.custom_minimum_size.x >= minf(480.0, screen.arena_layout.size.y) - 10.0, "landscape Arena maximizes available height instead of fixed 330px reservation")
 	# Regression: base Godot viewport is 720 logical px high. A 480px
 	# upper cap would render the battle square at only 260px in 390px landscape.
-	var arena_room := screen.arena_layout.size
+	var arena_room := screen.size
 	var min_info := screen.info_column.custom_minimum_size.x
 	var fit_width := arena_room.x - min_info - float(screen.arena_layout.get_theme_constant("separation"))
 	var expected_edge := floorf(maxf(1.0, minf(fit_width, arena_room.y)))
