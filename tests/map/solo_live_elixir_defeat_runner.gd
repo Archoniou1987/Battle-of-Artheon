@@ -50,6 +50,23 @@ func _run() -> void:
 	check(hero.equip("waist","elixir_test_belt_v1",repo),"belt_equipped")
 	check(hero.assign_elixir(0,ELIXIR,repo),"health_elixir_equipped")
 	var original := int(repo.get_item(ELIXIR).get("charges",-1))
+	# Disk-loaded JSON can turn integer charges into an equivalent float.
+	# This must not make a legitimate loss snapshot look like a forged item.
+	var json_items: Variant = JSON.parse_string(JSON.stringify(repo.to_dict()))
+	check(json_items is Dictionary,"roundtrip_repository_json")
+	if json_items is Dictionary:
+		var restored_repo := ItemRepository.from_dict(json_items)
+		check(SoloCombatElixirJournal.same_repository(repo,restored_repo),"numeric_json_roundtrip_preserves_item_identity")
+		var counterfeit := ItemRepository.from_dict(restored_repo.to_dict())
+		var changed: Dictionary = counterfeit.get_item(ELIXIR)
+		changed["charges"] = original-1
+		check(counterfeit.update_item(changed),"tampered_charge_fixture")
+		check(not SoloCombatElixirJournal.same_repository(repo,counterfeit),"charge_difference_still_rejected")
+		var altered := ItemRepository.from_dict(restored_repo.to_dict())
+		var wrong_item: Dictionary = altered.get_item(ELIXIR)
+		wrong_item["name"] = "altered"
+		check(altered.update_item(wrong_item),"tampered_item_fixture")
+		check(not SoloCombatElixirJournal.same_repository(repo,altered),"other_item_properties_still_protected")
 	check(bool(SoloTownSaveService.save(TOWN,hero,repo).get("ok",false)),"town_saved")
 	check(bool(SoloTownExpeditionBridge.create_from_town(EXP,ID,995,START,hero,repo,MANIFEST).get("ok",false)),"expedition_created")
 	var world := SoloLiveMapSession.open(EXP,MANIFEST,ID,PLAYER)
