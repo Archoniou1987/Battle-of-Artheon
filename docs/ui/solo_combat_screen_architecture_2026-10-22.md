@@ -207,3 +207,14 @@ ABI Branch Tests #39831991942 passed on `3e911c1e1cf713ec2addd7d94b409423eec86ad
 - UI runner checks victory/defeat/unresolved labels and duplicate confirmation lock. Underlying terminal commit/resume tests remain unchanged.
 
 **Manual ABI CI required on latest SHA.** No arena geometry changes.
+
+
+## Post-terminal integration audit: stun & potion UI consistency (2026-10-22)
+
+ABI Branch Tests run #39832943468 passed on `f504330f276324dcf5fc93dc7e6da51072569c27`. A source review found one **UI projection discrepancy**: `solo_live_map.gd::_game_combat_view()` originally exposed potions as available based on elixir journal preflight and terminal status but did not factor in stun; `SoloCombatScreen` also relied on availability alone when presenting/selecting potion controls. Thus a stunned player's displayed control could appear usable despite the already-established engine rejection. The **engine was already correct**: `tests/map/solo_live_elixir_round_runner.gd` expects and verifies `elixir_actor_unavailable` before the round and without charge spending. Preserve that rejection contract.
+
+Fix: add stun gating when projecting live potion availability; independently guard `SoloCombatScreen._choose_elixir` and disable its live potion controls on stunned snapshots, including when a stale caller gives `elixir_availability=true`. Added UI assertions to the existing ABI suite. Neither default PAR073 nor stun combat mechanics nor Arena geometry has been modified.
+
+Audit also confirmed that `solo_live_map.gd` retains legacy development selectors under the hidden map for older CI runners; the live game overlay uses only `SoloCombatScreen` and persistent `ArenaScreen`. Removing those legacy widgets should be a separately scoped cleanup after existing test dependencies are migrated.
+
+**Needs one manual ABI Branch Tests run on latest HEAD.**
