@@ -43,6 +43,22 @@ func _run() -> void:
 		check(round_button.custom_minimum_size.y>=48,"primary_action_mobile_height")
 	if ability != null and elixir != null:
 		check(ability.custom_minimum_size.y>=44 and elixir.custom_minimum_size.y>=44,"ability_and_elixir_touch_targets")
+	var hero_bar := page.get("hero_hp_bar") as ProgressBar
+	var enemy_rows := page.get("enemy_hp_rows") as VBoxContainer
+	check(hero_bar != null and enemy_rows != null,"live_hp_widgets_exist")
+	if hero_bar != null and enemy_rows != null:
+		page.call("_update_combat_hp_bars",{"name":"Hero","hp":37,"max_hp":100},[
+			{"name":"Bandit A","hp":18,"max_hp":80},
+			{"name":"Bandit B","hp":0,"max_hp":60}
+		])
+		check(int(hero_bar.value)==37 and int(hero_bar.max_value)==100,"hero_bar_uses_canonical_values")
+		check(enemy_rows.get_child_count()==4,"each_npc_has_own_label_and_bar")
+		if enemy_rows.get_child_count()==4:
+			var first := enemy_rows.get_child(1) as ProgressBar
+			var second := enemy_rows.get_child(3) as ProgressBar
+			check(first != null and second != null and int(first.value)==18 and int(first.max_value)==80 and int(second.value)==0,"npc_hp_values_and_zero_visible")
+		page.call("_update_combat_hp_bars",{"name":"Hero","hp":150,"max_hp":100},[])
+		check(int(hero_bar.value)==100 and enemy_rows.get_child_count()==0,"hp_clamped_and_stale_enemies_cleared")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
 	check(grid != null and grid.columns==SoloLiveMapSession.WIDTH,"canonical_map_width_preserved")
 	# Exercise the real scene's selection handler without a fabricated
