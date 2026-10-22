@@ -56,3 +56,18 @@ Both original checks passed at `294e1df7efbe667592dad18761e304b530043da7`:
 The user rejected the interim vertical list of fighter cards as the wrong **primary** battle visual. Its good ABI/Solo checks only meant the implementation rendered and commands remained healthy, not that the UX met the visual target. The UI was therefore reorganized: a **single 1:1 Face to Face square** uses two 232px fighter positions modelled after training Arena, and all extra combatants are in a **separate two-column participant tab**, not appended into the live duel view. The Ally column currently includes the solo player only, since `SoloLiveNpcCombat.combat_view()` currently exposes just the player and opponents; it may render additional allies in future only if an authoritative snapshot supplies them. Enemy list is fully read-only and cannot retarget combat through list taps.
 
 The same synthetic-fixture Solo Visual Audit now captures both the duel square and the participants tab in portrait and landscape. ABI test checks the single-two-fighter invariant even with two NPCs, and rosters stay separate. This correction is not CI-verified as of this note.
+
+
+## Universal Arena UI migration (2026-10-22)
+
+**Supersedes the earlier separate visual design:** The Arena square is the canonical, shared player-facing combat interface across training, expedition, solo and group battles. The map overlay is a host / data adapter only. Its secondary tabs are located **outside** the square (portrait: below; landscape: right). Never create a second fighter/command square for new modes.
+
+Implemented in `ArenaScreen` with `external_combat_mode`:
+- In an expedition, no `ArenaCombatSession` is constructed and no test round handler is connected. Only the expedition's `SoloLiveNpcCombat` can resolve actions.
+- Existing Arena UI displays live fighter snapshots, zones, equipment slots, ABI and elixir buttons. Signals bridge chosen zones, ABI, potions and End Round into `SoloCombatScreen`'s canonical `round_requested(orders)` output.
+- The map still owns checkpoints, combat outcome, inventory transactions and settlement.
+- The Arena test screen remains available in its original mode for diagnostic work.
+
+**Mandatory cleanup rule:** Trial Solo Face-to-Face fighter panels, pseudo-ABI strips, placeholder status text and duplicated action control builders have been **deleted** after mounting the shared Arena square. Do not restore them. The Solo wrapper retains only the secondary participants/journal tabs, an internal order adapter and temporary compatibility plumbing needed by the map. Further obsolete compatibility plumbing may be deleted after passing CI and checking the actual expedition screenshots.
+
+**Verification not yet complete:** This migration was committed without starting GitHub Actions. Run ABI Branch Tests and Solo Visual Audit manually at the latest HEAD; a green result is required before calling the integration complete. Separately inspect the real 480px Arena textures and clicks, rather than interpreting synthetic screenshots as a production-ready playable flow.
