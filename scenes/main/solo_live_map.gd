@@ -538,7 +538,7 @@ func _game_combat_view(view: Dictionary) -> Dictionary:
 	var ready: Array[bool] = []
 	for index in range(4):
 		var check := SoloCombatElixirJournal.preflight(simulator.state, session.character, session.repository, index)
-		ready.append(bool(check.get("ok", false)) and not bool(view.get("finished", false)))
+		ready.append(bool(check.get("ok", false)) and not bool(view.get("finished", false)) and not bool(Dictionary(view.get("controls", {})).get("stunned", false)))
 	display["elixir_availability"] = ready
 	return display
 
