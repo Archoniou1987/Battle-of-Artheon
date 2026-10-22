@@ -7,6 +7,9 @@ var controller:GroupCombatController
 var engine:CombatEngine
 var orchestrator:RoundOrchestrator
 var attack_pipeline:CombatAttackPipeline
+## Only explicitly bound Solo encounters may spend real consumables.
+var solo_elixir_owner: CharacterState
+var solo_elixir_repository: ItemRepository
 var max_rounds:int=999
 
 ## Empty by default: legacy tests and Arena never persist implicitly.
@@ -127,6 +130,17 @@ func _validate_player_orders(orders: Dictionary) -> Dictionary:
 			return {"ok":false,"reason":"invalid_attack_zone_count","expected":int(controls["attack_count"])}
 		if blocks.size() != int(controls["block_capacity"]):
 			return {"ok":false,"reason":"invalid_block_zone_count","expected":int(controls["block_capacity"])}
+	var requested_elixir: Variant = orders.get("elixir_slot",-1)
+	if not requested_elixir is int or int(requested_elixir) < -1 or int(requested_elixir) > 3:
+		return {"ok":false,"reason":"invalid_elixir_slot"}
+	var selected_elixir := ""
+	if int(requested_elixir) >= 0:
+		if solo_elixir_owner == null or solo_elixir_repository == null or solo_elixir_owner.character_id != player_id:
+			return {"ok":false,"reason":"solo_elixir_not_bound"}
+		var elixir_check := SoloCombatElixirJournal.preflight(state,solo_elixir_owner,solo_elixir_repository,int(requested_elixir))
+		if not bool(elixir_check.get("ok",false)):
+			return elixir_check
+		selected_elixir = String(elixir_check["item_id"])
 	var ability_value: Variant = orders.get("ability_id","")
 	if not ability_value is String:
 		return {"ok":false,"reason":"invalid_player_ability_format"}
@@ -151,7 +165,8 @@ func _validate_player_orders(orders: Dictionary) -> Dictionary:
 		"ok":true,"player_id":player_id,
 		"attack_zones":attacks,"block_zones":blocks,
 		"stunned":bool(controls["stunned"]),
-		"ability_id":ability_id,"ability_target":ability_target
+		"ability_id":ability_id,"ability_target":ability_target,
+		"elixir_slot":int(requested_elixir),"elixir_item_id":selected_elixir
 	}
 
 func run_round(player_orders: Dictionary = {}) -> Dictionary:
@@ -176,6 +191,17 @@ func run_round(player_orders: Dictionary = {}) -> Dictionary:
 			return {"ok":false,"reason":"manual_block_rejected","detail":String(manual_result.get("reason","unknown"))}
 	round_in_progress = true
 	var round:=orchestrator.begin_round()
+	if not selected.is_empty() and int(selected.get("elixir_slot",-1)) >= 0:
+		var elixir_service := CombatElixirService.new(state,engine,solo_elixir_owner)
+		# The complete event-derived shared cooldown survives reload.
+		var audit := SoloCombatElixirJournal.inspect(state,solo_elixir_owner,solo_elixir_repository)
+		if not bool(audit.get("ok",false)):
+			return {"ok":false,"reason":"elixir_journal_rejected_after_round_start"}
+		elixir_service.next_available_round[solo_elixir_owner.character_id] = int(audit["next_available_round"])
+		elixir_service.used_round[solo_elixir_owner.character_id] = int(audit["last_used_round"])
+		var use_result := elixir_service.use(solo_elixir_owner.character_id,String(selected["elixir_item_id"]),solo_elixir_repository)
+		if not bool(use_result.get("ok",false)):
+			return {"ok":false,"reason":"prevalidated_elixir_use_failed","detail":String(use_result.get("reason","unknown"))}
 	var round_targets:Dictionary={}
 	var actors:Array[String]=[]
 	for raw_id in group.combatant_team.keys():
