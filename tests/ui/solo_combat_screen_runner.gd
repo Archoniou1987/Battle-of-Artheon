@@ -62,7 +62,7 @@ func _run() -> void:
 	await process_frame
 	check(screen.square_host != null and screen.square_content != null, "single 480x480 Face to Face stage")
 	check(screen.square_content.size == Vector2(480, 480), "arena keeps 1:1 logical geometry")
-	check(screen.tab_container.get_tab_count() == 3, "external info, participants, log tabs")
+	check(screen.tab_container.get_tab_count() == 2, "only participants and journal remain outside Arena square")
 	check(screen.roster_allies.get_child_count() == 2, "player occupies ally roster")
 	check(screen.roster_enemies.get_child_count() == 3, "two NPCs belong only to opponent roster")
 
