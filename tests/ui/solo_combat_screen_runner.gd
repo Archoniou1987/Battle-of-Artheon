@@ -163,7 +163,7 @@ func _run() -> void:
 	screen.present(stunned)
 	check(screen.chosen_attack.is_empty() and screen.chosen_blocks.is_empty(), "stun clears physical orders")
 	check(arena.attack_buttons[0].disabled and arena.defense_buttons[0].disabled, "stunned Arena disables physical input")
-	check(arena.player_elixir_slots[0].disabled or not arena.player_elixir_slots[0].button_pressed, "stunned UI never displays a selected potion")
+	check(arena.player_elixir_slots[0].disabled, "stunned UI disables elixirs despite stale availability")
 	screen._choose_elixir(0)
 	check(screen.chosen_elixir == -1, "stun ignores potion commands even with stale fixture availability")
 	screen._submit()
