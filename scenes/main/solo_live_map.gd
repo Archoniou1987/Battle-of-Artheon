@@ -25,6 +25,7 @@ var elixir_summary: Label
 var elixir_selector: OptionButton
 var attack_controls: Array[OptionButton] = []
 var block_controls: Array[CheckBox] = []
+var active_block_capacity: int = 0
 var ground_list: VBoxContainer
 var pickup_ticket: String = ""
 var pickup_active: bool = false
@@ -191,6 +192,7 @@ func _refresh_combat_controls() -> void:
 	combat_panel.visible = live_combat != null
 	attack_controls.clear()
 	block_controls.clear()
+	active_block_capacity = 0
 	for parent in [attack_zone_row,block_zone_row]:
 		for child in parent.get_children():
 			parent.remove_child(child)
@@ -294,13 +296,36 @@ func _refresh_combat_controls() -> void:
 		option.select(1)
 		attack_zone_row.add_child(option)
 		attack_controls.append(option)
+	active_block_capacity = int(controls.get("block_capacity",0))
 	for i in range(CombatCommandApi.BODY_ZONES.size()):
 		var cb := CheckBox.new()
 		cb.custom_minimum_size.y = 44
 		cb.text = zone_names[i]
-		cb.button_pressed = [1,2,3,4,0].find(i) < int(controls.get("block_capacity",0))
+		cb.button_pressed = [1,2,3,4,0].find(i) < active_block_capacity
+		cb.disabled = active_block_capacity == 0
 		block_zone_row.add_child(cb)
 		block_controls.append(cb)
+		cb.toggled.connect(_on_block_zone_toggled.bind(i))
+
+## Manual PAR073 defense has an exact capacity, not a maximum.
+## Tapping an unselected zone replaces another selected zone if full;
+## tapping the final selected zone never leaves a partial order.
+## All choices still go through CombatCommandApi for authoritative validation.
+func _on_block_zone_toggled(enabled: bool, zone_index: int) -> void:
+	if zone_index < 0 or zone_index >= block_controls.size():
+		return
+	var capacity := clampi(active_block_capacity,0,block_controls.size())
+	var selected := 0
+	for cb in block_controls:
+		if cb.button_pressed:
+			selected += 1
+	if enabled and selected > capacity:
+		for i in range(block_controls.size()):
+			if i != zone_index and block_controls[i].button_pressed:
+				block_controls[i].set_pressed_no_signal(false)
+				break
+	elif not enabled and selected < capacity:
+		block_controls[zone_index].set_pressed_no_signal(true)
 
 ## Recalculate the ABI's enabled state when a mana potion is selected.
 ## The simulator runs the SAME canonical order validation without spending
