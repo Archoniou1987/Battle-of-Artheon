@@ -96,6 +96,11 @@ func _run() -> void:
 		check(int(base["repository"].get_item(ELIXIR).get("charges",-1))==original_charges,"precombat_world_is_unchanged_during_battle")
 		var reconstructed := SoloCombatElixirJournal.apply_to_baseline(simulator.state,base["character"],base["repository"])
 		check(bool(reconstructed.get("ok",false)) and int(reconstructed["repository"].get_item(ELIXIR).get("charges",-1))==original_charges-1,"journal_reconciles_original_repository")
+		var exhausted := ItemRepository.from_dict(base["repository"].to_dict())
+		var insufficient := exhausted.get_item(ELIXIR)
+		insufficient["charges"] = 0
+		check(exhausted.update_item(insufficient),"overspend_fixture_created")
+		check(not bool(SoloCombatElixirJournal.apply_to_baseline(simulator.state,base["character"],exhausted).get("ok",false)),"journal_refuses_overspending_original_item")
 	if String(first.get("state",""))!="ongoing":
 		check(false,"first_elixir_round_must_remain_resumable")
 		return
@@ -122,5 +127,19 @@ func _run() -> void:
 		check(int(after.owner.repository.get_item(ELIXIR).get("charges",-1))==original_charges-1,"no_repeated_charge_debit")
 		var persisted := SoloCombatElixirJournal.inspect(sim2.state,after.owner.character,after.owner.repository)
 		check(bool(persisted.get("ok",false)) and int(Dictionary(persisted.get("counts",{})).get(ELIXIR,0))==1,"potion_event_once_even_after_second_round")
+		if String(second.get("state",""))=="ongoing":
+			var pending_again := SoloLiveMapSession.open_pending(EXP,MANIFEST,ID,PLAYER)
+			check(bool(pending_again.get("ok",false)),"second_checkpoint_world_readable")
+			if bool(pending_again.get("ok",false)):
+				var recovered_again := SoloLiveNpcCombat.resume(pending_again["session"])
+				check(bool(recovered_again.get("ok",false)),"second_checkpoint_reopened_without_replay")
+				if bool(recovered_again.get("ok",false)):
+					var third_combat: SoloLiveNpcCombat = recovered_again["combat"]
+					check(int(third_combat.owner.repository.get_item(ELIXIR).get("charges",-1))==original_charges-1,"repeat_restart_does_not_spend_twice")
+		elif String(second.get("state","")) in ["victory","defeat"]:
+			var terminal_world := ExpeditionSaveService.read(EXP,ID,PLAYER)
+			check(bool(terminal_world.get("ok",false)),"terminal_elixir_world_readable")
+			if bool(terminal_world.get("ok",false)):
+				check(int(terminal_world["repository"].get_item(ELIXIR).get("charges",-1))==original_charges-1,"terminal_world_contains_exact_consumed_charge")
 	for path in [EXP,TOWN,MANIFEST,String(paths["checkpoint"]),String(paths["receipt"]),String(paths["terminal"])]:
 		wipe(path)
