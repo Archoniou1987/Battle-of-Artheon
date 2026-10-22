@@ -10,6 +10,7 @@ signal inventory_changed
 signal live_ability_selected(index: int)
 signal live_elixir_selected(index: int)
 signal live_selection_changed
+signal live_effect_inspected(description: String)
 var external_combat_mode := false
 
 const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]
@@ -1306,9 +1307,17 @@ func _refresh_effect_display() -> void:
 ## existing Buffs/Debuffs journal tabs, not in separate popup windows.
 func _show_effect_detail(is_player:bool,row_type:String,index:int) -> void:
 	var effects := _effect_entries(is_player, row_type)
-	if index >= mini(5,effects.size()) or tabs == null:
+	if index >= mini(5,effects.size()):
 		return
-	tabs.current_tab = 1 if row_type == "Баффы" else 2
+	if external_combat_mode:
+		var lines: PackedStringArray = []
+		for entry in effects:
+			if entry is Dictionary:
+				lines.append(_effect_description(entry))
+		live_effect_inspected.emit("\n".join(lines))
+		return
+	if tabs != null:
+		tabs.current_tab = 1 if row_type == "Баффы" else 2
 
 func _sync_combat_session() -> void:
 	if combat_session == null:
