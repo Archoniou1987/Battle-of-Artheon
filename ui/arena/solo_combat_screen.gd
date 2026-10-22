@@ -189,7 +189,10 @@ func _apply_orientation() -> void:
 	# The approved Arena is a fixed 480x480 drawing. Only its outer host
 	# scales. The information zone consumes REMAINING space, not a reserved
 	# fixed 330px that shrinks Arena on narrow landscape screens.
-	var room: Vector2 = arena_layout.size
+	# Read the viewport-sized screen, NOT BattleLayout.size: the latter can
+	# already be inflated by the previous orientation's square minimum size.
+	# This caused self-reinforcing oversize and a clipped End Turn in landscape.
+	var room: Vector2 = size
 	var gap := float(arena_layout.get_theme_constant("separation"))
 	# UI tabs remain usable but never dictate Arena's size before the
 	# available height is considered. Keep the minimum responsive.
@@ -204,7 +207,8 @@ func _apply_orientation() -> void:
 	# canvas_items stretch may give us >480 logical px even on a phone;
 	# capping here shrank the battle square to ~260 physical px in landscape.
 	var edge := floorf(maxf(1.0, minf(available_width, available_height)))
-	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
+	if not is_equal_approx(square_host.custom_minimum_size.x, edge):
+		SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
 
 func present(view: Dictionary) -> void:
 	snapshot = view.duplicate(true)
