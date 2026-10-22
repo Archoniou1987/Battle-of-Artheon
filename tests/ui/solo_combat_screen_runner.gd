@@ -167,10 +167,27 @@ func _run() -> void:
 	check(last_orders.get("attack_zones", []) == [] and last_orders.get("block_zones", []) == [], "stun submits no physical actions")
 	var finished: Dictionary = fixture.duplicate(true)
 	finished["finished"] = true
+	finished["winner"] = "players"
 	screen.present(finished)
 	check(not screen.round_button.disabled, "terminal checkpoint confirmation remains available")
+	check(screen.instruction_label.text.contains("Победа"), "victory label reflects authoritative winner")
+	check(screen.instruction_label.text.contains("подтвердите"), "terminal checkpoint is not falsely described as world-published")
+	last_orders = {"not_yet": true}
 	screen._submit()
 	check(last_orders.is_empty(), "terminal confirmation never queues another action")
+	check(screen.round_button.disabled, "terminal button locks after one confirmation")
+	last_orders = {"still_locked": true}
+	screen._submit()
+	check(last_orders.has("still_locked"), "double terminal tap never emits second settlement request")
+	var defeat: Dictionary = fixture.duplicate(true)
+	defeat["finished"] = true
+	defeat["winner"] = "enemies"
+	screen.present(defeat)
+	check(screen.instruction_label.text.contains("Поражение"), "defeat label reflects authoritative winner")
+	var unresolved: Dictionary = fixture.duplicate(true)
+	unresolved["finished"] = true
+	screen.present(unresolved)
+	check(screen.instruction_label.text.contains("Бой завершён"), "unknown terminal winner never mislabels defeat")
 	root.size = Vector2i(390, 844)
 	await process_frame
 	screen._apply_orientation()
