@@ -184,6 +184,32 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	instance.target_cell = match_cell
 	return {"ok":true,"combat":instance,"round":opened["simulator"].state.round_number}
 
+## Expose only disclosed active effects. The same rule is used by the
+## Arena view: unrevealed instant ABI effects must remain hidden until
+## the end-of-round disclosure boundary.
+static func _disclosed_effects(actor: CombatantState) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if actor == null:
+		return result
+	for raw in actor.active_effects:
+		if not raw is Dictionary:
+			continue
+		var entry: Dictionary = raw
+		if int(entry.get("remaining_rounds",0)) <= 0 or not bool(entry.get("revealed",true)):
+			continue
+		var definition: Dictionary = entry.get("definition",{})
+		var kind := EffectPolarity.of(definition)
+		if kind.is_empty():
+			continue
+		result.append({
+			"id":String(entry.get("effect_id","")),
+			"name":String(definition.get("name",entry.get("effect_id",""))),
+			"polarity":kind,
+			"stacks":maxi(1,int(entry.get("stacks",1))-maxi(0,int(entry.get("undisclosed_stacks",0)))),
+			"remaining_rounds":int(entry.get("visible_remaining_rounds",entry.get("remaining_rounds",0)))
+		})
+	return result
+
 ## Read-only projection of the exact persisted GroupCombatSimulator.
 ## No secondary Arena combat session or recreated NPC stats.
 func combat_view() -> Dictionary:
@@ -197,12 +223,30 @@ func combat_view() -> Dictionary:
 	if hero == null:
 		return {"ok":false,"reason":"combat_view_player_missing"}
 	var controls := simulator.player_controls(player_id)
+	var available_options: Dictionary = {}
+	for raw_option in Array(controls.get("abilities",[])):
+		if raw_option is Dictionary:
+			var option: Dictionary = raw_option
+			available_options[String(option.get("id",""))] = option
+	var equipment_slots := EquipmentAbilityLoadout.build(owner.character,owner.repository)
+	var five_slots: Array[Dictionary] = []
+	for category in ["weapon","chest","head"]:
+		for raw_ability in Array(equipment_slots.get(category,[])):
+			var equipped_id := "" if raw_ability == null else String(raw_ability)
+			var slot: Dictionary = {
+				"id":equipped_id,"category":category,
+				"name":"Пусто" if equipped_id.is_empty() else equipped_id,
+				"available":false,"mana_cost":0,"cooldown_until":0
+			}
+			if available_options.has(equipped_id):
+				slot.merge(Dictionary(available_options[equipped_id]),true)
+			five_slots.append(slot)
 	var enemy_views: Array[Dictionary] = []
 	for raw_id in Array(battle.get("npc_instance_ids",[])):
 		var npc: CombatantState = simulator.state.get_combatant(String(raw_id))
 		if npc == null:
 			continue
-		enemy_views.append({"id":npc.combatant_id,"name":npc.display_name,"hp":npc.visible_hp(),"max_hp":npc.max_hp,"mana":npc.mana,"max_mana":npc.max_mana,"dead":npc.is_death_finalized()})
+		enemy_views.append({"id":npc.combatant_id,"name":npc.display_name,"hp":npc.visible_hp(),"max_hp":npc.max_hp,"mana":npc.mana,"max_mana":npc.max_mana,"dead":npc.is_death_finalized(),"effects":_disclosed_effects(npc)})
 	var ability_definitions: Dictionary = simulator.attack_pipeline.ability_scheduler.definitions
 	var log_lines: Array[String] = ArenaCombatLog.lines_for_round(simulator.state.event_log,simulator.state.round_number,player_id,ability_definitions)
 	return {
@@ -210,8 +254,9 @@ func combat_view() -> Dictionary:
 		"round":simulator.state.round_number,
 		"finished":simulator.controller.combat_finished(),
 		"winner":simulator.controller.winning_team(),
-		"player":{"id":player_id,"name":hero.display_name,"hp":hero.visible_hp(),"max_hp":hero.max_hp,"mana":hero.mana,"max_mana":hero.max_mana,"dead":hero.is_death_finalized()},
+		"player":{"id":player_id,"name":hero.display_name,"hp":hero.visible_hp(),"max_hp":hero.max_hp,"mana":hero.mana,"max_mana":hero.max_mana,"dead":hero.is_death_finalized(),"effects":_disclosed_effects(hero)},
 		"enemies":enemy_views,
+		"ability_slots":five_slots,
 		"controls":controls,
 		"last_round_log":log_lines
 	}
