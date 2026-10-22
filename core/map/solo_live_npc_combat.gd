@@ -32,6 +32,38 @@ static func _next_attempt(session: SoloLiveMapSession, npc_id: String) -> int:
 			count += 1
 	return count + 1
 
+## Solo must never silently equip development fixture ABI. New NPC
+## encounters use only production definitions and the actually equipped
+## player/NPC ABI identities. Restored checkpoints own their own scheduler
+## snapshot, including cooldowns; never replace it after a saved round.
+static func _configure_live_ability_scheduler(opened: Dictionary) -> Dictionary:
+	var simulator: GroupCombatSimulator = opened.get("simulator") as GroupCombatSimulator
+	if simulator == null:
+		return {"ok":false,"reason":"live_ability_simulator_missing"}
+	if bool(opened.get("resumed",false)):
+		return {"ok":true,"resumed":true}
+	var definitions := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	if definitions.is_empty():
+		return {"ok":false,"reason":"live_ability_catalog_missing"}
+	var loadouts: Dictionary = {}
+	for raw_id in simulator.state.combatants.keys():
+		var actor: CombatantState = simulator.state.get_combatant(String(raw_id))
+		if actor == null:
+			return {"ok":false,"reason":"live_ability_actor_missing"}
+		var equipped: Array[String] = []
+		for raw_ability in CombatModifierService.abilities(actor):
+			var ability_id := String(raw_ability)
+			if ability_id.is_empty() or equipped.has(ability_id):
+				continue
+			# Unknown equipped ABI are visible as unavailable in UI, but
+			# cannot resolve as invented test-only spells.
+			if AbilityCatalog.definition(definitions,ability_id).is_empty():
+				continue
+			equipped.append(ability_id)
+		loadouts[actor.combatant_id] = equipped
+	simulator.attack_pipeline.ability_scheduler = AbilityScheduler.new(definitions,loadouts)
+	return {"ok":true,"resumed":false}
+
 ## Failed contact reconstruction must not leave a ghost player on the NPC
 ## tile. The persisted expedition position always remains authoritative.
 static func _restore_precombat_position(session: SoloLiveMapSession) -> void:
@@ -77,6 +109,10 @@ static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 	if not bool(opened.get("ok",false)):
 		_restore_precombat_position(session)
 		return opened
+	var scheduler := _configure_live_ability_scheduler(opened)
+	if not bool(scheduler.get("ok",false)):
+		_restore_precombat_position(session)
+		return scheduler
 	var live := SoloLiveNpcCombat.new()
 	live.owner=session
 	live.turns=turns_instance
@@ -131,6 +167,12 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	if not bool(opened.get("ok",false)) or not bool(opened.get("resumed",false)):
 		_restore_precombat_position(session)
 		return {"ok":false,"reason":"resume_checkpoint_rejected","detail":String(opened.get("reason","unknown"))}
+	# The checkpoint must retain its original ABI definitions/loadout and
+	# ability counters; restoring the production catalog here would erase it.
+	var validated_scheduler := _configure_live_ability_scheduler(opened)
+	if not bool(validated_scheduler.get("ok",false)):
+		_restore_precombat_position(session)
+		return validated_scheduler
 	var instance := SoloLiveNpcCombat.new()
 	instance.owner = session
 	instance.turns = turn
