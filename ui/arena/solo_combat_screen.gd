@@ -183,7 +183,7 @@ func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: 
 	if fighter.has("max_ap"):
 		var ap := Label.new()
 		ap.text = "AP %d / %d" % [int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0))]
-		ap.add_theme_font_size_override("font_size", 11)
+		ap.add_theme_font_size_override("font_size", 16)
 		column.add_child(ap)
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 6)
@@ -329,6 +329,7 @@ func _build_actions() -> void:
 		var charges := int(entry.get("charges", 0))
 		var maximum := int(entry.get("max_charges", 0))
 		button.text = "%d/%d" % [charges, maximum] if not String(entry.get("instance_id", "")).is_empty() else "—"
+		button.add_theme_font_size_override("font_size", 17)
 		button.tooltip_text = "%s • %d/%d" % [String(entry.get("instance_id", "Пусто")), charges, maximum]
 		button.pressed.connect(_choose_elixir.bind(index))
 		potions.add_child(button)
