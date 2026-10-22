@@ -83,6 +83,7 @@ var mana_labels: Dictionary = {}
 var ap_segments: Dictionary = {}
 var ap_labels: Dictionary = {}
 var effects_rows: Dictionary = {}
+var external_effects: Dictionary = {}
 var effect_detail_labels: Dictionary = {}
 var selected_ability := ""
 var ability_buttons: Array[Button] = []
@@ -1191,6 +1192,7 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 		round_lines.append(String(line))
 	if String(result.get("outcome", "ongoing")) == "ongoing":
 		set_combat_ready(true)
+	_refresh_effect_display()
 	else:
 		round_lines.append("Бой завершён: " + String(result.get("outcome", "")))
 	_prepend_combat_log("\n".join(round_lines))
@@ -1206,6 +1208,14 @@ func _prepend_combat_log(entry: String) -> void:
 ## Compact two-row EFF view. Five cells per row; last cell becomes +N when
 ## there are more than five active/pending effects. Tap for details on mobile.
 func _effect_entries(is_player:bool,row_type:String) -> Array:
+	if external_combat_mode:
+		var side := "player" if is_player else "enemy"
+		var polarity := "BUFF" if row_type == "Баффы" else "DEBUFF"
+		var disclosed: Array = []
+		for raw in Array(external_effects.get(side, [])):
+			if raw is Dictionary and String(raw.get("polarity", "")).to_upper() == polarity:
+				disclosed.append(raw)
+		return disclosed
 	if visual_lab_eff_index > 0:
 		return _visual_lab_effect_examples(is_player, row_type)
 	if combat_session == null:
@@ -1251,7 +1261,7 @@ func _effect_description(effect:Dictionary) -> String:
 	return result
 
 func _refresh_effect_display() -> void:
-	if combat_session==null and visual_lab_eff_index == 0:
+	if not external_combat_mode and combat_session==null and visual_lab_eff_index == 0:
 		return
 	for is_player in [true,false]:
 		var fighter_key: String = "player_" if is_player else "enemy_"
@@ -1427,6 +1437,12 @@ func present_external(view: Dictionary) -> void:
 			if raw is Dictionary and not bool(raw.get("dead", false)):
 				opponent = raw
 				break
+	# These are already disclosed by SoloLiveNpcCombat at the legal
+	# end-of-round boundary. Never derive effects from hidden engine state.
+	external_effects = {
+		"player": Array(player.get("effects", [])).duplicate(true),
+		"enemy": Array(opponent.get("effects", [])).duplicate(true)
+	}
 	set_fighter_header(true, String(player.get("name", "Герой")), int(player.get("level", 1)))
 	set_fighter_header(false, String(opponent.get("name", "Противник")), int(opponent.get("level", 1)))
 	for side in [true, false]:
