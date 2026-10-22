@@ -76,6 +76,17 @@ static func prepare_legacy_inventory_migration(player: CharacterState, repositor
 
 
 static func _write(path: String, player: CharacterState, repository: ItemRepository, source: Dictionary) -> Dictionary:
+	# Diagnose orphan instances BEFORE touching the durable town snapshot.
+	# This check is intentionally strict: never silently delete inventory.
+	var raw_instances: Dictionary = repository.to_dict().get("items",{})
+	var orphan_ids: Array[String] = []
+	for raw_id in raw_instances.keys():
+		var instance_id := String(raw_id)
+		if not player.inventory.owns(instance_id):
+			orphan_ids.append(instance_id)
+	if not orphan_ids.is_empty():
+		orphan_ids.sort()
+		return {"ok":false,"reason":"town_snapshot_unowned_items","detail":", ".join(PackedStringArray(orphan_ids.slice(0,8))),"orphan_count":orphan_ids.size()}
 	var payload := {"version":VERSION,"player_id":player.character_id,"character":MapWorldCommitService._character_to_dict(player),"repository":repository.to_dict(),"return_origin":source.duplicate(true)}
 	var encoded := JSON.stringify(payload)
 	var wrapper := JSON.stringify({"format":FORMAT,"payload_json":encoded,"sha256":encoded.sha256_text()})
