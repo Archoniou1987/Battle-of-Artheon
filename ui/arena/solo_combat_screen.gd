@@ -406,8 +406,12 @@ func _update_selection() -> void:
 	var block_count := int(controls.get("block_capacity", 0))
 	var valid := bool(controls.get("ok", false)) and (stunned or (not chosen_attack.is_empty() and count > 0 and chosen_blocks.size() == block_count))
 	if finished:
+		# Combat checkpoint is complete, but the world settlement is not
+		# published until the owning SoloLiveNpcCombat confirms it.
+		var winner := String(snapshot.get("winner", ""))
+		var player_won := winner == "players"
 		round_button.text = "ПОДТВЕРДИТЬ ИТОГ"
-		instruction_label.text = "Исход сохранён в боевом checkpoint"
+		instruction_label.text = ("Победа" if player_won else "Поражение") + " — подтвердите результат боя"
 		round_button.disabled = false
 	elif stunned:
 		round_button.text = "ПРОПУСТИТЬ РАУНД"
