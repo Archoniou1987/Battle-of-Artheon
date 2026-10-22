@@ -96,7 +96,67 @@ func _initialize() -> void:
 				check(not saved_second["repository"].has_item("UNCLAIMED_DROP"),"ground_loot_not_minted_into_second_expedition")
 				check(saved_second["expedition"].is_active(),"second_expedition_active")
 		wipe(archive_path)
+	_test_conflict_recovery()
 	for path in [EXPEDITION,TOWN,MANIFEST]:
 		wipe(path)
 	print("TOWN_ADOPT_TEST="+("PASS" if errors.is_empty() else "FAIL")+" errors="+str(errors))
 	quit(0 if errors.is_empty() else 1)
+
+
+## Browser return regression: one city-only generated item and one expedition
+## reward. Automatic overwrite must fail; explicitly confirmed recovery must
+## preserve the original city bytes in a validated, readable archive.
+func _test_conflict_recovery() -> void:
+	const CTOWN := "user://test_return_conflict_town.json"
+	const CEXP := "user://test_return_conflict_exp.json"
+	const CMAN := "user://test_return_conflict_manifest.json"
+	for path in [CTOWN,CEXP,CMAN]:
+		wipe(path)
+	var city := CharacterState.new("player","Conflict Hero",5)
+	var repo := ItemRepository.new()
+	check(repo.add_item({"instance_id":"BASE_BLADE"}),"conflict_base_registered")
+	check(city.receive_item("BASE_BLADE",repo),"conflict_base_owned")
+	var first := SoloTownSaveService.save(CTOWN,city,repo)
+	check(bool(first.get("ok",false)),"conflict_initial_town_saved")
+	if not bool(first.get("ok",false)):
+		return
+	var launched := SoloTownExpeditionBridge.create_from_town(CEXP,ID,79,Vector2i(3,3),city,repo,CMAN)
+	check(bool(launched.get("ok",false)),"conflict_exp_started")
+	if not bool(launched.get("ok",false)):
+		return
+	check(repo.add_item({"instance_id":"CITY_GENERATED"}),"conflict_city_item_registered")
+	check(city.receive_item("CITY_GENERATED",repo),"conflict_city_item_owned")
+	check(bool(SoloTownSaveService.save(CTOWN,city,repo,String(first["sha256"])).get("ok",false)),"conflict_city_changed_after_departure")
+	var pre_return_town := FileAccess.get_file_as_string(CTOWN)
+	var exp := ExpeditionSaveService.read(CEXP,ID,"player")
+	check(bool(exp.get("ok",false)),"conflict_exp_read")
+	if not bool(exp.get("ok",false)):
+		return
+	var live_hero: CharacterState = exp["character"]
+	var live_repo: ItemRepository = exp["repository"]
+	check(live_repo.add_item({"instance_id":"EXP_REWARD"}),"conflict_exp_reward_registered")
+	check(live_hero.receive_item("EXP_REWARD",live_repo),"conflict_exp_reward_owned")
+	check(bool(ExpeditionSaveService.save(CEXP,exp["expedition"],live_hero,live_repo).get("ok",false)),"conflict_exp_progress_saved")
+	check(bool(SoloTownReturnService.close_for_town(CEXP,ID,"player",CMAN).get("ok",false)),"conflict_exp_closed")
+	var automatic := SoloTownSaveService.adopt_closed_expedition(CTOWN,CEXP,ID,"player",CMAN)
+	check(not bool(automatic.get("ok",false)) and String(automatic.get("reason",""))=="town_snapshot_conflict","conflict_automatic_adoption_refused")
+	check(FileAccess.get_file_as_string(CTOWN)==pre_return_town,"conflict_automatic_refusal_preserves_town")
+	var resolved := SoloTownSaveService.adopt_closed_expedition_preserving_town(CTOWN,CEXP,ID,"player",CMAN)
+	check(bool(resolved.get("ok",false)) and bool(resolved.get("conflict_recovered",false)),"conflict_explicit_archival_recovery")
+	if bool(resolved.get("ok",false)):
+		var archive := String(resolved["city_backup_path"])
+		check(FileAccess.file_exists(archive) and FileAccess.get_file_as_string(archive)==pre_return_town,"conflict_old_town_archived_exact_bytes")
+		var archived_city := SoloTownSaveService.read(archive,"player")
+		check(bool(archived_city.get("ok",false)),"conflict_archive_is_readable")
+		if bool(archived_city.get("ok",false)):
+			check(archived_city["character"].inventory.owns("CITY_GENERATED"),"conflict_city_only_item_preserved_in_archive")
+		var adopted := SoloTownSaveService.read(CTOWN,"player")
+		check(bool(adopted.get("ok",false)),"conflict_returned_city_readable")
+		if bool(adopted.get("ok",false)):
+			check(adopted["character"].inventory.owns("EXP_REWARD"),"conflict_reward_carried_to_town")
+			check(not adopted["character"].inventory.owns("CITY_GENERATED"),"conflict_city_only_item_not_silently_merged")
+		var repeated := SoloTownSaveService.adopt_closed_expedition_preserving_town(CTOWN,CEXP,ID,"player",CMAN)
+		check(bool(repeated.get("ok",false)) and bool(repeated.get("already_adopted",false)),"conflict_recovery_idempotent")
+		wipe(archive)
+	for path in [CTOWN,CEXP,CMAN]:
+		wipe(path)
