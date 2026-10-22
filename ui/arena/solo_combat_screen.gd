@@ -83,6 +83,7 @@ func _ready() -> void:
 	shared_arena = ArenaScreen.new()
 	shared_arena.name = "SharedArenaUI"
 	shared_arena.external_combat_mode = true
+	shared_arena.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	shared_arena.size = Vector2.ONE * SQUARE_EDGE
 	square_content.add_child(shared_arena)
 	shared_arena.end_turn_requested.connect(func(_attacks: Array[String], _blocks: Array[String]) -> void: _submit())
@@ -158,7 +159,7 @@ func _ready() -> void:
 	detail_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_popup.add_child(detail_text)
 	resized.connect(_apply_orientation)
-	tab_container.resized.connect(_apply_orientation)
+	arena_layout.resized.connect(_apply_orientation)
 	_apply_orientation()
 
 func _panel_style(panel: PanelContainer) -> void:
@@ -177,12 +178,18 @@ func _apply_orientation() -> void:
 	arena_layout.vertical = portrait
 	# Retain the same 480x480 logical composition, with one uniform scale.
 	# On landscape the participants and journal tabs sit beside the square.
+	# Reserve the information zone FIRST, then scale the original 480x480
+	# Arena once within the actual remaining BattleLayout bounds (not full screen).
+	# The native Arena square itself never scales or rearranges its children.
+	var info_min := Vector2(0, 190) if portrait else Vector2(330, 0)
+	if tab_container.custom_minimum_size != info_min:
+		tab_container.custom_minimum_size = info_min
 	var room: Vector2 = arena_layout.size
-	var edge: float = minf(room.x - (0.0 if portrait else 340.0), maxf(1.0, room.y - (210.0 if portrait else 0.0)))
-	edge = floorf(maxf(1.0, edge))
+	var gap := float(arena_layout.get_theme_constant("separation"))
+	var available_width := room.x - (info_min.x + gap if not portrait else 0.0)
+	var available_height := room.y - (info_min.y + gap if portrait else 0.0)
+	var edge := floorf(maxf(1.0, minf(SQUARE_EDGE, available_width, available_height)))
 	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
-	# The external information zone fills the remaining area.
-	tab_container.custom_minimum_size = Vector2(0, 190) if portrait else Vector2(330, 0)
 
 func present(view: Dictionary) -> void:
 	snapshot = view.duplicate(true)
