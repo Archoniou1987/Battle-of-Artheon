@@ -83,6 +83,6 @@ static func preflight(state: CombatState, player: CharacterState, repository: It
 	if state.round_number + 1 < int(audit["next_available_round"]):
 		return {"ok":false,"reason":"elixir_shared_cooldown"}
 	var actor := state.get_combatant(player.character_id)
-	if actor == null or not CombatElixirService.new(state,CombatEngine.new(state),player).can_use(actor,state.round_number+1):
+	if actor == null or actor.is_death_finalized() or actor.hp <= 0 or CombatTempoService.is_stunned(actor,state.round_number+1):
 		return {"ok":false,"reason":"elixir_actor_unavailable"}
 	return {"ok":true,"item_id":String(entry["instance_id"]),"slot":slot,"audit":audit}
