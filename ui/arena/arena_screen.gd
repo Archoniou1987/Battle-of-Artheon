@@ -7,6 +7,9 @@ signal end_turn_requested(attack_targets: Array[String], block_zones: Array[Stri
 ## Notify the owning scene to save persistent HP/mana after an accepted round.
 signal resources_changed
 signal inventory_changed
+signal live_ability_selected(index: int)
+signal live_elixir_selected(index: int)
+var external_combat_mode := false
 
 const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]
 const SLOTS_RIGHT := ["neck", "back", "wrists", "hands", "off_hand", "ring1", "ring2"]
@@ -235,7 +238,8 @@ func _ready() -> void:
 	resized.connect(_apply_layout)
 	_apply_layout()
 	refresh()
-	_start_combat_session()
+	if not external_combat_mode:
+		_start_combat_session()
 
 ## Visual Lab is a view-only overlay and does not change CombatSession.
 func _build_visual_lab() -> void:
@@ -494,7 +498,8 @@ func _build_square() -> void:
 	round_button.disabled = true # Enabled by the combat session controller.
 	round_button.tooltip_text = "Ожидание боевого сеанса"
 	round_button.pressed.connect(_request_end_turn)
-	end_turn_requested.connect(_play_combat_round)
+	if not external_combat_mode:
+		end_turn_requested.connect(_play_combat_round)
 	square_content.add_child(round_button)
 	var invisible_button_style := StyleBoxEmpty.new()
 	for button_state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
@@ -919,6 +924,9 @@ func set_attack_count(count: int) -> void:
 	_update_zone_buttons()
 
 func _select_ability(index: int) -> void:
+	if external_combat_mode:
+		live_ability_selected.emit(index)
+		return
 	if combat_session == null or index < 0 or index >= ability_buttons.size():
 		return
 	var options := combat_session.player_ability_options()
@@ -938,6 +946,9 @@ func _select_ability(index: int) -> void:
 			resources_changed.emit()
 
 func _use_elixir(index: int) -> void:
+	if external_combat_mode:
+		live_elixir_selected.emit(index)
+		return
 	if combat_session == null:
 		return
 	var result := combat_session.use_elixir(index)
@@ -1311,6 +1322,10 @@ func refresh() -> void:
 func _apply_layout() -> void:
 	if layout == null:
 		return
+	if external_combat_mode:
+		layout.vertical = true
+		SquareUiGeometry.fit(square_host, square_content, minf(size.x, size.y), ARENA_LOGICAL_EXTENT)
+		return
 	var portrait := size.y > size.x
 	layout.vertical = portrait
 	var separation := float(layout.get_theme_constant("separation"))
@@ -1374,3 +1389,49 @@ func _show_par_report() -> void:
 func _open_abi_test_lab() -> void:
 	if abi_lab_dialog != null:
 		abi_lab_dialog.open_lab()
+
+
+## The shared Arena square can display a real expedition without owning combat.
+func present_external(view: Dictionary) -> void:
+	if not external_combat_mode:
+		push_error("External combat presentation requires external_combat_mode")
+		return
+	var player: Dictionary = view.get("player", {})
+	var enemies: Array = view.get("enemies", [])
+	var controls: Dictionary = view.get("controls", {})
+	var opponent: Dictionary = {}
+	for raw in enemies:
+		if raw is Dictionary and String(raw.get("id", "")) == String(controls.get("target_id", "")):
+			opponent = raw
+			break
+	if opponent.is_empty():
+		for raw in enemies:
+			if raw is Dictionary and not bool(raw.get("dead", false)):
+				opponent = raw
+				break
+	set_fighter_header(true, String(player.get("name", "Герой")), int(player.get("level", 1)))
+	set_fighter_header(false, String(opponent.get("name", "Противник")), int(opponent.get("level", 1)))
+	for side in [true, false]:
+		var fighter: Dictionary = player if side else opponent
+		set_fighter_hp(side, int(fighter.get("hp", 0)), int(fighter.get("max_hp", 1)))
+		set_fighter_resources(side, int(fighter.get("mana", 0)), int(fighter.get("max_mana", 0)), int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0)))
+	set_attack_count(maxi(1, int(controls.get("attack_count", 1))))
+	set_defense_capacity(maxi(1, int(controls.get("block_capacity", 1))))
+	attack_zones = ["chest"]
+	_update_zone_buttons()
+	var abilities: Array = view.get("ability_slots", [])
+	for index in range(ability_buttons.size()):
+		var option: Dictionary = abilities[index] if index < abilities.size() and abilities[index] is Dictionary else {}
+		var button := ability_buttons[index]
+		button.text = String(option.get("id", ""))
+		button.tooltip_text = String(option.get("name", ""))
+		button.disabled = not bool(option.get("available", false)) or bool(view.get("finished", false))
+	var loadout: Dictionary = view.get("elixir_loadout", {})
+	var potions: Array = loadout.get("slots", [])
+	var available: Array = view.get("elixir_availability", [])
+	for index in range(player_elixir_slots.size()):
+		var entry: Dictionary = potions[index] if index < potions.size() and potions[index] is Dictionary else {}
+		var potion := player_elixir_slots[index]
+		potion.text = "%d/%d" % [int(entry.get("charges", 0)), int(entry.get("max_charges", 0))] if not String(entry.get("instance_id", "")).is_empty() else ""
+		potion.disabled = bool(view.get("finished", false)) or index >= available.size() or not bool(available[index])
+	set_combat_ready(true)
