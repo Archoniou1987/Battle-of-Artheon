@@ -40,6 +40,8 @@ static func inspect(character: CharacterState, repository: ItemRepository) -> Di
 		var maximum := int(item.get("max_charges",0))
 		if reason.is_empty() and (maximum < 1 or charges < 0 or charges > maximum):
 			reason = "elixir_invalid_charges"
+		if reason.is_empty() and charges == 0:
+			reason = "elixir_depleted"
 		entry["charges"] = charges
 		entry["max_charges"] = maximum
 		entry["cooldown_rounds"] = maxi(0,int(item.get("cooldown_rounds",1)))
