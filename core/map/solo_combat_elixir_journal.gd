@@ -100,31 +100,45 @@ static func apply_to_baseline(state: CombatState, player: CharacterState, baseli
 			return {"ok":false,"reason":"elixir_journal_update_failed"}
 	return {"ok":true,"repository":copied,"audit":audit}
 
-## Persisted JSON normalizes numeric types (3 vs 3.0). Compare exact
-## item identities and all non-charge fields, while requiring an exact
-## whole-number match for charges. Never drop an item or skip any other field.
+## JSON round-trips may change numeric Variant types at ANY nesting
+## depth (e.g. rarity metadata 1 -> 1.0). Compare every key and element,
+## accepting only value-equivalent numbers. Never omit a property.
+static func _same_json_value(left: Variant, right: Variant) -> bool:
+	if left is Dictionary:
+		if not right is Dictionary:
+			return false
+		var a: Dictionary = left
+		var b: Dictionary = right
+		if a.size() != b.size():
+			return false
+		for key in a.keys():
+			if not b.has(key) or not _same_json_value(a[key],b[key]):
+				return false
+		return true
+	if left is Array:
+		if not right is Array:
+			return false
+		var a: Array = left
+		var b: Array = right
+		if a.size() != b.size():
+			return false
+		for i in range(a.size()):
+			if not _same_json_value(a[i],b[i]):
+				return false
+		return true
+	if left is int or left is float:
+		if not (right is int or right is float):
+			return false
+		if left is int and right is int:
+			return left == right
+		return is_finite(float(left)) and is_finite(float(right)) and float(left) == float(right)
+	# Strings, bools and nulls must retain their exact JSON kind and value.
+	return typeof(left) == typeof(right) and left == right
+
 static func same_repository(expected: ItemRepository, staged: ItemRepository) -> bool:
 	if expected == null or staged == null:
 		return false
-	var a: Dictionary = expected.to_dict().get("items",{})
-	var b: Dictionary = staged.to_dict().get("items",{})
-	if a.size() != b.size():
-		return false
-	for raw_id in a.keys():
-		if not b.has(raw_id) or not a[raw_id] is Dictionary or not b[raw_id] is Dictionary:
-			return false
-		var ea: Dictionary = Dictionary(a[raw_id]).duplicate(true)
-		var eb: Dictionary = Dictionary(b[raw_id]).duplicate(true)
-		if ea.has("charges") != eb.has("charges"):
-			return false
-		if ea.has("charges"):
-			if not CharacterProgression._is_whole_number(ea["charges"]) or not CharacterProgression._is_whole_number(eb["charges"]) or int(ea["charges"]) != int(eb["charges"]):
-				return false
-			ea.erase("charges")
-			eb.erase("charges")
-		if JSON.stringify(ea) != JSON.stringify(eb):
-			return false
-	return true
+	return _same_json_value(expected.to_dict(),staged.to_dict())
 
 static func preflight(state: CombatState, player: CharacterState, repository: ItemRepository, slot: int) -> Dictionary:
 	if slot < 0:
