@@ -9,6 +9,7 @@ signal resources_changed
 signal inventory_changed
 signal live_ability_selected(index: int)
 signal live_elixir_selected(index: int)
+signal live_selection_changed
 var external_combat_mode := false
 
 const SLOTS_LEFT := ["head", "shoulders", "chest", "main_hand", "waist", "legs", "feet"]
@@ -904,6 +905,8 @@ func _select_zone(is_player: bool, zone: String) -> void:
 			# Replacing the second target is quicker than clearing both selections.
 			attack_zones[attack_zones.size() - 1] = zone
 	_update_zone_buttons()
+	if external_combat_mode:
+		live_selection_changed.emit()
 
 func set_defense_capacity(capacity: int) -> void:
 	defense_capacity = clampi(capacity, 1, 4)
