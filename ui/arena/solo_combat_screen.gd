@@ -402,7 +402,7 @@ func _update_selection() -> void:
 		_style_button(abi_buttons[index], not chosen_abi.is_empty() and chosen_abi == String(slot.get("id", "")), Color("#ac8edb"))
 	for index in range(potion_buttons.size()):
 		var availability: Array = snapshot.get("elixir_availability", [])
-		potion_buttons[index].disabled = finished or index >= availability.size() or not bool(availability[index])
+		potion_buttons[index].disabled = finished or stunned or index >= availability.size() or not bool(availability[index])
 		_style_button(potion_buttons[index], chosen_elixir == index, Color("#66ab8b"))
 	var count := int(controls.get("attack_count", 0))
 	var block_count := int(controls.get("block_capacity", 0))
@@ -436,7 +436,7 @@ func _update_selection() -> void:
 		for index in range(shared_arena.player_elixir_slots.size()):
 			var potion := shared_arena.player_elixir_slots[index]
 			var availability: Array = snapshot.get("elixir_availability", [])
-			potion.disabled = finished or index >= availability.size() or not bool(availability[index])
+			potion.disabled = finished or stunned or index >= availability.size() or not bool(availability[index])
 			potion.set_pressed_no_signal(chosen_elixir == index)
 		shared_arena.set_combat_ready(not round_button.disabled)
 
