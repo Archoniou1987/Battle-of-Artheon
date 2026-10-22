@@ -73,7 +73,11 @@ func player_controls(player_id: String) -> Dictionary:
 		var is_ally := String(definition.get("target_team","ENEMY")).to_upper() == "ALLY"
 		# UI reads and rejected orders must not retarget an actor.
 		var target_id := player_id if is_ally else group.active_opponent(player_id)
-		var ready := not CombatTempoService.is_stunned(player,next_round) and player.hp > 0
+		# Match CombatCommandApi's complete PAR action preflight before
+		# beginning the round. A rejected cast must never consume regen,
+		# RNG, mana, event IDs or invalidate the last checkpoint.
+		var status := ParCombatContract.action_status(player,next_round)
+		var ready := bool(status.get("ok",false)) and player.hp > 0
 		ready = ready and scheduler.can_cast_this_round(player_id,next_round)
 		ready = ready and AbilityRuntime.can_use(ability_id,cd,next_round)
 		ready = ready and player.mana >= int(definition.get("mana_cost",0))
