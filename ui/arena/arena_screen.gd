@@ -1436,7 +1436,7 @@ func present_external(view: Dictionary) -> void:
 	set_attack_count(maxi(0, int(controls.get("attack_count", 1))))
 	set_defense_capacity(maxi(0, int(controls.get("block_capacity", 1))))
 	attack_zones.clear()
-	if not bool(controls.get("stunned", false)):
+	if not bool(controls.get("stunned", false)) and attack_count > 0:
 		attack_zones.append("chest")
 	if bool(controls.get("stunned", false)):
 		defense_zones.clear()
