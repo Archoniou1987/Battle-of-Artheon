@@ -200,7 +200,10 @@ func _apply_orientation() -> void:
 		info_column.custom_minimum_size = minimum_info
 	var available_width := room.x if portrait else room.x - gap - minimum_info_width
 	var available_height := room.y - gap - minimum_info_height if portrait else room.y
-	var edge := floorf(maxf(1.0, minf(SQUARE_EDGE, minf(available_width, available_height))))
+	# 480 is the *design* edge, not a maximum display size. Godot's
+	# canvas_items stretch may give us >480 logical px even on a phone;
+	# capping here shrank the battle square to ~260 physical px in landscape.
+	var edge := floorf(maxf(1.0, minf(available_width, available_height)))
 	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
 
 func present(view: Dictionary) -> void:
