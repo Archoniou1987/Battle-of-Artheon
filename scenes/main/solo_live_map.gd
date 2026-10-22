@@ -15,6 +15,8 @@ var round_button: Button
 var return_button: Button
 var combat_panel: VBoxContainer
 var combat_summary: Label
+var hero_hp_bar: ProgressBar
+var enemy_hp_rows: VBoxContainer
 var combat_log_label: Label
 var attack_zone_row: VBoxContainer
 var block_zone_row: GridContainer
@@ -86,6 +88,16 @@ func _build_view() -> void:
 	combat_summary = Label.new()
 	combat_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(combat_summary)
+	var hp_heading := Label.new()
+	hp_heading.text = "Здоровье героя"
+	combat_panel.add_child(hp_heading)
+	hero_hp_bar = ProgressBar.new()
+	hero_hp_bar.custom_minimum_size.y = 26
+	hero_hp_bar.show_percentage = false
+	combat_panel.add_child(hero_hp_bar)
+	enemy_hp_rows = VBoxContainer.new()
+	enemy_hp_rows.add_theme_constant_override("separation",6)
+	combat_panel.add_child(enemy_hp_rows)
 	var attack_label := Label.new()
 	attack_label.text = "Атака — зона каждого удара"
 	combat_panel.add_child(attack_label)
@@ -186,6 +198,37 @@ func _refresh() -> void:
 			btn.pressed.connect(_move.bind(pos))
 			tile_container.add_child(btn)
 
+## Bars are read-only projections of combat_view() values, including
+## provisional death masking via CombatantState.visible_hp().
+## Multiple NPCs each have their own bar; no active-target inference.
+func _update_combat_hp_bars(hero: Dictionary, enemies: Array) -> void:
+	if hero_hp_bar == null or enemy_hp_rows == null:
+		return
+	_set_hp_bar(hero_hp_bar,hero)
+	for child in enemy_hp_rows.get_children():
+		enemy_hp_rows.remove_child(child)
+		child.queue_free()
+	for raw in enemies:
+		if not raw is Dictionary:
+			continue
+		var npc: Dictionary = raw
+		var label := Label.new()
+		label.text = String(npc.get("name","Противник"))
+		enemy_hp_rows.add_child(label)
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size.y = 22
+		bar.show_percentage = false
+		_set_hp_bar(bar,npc)
+		enemy_hp_rows.add_child(bar)
+
+func _set_hp_bar(bar: ProgressBar, snapshot: Dictionary) -> void:
+	var maximum := maxi(1,int(snapshot.get("max_hp",1)))
+	var current := clampi(int(snapshot.get("hp",0)),0,maximum)
+	bar.min_value = 0
+	bar.max_value = maximum
+	bar.value = current
+	bar.tooltip_text = "%d / %d HP" % [current,maximum]
+
 ## Read-only widgets for the real checkpointed combatant and log.
 ## Display never creates another CombatEngine or overwrites saved stats.
 func _refresh_combat_controls() -> void:
@@ -204,6 +247,7 @@ func _refresh_combat_controls() -> void:
 		combat_summary.text = "Боевые данные недоступны."
 		return
 	var hero: Dictionary = view["player"]
+	_update_combat_hp_bars(hero,Array(view.get("enemies",[])))
 	var elixir_view: Dictionary = view.get("elixir_loadout",{})
 	var elixir_lines: Array[String] = []
 	if bool(elixir_view.get("ok",false)):
