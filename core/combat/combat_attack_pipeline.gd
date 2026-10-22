@@ -23,7 +23,23 @@ func lock_ready_abilities(round:CombatRound,source:CombatantState,target:Combata
 
 func queue_ready_abilities(source:CombatantState,target:CombatantState)->void:
 	for event in ability_scheduler.ready_events(state,source.combatant_id,target.combatant_id): state.queue_event(event)
-func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState)->void:
+## Player orders may supply one body zone per canonical weapon constituent.
+## Empty zones retain historical NPC/autoplay random targeting.
+func basic_hit_count(attacker: CombatantState) -> int:
+	if attacker == null or attacker.is_death_finalized():
+		return 0
+	var weapon_indices: Array[int] = []
+	for profile in WeaponAttackProfile.all(attacker):
+		var index := int(profile.get("weapon_index",-1))
+		if not weapon_indices.has(index):
+			weapon_indices.append(index)
+	var count := 0
+	for index in weapon_indices:
+		if _weapon_attack_available(attacker,index):
+			count += maxi(1,int(_weapon_profile(attacker,index).get("hit_count",1)))
+	return count
+
+func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:CombatantState,body_zones:Array[String]=[])->void:
 	if attacker==null or defender==null or attacker.is_death_finalized() or defender.is_death_finalized() or CombatTempoService.is_stunned(attacker, state.round_number): return
 	var weapon_indices:Array=[]
 	var canonical_profiles:=WeaponAttackProfile.all(attacker)
@@ -39,10 +55,13 @@ func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Combat
 	# One normal Base Attack (all MH/OH and multi-hit constituents) shares one AP group.
 	# Base attacks are determined by weapons; Tempo grants no additional hits.
 	var ap_group_id:=state.next_event_id
+	var zone_offset := 0
 	for raw_weapon_index in weapon_indices:
 		var weapon_index:=int(raw_weapon_index)
 		if _weapon_attack_available(attacker,weapon_index):
-			for event in _make_basic_attacks(attacker,defender,false,weapon_index,ap_group_id):
+			var events := _make_basic_attacks(attacker,defender,false,weapon_index,ap_group_id,body_zones,zone_offset)
+			zone_offset += events.size()
+			for event in events:
 				round.lock_action(event)
 func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var profile:=_weapon_profile(attacker,weapon_index)
@@ -53,7 +72,7 @@ func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var equipped_types:Array=CombatModifierService.equipped_item_types(attacker)
 	return equipped_types.has(requirement)
 
-func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int,ap_group_id:int=-1)->Array[CombatEvent]:
+func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int,ap_group_id:int=-1,body_zones:Array[String]=[],zone_offset:int=0)->Array[CombatEvent]:
 	var profile:=_weapon_profile(attacker,weapon_index)
 	var result:Array[CombatEvent]=[]
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
@@ -61,7 +80,8 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 		var rolls:=_attack_rolls()
 		var damage_roll:=float(rolls["damage"]) if rolls.has("damage") else rng.randf()
 		rolls["damage"]=damage_roll
-		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)],{
+		var selected_zone := body_zones[zone_offset + hit_index] if zone_offset + hit_index < body_zones.size() else HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)]
+		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,selected_zone,{
 			"is_extra_attack":extra,
 			"generates_ap":not extra,
 			"ap_group_id":ap_group_id if ap_group_id>=0 else state.next_event_id,
