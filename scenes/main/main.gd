@@ -58,6 +58,7 @@ var _canonical_town_active := false
 var _canonical_town_revision := ""
 var _town_storage_blocked := false
 var _town_storage_issue := ""
+var _town_expedition_handed_off := false
 
 
 func _ready() -> void:
@@ -124,7 +125,7 @@ func _activate_canonical_owner(restored: Dictionary) -> void:
 	_resources_loaded_from_save = true
 
 func _save_canonical_town() -> void:
-	if _town_storage_blocked or not _canonical_town_active:
+	if _town_expedition_handed_off or _town_storage_blocked or not _canonical_town_active:
 		return
 	var saved := SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository,_canonical_town_revision,true)
 	if bool(saved.get("ok",false)):
@@ -556,8 +557,12 @@ func _enter_solo_map(create: bool, resume_pending: bool = false) -> void:
 		if not bool(verified.get("ok",false)):
 			popup_description.text = "Экспедиция не открыта: "+String(verified.get("reason","unknown"))
 			return
+	# The town state is now handed off to the expedition. Scene teardown
+	# must not write a second divergent town snapshot.
+	_town_expedition_handed_off = true
 	var change_error := get_tree().change_scene_to_file("res://scenes/main/solo_live_map.tscn")
 	if change_error != OK:
+		_town_expedition_handed_off = false
 		popup_description.text = "Не удалось открыть игровую карту."
 
 func _add_debug_button(title: String, path: String) -> void:
