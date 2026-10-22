@@ -100,6 +100,32 @@ static func apply_to_baseline(state: CombatState, player: CharacterState, baseli
 			return {"ok":false,"reason":"elixir_journal_update_failed"}
 	return {"ok":true,"repository":copied,"audit":audit}
 
+## Persisted JSON normalizes numeric types (3 vs 3.0). Compare exact
+## item identities and all non-charge fields, while requiring an exact
+## whole-number match for charges. Never drop an item or skip any other field.
+static func same_repository(expected: ItemRepository, staged: ItemRepository) -> bool:
+	if expected == null or staged == null:
+		return false
+	var a: Dictionary = expected.to_dict().get("items",{})
+	var b: Dictionary = staged.to_dict().get("items",{})
+	if a.size() != b.size():
+		return false
+	for raw_id in a.keys():
+		if not b.has(raw_id) or not a[raw_id] is Dictionary or not b[raw_id] is Dictionary:
+			return false
+		var ea: Dictionary = Dictionary(a[raw_id]).duplicate(true)
+		var eb: Dictionary = Dictionary(b[raw_id]).duplicate(true)
+		if ea.has("charges") != eb.has("charges"):
+			return false
+		if ea.has("charges"):
+			if not CharacterProgression._is_whole_number(ea["charges"]) or not CharacterProgression._is_whole_number(eb["charges"]) or int(ea["charges"]) != int(eb["charges"]):
+				return false
+			ea.erase("charges")
+			eb.erase("charges")
+		if JSON.stringify(ea) != JSON.stringify(eb):
+			return false
+	return true
+
 static func preflight(state: CombatState, player: CharacterState, repository: ItemRepository, slot: int) -> Dictionary:
 	if slot < 0:
 		return {"ok":true,"item_id":""}
