@@ -126,3 +126,16 @@ Status: **committed, not yet run on Godot CI**. Do not claim visual completion u
 **Deliberately open for point changes:** the **presentation of participants** in the auxiliary roster (allies/enemies). The owner intends to display participants differently. This is *not* authorization to rebuild the square, move the information section, or change the overall screen structure. Adjust only roster content/components when the new participant design is specified.
 
 **Next functional milestone:** validate attack zone selection, block zone selection, ABI, elixirs, and End Turn -> authoritative live Combat Engine, retaining one Arena UI and one gameplay engine.
+
+
+## Functional command integration — batch 1 (2026-10-22)
+
+The approved UI geometry remains **frozen and untouched**. Live expedition wiring already used the authoritative `SoloLiveNpcCombat.play_round()` in `scenes/main/solo_live_map.gd`, receiving commands via `SoloCombatScreen.round_requested` and returning a new canonical snapshot through `_refresh_combat_controls()`. This batch strengthens the input contract and its UI coverage; it does **not** add a second engine or change round resolution.
+
+- Five attack zones: the Arena's selected zone list feeds the submitted hit targets; a single zone repeats as needed for dual attacks; two selected zones are kept distinct. Zero available attacks no longer fabricate a chest attack in presentation.
+- Manual defense: actual block capacity from the simulator can be **zero**. Original Arena previously clamped it to one and displayed a phantom chest block. Zero now clears all blocks and disables defense selectors; stun likewise disables both zone selector groups.
+- ABI and elixir: one optional selected ability ID and one optional potion slot coexist with attack/block choices. Their toggle appearances and disabled states now reflect the actual submitted selection and predicted availability. Potions may refresh ABI affordability through the existing simulator projection without spending resources.
+- End Round emits the command once, disables immediate duplicate submission, and leaves authoritative verification, checkpoint commit, finalization and next-snapshot publication with the existing live engine.
+- `tests/ui/solo_combat_screen_runner.gd` checks original-command output, selected button visibility, duplicate submission lock, zero-block behavior, and stun behavior.
+
+**Verification pending:** run ABI Branch Tests for the latest SHA before marking this batch stable. Solo Visual Audit is useful if these control-state changes affect rendered screenshots; no geometry changes were made.
