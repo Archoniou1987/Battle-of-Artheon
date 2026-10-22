@@ -897,6 +897,8 @@ func _show_fighter_details(is_player: bool) -> void:
 func _select_zone(is_player: bool, zone: String) -> void:
 	var index := ZONES.find(zone)
 	if is_player:
+		if defense_capacity == 0:
+			return
 		# Each protected zone is individually chosen; non-adjacent combinations work.
 		if defense_zones.has(zone):
 			if defense_zones.size() > 1:
@@ -906,6 +908,8 @@ func _select_zone(is_player: bool, zone: String) -> void:
 		else:
 			defense_zones[defense_zones.size() - 1] = zone
 	else:
+		if attack_count <= 0:
+			return
 		if attack_zones.has(zone):
 			attack_zones.erase(zone)
 		elif attack_zones.size() < attack_count:
@@ -918,7 +922,7 @@ func _select_zone(is_player: bool, zone: String) -> void:
 		live_selection_changed.emit()
 
 func set_defense_capacity(capacity: int) -> void:
-	defense_capacity = clampi(capacity, 1, 4)
+	defense_capacity = clampi(capacity, 0, 5)
 	while defense_zones.size() > defense_capacity:
 		defense_zones.pop_back()
 	# Preserve the familiar ready-to-fight default while allowing any zone combination.
@@ -930,7 +934,7 @@ func set_defense_capacity(capacity: int) -> void:
 	_update_zone_buttons()
 
 func set_attack_count(count: int) -> void:
-	attack_count = maxi(1, count)
+	attack_count = maxi(0, count)
 	while attack_zones.size() > attack_count:
 		attack_zones.pop_back()
 	_update_zone_buttons()
@@ -1429,14 +1433,22 @@ func present_external(view: Dictionary) -> void:
 		var fighter: Dictionary = player if side else opponent
 		set_fighter_hp(side, int(fighter.get("hp", 0)), int(fighter.get("max_hp", 1)))
 		set_fighter_resources(side, int(fighter.get("mana", 0)), int(fighter.get("max_mana", 0)), int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0)))
-	set_attack_count(maxi(1, int(controls.get("attack_count", 1))))
-	set_defense_capacity(maxi(1, int(controls.get("block_capacity", 1))))
+	set_attack_count(maxi(0, int(controls.get("attack_count", 1))))
+	set_defense_capacity(maxi(0, int(controls.get("block_capacity", 1))))
 	attack_zones.clear()
 	if not bool(controls.get("stunned", false)):
 		attack_zones.append("chest")
 	if bool(controls.get("stunned", false)):
 		defense_zones.clear()
 	_update_zone_buttons()
+	# No attack or manual block input is legal while stunned. Keep the
+	# selectors visually consistent with authoritative player_controls.
+	var stunned := bool(controls.get("stunned", false))
+	var finished := bool(view.get("finished", false))
+	for button in attack_buttons:
+		button.disabled = stunned or finished or attack_count == 0
+	for button in defense_buttons:
+		button.disabled = stunned or finished or defense_capacity == 0
 	for raw_gear in Array(view.get("equipment_slots", [])):
 		if raw_gear is Dictionary:
 			var slot := String(raw_gear.get("slot", ""))
