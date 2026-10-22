@@ -195,9 +195,6 @@ func present(view: Dictionary) -> void:
 	potion_buttons.clear()
 	attack_buttons.clear()
 	block_buttons.clear()
-	for child in actions_column.get_children():
-		actions_column.remove_child(child)
-		child.queue_free()
 	# Shared Arena is persistent; never delete its square during snapshots.
 	var controls: Dictionary = snapshot.get("controls", {})
 	if not bool(controls.get("stunned", false)):
