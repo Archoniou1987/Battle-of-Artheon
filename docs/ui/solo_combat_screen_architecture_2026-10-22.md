@@ -153,3 +153,17 @@ The previously described “zero-block player” was an **incorrect interpretati
 Source of truth is `ParCalculationService.calculate()` PAR073, not a UI-only fallback. The canonical source previously initialized PAR073 to 2 regardless of unarmed combat. The baseline now selects 1 for unarmed/bow and 2 for equipped melee, and `CharacterCombatBuilder` carries that total into live combat. The existing lower-level zero capability is retained only as a defensive representation of unavailable/invalid controls (for example, missing mandatory PAR073 or an actor who cannot manually block), **not as an ordinary equipment class or combat design**. UI regression tests now assert one block for unarmed instead of promoting zero as a gameplay rule. PAR migration tests check unarmed=1 and equipped melee=2.
 
 **CI pending**: run PAR Migration Audit and ABI Branch Tests on latest SHA. The approved UI geometry has not changed.
+
+
+## Live Arena system integration: disclosed EFF and terminal UI (2026-10-22)
+
+The approved responsive layout remains frozen. After the input command wiring audit, the next gap was **engine -> UI effect projection**. `SoloLiveNpcCombat.combat_view()` already emits only end-of-round **disclosed** `player.effects` and `enemies[].effects`, but the embedded `ArenaScreen` previously displayed no buffs/debuffs in external mode because `combat_session == null`. Do not create a second session or read undisclosed `CombatantState.active_effects` in the UI.
+
+- `ArenaScreen.present_external(view)` stores player/current-target disclosed effect arrays. Its existing avatar-corner Buff/Debuff rows are updated on each snapshot and cleared when effects expire.
+- A live effect icon tap opens an owner-managed information popup, rather than trying to switch the training Arena's hidden diagnostic tabs.
+- After terminal confirmation the shared round button is disabled immediately to prevent duplicate submissions while the parent publishes the terminal result.
+- `tests/ui/solo_combat_screen_runner.gd` includes effect polarity, visibility, clearing, and tap/details assertions; the existing hit/block/ABI/elixir/terminal contract checks remain.
+
+**Integration boundary:** `SoloCombatScreen` emits a structured command; `SoloLiveNpcCombat.play_round` owns authoritative validation, end-of-round death, elixir/ability resource spending and durable checkpoints; `_refresh_combat_controls` calls `present_external` with the next canonical view. This batch changes presentation and input safety, not engine ordering or calculations.
+
+**Status:** code committed; verify latest ABI Branch Tests (and Solo Visual Audit if checking screenshots). CI not invoked automatically.
