@@ -59,13 +59,40 @@ func player_controls(player_id: String) -> Dictionary:
 	var capacity := CombatModifierService.manual_block_zone_capacity(player)
 	if capacity < 1 or capacity > 4 or not player.can_manual_block():
 		capacity = 0
+	var next_round := state.round_number + 1
+	var options: Array[Dictionary] = []
+	var scheduler: AbilityScheduler = attack_pipeline.ability_scheduler
+	var equipped: Array = AbilityCatalog.assigned_abilities(scheduler.loadouts,player_id)
+	var cd: Dictionary = scheduler.cooldowns_by_combatant.get(player_id,{})
+	var policy := GroupActionPolicy.new(group)
+	for raw_id in equipped:
+		var ability_id := String(raw_id)
+		var definition := AbilityCatalog.definition(scheduler.definitions,ability_id)
+		if definition.is_empty():
+			continue
+		var is_ally := String(definition.get("target_team","ENEMY")).to_upper() == "ALLY"
+		var target_id := player_id if is_ally else controller.ensure_active_opponent(player_id)
+		var ready := not CombatTempoService.is_stunned(player,next_round) and player.hp > 0
+		ready = ready and scheduler.can_cast_this_round(player_id,next_round)
+		ready = ready and AbilityRuntime.can_use(ability_id,cd,next_round)
+		ready = ready and player.mana >= int(definition.get("mana_cost",0))
+		ready = ready and AbilityRuntime.validate_definition(ability_id,definition).is_empty()
+		ready = ready and policy.valid_ability_targets(player_id,definition).has(target_id)
+		options.append({
+			"id":ability_id,"name":String(definition.get("name",ability_id)),
+			"available":ready,"target_id":target_id,
+			"target_label":"Себя" if is_ally else "Противник",
+			"mana_cost":int(definition.get("mana_cost",0)),
+			"cooldown_until":int(cd.get(ability_id,0))
+		})
 	return {
 		"ok":true,
 		"attack_count":attack_pipeline.basic_hit_count(player),
 		"block_capacity":capacity,
-		"stunned":CombatTempoService.is_stunned(player,state.round_number + 1),
+		"stunned":CombatTempoService.is_stunned(player,next_round),
 		"zones":CombatCommandApi.BODY_ZONES.duplicate(),
-		"target_id":group.active_opponent(player_id)
+		"target_id":group.active_opponent(player_id),
+		"abilities":options
 	}
 
 func _validate_player_orders(orders: Dictionary) -> Dictionary:
@@ -92,7 +119,32 @@ func _validate_player_orders(orders: Dictionary) -> Dictionary:
 			return {"ok":false,"reason":"invalid_attack_zone_count","expected":int(controls["attack_count"])}
 		if blocks.size() != int(controls["block_capacity"]):
 			return {"ok":false,"reason":"invalid_block_zone_count","expected":int(controls["block_capacity"])}
-	return {"ok":true,"player_id":player_id,"attack_zones":attacks,"block_zones":blocks,"stunned":bool(controls["stunned"])}
+	var ability_value: Variant = orders.get("ability_id","")
+	if not ability_value is String:
+		return {"ok":false,"reason":"invalid_player_ability_format"}
+	var ability_id := String(ability_value)
+	var ability_target := ""
+	if not ability_id.is_empty():
+		if bool(controls["stunned"]):
+			return {"ok":false,"reason":"stunned_cannot_cast"}
+		var available := false
+		for raw_option in Array(controls.get("abilities",[])):
+			var option: Dictionary = raw_option
+			if String(option.get("id","")) != ability_id:
+				continue
+			if not bool(option.get("available",false)):
+				return {"ok":false,"reason":"player_ability_unavailable"}
+			available = true
+			ability_target = String(option.get("target_id",""))
+			break
+		if not available:
+			return {"ok":false,"reason":"player_ability_not_equipped"}
+	return {
+		"ok":true,"player_id":player_id,
+		"attack_zones":attacks,"block_zones":blocks,
+		"stunned":bool(controls["stunned"]),
+		"ability_id":ability_id,"ability_target":ability_target
+	}
 
 func run_round(player_orders: Dictionary = {}) -> Dictionary:
 	if controller.combat_finished():
@@ -147,7 +199,22 @@ func run_round(player_orders: Dictionary = {}) -> Dictionary:
 		var target:=state.get_combatant(target_id)
 		if target==null or target.is_death_finalized():
 			continue
-		attack_pipeline.lock_ready_abilities(round,actor,target)
+		if not selected.is_empty() and actor_id == String(selected["player_id"]):
+			# Explicit "no ABI" is a real player choice. Never fall back
+			# to the automatic spell picker for a manually controlled hero.
+			var ability_id := String(selected.get("ability_id",""))
+			if not ability_id.is_empty():
+				var commands := CombatCommandApi.new(state,group,null,orchestrator,attack_pipeline.ability_scheduler)
+				var cast := commands.cast_ability(actor_id,String(selected["ability_target"]),ability_id)
+				if not bool(cast.get("ok",false)):
+					# Preflight must prevent this branch. Mark the round as
+					# failed; do not accept an incomplete action set.
+					return {"ok":false,"reason":"prevalidated_ability_cast_failed","detail":String(cast.get("reason","unknown"))}
+				for ability_event in state.pending_events:
+					round.lock_action(ability_event)
+				state.pending_events.clear()
+		else:
+			attack_pipeline.lock_ready_abilities(round,actor,target)
 	orchestrator.resolve_locked_actions(round)
 	var summary:=orchestrator.end_round()
 	var sync:=controller.after_end_round(summary)
