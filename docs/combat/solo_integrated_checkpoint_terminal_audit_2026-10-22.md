@@ -54,3 +54,14 @@ The next package extends `tests/map/solo_live_elixir_round_runner.gd` rather tha
 - Existing checks of tampered event payload, overspending, cooldown across slots, repeat restart, and terminal publication remain active.
 
 New edge assertions are **pending CI** on the updated HEAD. No production combat formulas or settlement rules were modified.
+
+
+## Mobile scene integration — after ABI #318
+
+ABI #318 succeeded on `344b2f4182d7ea3bd89acbda25d2f5fe10185b7e`: stun, zero-charge refusal, and a two-component heal+mana potion now pass alongside the canonical checkpoint suite. The core Solo combat integration is green for the documented contracts.
+
+The next package begins **UI layout integration**, without touching combat execution, save state, balance or NPC encounters. The existing `solo_live_map.gd` viewport previously rendered all 10 map columns directly into the main vertical scroller, causing excessive width on a narrow phone, and positioned its `round_button` *after* a potentially long combat log.
+
+The map now has an independently horizontally scrollable area with 44px minimum tiles; the main action button is above the log, with a 56px minimum height. ABI, potion, attack and defense touch controls use larger minimum heights. A new headless Godot smoke test `tests/map/solo_live_mobile_layout_runner.gd` instantiates the actual scene and validates map parentage, scroll modes, action order and touch targets.
+
+**Not yet visually approved**: portrait and landscape screenshots / real device input are still required; static scene smoke does not establish UX or visual quality. No new gameplay systems have been added.
