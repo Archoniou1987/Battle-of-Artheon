@@ -10,6 +10,7 @@ static func inspect(state: CombatState, player: CharacterState, repository: Item
 	var uses: Array[Dictionary] = []
 	var by_round: Dictionary = {}
 	var components_by_round: Dictionary = {}
+	var components_seen: Dictionary = {}
 	for event in state.event_log:
 		if event.kind != CombatEvent.Kind.EFFECT or String(event.payload.get("source_type","")) != "elixir":
 			continue
@@ -22,6 +23,33 @@ static func inspect(state: CombatState, player: CharacterState, repository: Item
 		var item: Dictionary = repository.get_item(item_id)
 		if item.is_empty() or not CombatElixirService.validate_components(item).is_empty():
 			return {"ok":false,"reason":"elixir_journal_invalid_item"}
+		# Match the resolved EFFECT payload against one authored elixir
+		# component. Count alone cannot prove a genuine charge was spent.
+		var signatures: Array = components_seen.get(round_number,[])
+		var candidates: Array = item.get("elixir_components",[])
+		var matched := -1
+		for part_index in range(candidates.size()):
+			if signatures.has(part_index):
+				continue
+			var part: Dictionary = candidates[part_index]
+			var kind := String(part.get("kind",""))
+			var valid := false
+			match kind:
+				"heal":
+					valid = int(event.payload.get("inline_heal",-1)) == int(part.get("amount",0)) and bool(event.payload.get("clamp_heal_to_max",false))
+				"mana":
+					valid = int(event.payload.get("inline_mana",-1)) == int(part.get("amount",0))
+				"effect":
+					valid = String(event.payload.get("effect_id","")) == String(part.get("effect_id","")) and bool(event.payload.get("preparation_effect",false))
+				"cleanse":
+					valid = String(event.payload.get("dispel_polarity","")) == "DEBUFF" and int(event.payload.get("max_effects",-1)) == int(part.get("max_effects",1))
+			if valid:
+				matched = part_index
+				break
+		if matched < 0:
+			return {"ok":false,"reason":"elixir_journal_component_payload_mismatch"}
+		signatures.append(matched)
+		components_seen[round_number] = signatures
 		components_by_round[round_number] = int(components_by_round.get(round_number,0)) + 1
 		if not by_round.has(round_number):
 			by_round[round_number] = item_id
