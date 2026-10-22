@@ -12,6 +12,13 @@ var tile_container: GridContainer
 var live_combat: SoloLiveNpcCombat
 var round_button: Button
 var return_button: Button
+var combat_panel: VBoxContainer
+var combat_summary: Label
+var combat_log_label: Label
+var attack_zone_row: VBoxContainer
+var block_zone_row: HBoxContainer
+var attack_controls: Array[OptionButton] = []
+var block_controls: Array[CheckBox] = []
 var ground_list: VBoxContainer
 var pickup_ticket: String = ""
 var pickup_active: bool = false
@@ -65,6 +72,25 @@ func _build_view() -> void:
 	explanation.text = "Враги отмечены ⚔. Контакт запускает настоящий пошаговый Combat Engine; пока раунды используют автоматические базовые атаки."
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(explanation)
+	combat_panel = VBoxContainer.new()
+	combat_panel.visible = false
+	root.add_child(combat_panel)
+	combat_summary = Label.new()
+	combat_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	combat_panel.add_child(combat_summary)
+	var attack_label := Label.new()
+	attack_label.text = "Атака — зона каждого удара"
+	combat_panel.add_child(attack_label)
+	attack_zone_row = VBoxContainer.new()
+	combat_panel.add_child(attack_zone_row)
+	var block_label := Label.new()
+	block_label.text = "Ручная защита — выберите доступные зоны"
+	combat_panel.add_child(block_label)
+	block_zone_row = HBoxContainer.new()
+	combat_panel.add_child(block_zone_row)
+	combat_log_label = Label.new()
+	combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	combat_panel.add_child(combat_log_label)
 	tile_container = GridContainer.new()
 	tile_container.columns = SoloLiveMapSession.WIDTH
 	root.add_child(tile_container)
@@ -91,6 +117,7 @@ func _refresh() -> void:
 	if session == null:
 		return
 	_set_status("Позиция: %s   •   Персонаж: %s" % [str(session.expedition.player_position),session.character.display_name])
+	_refresh_combat_controls()
 	for node in ground_list.get_children():
 		ground_list.remove_child(node)
 		node.queue_free()
@@ -127,6 +154,63 @@ func _refresh() -> void:
 			btn.pressed.connect(_move.bind(pos))
 			tile_container.add_child(btn)
 
+## Read-only widgets for the real checkpointed combatant and log.
+## Display never creates another CombatEngine or overwrites saved stats.
+func _refresh_combat_controls() -> void:
+	combat_panel.visible = live_combat != null
+	attack_controls.clear()
+	block_controls.clear()
+	for parent in [attack_zone_row,block_zone_row]:
+		for child in parent.get_children():
+			parent.remove_child(child)
+			child.queue_free()
+	if live_combat == null:
+		return
+	var view := live_combat.combat_view()
+	if not bool(view.get("ok",false)):
+		combat_summary.text = "Боевые данные недоступны."
+		return
+	var hero: Dictionary = view["player"]
+	var enemies: Array = view.get("enemies",[])
+	var opponent_text := ""
+	for enemy in enemies:
+		var npc: Dictionary = enemy
+		if not opponent_text.is_empty():
+			opponent_text += " • "
+		opponent_text += "%s: %d/%d HP" % [String(npc["name"]),int(npc["hp"]),int(npc["max_hp"])]
+	combat_summary.text = "Раунд %d • %s: %d/%d HP, %d/%d MP\n%s" % [
+		int(view["round"]),String(hero["name"]),int(hero["hp"]),int(hero["max_hp"]),
+		int(hero["mana"]),int(hero["max_mana"]),opponent_text
+	]
+	var log_parts: Array[String] = []
+	for raw_line in Array(view.get("last_round_log",[])):
+		log_parts.append(String(raw_line))
+	combat_log_label.text = "Последний раунд:\n" + ("\n".join(PackedStringArray(log_parts)) if not log_parts.is_empty() else "Событий пока нет")
+	if bool(view["finished"]):
+		return
+	var controls: Dictionary = view.get("controls",{})
+	if not bool(controls.get("ok",false)):
+		return
+	if bool(controls.get("stunned",false)):
+		var disabled_label := Label.new()
+		disabled_label.text = "Оглушение: действия этого раунда пропускаются."
+		attack_zone_row.add_child(disabled_label)
+		return
+	var zone_names := ["Голова","Грудь","Руки","Пояс","Ноги"]
+	for attack_index in range(int(controls.get("attack_count",0))):
+		var option := OptionButton.new()
+		for i in range(CombatCommandApi.BODY_ZONES.size()):
+			option.add_item(zone_names[i],i)
+		option.select(1)
+		attack_zone_row.add_child(option)
+		attack_controls.append(option)
+	for i in range(CombatCommandApi.BODY_ZONES.size()):
+		var cb := CheckBox.new()
+		cb.text = zone_names[i]
+		cb.button_pressed = [1,2,3,4,0].find(i) < int(controls.get("block_capacity",0))
+		block_zone_row.add_child(cb)
+		block_controls.append(cb)
+
 func _move(target: Vector2i) -> void:
 	if session == null or pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
 		return
@@ -161,10 +245,27 @@ func _start_combat(cell: Vector2i) -> void:
 func _play_combat_round() -> void:
 	if live_combat == null:
 		return
-	var step := live_combat.play_round()
+	var submission: Dictionary = {}
+	var before := live_combat.combat_view()
+	if bool(before.get("ok",false)) and not bool(before.get("finished",false)):
+		var attack_zones: Array[String] = []
+		for option in attack_controls:
+			var selected_index := option.get_selected_id()
+			if selected_index >= 0 and selected_index < CombatCommandApi.BODY_ZONES.size():
+				attack_zones.append(CombatCommandApi.BODY_ZONES[selected_index])
+		var block_zones: Array[String] = []
+		for i in range(block_controls.size()):
+			if block_controls[i].button_pressed:
+				block_zones.append(CombatCommandApi.BODY_ZONES[i])
+		submission = {"player_id":PLAYER,"attack_zones":attack_zones,"block_zones":block_zones}
+	var step := live_combat.play_round(submission)
 	if not bool(step.get("ok",false)):
+		var issue := String(step.get("reason",step.get("state","unknown")))
+		if issue in ["invalid_attack_zone","invalid_block_zone","invalid_attack_zone_count","invalid_block_zone_count","invalid_player_order_format","invalid_player_orders_owner","manual_block_rejected"]:
+			_set_status("Неверный выбор зон: "+issue+". Проверьте количество зон атаки и защиты.")
+			return
 		round_button.disabled=true
-		_set_status("Бой приостановлен: "+String(step.get("reason",step.get("state","unknown")))+". Сохранения не удалены; дальнейшие действия заблокированы.")
+		_set_status("Бой приостановлен: "+issue+". Сохранения не удалены; дальнейшие действия заблокированы.")
 		return
 	var state := String(step.get("state",""))
 	if state == "victory" or state == "defeat":
@@ -173,7 +274,7 @@ func _play_combat_round() -> void:
 		var reopened := SoloLiveMapSession.open(SAVE,MANIFEST,session.expedition.expedition_id,PLAYER)
 		if not bool(reopened.get("ok",false)):
 			round_button.disabled = true
-			_set_status("Победа сохранена, но карту не удалось обновить: "+String(reopened.get("reason","unknown")))
+			_set_status("Результат боя сохранён, но карту не удалось обновить: "+String(reopened.get("reason","unknown")))
 			return
 		session = reopened["session"]
 		live_combat=null
@@ -186,6 +287,7 @@ func _play_combat_round() -> void:
 		else:
 			_set_status("Поражение сохранено. Герой вернулся на стартовую клетку экспедиции; враг и добыча не изменены.")
 	else:
+		_refresh_combat_controls()
 		_set_status("Раунд "+str(step.get("round",0))+" завершён и сохранён.")
 
 func _pickup_item(item_id: String) -> void:
