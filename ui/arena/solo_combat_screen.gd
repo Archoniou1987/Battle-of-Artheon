@@ -21,6 +21,7 @@ var potion_buttons: Array[Button] = []
 var attack_buttons: Array[Button] = []
 var block_buttons: Array[Button] = []
 var arena_layout: BoxContainer
+var info_column: VBoxContainer
 var square_host: Control
 var square_content: Control
 var shared_arena: ArenaScreen
@@ -48,20 +49,6 @@ func _ready() -> void:
 	shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shell.add_theme_constant_override("separation", 5)
 	add_child(shell)
-	var top := PanelContainer.new()
-	_panel_style(top)
-	shell.add_child(top)
-	var title_row := HBoxContainer.new()
-	top.add_child(title_row)
-	var title := Label.new()
-	title.text = "BATTLE OF ARTHEON  •  БОЙ"
-	title.add_theme_color_override("font_color", Color("#ead9b9"))
-	title.add_theme_font_size_override("font_size", 19)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(title)
-	round_label = Label.new()
-	round_label.text = "Раунд —"
-	title_row.add_child(round_label)
 
 	# The battle tab always holds ONE 1:1 Face to Face arena. A group roster
 	# never causes additional fighter cards to appear in the main arena.
@@ -90,12 +77,35 @@ func _ready() -> void:
 	shared_arena.live_ability_selected.connect(_choose_ability)
 	shared_arena.live_elixir_selected.connect(_choose_elixir)
 	shared_arena.live_selection_changed.connect(_on_shared_selection)
+	# Side/bottom information has its own header. The Arena square now gets
+	# the FULL BattleLayout height in landscape, just like the training Arena.
+	info_column = VBoxContainer.new()
+	info_column.name = "CombatInfo"
+	info_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info_column.add_theme_constant_override("separation", 5)
+	arena_layout.add_child(info_column)
+	var top := PanelContainer.new()
+	_panel_style(top)
+	info_column.add_child(top)
+	var title_row := HBoxContainer.new()
+	top.add_child(title_row)
+	var title := Label.new()
+	title.text = "BATTLE OF ARTHEON  •  БОЙ"
+	title.add_theme_color_override("font_color", Color("#ead9b9"))
+	title.add_theme_font_size_override("font_size", 19)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(title)
+	round_label = Label.new()
+	round_label.text = "Раунд —"
+	title_row.add_child(round_label)
+
 	# Secondary information tabs are outside the immutable Arena square.
 	tab_container = TabContainer.new()
 	tab_container.name = "CombatTabs"
 	tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	arena_layout.add_child(tab_container)
+	info_column.add_child(tab_container)
 
 	roster_page = HBoxContainer.new()
 	roster_page.name = "Участники"
@@ -176,18 +186,20 @@ func _apply_orientation() -> void:
 		return
 	var portrait := size.y >= size.x
 	arena_layout.vertical = portrait
-	# Retain the same 480x480 logical composition, with one uniform scale.
-	# On landscape the participants and journal tabs sit beside the square.
-	# Reserve the information zone FIRST, then scale the original 480x480
-	# Arena once within the actual remaining BattleLayout bounds (not full screen).
-	# The native Arena square itself never scales or rearranges its children.
-	var info_min := Vector2(0, 190) if portrait else Vector2(330, 0)
-	if tab_container.custom_minimum_size != info_min:
-		tab_container.custom_minimum_size = info_min
+	# The approved Arena is a fixed 480x480 drawing. Only its outer host
+	# scales. The information zone consumes REMAINING space, not a reserved
+	# fixed 330px that shrinks Arena on narrow landscape screens.
 	var room: Vector2 = arena_layout.size
 	var gap := float(arena_layout.get_theme_constant("separation"))
-	var available_width := room.x - (info_min.x + gap if not portrait else 0.0)
-	var available_height := room.y - (info_min.y + gap if portrait else 0.0)
+	# UI tabs remain usable but never dictate Arena's size before the
+	# available height is considered. Keep the minimum responsive.
+	var minimum_info_width := minf(220.0, maxf(120.0, room.x * 0.28))
+	var minimum_info_height := 150.0
+	var minimum_info := Vector2(0.0, minimum_info_height) if portrait else Vector2(minimum_info_width, 0.0)
+	if info_column.custom_minimum_size != minimum_info:
+		info_column.custom_minimum_size = minimum_info
+	var available_width := room.x if portrait else room.x - gap - minimum_info_width
+	var available_height := room.y - gap - minimum_info_height if portrait else room.y
 	var edge := floorf(maxf(1.0, minf(SQUARE_EDGE, minf(available_width, available_height))))
 	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
 
