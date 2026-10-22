@@ -71,7 +71,8 @@ func player_controls(player_id: String) -> Dictionary:
 		if definition.is_empty():
 			continue
 		var is_ally := String(definition.get("target_team","ENEMY")).to_upper() == "ALLY"
-		var target_id := player_id if is_ally else controller.ensure_active_opponent(player_id)
+		# UI reads and rejected orders must not retarget an actor.
+		var target_id := player_id if is_ally else group.active_opponent(player_id)
 		var ready := not CombatTempoService.is_stunned(player,next_round) and player.hp > 0
 		ready = ready and scheduler.can_cast_this_round(player_id,next_round)
 		ready = ready and AbilityRuntime.can_use(ability_id,cd,next_round)
