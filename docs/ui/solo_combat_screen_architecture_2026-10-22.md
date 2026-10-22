@@ -94,3 +94,13 @@ The UI regression runner now requires the external column hierarchy and a near-f
 Root cause verified against `project.godot`: `window/size/viewport_height=720` and `window/stretch/mode="canvas_items"`. The map host incorrectly used `minf(SQUARE_EDGE, available_width, available_height)` (nested two-argument form), capping the *display edge* at 480 logical pixels. On a 390px-tall landscape mobile test viewport this yields approximately 480 / 720 × 390 = **260 actual screen pixels**, unlike the full-height training Arena in the reference screenshots. `SQUARE_EDGE=480` is a **design coordinate system**, not a permitted upper limit.
 
 Now compute the host display edge as `floorf(maxf(1.0, minf(available_width, available_height)))`, preserving the existing responsive information-column allocation and one-only outer scale. The inner Arena remains native 480×480 with no secondary scaling. The regression runner checks the exact width/height bound and explicitly verifies edges >480 when space allows. **No CI has run on this change yet.**
+
+
+## Container/background/ABI stability (2026-10-22)
+
+- Fix for landscape cut-off: responsive edge is computed from `SoloCombatScreen.size` (the screen's available canvas area), rather than `BattleLayout.size`, which can be inflated by the previous frame's `square_host.custom_minimum_size` and thus feed its own oversize back into the calculation. Refit only when the desired edge changes, avoiding a feedback loop from `resized` signals.
+- Keep the original Arena background texture at position (0,0) in its **native 480×480** `square_content`. Scale background, avatar and HUD together exactly once through the outer host. Do not stretch the background independently to fill the screen or the information column. Runtime visual audit prints the source texture dimensions to detect a non-square bitmap; its actual source aspect ratio is not assumed here.
+- ABI button names must not alter the 5-slot strip width: each button is placed inside an exactly 34×34 cell, and button text is clipped with an 8px font. Long ability names belong in tooltips, not in layout calculations.
+- Automated UI/visual checks now assert all ABI widths, original background geometry, and that the final Arena square rect lies inside the full screen in portrait and landscape (including the bottom End Turn artwork).
+
+Status: **committed, not yet run on Godot CI**. Do not claim visual completion until ABI Branch Tests and Solo Visual Audit on the latest SHA pass, followed by screenshot inspection.
