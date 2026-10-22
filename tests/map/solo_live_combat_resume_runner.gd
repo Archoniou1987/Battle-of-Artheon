@@ -50,6 +50,11 @@ func _initialize() -> void:
 	check(last_round == 1,"first_round_number")
 	check(FileAccess.file_exists(combat.checkpoint_path),"round_checkpoint_exists")
 	var checkpoint_text := FileAccess.get_file_as_string(combat.checkpoint_path)
+	# Snapshot shown by SoloCombatScreen before restart is the reference.
+	# Reopen must preserve the disclosed values, current actions and
+	# item charges without starting or replaying any round.
+	var ui_before: Dictionary = combat.combat_view()
+	check(bool(ui_before.get("ok", false)), "pre_restart_ui_snapshot_available")
 	var revision := ExpeditionSaveService._read_payload_envelope(EXP)
 	check(bool(revision.get("ok",false)),"prebattle_revision_readable")
 	var base_sha := String(revision.get("sha256",""))
@@ -116,6 +121,19 @@ func _initialize() -> void:
 			check(restored_sim.state.next_event_id==original_sim.state.next_event_id and restored_sim.state.event_log.size()==original_sim.state.event_log.size(),"event_history_not_replayed")
 			check(restored_sim.state.get_combatant("player").hp==original_sim.state.get_combatant("player").hp and restored_sim.state.get_combatant("solo_npc_bandit_01").hp==original_sim.state.get_combatant("solo_npc_bandit_01").hp,"combatant_hp_restored_exactly")
 			check(FileAccess.get_file_as_string(combat.checkpoint_path)==checkpoint_text,"resume_does_not_rewrite_checkpoint")
+			var ui_after: Dictionary = resumed_combat.combat_view()
+			check(bool(ui_after.get("ok", false)), "restored_ui_snapshot_available")
+			if bool(ui_before.get("ok", false)) and bool(ui_after.get("ok", false)):
+				check(int(ui_after.get("round", -1)) == int(ui_before.get("round", -2)), "ui_round_restored_without_replay")
+				var before_hero: Dictionary = ui_before.get("player", {})
+				var after_hero: Dictionary = ui_after.get("player", {})
+				for field in ["hp", "max_hp", "mana", "max_mana", "effects"]:
+					check(after_hero.get(field) == before_hero.get(field), "ui_player_" + field + "_survives_restart")
+				check(ui_after.get("enemies", []) == ui_before.get("enemies", []), "ui_enemy_hp_and_disclosed_effects_survive_restart")
+				check(ui_after.get("ability_slots", []) == ui_before.get("ability_slots", []), "ui_ability_availability_and_cooldowns_survive_restart")
+				check(ui_after.get("elixir_loadout", {}) == ui_before.get("elixir_loadout", {}), "ui_elixir_charges_survive_restart")
+				check(ui_after.get("controls", {}) == ui_before.get("controls", {}), "ui_attack_and_block_capacity_survive_restart")
+				check(ui_after.get("last_round_log", []) == ui_before.get("last_round_log", []), "ui_combat_log_survives_restart")
 			check(not FileAccess.file_exists(combat.receipt_path) and not FileAccess.file_exists(combat.terminal_path),"resume_does_not_generate_rewards")
 			var next := resumed_combat.play_round()
 			var state := String(next.get("state",""))
