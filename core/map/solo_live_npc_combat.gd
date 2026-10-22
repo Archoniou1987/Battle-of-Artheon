@@ -142,12 +142,46 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	instance.target_cell = match_cell
 	return {"ok":true,"combat":instance,"round":opened["simulator"].state.round_number}
 
-func play_round() -> Dictionary:
+## Read-only projection of the exact persisted GroupCombatSimulator.
+## No secondary Arena combat session or recreated NPC stats.
+func combat_view() -> Dictionary:
+	if battle.is_empty():
+		return {"ok":false,"reason":"combat_not_started"}
+	var simulator: GroupCombatSimulator = battle.get("simulator") as GroupCombatSimulator
+	if simulator == null or owner == null or owner.character == null:
+		return {"ok":false,"reason":"combat_view_missing_owner"}
+	var player_id := owner.character.character_id
+	var hero: CombatantState = simulator.state.get_combatant(player_id)
+	if hero == null:
+		return {"ok":false,"reason":"combat_view_player_missing"}
+	var controls := simulator.player_controls(player_id)
+	var enemy_views: Array[Dictionary] = []
+	for raw_id in Array(battle.get("npc_instance_ids",[])):
+		var npc: CombatantState = simulator.state.get_combatant(String(raw_id))
+		if npc == null:
+			continue
+		enemy_views.append({"id":npc.combatant_id,"name":npc.display_name,"hp":npc.visible_hp(),"max_hp":npc.max_hp,"mana":npc.mana,"max_mana":npc.max_mana,"dead":npc.is_death_finalized()})
+	var ability_definitions: Dictionary = simulator.attack_pipeline.ability_scheduler.definitions
+	var log_lines: Array[String] = ArenaCombatLog.lines_for_round(simulator.state.event_log,simulator.state.round_number,player_id,ability_definitions)
+	return {
+		"ok":true,
+		"round":simulator.state.round_number,
+		"finished":simulator.controller.combat_finished(),
+		"winner":simulator.controller.winning_team(),
+		"player":{"id":player_id,"name":hero.display_name,"hp":hero.visible_hp(),"max_hp":hero.max_hp,"mana":hero.mana,"max_mana":hero.max_mana,"dead":hero.is_death_finalized()},
+		"enemies":enemy_views,
+		"controls":controls,
+		"last_round_log":log_lines
+	}
+
+func play_round(player_orders: Dictionary = {}) -> Dictionary:
 	var simulator: GroupCombatSimulator = battle["simulator"]
 	if not simulator.controller.combat_finished():
-		var step := simulator.run_round()
-		if not bool(step.get("ok",false)) or not bool(step.get("checkpoint_ok",false)):
-			return {"ok":false,"reason":"combat_round_checkpoint_failed","detail":String(step.get("checkpoint_reason",step.get("reason","unknown")))}
+		var step := simulator.run_round(player_orders)
+		if not bool(step.get("ok",false)):
+			return {"ok":false,"reason":String(step.get("reason","combat_round_rejected")),"expected":step.get("expected",-1)}
+		if not bool(step.get("checkpoint_ok",false)):
+			return {"ok":false,"reason":"combat_round_checkpoint_failed","detail":String(step.get("checkpoint_reason","unknown"))}
 	if not simulator.controller.combat_finished():
 		return {"ok":true,"state":"ongoing","round":simulator.state.round_number}
 	if simulator.controller.winning_team() != "players":
