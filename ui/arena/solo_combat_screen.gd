@@ -77,6 +77,7 @@ func _ready() -> void:
 	shared_arena.live_ability_selected.connect(_choose_ability)
 	shared_arena.live_elixir_selected.connect(_choose_elixir)
 	shared_arena.live_selection_changed.connect(_on_shared_selection)
+	shared_arena.live_effect_inspected.connect(_show_item)
 	# Side/bottom information has its own header. The Arena square now gets
 	# the FULL BattleLayout height in landscape, just like the training Arena.
 	info_column = VBoxContainer.new()
@@ -440,6 +441,8 @@ func _submit() -> void:
 	if round_button.disabled:
 		return
 	if bool(snapshot.get("finished", false)):
+		round_button.disabled = true
+		shared_arena.set_combat_ready(false)
 		round_requested.emit({})
 		return
 	var controls: Dictionary = snapshot.get("controls", {})
