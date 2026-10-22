@@ -139,3 +139,17 @@ The approved UI geometry remains **frozen and untouched**. Live expedition wirin
 - `tests/ui/solo_combat_screen_runner.gd` checks original-command output, selected button visibility, duplicate submission lock, zero-block behavior, and stun behavior.
 
 **Verification pending:** run ABI Branch Tests for the latest SHA before marking this batch stable. Solo Visual Audit is useful if these control-state changes affect rendered screenshots; no geometry changes were made.
+
+
+## PAR073 gameplay rule correction (2026-10-22)
+
+The previously described “zero-block player” was an **incorrect interpretation** of technical code, not an agreed gameplay rule. Product owner clarified these intended minimums:
+
+- **Unarmed / fists:** 1 manually defended zone.
+- **Equipped melee weapon:** 2 manually defended zones baseline.
+- **Bow / future ranged weapon:** at least 1 manually defended zone.
+- Additional PAR073 equipment, trait or effect modifiers remain part of normal canonical parameter aggregation.
+
+Source of truth is `ParCalculationService.calculate()` PAR073, not a UI-only fallback. The canonical source previously initialized PAR073 to 2 regardless of unarmed combat. The baseline now selects 1 for unarmed/bow and 2 for equipped melee, and `CharacterCombatBuilder` carries that total into live combat. The existing lower-level zero capability is retained only as a defensive representation of unavailable/invalid controls (for example, missing mandatory PAR073 or an actor who cannot manually block), **not as an ordinary equipment class or combat design**. UI regression tests now assert one block for unarmed instead of promoting zero as a gameplay rule. PAR migration tests check unarmed=1 and equipped melee=2.
+
+**CI pending**: run PAR Migration Audit and ABI Branch Tests on latest SHA. The approved UI geometry has not changed.
