@@ -127,10 +127,27 @@ func _run() -> void:
 		return
 	var resumed: SoloLiveNpcCombat = restored["combat"]
 	check(int(resumed.owner.repository.get_item(ELIXIR).get("charges",-1))==original-1,"spent_charge_restored_before_terminal")
-	var closed := resumed.play_round()
-	check(bool(closed.get("ok",false)) and String(closed.get("state",""))=="defeat","defeat_published")
-	if not bool(closed.get("ok",false)):
-		print("LIVE_ELIXIR_DEFEAT_PUBLISH=",closed.get("reason","unknown"),":",closed.get("detail",""))
+	# Simulate the power loss in the exact critical window:
+	# the terminal is fully staged, but the authoritative expedition save
+	# has NOT yet been published. LaunchGate must complete publication.
+	var manifest_record := SoloCombatSessionManifest.read(MANIFEST)
+	check(bool(manifest_record.get("ok",false)),"manifest_verified_before_staging")
+	if not bool(manifest_record.get("ok",false)):
+		return
+	var staged := SoloCombatDefeatService.stage(resumed.owner,resumed.battle,resumed.encounter_key,resumed.checkpoint_path,resumed.terminal_path,manifest_record["data"])
+	check(bool(staged.get("ok",false)) and FileAccess.file_exists(resumed.terminal_path),"potion_defeat_terminal_staged_before_crash")
+	if not bool(staged.get("ok",false)):
+		print("LIVE_ELIXIR_DEFEAT_STAGE=",staged.get("reason","unknown"),":",staged.get("detail",""))
+		return
+	var still_original := ExpeditionSaveService.read(EXP,ID,PLAYER)
+	check(bool(still_original.get("ok",false)),"prepublish_world_readable")
+	if bool(still_original.get("ok",false)):
+		check(int(still_original["repository"].get_item(ELIXIR).get("charges",-1))==original,"terminal_stage_does_not_prematurely_debit_world")
+	check(FileAccess.file_exists(MANIFEST),"pending_manifest_survives_terminal_stage")
+	var recovered_gate := SoloExpeditionLaunchGate.inspect(EXP,MANIFEST,ID,PLAYER)
+	check(bool(recovered_gate.get("ok",false)) and String(recovered_gate.get("state",""))=="ready_after_recovery","crash_gap_publishes_defeat")
+	if not bool(recovered_gate.get("ok",false)):
+		print("LIVE_ELIXIR_DEFEAT_RECOVER=",recovered_gate.get("reason","unknown"),":",recovered_gate.get("detail",""))
 		return
 	var published := ExpeditionSaveService.read(EXP,ID,PLAYER)
 	check(bool(published.get("ok",false)),"published_world_valid")
