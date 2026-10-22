@@ -35,3 +35,18 @@ The only gameplay owner remains \`SoloLiveNpcCombat\` / \`GroupCombatSimulator\`
 No CI was started by the assistant. The manual ABI Branch Tests now includes \`tests/ui/solo_combat_screen_runner.gd\` for UI commands, multi-NPC composition, stun, terminal confirmation and both orientations. The separate manual Solo Visual Audit captures the actual \`SoloCombatScreen\` using a clearly labelled synthetic 2-NPC fixture in 390×844 and 844×390 viewports.
 
 **Known next refinements:** full texture icons for ABI/elixirs/effects instead of transitional symbols/IDs; accurate NPC portraits; richer multi-enemy targeting UX if the backend adds selectable targets; smaller-screen touch dimensions and responsive screenshots; remove technical UI dead code after CI. No gameplay math should be changed to fix presentation.
+
+
+## Post-CI visual audit (Oct 22, 2026)
+
+Both original checks passed at `294e1df7efbe667592dad18761e304b530043da7`:
+- [ABI Branch Tests #39761530040](https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/39761530040)
+- [Solo Visual Audit #39767725662](https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/39767725662), artifact `solo-visual-portrait-landscape` ID `12420678416`.
+
+**Actual PNGs inspected:** `portrait_00.png` (390×844), `landscape_00.png` (844×390). These are real Godot scene captures with **fixture**, not player-save gameplay. In both orientations the game surface renders, shows two NPCs and the separated fighter/actions columns; the footer action remains anchored. Main issues seen were tiny text and touch controls, substantial unused lower space, and all 10 displayed equipment cells appearing blank even though the fixture provided helmet/sword artwork.
+
+**Confirmed root cause:** `_fighter_card()` calls `ItemIcon.set_item()` before the detached card is inserted into a live scene tree. `ItemIcon._ready()` later resets the item to empty. The UI now defers item binding until after `_ready()`, without touching ownership or equipment. The new UI test verifies the first item's retained instance ID and actual texture.
+
+**Size adjustment:** `project.godot` retains the shared 720×720 canvas-items stretch configuration, so 48–53 logical pixel buttons shrink to roughly 26–29 physical pixels in a 390px viewport. The new screen increases font sizes and control minima (attack / defense 84×83, ABI 84×80, potion 90×79, End Round 238×82 logical) without globally changing the existing Arena/Inventory/game scene scaling. After fresh captures, visually inspect clipping and ensure the minimum physical touch targets are appropriate. No exact final art or touch usability is claimed before new CI and PNG inspection.
+
+**Validation status:** these subsequent adjustments are committed but **not yet verified**; no CI triggered automatically. The next manual batch should run ABI Branch Tests then Solo Visual Audit on the new SHA, not independently rerun tests per small UI edit.
