@@ -144,6 +144,7 @@ func _ready() -> void:
 	log_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	log_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout.add_child(log_panel)
+	log_panel.visible = not external_combat_mode
 	var log_column := VBoxContainer.new()
 	log_panel.add_child(log_column)
 	# Wrap controls on narrow portrait screens instead of clipping ABI Lab.
