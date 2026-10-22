@@ -297,6 +297,14 @@ func play_round(player_orders: Dictionary = {}) -> Dictionary:
 		if not bool(published.get("ok",false)):
 			return {"ok":false,"state":"defeat_pending_resolution","reason":"defeat_publish_failed","detail":String(published.get("reason","unknown"))}
 		return {"ok":true,"state":"defeat","round":simulator.state.round_number,"return_cell":staged["return_cell"]}
+	# Audit the live, charge-mutated repository against the pinned base
+	# expedition and the resolved checkpoint BEFORE loot is generated.
+	var baseline := ExpeditionSaveService.read(owner.save_path,owner.expedition.expedition_id,owner.character.character_id)
+	if not bool(baseline.get("ok",false)):
+		return {"ok":false,"reason":"victory_elixir_baseline_missing"}
+	var elixir_verified := SoloCombatElixirJournal.apply_to_baseline(simulator.state,baseline["character"],baseline["repository"])
+	if not bool(elixir_verified.get("ok",false)) or JSON.stringify(elixir_verified["repository"].to_dict()) != JSON.stringify(owner.repository.to_dict()):
+		return {"ok":false,"reason":"victory_elixir_journal_mismatch","detail":String(elixir_verified.get("reason","changed"))}
 	var committed := turns.finalize_group_victory_atomic(battle,encounter_key,owner.expedition,owner.map,owner.npc_bridge,owner.character,owner.repository,NpcPossessionLootService.new(1),{"common":100.0},receipt_path,checkpoint_path,terminal_path,int(Time.get_unix_time_from_system()),true)
 	if not bool(committed.get("ok",false)):
 		return {"ok":false,"reason":"world_commit_failed","detail":String(committed.get("reason","unknown"))}
