@@ -71,6 +71,24 @@ func _run() -> void:
 	var elixir_view: Dictionary = view.get("elixir_loadout",{})
 	check(bool(elixir_view.get("ok",false)) and Array(elixir_view.get("slots",[])).size()==4,"four_slots_visible_in_live_combat")
 	var base_event_id := simulator.state.next_event_id
+	var combatant: CombatantState = simulator.state.get_combatant(PLAYER)
+	var original_stun := combatant.tempo_stun_round
+	combatant.tempo_stun_round = simulator.state.round_number + 1
+	var stunned := live.play_round(orders(simulator,0))
+	check(not bool(stunned.get("ok",false)) and String(stunned.get("reason",""))=="elixir_actor_unavailable","stunned_hero_cannot_drink")
+	check(simulator.state.round_number==0 and simulator.state.next_event_id==base_event_id,"stun_refusal_never_starts_round")
+	check(int(live.owner.repository.get_item(ELIXIR).get("charges",-1))==original_charges,"stun_refusal_never_spends_charge")
+	combatant.tempo_stun_round = original_stun
+	# A depleted elixir must remain visible but cannot be used. The
+	# rejected order cannot consume RNG, event IDs or mutate a checkpoint.
+	var depleted_item := live.owner.repository.get_item(ELIXIR)
+	depleted_item["charges"] = 0
+	check(live.owner.repository.update_item(depleted_item),"depleted_fixture_updated")
+	var depleted := live.play_round(orders(simulator,0))
+	check(not bool(depleted.get("ok",false)) and String(depleted.get("reason",""))=="elixir_slot_unavailable","depleted_elixir_cannot_be_used")
+	check(simulator.state.round_number==0 and simulator.state.next_event_id==base_event_id,"depleted_refusal_never_starts_round")
+	depleted_item["charges"] = original_charges
+	check(live.owner.repository.update_item(depleted_item),"original_charges_restored_before_fight")
 	var invalid := live.play_round(orders(simulator,3))
 	check(not bool(invalid.get("ok",false)) and simulator.state.round_number==0,"empty_elixir_rejected_before_round")
 	check(simulator.state.next_event_id==base_event_id and not FileAccess.file_exists(live.checkpoint_path),"invalid_potion_never_committed")
