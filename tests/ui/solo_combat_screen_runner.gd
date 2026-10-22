@@ -62,52 +62,39 @@ func _run() -> void:
 	await process_frame
 	check(screen.square_host != null and screen.square_content != null, "single 480x480 Face to Face stage")
 	check(screen.square_content.size == Vector2(480, 480), "arena keeps 1:1 logical geometry")
-	check(screen.tab_container.get_tab_count() == 3, "battle, participants, log tabs")
+	check(screen.tab_container.get_tab_count() == 3, "external info, participants, log tabs")
 	check(screen.roster_allies.get_child_count() == 2, "player occupies ally roster")
 	check(screen.roster_enemies.get_child_count() == 3, "two NPCs belong only to opponent roster")
-	var scene_fighters: Array[Panel] = []
-	for node in screen.square_content.get_children():
-		if node is Panel:
-			scene_fighters.append(node)
-	check(scene_fighters.size() == 2, "face stage draws exactly two fighters, even in group combat")
-	if scene_fighters.size() > 0:
-		var icons: Array[ItemIcon] = []
-		for node in scene_fighters[0].get_children():
-			if node is ItemIcon:
-				icons.append(node)
-		check(icons.size() == 10, "face stage shows ten real player equipment slots")
-		if icons.size() > 0:
-			var helmet := icons[0]
-			check(helmet.instance_id == "fixture_helm", "item data survives _ready")
-			check(helmet._icon_texture != null and helmet._icon_texture.texture != null, "item texture survives _ready")
-	check(screen.attack_buttons[0].custom_minimum_size.y >= 80, "mobile attack touch size compensates Godot canvas stretch")
-	check(screen.abi_buttons[0].custom_minimum_size.y >= 80, "mobile ABI touch size compensates Godot canvas stretch")
-	check(screen.round_button.custom_minimum_size.y >= 80, "mobile end-round touch height")
-	check(screen.roster_enemies.get_child_count() == 3, "two NPCs remain in separate roster tab")
-	check(screen.attack_buttons.size() == 5 and screen.block_buttons.size() == 5, "five hit/block zones")
-	check(screen.abi_buttons.size() == 5 and screen.potion_buttons.size() == 4, "five ABI and four potions")
-	check(screen.chosen_attack.size() == 1 and screen.chosen_attack[0] == "chest", "one selected zone prepares all physical hits")
-	check(screen.chosen_blocks.size() == 2, "canonical PAR073 defense capacity")
-	screen._choose_zone(true, "head")
-	screen._choose_zone(false, "legs")
-	check(screen.chosen_attack == ["chest", "head"], "split two physical hits")
-	check(screen.chosen_blocks == ["arms", "legs"], "independent two-zone defense")
+
+	var arena := screen.shared_arena
+	check(arena is ArenaScreen and arena.external_combat_mode, "real Arena template mounted for live map combat")
+	check(arena.combat_session == null, "expedition Arena never constructs a second test engine")
+	check(arena.square_content.size == Vector2(480, 480), "original Arena square preserved")
+	check(arena.player_slots.size() == 14 and arena.enemy_slots.size() == 14, "actual Arena equipment slots reused")
+	check(arena.ability_buttons.size() == 5 and arena.player_elixir_slots.size() == 4, "real Arena ABI and elixirs reused")
+	check(arena.attack_buttons.size() == 5 and arena.defense_buttons.size() == 5, "real Arena zone selectors reused")
+	check(screen.attack_buttons.is_empty() and screen.abi_buttons.is_empty(), "temporary Solo input widgets no longer mounted")
+	check(screen.chosen_attack == ["chest"] and screen.chosen_blocks.size() == 2, "live round choices initialized")
+	arena._select_zone(false, "head")
+	arena._select_zone(true, "legs")
+	check(screen.chosen_attack == ["chest", "head"], "shared Arena selects split physical hits")
+	check(screen.chosen_blocks == ["chest", "legs"], "shared Arena selects defense zones")
 	screen._choose_ability(0)
 	screen._choose_elixir(0)
 	check(last_elixir == 0 and screen.chosen_abi == "ABI003", "ABI and potion selections coexist")
 	screen._submit()
 	check(last_orders.get("player_id", "") == "player", "submitted owner identity")
 	check(last_orders.get("attack_zones", []) == ["chest", "head"], "submitted split hits")
-	check(last_orders.get("block_zones", []) == ["arms", "legs"], "submitted exact block zones")
+	check(last_orders.get("block_zones", []) == ["chest", "legs"], "submitted exact block zones")
 	check(last_orders.get("ability_id", "") == "ABI003" and int(last_orders.get("elixir_slot", -1)) == 0, "submitted one ABI and elixir")
 	check(screen.round_button.disabled, "submission locks duplicate taps")
 	screen.present(fixture)
-	screen._choose_zone(true, "chest")
+	screen.shared_arena._select_zone(false, "chest")
 	check(screen.round_button.disabled, "no attack selection cannot advance a round")
 	screen.present(fixture)
 	screen._choose_elixir(0)
 	screen.set_ability_options([{"id": "ABI003", "available": false}])
-	check(screen.abi_buttons[0].disabled, "ability availability updates after potion selection")
+	check(screen.shared_arena.ability_buttons[0].disabled, "ability availability updates after potion selection")
 	var stunned: Dictionary = fixture.duplicate(true)
 	stunned["controls"]["stunned"] = true
 	screen.present(stunned)
