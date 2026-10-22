@@ -71,3 +71,10 @@ Implemented in `ArenaScreen` with `external_combat_mode`:
 **Mandatory cleanup rule:** Trial Solo Face-to-Face fighter panels, pseudo-ABI strips, placeholder status text and duplicated action control builders have been **deleted** after mounting the shared Arena square. Do not restore them. The Solo wrapper retains only the secondary participants/journal tabs, an internal order adapter and temporary compatibility plumbing needed by the map. Further obsolete compatibility plumbing may be deleted after passing CI and checking the actual expedition screenshots.
 
 **Verification not yet complete:** This migration was committed without starting GitHub Actions. Run ABI Branch Tests and Solo Visual Audit manually at the latest HEAD; a green result is required before calling the integration complete. Separately inspect the real 480px Arena textures and clicks, rather than interpreting synthetic screenshots as a production-ready playable flow.
+
+
+## Single-scale Arena geometry correction (2026-10-22)
+
+The live map previously scaled `SoloCombatScreen.square_content` and also called `SquareUiGeometry.fit` within the embedded `ArenaScreen`, so the same 480px composition had independent layout calculations. **Contract now:** shared `ArenaScreen` stays at native 480×480, with internal scale exactly 1.0; the outer Solo host is the sole responsive scaler. The host computes the square edge using the **actual BattleLayout size**, after reserving the external info tabs and their separation in portrait/landscape. No Arena element is repositioned, no alternate combat square is introduced.
+
+Regression tests assert native internal scaling, exactly one Arena child in the visual host, outer-only scaling, and that the landscape square fits within the available layout. CI and visual screenshots are still required to validate this batch; do not infer success from committed code.
