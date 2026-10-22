@@ -83,3 +83,12 @@ ABI #320 passed on `c6e7200bf68c3eb05db8e5409d8d1a31e45b3f8c`. Mobile defense-zo
 The next UI layer adds a live hero HP ProgressBar and a separate row for **each** NPC from `SoloLiveNpcCombat.combat_view()`. Progress bars only render `hp` and `max_hp` supplied by the canonical combat snapshot; they never independently compute injuries or death. The UI clamps display into 0..maximum and shows numeric values via tooltip, alongside the existing combat summary. Old NPC rows are removed on refresh, avoiding stale opponents.
 
 The existing headless scene smoke runner covers two NPC bars, zero HP, a new snapshot with no NPCs, and HP clamping. This visualization layer awaits the next CI run. Avatar illustrations, equipment portraits and full arena layout are separate remaining presentation tasks.
+
+
+## ABI #321 — status effects beside canonical HP bars
+
+ABI #321 passed on `2f7d7f057a0aa93153296ac362966c10ba454d9c`, confirming hero and group NPC HP visualization.
+
+Next UI pass: each actor's HP bar has a read-only `HFlowContainer` for disclosed effect summaries. Source is `SoloLiveNpcCombat.combat_view` and `_disclosed_effects`, which already enforce revealed effect visibility and classify polarity using canonical `EffectPolarity`. Chips distinguish BUFF (▲) and DEBUFF (▼), show name and stacks, and expose remaining rounds via tooltip. A maximum of eight chips are shown; `+N` collapses additional effects with complete overflow details in its tooltip. Enemy panels are generated from the same per-NPC snapshot as their HP bars. Refresh removes old effects and defeated/absent NPC panels.
+
+Godot scene smoke now covers one buff, enemy debuff, two NPCs, zero HP, eleven-effect overflow, and stale effect removal. **Pending ABI CI**; this is presentation only and does not change damage, EFF resolution or checkpoint persistence.
