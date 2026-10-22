@@ -693,11 +693,12 @@ func _show_town_conflict_resolution() -> void:
 	var dialog := ConfirmationDialog.new()
 	dialog.title = "Конфликт сохранений"
 	dialog.dialog_text = "Город и завершённая экспедиция содержат разные версии персонажа. Автоматический возврат остановлен.\n\nЕсли подтвердить, текущее сохранение города будет сначала сохранено в отдельном архивном файле. Затем город примет персонажа, HP и предметы из завершённой экспедиции. Изменения, существующие только в прежнем городе, не объединяются автоматически.\n\nОтмена ничего не меняет."
-	dialog.ok_button_text = "Сохранить город в архив и принять экспедицию"
+	dialog.ok_button_text = "Принять экспедицию"
 	dialog.cancel_button_text = "Отмена"
 	add_child(dialog)
-	dialog.confirmed.connect(func() -> void: _confirm_town_conflict_resolution())
-	dialog.popup_centered(Vector2i(640,440))
+	dialog.confirmed.connect(_confirm_town_conflict_resolution)
+	dialog.get_label().autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dialog.popup_centered(Vector2i(340,320))
 
 
 func _confirm_town_conflict_resolution() -> void:
