@@ -79,7 +79,13 @@ func _run() -> void:
 	map_scroll.visible = false
 	screen.visible = true
 	screen.present(fixture)
-	screen.round_label.text = "VISUAL FIXTURE • НЕ ИГРОВОЙ БОЙ"
+	screen.round_label.text = "DEMO R5"
+	var notice := Label.new()
+	notice.text = "VISUAL FIXTURE • НЕ ИГРОВОЙ БОЙ"
+	notice.position = Vector2(74, 462)
+	notice.add_theme_font_size_override("font_size", 12)
+	notice.add_theme_color_override("font_color", Color("#f4c47d"))
+	screen.square_content.add_child(notice)
 	for key in ["portrait", "landscape"]:
 		var viewport_size: Vector2i = SIZES[key]
 		root.size = viewport_size
