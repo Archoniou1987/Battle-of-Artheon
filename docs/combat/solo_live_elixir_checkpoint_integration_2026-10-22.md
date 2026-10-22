@@ -31,7 +31,14 @@ This package does not alter the globally shared five-second `GroundLootService` 
 
 The checkpoint-derived journal now also validates each actual EFFECT payload against the elixir's authored component kind and values, not only component count. A forged heal value, unrelated effect ID, or duplicate component must fail closed. The regression temporarily corrupts one resolved heal event in memory, verifies rejection, then restores it without changing the durable checkpoint.
 
-### Known follow-up
-The normal ABI availability readout currently preflights mana before elixir recovery. Therefore a player starting with insufficient mana cannot yet select an otherwise valid ABI funded by a mana elixir **in the same submitted round**. This combined-action edge case needs a separate preflight adjustment and test; do not mark it complete. Also, the final CI workflow must verify compilation and the existing victory/defeat regressions.
+### Mana elixir + ABI in one round
+
+`GroupCombatSimulator.player_controls(player_id, elixir_slot)` now projects ONLY the selected elixir's direct mana components into the player's capped mana pool before checking the equipped ABI's resource requirement. It does not spend any charge, create a combat event, modify RNG or mutate the combatant. During whole-order validation, the chosen elixir is independently validated for belt ownership, charges, stun, shared cooldown and live combat state; the same projected mana check is applied to ABI availability. During the canonical resolution, `CombatElixirService.use` restores mana first, then `CombatCommandApi.cast_ability` spends it.
+
+The Solo UI recalculates disabled ABI options when the player changes the elixir selector, including switching back to no elixir. An ABI cannot be selected based on a potion the player has not chosen.
+
+The new real-NPC test `tests/map/solo_live_mana_abi_combo_runner.gd` verifies a player starting on zero mana cannot submit healing ABI004 alone, can submit ABI004 with a real equipped mana elixir, only one charge is spent, the same round contains exactly one elixir EFFECT and one ABI ACTION, and the result recovers from the original combat checkpoint without replay.
+
+**This newer mana/ABI combination and interface wiring are unverified until the next CI run.** Existing ABI #311 only confirms the previous elixir package.
 
 Do not claim this package is green until the user performs the ABI run.
