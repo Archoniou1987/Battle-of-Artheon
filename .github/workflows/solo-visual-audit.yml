@@ -1,0 +1,42 @@
+name: Solo Visual Audit
+on:
+  workflow_dispatch:
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/character-inventory-ui-v1
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import Godot resources
+        run: bash tools/run_godot_check.sh --import
+      - name: Install virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+      - name: Capture real Solo map control hierarchy in two screen sizes
+        run: |
+          set -o pipefail
+          data_dir="$(mktemp -d)"
+          trap 'rm -rf "$data_dir"' EXIT
+          XDG_DATA_HOME="$data_dir" timeout 120 xvfb-run -a -s "-screen 0 1024x1024x24" godot --path . --rendering-method gl_compatibility --script res://tests/ui/solo_live_visual_capture.gd 2>&1 | tee solo_visual_capture.log
+          grep -q "SOLO_VISUAL_CAPTURE=PASS" solo_visual_capture.log
+          test -f test-results/solo-visual/portrait_00.png
+          test -f test-results/solo-visual/landscape_00.png
+      - name: Upload portrait and landscape captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: solo-visual-portrait-landscape
+          path: |
+            test-results/solo-visual/*.png
+            solo_visual_capture.log
+          if-no-files-found: warn
+          retention-days: 14
