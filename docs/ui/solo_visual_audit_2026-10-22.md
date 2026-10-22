@@ -30,3 +30,31 @@ After reviewing actual captures, create a coherent layout with reusable fighter 
 ## CI status
 
 ABI #323 succeeded on `1b66640fea6ab498be87c49fce4826db6c507716`; this audit and screenshot workflow have **not yet** been run or verified.
+
+
+## Actual screenshot evidence — successful Solo Visual Audit
+
+**Run:** https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/39755177554  
+**Artifact:** `solo-visual-portrait-landscape` (PNG captures, 390×844 and 844×390), successful standalone capture.
+
+Verified screenshots `portrait_00.png`, `portrait_03.png`, `landscape_00.png`, `landscape_01.png`, and `landscape_07.png`. Images are of the real scene's Control hierarchy **with synthetic fixture values**, not actual saved battle state.
+
+### Observed outcomes, not assumptions
+- Portrait first frame contains essentially all encounter controls, HP bars, hero equipment, zones, abilities, elixir picker, End Round action, log and return-to-town button. There is extensive unused dark area beneath controls. Typography is small at 390px width.
+- Portrait `_00` and `_03` look identical, reflecting no meaningful scrolling in the fixture.
+- Landscape first frame shows top of one long vertical column. Second frame scrolls the same column; no responsive two-column combat layout is present.
+- Hero and NPC HP bars are visible, but numerical HP appears in a compact summary above the bars rather than overlaid on each.
+- No portraits, equipment art, rarity frames or red/blue target silhouettes are drawn.
+- Buff/debuffs are textual chips rather than art icons on avatars.
+- Empty gear symbols, large dropdown rows, and dense text make the scene visibly diagnostic rather than a final mobile RPG.
+
+### Priority implementation order
+1. Build an orientation-responsive **arena layout shell** without duplicating combat state: portrait stacked but compact, landscape split fighter/commands/log. Preserve existing round submission contracts and terminal persistence.
+2. Introduce a reusable fighter widget with name, readable HP/MP and a reserved avatar art region; NPC group should support multiple cards, not only one.
+3. Replace attack/defense dropdown/checkbox visuals with five-zone touch controls, retaining existing canonical hit/block submission.
+4. Replace ABI and potion dropdown presentation with respectively five and four visible buttons, still allowing at most one ability and one potion per round and retaining shared potion cooldown.
+5. Bind actual artwork and rarity frame resources to ten equipment slots; keep same persisted item instance IDs and active validation.
+6. Adapt effect icon strips to avatar corners with overflow and accessibility on mobile taps; compact log should remain readable.
+7. Re-run screenshot capture and manual ABI only after a meaningful coherent batch, to avoid paid workflow churn.
+
+**Status:** visual audit completed; visual redesign has **not** been implemented. CI outcome of screenshot workflow is not evidence of production gameplay appearance or touch usability.
