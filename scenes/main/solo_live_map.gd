@@ -103,6 +103,7 @@ func _build_view() -> void:
 	elixir_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(elixir_summary)
 	elixir_selector = OptionButton.new()
+	elixir_selector.item_selected.connect(_on_elixir_selection_changed)
 	combat_panel.add_child(elixir_selector)
 	effects_label = Label.new()
 	effects_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -262,6 +263,7 @@ func _refresh_combat_controls() -> void:
 			ability_selector.set_item_disabled(i+1,true)
 	ability_selector.select(0)
 	ability_selector.disabled = bool(view["finished"])
+	_sync_abi_availability_with_elixir()
 	if bool(view["finished"]):
 		return
 	var controls: Dictionary = view.get("controls",{})
@@ -286,6 +288,33 @@ func _refresh_combat_controls() -> void:
 		cb.button_pressed = [1,2,3,4,0].find(i) < int(controls.get("block_capacity",0))
 		block_zone_row.add_child(cb)
 		block_controls.append(cb)
+
+## Recalculate the ABI's enabled state when a mana potion is selected.
+## The simulator runs the SAME canonical order validation without spending
+## mana or item charges. Only the selected potion changes affordability.
+func _on_elixir_selection_changed(_index: int) -> void:
+	_sync_abi_availability_with_elixir()
+
+func _sync_abi_availability_with_elixir() -> void:
+	if live_combat == null or session == null or elixir_selector == null or ability_selector == null:
+		return
+	var simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
+	if simulator == null or simulator.controller.combat_finished():
+		return
+	var slot := elixir_selector.get_selected_id() - 1
+	var controls := simulator.player_controls(session.character.character_id,slot)
+	var options: Dictionary = {}
+	if bool(controls.get("ok",false)):
+		for raw_option in Array(controls.get("abilities",[])):
+			var option: Dictionary = raw_option
+			options[String(option.get("id",""))] = option
+	for i in range(ability_slot_ids.size()):
+		var id := ability_slot_ids[i]
+		var ready := options.has(id) and bool(Dictionary(options.get(id,{})).get("available",false))
+		ability_selector.set_item_disabled(i+1,not ready)
+	var selected_id := ability_selector.get_selected_id()
+	if selected_id > 0 and ability_selector.is_item_disabled(selected_id):
+		ability_selector.select(0)
 
 func _move(target: Vector2i) -> void:
 	if session == null or pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
