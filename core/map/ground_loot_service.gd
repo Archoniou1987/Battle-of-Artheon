@@ -97,8 +97,8 @@ static func drop_from_bag(expedition: ExpeditionState, map: TacticalMapState, pl
 	expedition.world_state[WORLD_KEY] = registry
 	return {"ok":true,"instance_id":instance_id}
 
-func begin_pickup(expedition: ExpeditionState, map: TacticalMapState, player: CharacterState, repository: ItemRepository, instance_id: String, started_at_unix: int) -> Dictionary:
-	if not _valid_expedition(expedition) or map == null or player == null or repository == null or player.in_combat or started_at_unix < 0:
+func begin_pickup(expedition: ExpeditionState, map: TacticalMapState, player: CharacterState, repository: ItemRepository, instance_id: String, started_at_unix: int, duration_seconds: int = PICKUP_SECONDS) -> Dictionary:
+	if not _valid_expedition(expedition) or map == null or player == null or repository == null or player.in_combat or started_at_unix < 0 or duration_seconds < 1:
 		return {"ok":false,"reason":"invalid_pickup_context"}
 	if not map.entity_positions.has(player.character_id):
 		return {"ok":false,"reason":"player_not_on_map"}
@@ -116,8 +116,8 @@ func begin_pickup(expedition: ExpeditionState, map: TacticalMapState, player: Ch
 		return {"ok":false,"reason":"already_owned"}
 	_serial += 1
 	var ticket := player.character_id + ":pickup:" + str(_serial)
-	pending_pickups[ticket] = {"item_id":instance_id,"expedition_id":expedition.expedition_id,"player_id":player.character_id,"cell":pos.duplicate(),"began":started_at_unix}
-	return {"ok":true,"ticket":ticket,"complete_at_unix":started_at_unix+PICKUP_SECONDS}
+	pending_pickups[ticket] = {"item_id":instance_id,"expedition_id":expedition.expedition_id,"player_id":player.character_id,"cell":pos.duplicate(),"began":started_at_unix,"duration":duration_seconds}
+	return {"ok":true,"ticket":ticket,"complete_at_unix":started_at_unix+duration_seconds}
 
 func cancel_pickup(ticket: String) -> bool:
 	return pending_pickups.erase(ticket)
@@ -126,7 +126,7 @@ func finish_pickup(ticket: String, expedition: ExpeditionState, map: TacticalMap
 	if not pending_pickups.has(ticket):
 		return {"ok":false,"reason":"pickup_not_started"}
 	var action: Dictionary = pending_pickups[ticket]
-	if now_unix < int(action["began"]) + PICKUP_SECONDS:
+	if now_unix < int(action["began"]) + int(action.get("duration",PICKUP_SECONDS)):
 		return {"ok":false,"reason":"pickup_still_running"}
 	# The action cannot be replayed after a failed or successful completion.
 	pending_pickups.erase(ticket)
