@@ -43,6 +43,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			return {}
 	var equipment := {}
 	var active_weapon_count := 0
+	var main_hand_is_bow := false
 	var attack_ranges := {"PAR050": {}, "PAR051": {}}
 	if repository == null:
 		for id in character.equipment.slots.values():
@@ -73,6 +74,9 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				if not in_main and not in_off:
 					push_error("Weapon equipped outside a hand: " + String(instance_id))
 					return {}
+				if in_main:
+					var weapon_class := String(item.get("weapon_class", item.get("subtype", ""))).to_lower()
+					main_hand_is_bow = weapon_class.contains("bow")
 				var target_par := "PAR050" if in_main else "PAR051"
 				if not valid_damage_range(damage):
 					push_error("Invalid mandatory weapon range: " + target_par)
@@ -94,6 +98,10 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				var armour_id: String = zone_ids[zone]
 				equipment[armour_id] = float(equipment.get(armour_id, 0)) + armour
 	var main_unarmed: bool = Dictionary(attack_ranges["PAR050"]).is_empty()
+	# PAR073 baseline: bare fists defend one zone, equipped melee weapons
+	# defend two. Bow-type ranged weapons use one zone. Equipment/talent
+	# PAR073 modifiers are added separately in the canonical aggregation.
+	base["PAR073"] = 1.0 if main_unarmed or main_hand_is_bow else 2.0
 	if main_unarmed:
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/combat/unarmed_attack.json"))
 		if not parsed is Dictionary or not parsed.get("unarmed") is Dictionary:
