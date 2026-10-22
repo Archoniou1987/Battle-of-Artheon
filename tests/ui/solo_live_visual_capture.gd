@@ -108,6 +108,20 @@ func _run() -> void:
 			print("VISUAL_CAPTURE_FILE=", file, " scroll=", screen.scroll.scroll_vertical)
 			if screen.scroll.scroll_vertical >= max_scroll:
 				break
+		# In addition to Face to Face, capture the distinct two-column
+		# allies/enemies view. Its contents come from the same safe fixture.
+		screen.tab_container.current_tab = 1
+		await process_frame
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var roster_file := "%s/%s_roster.png" % [OUTPUT, key]
+		var roster_error := root.get_texture().get_image().save_png(roster_file)
+		if roster_error != OK:
+			push_error("VISUAL_CAPTURE_FAIL: " + roster_file + " code=" + str(roster_error))
+			quit(1)
+			return
+		print("VISUAL_CAPTURE_FILE=", roster_file, " tab=participants")
+		screen.tab_container.current_tab = 0
 	page.queue_free()
 	print("SOLO_VISUAL_CAPTURE=PASS")
 	quit(0)
