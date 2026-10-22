@@ -506,7 +506,8 @@ func _open_solo_map_gate() -> void:
 			popup_description.text = "Продолжить сохранённую экспедицию с последней клетки."
 			_add_solo_map_button("Продолжить экспедицию",false)
 		"expedition_closed":
-			popup_description.text = "Экспедиция завершена. Перенос сохранённого персонажа в деревню требует подключения единого городского сохранения; старый инвентарь не перезаписывается."
+			popup_description.text = "Экспедиция завершена. Её результат будет проверен и сохранён в архиве перед новым походом."
+			_add_solo_map_button("Начать новую экспедицию",true)
 		_:
 			popup_description.text = "Вход заблокирован: " + String(gate.get("reason","unknown")) + ". Прогресс не изменён."
 	popup.visible = true
@@ -535,6 +536,11 @@ func _enter_solo_map(create: bool, resume_pending: bool = false) -> void:
 			popup_description.text = "Checkpoint боя отклонён: "+String(resumed.get("detail",resumed.get("reason","unknown")))
 			return
 	elif create:
+		if FileAccess.file_exists(ExpeditionSaveService.DEFAULT_PATH):
+			var archived := SoloTownExpeditionBridge.archive_adopted_expedition(ExpeditionSaveService.DEFAULT_PATH,CANONICAL_TOWN_PATH,id,player_character.character_id,SoloCombatSessionManifest.PATH)
+			if not bool(archived.get("ok",false)):
+				popup_description.text = "Новая экспедиция заблокирована: " + String(archived.get("reason","unknown")) + " / " + String(archived.get("detail",""))
+				return
 		# City must be saved first, otherwise the one-time fingerprint
 		# could represent progress never persisted to the canonical town.
 		_save_canonical_town()
