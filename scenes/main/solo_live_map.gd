@@ -17,6 +17,9 @@ var combat_summary: Label
 var combat_log_label: Label
 var attack_zone_row: VBoxContainer
 var block_zone_row: GridContainer
+var ability_selector: OptionButton
+var ability_slot_ids: Array[String] = []
+var effects_label: Label
 var attack_controls: Array[OptionButton] = []
 var block_controls: Array[CheckBox] = []
 var ground_list: VBoxContainer
@@ -69,7 +72,7 @@ func _build_view() -> void:
 	status_label = Label.new()
 	root.add_child(status_label)
 	var explanation := Label.new()
-	explanation.text = "Враги отмечены ⚔. Контакт запускает настоящий пошаговый Combat Engine; пока раунды используют автоматические базовые атаки."
+	explanation.text = "Враги отмечены ⚔. Контакт запускает настоящий Combat Engine. Выберите зоны атаки, защиты и одну ABI (или пропустите её)."
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(explanation)
 	combat_panel = VBoxContainer.new()
@@ -89,6 +92,14 @@ func _build_view() -> void:
 	block_zone_row = GridContainer.new()
 	block_zone_row.columns = 3
 	combat_panel.add_child(block_zone_row)
+	var ability_label := Label.new()
+	ability_label.text = "ABI — до одной способности за раунд (5 слотов экипировки)"
+	combat_panel.add_child(ability_label)
+	ability_selector = OptionButton.new()
+	combat_panel.add_child(ability_selector)
+	effects_label = Label.new()
+	effects_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	combat_panel.add_child(effects_label)
 	combat_log_label = Label.new()
 	combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(combat_log_label)
@@ -179,14 +190,40 @@ func _refresh_combat_controls() -> void:
 		if not opponent_text.is_empty():
 			opponent_text += " • "
 		opponent_text += "%s: %d/%d HP" % [String(npc["name"]),int(npc["hp"]),int(npc["max_hp"])]
+		for raw_effect in Array(npc.get("effects",[])):
+			var effect: Dictionary = raw_effect
+			opponent_text += " [%s %s ×%d, %d р.]" % [String(effect.get("polarity","")),String(effect.get("name","")),int(effect.get("stacks",1)),int(effect.get("remaining_rounds",0))]
 	combat_summary.text = "Раунд %d • %s: %d/%d HP, %d/%d MP\n%s" % [
 		int(view["round"]),String(hero["name"]),int(hero["hp"]),int(hero["max_hp"]),
 		int(hero["mana"]),int(hero["max_mana"]),opponent_text
 	]
+	var active_effects: Array[String] = []
+	for raw_effect in Array(hero.get("effects",[])):
+		var effect: Dictionary = raw_effect
+		active_effects.append("%s %s ×%d (%d р.)" % [String(effect.get("polarity","")),String(effect.get("name","")),int(effect.get("stacks",1)),int(effect.get("remaining_rounds",0))])
+	effects_label.text = "Эффекты героя: " + (", ".join(PackedStringArray(active_effects)) if not active_effects.is_empty() else "нет")
 	var log_parts: Array[String] = []
 	for raw_line in Array(view.get("last_round_log",[])):
 		log_parts.append(String(raw_line))
 	combat_log_label.text = "Последний раунд:\n" + ("\n".join(PackedStringArray(log_parts)) if not log_parts.is_empty() else "Событий пока нет")
+	ability_slot_ids.clear()
+	ability_selector.clear()
+	ability_selector.add_item("Без ABI",0)
+	for i in range(5):
+		var slots: Array = view.get("ability_slots",[])
+		var slot: Dictionary = slots[i] if i < slots.size() else {}
+		var ability_id := String(slot.get("id",""))
+		ability_slot_ids.append(ability_id)
+		var caption := str(i + 1) + ". "
+		if ability_id.is_empty():
+			caption += "Пусто"
+		else:
+			caption += String(slot.get("name",ability_id)) + " • " + str(int(slot.get("mana_cost",0))) + " MP"
+		ability_selector.add_item(caption,i+1)
+		if not bool(slot.get("available",false)) or bool(view["finished"]):
+			ability_selector.set_item_disabled(i+1,true)
+	ability_selector.select(0)
+	ability_selector.disabled = bool(view["finished"])
 	if bool(view["finished"]):
 		return
 	var controls: Dictionary = view.get("controls",{})
@@ -258,11 +295,13 @@ func _play_combat_round() -> void:
 		for i in range(block_controls.size()):
 			if block_controls[i].button_pressed:
 				block_zones.append(CombatCommandApi.BODY_ZONES[i])
-		submission = {"player_id":PLAYER,"attack_zones":attack_zones,"block_zones":block_zones}
+		var abi_position := ability_selector.get_selected_id() - 1
+		var ability_id := ability_slot_ids[abi_position] if abi_position >= 0 and abi_position < ability_slot_ids.size() else ""
+		submission = {"player_id":PLAYER,"attack_zones":attack_zones,"block_zones":block_zones,"ability_id":ability_id}
 	var step := live_combat.play_round(submission)
 	if not bool(step.get("ok",false)):
 		var issue := String(step.get("reason",step.get("state","unknown")))
-		if issue in ["invalid_attack_zone","invalid_block_zone","invalid_attack_zone_count","invalid_block_zone_count","invalid_player_order_format","invalid_player_orders_owner","manual_block_rejected"]:
+		if issue in ["invalid_attack_zone","invalid_block_zone","invalid_attack_zone_count","invalid_block_zone_count","invalid_player_order_format","invalid_player_orders_owner","manual_block_rejected","invalid_player_ability_format","stunned_cannot_cast","player_ability_unavailable","player_ability_not_equipped"]:
 			_set_status("Неверный выбор зон: "+issue+". Проверьте количество зон атаки и защиты.")
 			return
 		round_button.disabled=true
