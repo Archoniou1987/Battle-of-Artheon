@@ -1421,7 +1421,9 @@ func present_external(view: Dictionary) -> void:
 		set_fighter_resources(side, int(fighter.get("mana", 0)), int(fighter.get("max_mana", 0)), int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0)))
 	set_attack_count(maxi(1, int(controls.get("attack_count", 1))))
 	set_defense_capacity(maxi(1, int(controls.get("block_capacity", 1))))
-	attack_zones = [] if bool(controls.get("stunned", false)) else ["chest"]
+	attack_zones.clear()
+	if not bool(controls.get("stunned", false)):
+		attack_zones.append("chest")
 	if bool(controls.get("stunned", false)):
 		defense_zones.clear()
 	_update_zone_buttons()
