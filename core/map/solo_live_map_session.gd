@@ -11,6 +11,8 @@ var map: TacticalMapState
 var npc_bridge: MapNpcBridge
 var save_path: String
 var manifest_path: String
+const SOLO_PICKUP_SECONDS := 2
+var loot_pickups: GroundLootService = GroundLootService.new()
 
 static func open(path: String, manifest: String, expedition_id: String, player_id: String) -> Dictionary:
 	var verified := SoloTownExpeditionBridge.open_existing(path,expedition_id,player_id,manifest)
@@ -99,6 +101,39 @@ func move_one_step(to: Vector2i) -> Dictionary:
 		return {"ok":false,"reason":"movement_save_failed","detail":String(stored.get("reason","unknown"))}
 	map.reveal_from(to,3)
 	return {"ok":true,"position":to}
+
+## Solo's two-second pickup is a mode parameter; the shared service
+## keeps its five-second default for other gameplay.
+func visible_ground_items() -> Array[Dictionary]:
+	if expedition == null or character == null:
+		return []
+	return GroundLootService.items_at(expedition,expedition.player_position,character.character_id,int(Time.get_unix_time_from_system()))
+
+func begin_ground_pickup(instance_id: String, now_unix: int = -1) -> Dictionary:
+	if expedition == null or character == null or repository == null or map == null or FileAccess.file_exists(manifest_path):
+		return {"ok":false,"reason":"pickup_world_locked"}
+	var moment := now_unix if now_unix >= 0 else int(Time.get_unix_time_from_system())
+	return loot_pickups.begin_pickup(expedition,map,character,repository,instance_id,moment,SOLO_PICKUP_SECONDS)
+
+func cancel_ground_pickup(ticket: String) -> bool:
+	return loot_pickups.cancel_pickup(ticket)
+
+func finish_ground_pickup(ticket: String, now_unix: int = -1) -> Dictionary:
+	if expedition == null or character == null or repository == null or map == null or FileAccess.file_exists(manifest_path):
+		return {"ok":false,"reason":"pickup_world_locked"}
+	var moment := now_unix if now_unix >= 0 else int(Time.get_unix_time_from_system())
+	# Transaction boundary: roll back BOTH item owners after a failed save.
+	var previous_world: Dictionary = expedition.world_state.duplicate(true)
+	var previous_inventory: Dictionary = character.inventory.to_dict()
+	var result := loot_pickups.finish_pickup(ticket,expedition,map,character,repository,moment)
+	if not bool(result.get("ok",false)):
+		return result
+	var saved := ExpeditionSaveService.save(save_path,expedition,character,repository)
+	if not bool(saved.get("ok",false)):
+		expedition.world_state = previous_world
+		character.inventory = InventoryState.from_dict(previous_inventory,repository)
+		return {"ok":false,"reason":"pickup_save_failed","detail":String(saved.get("reason","unknown"))}
+	return {"ok":true,"instance_id":String(result["instance_id"]),"saved":true}
 
 func return_to_town(town_path: String) -> Dictionary:
 	var closed := SoloTownReturnService.close_for_town(save_path,expedition.expedition_id,character.character_id,manifest_path)
