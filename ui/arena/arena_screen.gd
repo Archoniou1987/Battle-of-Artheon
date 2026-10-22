@@ -1327,8 +1327,10 @@ func _apply_layout() -> void:
 	if layout == null:
 		return
 	if external_combat_mode:
+		# The map host owns the ONLY responsive scale. In external mode Arena
+		# always composes its original 480x480 square at native coordinates.
 		layout.vertical = true
-		SquareUiGeometry.fit(square_host, square_content, minf(size.x, size.y), ARENA_LOGICAL_EXTENT)
+		SquareUiGeometry.fit(square_host, square_content, ARENA_LOGICAL_EXTENT, ARENA_LOGICAL_EXTENT)
 		return
 	var portrait := size.y > size.x
 	layout.vertical = portrait
