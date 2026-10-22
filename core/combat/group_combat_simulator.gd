@@ -150,8 +150,6 @@ func _validate_player_orders(orders: Dictionary) -> Dictionary:
 	if not requested_elixir is int or int(requested_elixir) < -1 or int(requested_elixir) > 3:
 		return {"ok":false,"reason":"invalid_elixir_slot"}
 	var selected_elixir := ""
-	if bool(controls["stunned"]) and int(requested_elixir) >= 0:
-		return {"ok":false,"reason":"stunned_cannot_use_elixir"}
 	if int(requested_elixir) >= 0:
 		if solo_elixir_owner == null or solo_elixir_repository == null or solo_elixir_owner.character_id != player_id:
 			return {"ok":false,"reason":"solo_elixir_not_bound"}
