@@ -194,3 +194,16 @@ ABI Branch Tests #39830073201 passed on `6222ff94b08de6ad667ba16b467e9cb8c0bb57e
 This preserves the single-source-of-truth boundary: the UI receives the reloaded simulator projection and does not own combat or restore selections from arbitrary UI state. The approved 480px Arena design coordinates and responsive orientation contract remain untouched.
 
 **Pending manual CI:** ABI Branch Tests on the new HEAD; this workflow already invokes the resume runner.
+
+
+## Terminal Arena confirmation boundary (2026-10-22)
+
+ABI Branch Tests #39831991942 passed on `3e911c1e1cf713ec2addd7d94b409423eec86ad1`. Terminal UI follow-up now makes the distinction between a finished **combat checkpoint** and a successfully published **world settlement** explicit.
+
+- `SoloCombatScreen` reads the authoritative `winner` from `combat_view` and labels a terminal view as victory, defeat, or unresolved. It requests confirmation without prematurely claiming world publication.
+- Confirmation emits one empty terminal order to the established `SoloLiveNpcCombat.play_round` publication pathway and disables duplicate taps. It never queues a new physical attack, ABI, or elixir.
+- On successful world publication, `solo_live_map.gd` reopens the canonical expedition and unmounts the Arena; rewards/return-cell semantics remain engine-owned.
+- If the world reload fails after a terminal result, the **visible Arena** now shows a blocking explanation rather than relying exclusively on a status label hidden behind the combat overlay. No retry or unsafe cleanup is invented.
+- UI runner checks victory/defeat/unresolved labels and duplicate confirmation lock. Underlying terminal commit/resume tests remain unchanged.
+
+**Manual ABI CI required on latest SHA.** No arena geometry changes.
