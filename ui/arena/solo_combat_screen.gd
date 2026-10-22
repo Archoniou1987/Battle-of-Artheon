@@ -53,7 +53,7 @@ func _ready() -> void:
 	var title := Label.new()
 	title.text = "BATTLE OF ARTHEON   •   БОЙ"
 	title.add_theme_color_override("font_color", Color("#ead9b9"))
-	title.add_theme_font_size_override("font_size", 15)
+	title.add_theme_font_size_override("font_size", 19)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 	round_label = Label.new()
@@ -85,13 +85,14 @@ func _ready() -> void:
 	instruction_label.text = "Выберите действие"
 	instruction_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	instruction_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	instruction_label.add_theme_font_size_override("font_size", 11)
+	instruction_label.add_theme_font_size_override("font_size", 17)
 	footer_row.add_child(instruction_label)
 	round_button = Button.new()
 	round_button.name = "EndRound"
-	round_button.custom_minimum_size = Vector2(142, 53)
+	round_button.custom_minimum_size = Vector2(238, 82)
 	round_button.text = "ЗАВЕРШИТЬ РАУНД"
 	round_button.disabled = true
+	round_button.add_theme_font_size_override("font_size", 18)
 	round_button.pressed.connect(_submit)
 	footer_row.add_child(round_button)
 	detail_popup = AcceptDialog.new()
@@ -173,7 +174,7 @@ func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: 
 	var name := Label.new()
 	var level := int(fighter.get("level", 0))
 	name.text = "%s%s%s" % [String(fighter.get("name", "Герой" if hero else "NPC")), (" [%d]" % level if level > 0 else ""), ("  ◀ ЦЕЛЬ" if targeted else "")]
-	name.add_theme_font_size_override("font_size", 13)
+	name.add_theme_font_size_override("font_size", 20)
 	name.add_theme_color_override("font_color", Color("#f0dcb6") if hero else Color("#e2b5a5"))
 	column.add_child(name)
 	_add_bar(column, int(fighter.get("hp", 0)), int(fighter.get("max_hp", 1)), Color("#b63b48"), "HP")
@@ -188,7 +189,7 @@ func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: 
 	body.add_theme_constant_override("separation", 6)
 	column.add_child(body)
 	var avatar := Control.new()
-	avatar.custom_minimum_size = Vector2(105, 130 if hero else 90)
+	avatar.custom_minimum_size = Vector2(142, 166 if hero else 116)
 	body.add_child(avatar)
 	var portrait := TextureRect.new()
 	portrait.position = Vector2.ZERO
@@ -203,8 +204,8 @@ func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: 
 	if not hero:
 		var unknown := Label.new()
 		unknown.text = "?" if not bool(fighter.get("dead", false)) else "†"
-		unknown.position = Vector2(42, 22)
-		unknown.add_theme_font_size_override("font_size", 32)
+		unknown.position = Vector2(55, 27)
+		unknown.add_theme_font_size_override("font_size", 43)
 		avatar.add_child(unknown)
 	_add_effect_rows(avatar, Array(fighter.get("effects", [])))
 	if hero:
@@ -222,11 +223,14 @@ func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: 
 		for slot in EQUIPMENT:
 			var entry: Dictionary = indexed.get(slot, {})
 			var icon := ItemIcon.new()
-			icon.custom_minimum_size = Vector2(34, 34)
+			icon.custom_minimum_size = Vector2(56, 56)
 			icon.set_empty_placeholder_icon_visible(false)
 			gear.add_child(icon)
 			var item: Dictionary = entry.get("item", {})
-			icon.set_item(item, slot, not String(entry.get("instance_id", "")).is_empty())
+			# The fighter card is assembled before insertion into the scene tree.
+			# ItemIcon._ready() rebuilds its children; defer the item binding
+			# until after _ready, otherwise it silently resets to empty.
+			icon.call_deferred("set_item", item.duplicate(true), slot, not String(entry.get("instance_id", "")).is_empty())
 			if not bool(entry.get("active", true)) and not item.is_empty():
 				icon.modulate = Color("#a66f77")
 			var item_name := String(entry.get("name", "Пусто"))
@@ -237,13 +241,13 @@ func _fighter_card(fighter: Dictionary, hero: bool, equipment: Array, targeted: 
 		info.text = "Выбрана движком" if targeted else "Участник группы"
 		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		info.add_theme_font_size_override("font_size", 11)
+		info.add_theme_font_size_override("font_size", 16)
 		body.add_child(info)
 	return panel
 
 func _add_bar(parent: Control, current: int, maximum: int, fill: Color, resource_name: String) -> void:
 	var holder := Control.new()
-	holder.custom_minimum_size = Vector2(0, 19)
+	holder.custom_minimum_size = Vector2(0, 27)
 	parent.add_child(holder)
 	var bar := ProgressBar.new()
 	bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -258,7 +262,7 @@ func _add_bar(parent: Control, current: int, maximum: int, fill: Color, resource
 	numbers.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	numbers.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	numbers.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	numbers.add_theme_font_size_override("font_size", 11)
+	numbers.add_theme_font_size_override("font_size", 16)
 	numbers.text = "%d / %d %s" % [current, maximum, resource_name]
 	numbers.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(numbers)
@@ -266,7 +270,7 @@ func _add_bar(parent: Control, current: int, maximum: int, fill: Color, resource
 func _add_effect_rows(avatar: Control, effects: Array) -> void:
 	for polarity in ["BUFF", "DEBUFF"]:
 		var row := HBoxContainer.new()
-		row.position = Vector2(2, avatar.custom_minimum_size.y - (39 if polarity == "BUFF" else 20))
+		row.position = Vector2(2, avatar.custom_minimum_size.y - (54 if polarity == "BUFF" else 27))
 		row.add_theme_constant_override("separation", 1)
 		avatar.add_child(row)
 		var matching: Array[Dictionary] = []
@@ -276,8 +280,8 @@ func _add_effect_rows(avatar: Control, effects: Array) -> void:
 		var shown := mini(5, matching.size())
 		for index in range(shown):
 			var button := Button.new()
-			button.custom_minimum_size = Vector2(19, 19)
-			button.add_theme_font_size_override("font_size", 9)
+			button.custom_minimum_size = Vector2(25, 25)
+			button.add_theme_font_size_override("font_size", 12)
 			var overflow := matching.size() > 5 and index == 4
 			var detail := ""
 			if overflow:
@@ -300,28 +304,28 @@ func _build_actions() -> void:
 	_zone_buttons(false)
 	_section("СПОСОБНОСТИ • 5 ABI")
 	var abilities := HBoxContainer.new()
-	abilities.add_theme_constant_override("separation", 5)
+	abilities.add_theme_constant_override("separation", 10)
 	actions_column.add_child(abilities)
 	for index in range(5):
 		var entry: Dictionary = abi_slots[index] if index < abi_slots.size() else {}
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(49, 48)
+		button.custom_minimum_size = Vector2(84, 80)
 		button.text = String(entry.get("id", "")) if not String(entry.get("id", "")).is_empty() else "—"
-		button.add_theme_font_size_override("font_size", 9)
+		button.add_theme_font_size_override("font_size", 15)
 		button.tooltip_text = "%s • %s • %d MP" % [String(entry.get("id", "Пусто")), String(entry.get("name", "Нет ABI")), int(entry.get("mana_cost", 0))]
 		button.pressed.connect(_choose_ability.bind(index))
 		abilities.add_child(button)
 		abi_buttons.append(button)
 	_section("ЭЛИКСИРЫ • общий откат")
 	var potions := HBoxContainer.new()
-	potions.add_theme_constant_override("separation", 5)
+	potions.add_theme_constant_override("separation", 10)
 	actions_column.add_child(potions)
 	var loadout: Dictionary = snapshot.get("elixir_loadout", {})
 	var potion_slots: Array = loadout.get("slots", [])
 	for index in range(4):
 		var entry: Dictionary = potion_slots[index] if index < potion_slots.size() else {}
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(57, 47)
+		button.custom_minimum_size = Vector2(90, 79)
 		var charges := int(entry.get("charges", 0))
 		var maximum := int(entry.get("max_charges", 0))
 		button.text = "%d/%d" % [charges, maximum] if not String(entry.get("instance_id", "")).is_empty() else "—"
@@ -331,12 +335,14 @@ func _build_actions() -> void:
 		potion_buttons.append(button)
 	var log_title := Label.new()
 	log_title.text = "ЖУРНАЛ • последний раунд"
+	log_title.add_theme_font_size_override("font_size", 19)
 	log_title.add_theme_color_override("font_color", Color("#e2d0ab"))
 	actions_column.add_child(log_title)
 	var log := RichTextLabel.new()
 	log.fit_content = true
+	log.add_theme_font_size_override("normal_font_size", 18)
 	log.scroll_active = false
-	log.custom_minimum_size.y = 90
+	log.custom_minimum_size.y = 136
 	var lines: PackedStringArray = []
 	for line in Array(snapshot.get("last_round_log", [])):
 		lines.append(String(line))
@@ -347,16 +353,16 @@ func _section(title: String) -> void:
 	var heading := Label.new()
 	heading.text = title
 	heading.add_theme_color_override("font_color", Color("#e4d6b9"))
-	heading.add_theme_font_size_override("font_size", 12)
+	heading.add_theme_font_size_override("font_size", 19)
 	actions_column.add_child(heading)
 
 func _zone_buttons(attack: bool) -> void:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5)
+	row.add_theme_constant_override("separation", 10)
 	actions_column.add_child(row)
 	for i in range(ZONES.size()):
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(53, 50)
+		button.custom_minimum_size = Vector2(84, 83)
 		button.text = ZONE_NAMES[i].substr(0, 1)
 		var zone_icon := _zone_texture(not attack, i)
 		if zone_icon != null:
