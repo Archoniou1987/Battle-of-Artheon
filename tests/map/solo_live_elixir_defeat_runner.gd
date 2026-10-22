@@ -67,6 +67,19 @@ func _run() -> void:
 		wrong_item["name"] = "altered"
 		check(altered.update_item(wrong_item),"tampered_item_fixture")
 		check(not SoloCombatElixirJournal.same_repository(repo,altered),"other_item_properties_still_protected")
+		var nested := ItemRepository.from_dict(restored_repo.to_dict())
+		var nested_item: Dictionary = nested.get_item(ELIXIR)
+		var components: Array = Array(nested_item["elixir_components"]).duplicate(true)
+		var heal: Dictionary = components[0]
+		heal["amount"] = int(heal["amount"])+1
+		components[0] = heal
+		nested_item["elixir_components"] = components
+		check(nested.update_item(nested_item),"nested_component_tamper_fixture")
+		check(not SoloCombatElixirJournal.same_repository(repo,nested),"nested_elixir_effect_mutation_rejected")
+		var replacement_repo := ItemRepository.from_dict(restored_repo.to_dict())
+		var spare: Dictionary = replacement_repo.get_item("elixir_test_mana_v1")
+		check(replacement_repo.remove_item("elixir_test_mana_v1"),"removed_unrelated_item_fixture")
+		check(not SoloCombatElixirJournal.same_repository(repo,replacement_repo),"removed_item_rejected")
 	check(bool(SoloTownSaveService.save(TOWN,hero,repo).get("ok",false)),"town_saved")
 	check(bool(SoloTownExpeditionBridge.create_from_town(EXP,ID,995,START,hero,repo,MANIFEST).get("ok",false)),"expedition_created")
 	var world := SoloLiveMapSession.open(EXP,MANIFEST,ID,PLAYER)
