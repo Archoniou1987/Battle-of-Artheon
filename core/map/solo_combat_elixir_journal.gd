@@ -1,0 +1,88 @@
+class_name SoloCombatElixirJournal
+extends RefCounted
+
+## No second item database: consumed elixirs are reconstructed exclusively
+## from engine-resolved EFFECT events in the canonical combat checkpoint.
+## The expedition revision is pinned by SoloCombatSessionManifest.
+static func inspect(state: CombatState, player: CharacterState, repository: ItemRepository) -> Dictionary:
+	if state == null or player == null or repository == null:
+		return {"ok":false,"reason":"elixir_journal_missing_owner"}
+	var uses: Array[Dictionary] = []
+	var by_round: Dictionary = {}
+	for event in state.event_log:
+		if event.kind != CombatEvent.Kind.EFFECT or String(event.payload.get("source_type","")) != "elixir":
+			continue
+		if event.source_id != player.character_id or event.target_id != player.character_id:
+			return {"ok":false,"reason":"elixir_journal_wrong_actor"}
+		var item_id := String(event.payload.get("source_instance_id",""))
+		var round_number := int(event.payload.get("round",-1))
+		if round_number < 1 or round_number > state.round_number or not player.inventory.owns(item_id) or not player.elixir_slots.has(item_id):
+			return {"ok":false,"reason":"elixir_journal_invalid_source"}
+		var item: Dictionary = repository.get_item(item_id)
+		if item.is_empty() or not CombatElixirService.validate_components(item).is_empty():
+			return {"ok":false,"reason":"elixir_journal_invalid_item"}
+		if not by_round.has(round_number):
+			by_round[round_number] = item_id
+			uses.append({"round":round_number,"item_id":item_id})
+		elif String(by_round[round_number]) != item_id:
+			return {"ok":false,"reason":"elixir_journal_multiple_items_same_round"}
+	# One usage may generate multiple component events; group by round.
+	uses.sort_custom(func(a: Dictionary,b: Dictionary): return int(a["round"]) < int(b["round"]))
+	var counts: Dictionary = {}
+	var next_available := 0
+	var last_used_round := -1
+	for record in uses:
+		var number := int(record["round"])
+		var id := String(record["item_id"])
+		if number < next_available:
+			return {"ok":false,"reason":"elixir_journal_shared_cooldown_broken"}
+		counts[id] = int(counts.get(id,0)) + 1
+		var item: Dictionary = repository.get_item(id)
+		var max_charges := int(item.get("max_charges",0))
+		var current := int(item.get("charges",-1))
+		if max_charges < 1 or current < 0 or current > max_charges:
+			return {"ok":false,"reason":"elixir_journal_invalid_charges"}
+		last_used_round = number
+		next_available = number + maxi(0,int(item.get("cooldown_rounds",1))) + 1
+	return {"ok":true,"uses":uses,"counts":counts,"next_available_round":next_available,"last_used_round":last_used_round}
+
+## Compare a pinned PRECOMBAT repository with the checkpoint and create a
+## validated new instance table. This never mutates the input repository.
+static func apply_to_baseline(state: CombatState, player: CharacterState, baseline: ItemRepository) -> Dictionary:
+	var audit := inspect(state,player,baseline)
+	if not bool(audit.get("ok",false)):
+		return audit
+	var copied := ItemRepository.from_dict(baseline.to_dict())
+	for raw_id in Dictionary(audit["counts"]).keys():
+		var id := String(raw_id)
+		var item := copied.get_item(id)
+		var spent := int(audit["counts"][id])
+		var original := int(item.get("charges",-1))
+		if original < spent:
+			return {"ok":false,"reason":"elixir_journal_overspends_item","instance_id":id}
+		item["charges"] = original - spent
+		if not copied.update_item(item):
+			return {"ok":false,"reason":"elixir_journal_update_failed"}
+	return {"ok":true,"repository":copied,"audit":audit}
+
+static func preflight(state: CombatState, player: CharacterState, repository: ItemRepository, slot: int) -> Dictionary:
+	if slot < 0:
+		return {"ok":true,"item_id":""}
+	var loadout := SoloCombatElixirLoadout.inspect(player,repository)
+	if not bool(loadout.get("ok",false)):
+		return loadout
+	var entries: Array = loadout["slots"]
+	if slot >= entries.size():
+		return {"ok":false,"reason":"elixir_slot_out_of_range"}
+	var entry: Dictionary = entries[slot]
+	if not bool(entry.get("unlocked",false)) or not bool(entry.get("valid",false)):
+		return {"ok":false,"reason":"elixir_slot_unavailable"}
+	var audit := inspect(state,player,repository)
+	if not bool(audit.get("ok",false)):
+		return audit
+	if state.round_number + 1 < int(audit["next_available_round"]):
+		return {"ok":false,"reason":"elixir_shared_cooldown"}
+	var actor := state.get_combatant(player.character_id)
+	if actor == null or not CombatElixirService.new(state,CombatEngine.new(state),player).can_use(actor,state.round_number+1):
+		return {"ok":false,"reason":"elixir_actor_unavailable"}
+	return {"ok":true,"item_id":String(entry["instance_id"]),"slot":slot,"audit":audit}
