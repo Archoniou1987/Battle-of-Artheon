@@ -55,7 +55,7 @@ func run() -> Dictionary:
 ## Validate the WHOLE player's submission before begin_round(), RNG
 ## consumption or any checkpoint mutation. Auto callers use empty orders
 ## and retain their previous simulator behavior.
-func player_controls(player_id: String) -> Dictionary:
+func player_controls(player_id: String, elixir_slot: int = -1) -> Dictionary:
 	var player := state.get_combatant(player_id)
 	if player == null or group.team_of(player_id) != "players" or player.is_death_finalized():
 		return {"ok":false,"reason":"player_controls_unavailable"}
@@ -63,6 +63,21 @@ func player_controls(player_id: String) -> Dictionary:
 	if capacity < 1 or capacity > 4 or not player.can_manual_block():
 		capacity = 0
 	var next_round := state.round_number + 1
+	var projected_mana := player.mana
+	if elixir_slot >= 0:
+		# The potion is resolved by CombatElixirService BEFORE the ABI
+		# command. Model only its direct mana restoration for preflight;
+		# never mutate the actor or spend charges while rendering.
+		if solo_elixir_owner == null or solo_elixir_repository == null or solo_elixir_owner.character_id != player_id:
+			return {"ok":false,"reason":"solo_elixir_not_bound"}
+		var checked_elixir := SoloCombatElixirJournal.preflight(state,solo_elixir_owner,solo_elixir_repository,elixir_slot)
+		if not bool(checked_elixir.get("ok",false)):
+			return checked_elixir
+		var selected_item := solo_elixir_repository.get_item(String(checked_elixir["item_id"]))
+		for component in Array(selected_item.get("elixir_components",[])):
+			var part: Dictionary = component
+			if String(part.get("kind","")) == "mana":
+				projected_mana = mini(player.max_mana,projected_mana + maxi(0,int(part.get("amount",0))))
 	var options: Array[Dictionary] = []
 	var scheduler: AbilityScheduler = attack_pipeline.ability_scheduler
 	var equipped: Array = AbilityCatalog.assigned_abilities(scheduler.loadouts,player_id)
@@ -83,7 +98,7 @@ func player_controls(player_id: String) -> Dictionary:
 		var ready := bool(status.get("ok",false)) and player.hp > 0
 		ready = ready and scheduler.can_cast_this_round(player_id,next_round)
 		ready = ready and AbilityRuntime.can_use(ability_id,cd,next_round)
-		ready = ready and player.mana >= int(definition.get("mana_cost",0))
+		ready = ready and projected_mana >= int(definition.get("mana_cost",0))
 		ready = ready and AbilityRuntime.validate_definition(ability_id,definition).is_empty()
 		ready = ready and policy.valid_ability_targets(player_id,definition).has(target_id)
 		options.append({
@@ -100,6 +115,7 @@ func player_controls(player_id: String) -> Dictionary:
 		"stunned":CombatTempoService.is_stunned(player,next_round),
 		"zones":CombatCommandApi.BODY_ZONES.duplicate(),
 		"target_id":group.active_opponent(player_id),
+		"projected_mana":projected_mana,
 		"abilities":options
 	}
 
@@ -141,6 +157,13 @@ func _validate_player_orders(orders: Dictionary) -> Dictionary:
 		if not bool(elixir_check.get("ok",false)):
 			return elixir_check
 		selected_elixir = String(elixir_check["item_id"])
+	# Validate the ABI with the actual chosen potion's projected mana.
+	# All other rules (equipment, cooldown, target, stun, PAR) are the
+	# same and remain checked before any round or charge mutation.
+	if int(requested_elixir) >= 0:
+		controls = player_controls(player_id,int(requested_elixir))
+		if not bool(controls.get("ok",false)):
+			return controls
 	var ability_value: Variant = orders.get("ability_id","")
 	if not ability_value is String:
 		return {"ok":false,"reason":"invalid_player_ability_format"}
