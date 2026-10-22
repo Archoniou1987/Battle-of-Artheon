@@ -30,7 +30,15 @@ static func _next_attempt(session: SoloLiveMapSession, npc_id: String) -> int:
 		var old := String(old_key)
 		if old == key or old.begins_with(key + ":attempt_"):
 			count += 1
-	return count + 1
+	# A new expedition may reuse the stable player/roster IDs, but previous
+	# receipt/checkpoint files are immutable. Skip their occupied attempts.
+	var attempt := count + 1
+	while attempt <= 10000:
+		var files := _paths(session.expedition.expedition_id,npc_id,attempt)
+		if not FileAccess.file_exists(String(files["checkpoint"])) and not FileAccess.file_exists(String(files["receipt"])) and not FileAccess.file_exists(String(files["terminal"])):
+			return attempt
+		attempt += 1
+	return -1
 
 ## Solo must never silently equip development fixture ABI. New NPC
 ## encounters use only production definitions and the actually equipped
@@ -83,7 +91,10 @@ static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 	var ids: Array = contact.get("npc_instance_ids",[])
 	if ids.is_empty():
 		return {"ok":false,"reason":"empty_npc_cohort"}
-	var files := _paths(session.expedition.expedition_id,String(ids[0]),_next_attempt(session,String(ids[0])))
+	var attempt := _next_attempt(session,String(ids[0]))
+	if attempt < 1:
+		return {"ok":false,"reason":"combat_attempt_archive_exhausted"}
+	var files := _paths(session.expedition.expedition_id,String(ids[0]),attempt)
 	if FileAccess.file_exists(String(files["terminal"])) or FileAccess.file_exists(String(files["receipt"])) or FileAccess.file_exists(String(files["checkpoint"])):
 		return {"ok":false,"reason":"old_combat_artifact_requires_reconciliation"}
 	var manifest := SoloCombatSessionManifest.begin(session.manifest_path,session.save_path,String(files["terminal"]),String(files["checkpoint"]),String(files["encounter_key"]),session.expedition.expedition_id,session.character.character_id)
