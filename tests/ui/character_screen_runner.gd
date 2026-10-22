@@ -116,10 +116,12 @@ func _run() -> void:
 	screen.refresh()
 	assert(screen.xp_label.text.contains("Уровень 2"))
 	var before := int(screen.character.progression.base_stats["PAR001"])
+	var points_before_allocation := screen.character.progression.unspent_stat_points
+	assert(points_before_allocation > 0)
 	screen.call("_allocate", "PAR001")
 	assert(int(screen.character.progression.base_stats["PAR001"]) == before)
 	assert(screen.character.progression.displayed_stat("PAR001") == before + 1)
-	assert(screen.character.progression.unspent_stat_points == 12)
+	assert(screen.character.progression.unspent_stat_points == points_before_allocation - 1)
 	assert(not screen.save_button.disabled)
 	screen.call("_save_pending")
 	assert(int(screen.character.progression.base_stats["PAR001"]) == before + 1)
