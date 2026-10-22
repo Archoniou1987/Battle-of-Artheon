@@ -28,6 +28,10 @@ func _run() -> void:
 	var gear: Array = []
 	for slot in SoloCombatScreen.EQUIPMENT:
 		gear.append({"slot": slot, "instance_id": "", "name": "", "active": false})
+	gear[0] = {
+		"slot": "head", "instance_id": "fixture_helm", "name": "Fixture Helmet",
+		"active": true, "item": {"instance_id": "fixture_helm", "name": "Fixture Helmet", "rarity": "blue", "atlas_index": 1}
+	}
 	var fixture: Dictionary = {
 		"ok": true, "round": 3, "finished": false,
 		"player": {"id": "player", "name": "Hero", "hp": 80, "max_hp": 100,
@@ -54,6 +58,23 @@ func _run() -> void:
 		"last_round_log": ["A hit B"]
 	}
 	screen.present(fixture)
+	await process_frame # deferred binding runs after ItemIcon._ready()
+	var hero_panel := screen.fighters_column.get_child(0) as PanelContainer
+	var hero_column := hero_panel.get_child(0) as VBoxContainer
+	var equipment_grid: GridContainer
+	for node in hero_column.get_children():
+		if node is HBoxContainer:
+			for inside in node.get_children():
+				if inside is GridContainer:
+					equipment_grid = inside
+	check(equipment_grid != null and equipment_grid.get_child_count() == 10, "ten item icon controls")
+	if equipment_grid != null:
+		var helmet := equipment_grid.get_child(0) as ItemIcon
+		check(helmet != null and helmet.instance_id == "fixture_helm", "equipment survives child ready")
+		check(helmet != null and helmet._icon_texture != null and helmet._icon_texture.texture != null, "real item texture applied after ready")
+	check(screen.attack_buttons[0].custom_minimum_size.y >= 80, "mobile attack touch size compensates Godot canvas stretch")
+	check(screen.abi_buttons[0].custom_minimum_size.y >= 80, "mobile ABI touch size compensates Godot canvas stretch")
+	check(screen.round_button.custom_minimum_size.y >= 80, "mobile end-round touch height")
 	check(screen.fighters_column.get_child_count() == 3, "hero and two NPC cards")
 	check(screen.attack_buttons.size() == 5 and screen.block_buttons.size() == 5, "five hit/block zones")
 	check(screen.abi_buttons.size() == 5 and screen.potion_buttons.size() == 4, "five ABI and four potions")
