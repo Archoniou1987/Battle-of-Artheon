@@ -337,6 +337,8 @@ func _choose_ability(index: int) -> void:
 
 func _choose_elixir(index: int) -> void:
 	var available: Array = snapshot.get("elixir_availability", [])
+	if bool(Dictionary(snapshot.get("controls", {})).get("stunned", false)) or bool(snapshot.get("finished", false)):
+		return
 	if index < 0 or index >= available.size() or not bool(available[index]):
 		return
 	chosen_elixir = -1 if chosen_elixir == index else index
