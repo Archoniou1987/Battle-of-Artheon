@@ -44,21 +44,35 @@ func _run() -> void:
 	if ability != null and elixir != null:
 		check(ability.custom_minimum_size.y>=44 and elixir.custom_minimum_size.y>=44,"ability_and_elixir_touch_targets")
 	var hero_bar := page.get("hero_hp_bar") as ProgressBar
+	var hero_effect_row := page.get("hero_effect_row") as HFlowContainer
 	var enemy_rows := page.get("enemy_hp_rows") as VBoxContainer
-	check(hero_bar != null and enemy_rows != null,"live_hp_widgets_exist")
-	if hero_bar != null and enemy_rows != null:
-		page.call("_update_combat_hp_bars",{"name":"Hero","hp":37,"max_hp":100},[
-			{"name":"Bandit A","hp":18,"max_hp":80},
-			{"name":"Bandit B","hp":0,"max_hp":60}
+	check(hero_bar != null and hero_effect_row != null and enemy_rows != null,"live_combat_vitals_widgets_exist")
+	if hero_bar != null and hero_effect_row != null and enemy_rows != null:
+		page.call("_update_combat_hp_bars",{
+			"name":"Hero","hp":37,"max_hp":100,
+			"effects":[{"id":"BUFF01","name":"Guard","polarity":"BUFF","stacks":2,"remaining_rounds":3}]
+		},[
+			{"name":"Bandit A","hp":18,"max_hp":80,"effects":[{"id":"EFF02","name":"Poison","polarity":"DEBUFF","stacks":1,"remaining_rounds":2}]},
+			{"name":"Bandit B","hp":0,"max_hp":60,"effects":[]}
 		])
 		check(int(hero_bar.value)==37 and int(hero_bar.max_value)==100,"hero_bar_uses_canonical_values")
-		check(enemy_rows.get_child_count()==4,"each_npc_has_own_label_and_bar")
-		if enemy_rows.get_child_count()==4:
-			var first := enemy_rows.get_child(1) as ProgressBar
-			var second := enemy_rows.get_child(3) as ProgressBar
+		check(hero_effect_row.get_child_count()==1 and "Guard" in String(hero_effect_row.get_child(0).text),"hero_buff_renders_under_hp")
+		check(enemy_rows.get_child_count()==2,"each_npc_has_own_panel")
+		if enemy_rows.get_child_count()==2:
+			var one := enemy_rows.get_child(0) as VBoxContainer
+			var two := enemy_rows.get_child(1) as VBoxContainer
+			var first := one.get_child(1) as ProgressBar
+			var second := two.get_child(1) as ProgressBar
+			var enemy_effects := one.get_child(2) as HFlowContainer
 			check(first != null and second != null and int(first.value)==18 and int(first.max_value)==80 and int(second.value)==0,"npc_hp_values_and_zero_visible")
-		page.call("_update_combat_hp_bars",{"name":"Hero","hp":150,"max_hp":100},[])
-		check(int(hero_bar.value)==100 and enemy_rows.get_child_count()==0,"hp_clamped_and_stale_enemies_cleared")
+			check(enemy_effects != null and enemy_effects.get_child_count()==1 and "Poison" in String(enemy_effects.get_child(0).text),"enemy_debuff_renders_under_hp")
+		var many: Array = []
+		for i in range(11):
+			many.append({"id":"EFF"+str(i),"name":"Effect "+str(i),"polarity":"DEBUFF","stacks":1,"remaining_rounds":2})
+		page.call("_set_effect_chips",hero_effect_row,many)
+		check(hero_effect_row.get_child_count()==9 and hero_effect_row.get_child(8).text=="+3","effects_overflow_is_collapsed")
+		page.call("_update_combat_hp_bars",{"name":"Hero","hp":150,"max_hp":100,"effects":[]},[])
+		check(int(hero_bar.value)==100 and enemy_rows.get_child_count()==0 and hero_effect_row.get_child_count()==0,"refresh_clears_stale_effects_and_enemies")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
 	check(grid != null and grid.columns==SoloLiveMapSession.WIDTH,"canonical_map_width_preserved")
 	# Exercise the real scene's selection handler without a fabricated
