@@ -91,7 +91,7 @@ func _ready() -> void:
 	var title_row := HBoxContainer.new()
 	top.add_child(title_row)
 	var title := Label.new()
-	title.text = "BATTLE OF ARTHEON  •  БОЙ"
+	title.text = "БОЙ"
 	title.add_theme_color_override("font_color", Color("#ead9b9"))
 	title.add_theme_font_size_override("font_size", 19)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
