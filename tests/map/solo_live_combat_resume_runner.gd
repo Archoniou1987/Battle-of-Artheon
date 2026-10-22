@@ -113,6 +113,9 @@ func _initialize() -> void:
 		else:
 			var resumed_combat: SoloLiveNpcCombat = resumed["combat"]
 			check(bool(resumed_combat.battle.get("resumed",false)),"old_combat_reused")
+			check(resumed_combat.encounter_key == combat.encounter_key, "resume_retains_manifest_encounter_identity")
+			check(resumed_combat.checkpoint_path == combat.checkpoint_path, "resume_reuses_original_checkpoint_path")
+			check(resumed_combat.receipt_path == combat.receipt_path, "resume_reuses_original_receipt_path")
 			check(resumed_combat.battle["simulator"].state.round_number==last_round,"round_not_replayed")
 			check(resumed_combat.target_cell==Vector2i(7,5),"npc_contact_restored")
 			check(Array(resumed_combat.battle.get("npc_instance_ids",[]))==Array(combat.battle.get("npc_instance_ids",[])),"npc_roster_identical")
