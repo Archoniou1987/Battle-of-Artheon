@@ -65,3 +65,12 @@ The next package begins **UI layout integration**, without touching combat execu
 The map now has an independently horizontally scrollable area with 44px minimum tiles; the main action button is above the log, with a 56px minimum height. ABI, potion, attack and defense touch controls use larger minimum heights. A new headless Godot smoke test `tests/map/solo_live_mobile_layout_runner.gd` instantiates the actual scene and validates map parentage, scroll modes, action order and touch targets.
 
 **Not yet visually approved**: portrait and landscape screenshots / real device input are still required; static scene smoke does not establish UX or visual quality. No new gameplay systems have been added.
+
+
+## ABI #319 — manual defense touch contract
+
+ABI #319 succeeded on `18dde95d96cf304cb88f30abe1ae3bbfeed46bc6`: the Solo mobile layout scene tree smoke test is green.
+
+The touch-selection layer now holds exactly the number of manual block zones permitted by `CombatModifierService.manual_block_zone_capacity` / PAR073. At full capacity, selecting another zone deselects an earlier one; tapping to remove a necessary last selection restores it. When capacity is zero, all defense choices are disabled. This prevents avoidable rejected orders from normal touch interaction, but **does not bypass** the existing `CombatCommandApi` authoritative server-side validation.
+
+The existing Godot scene smoke runner now tests 2-zone switching and deselection. These modifications await the next ABI CI check; no combat math or item persistence changed.
