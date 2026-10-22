@@ -654,6 +654,9 @@ func _build_fighter(origin: Vector2, is_player: bool) -> void:
 		elixir_row.add_child(elixir_button)
 		SquareSlotFeedback.attach(elixir_button, "elixir")
 		if is_player:
+			# Live command selection is toggled before End Turn. In training
+			# mode the existing _use_elixir still owns immediate consumption.
+			elixir_button.toggle_mode = external_combat_mode
 			elixir_button.pressed.connect(_use_elixir.bind(elixir_index))
 			player_elixir_slots.append(elixir_button)
 		else:
