@@ -100,6 +100,15 @@ func _run() -> void:
 	screen._apply_orientation()
 	check(not screen.arena_layout.vertical, "landscape uses two columns")
 	screen.queue_free()
+	var map_scene := load("res://scenes/main/solo_live_map.tscn") as PackedScene
+	check(map_scene != null, "real expedition scene exists")
+	if map_scene != null:
+		var map := map_scene.instantiate() as Control
+		root.add_child(map)
+		await process_frame
+		check(map.get("solo_combat_screen") is SoloCombatScreen, "real expedition mounts game combat overlay")
+		check(map.get("game_map_scroll") is ScrollContainer, "real map preserved behind overlay")
+		map.queue_free()
 	print("SOLO_COMBAT_SCREEN_TEST=", "PASS" if failures.is_empty() else "FAIL",
 		" failures=", failures.size())
 	quit(0 if failures.is_empty() else 1)
