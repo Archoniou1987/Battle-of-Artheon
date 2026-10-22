@@ -57,6 +57,37 @@ static func open_existing(path: String, expedition_id: String, player_id: String
 		return {"ok":false,"reason":"invalid_town_origin"}
 	return {"ok":true,"state":checked["state"],"expedition":expedition,"character":checked["character"],"repository":checked["repository"]}
 
+
+## The next Solo run must never overwrite the previous expedition. Only a
+## fully closed, adopted snapshot can be archived. A crash after rename
+## leaves the canonical town intact and the launch gate in NEW state.
+static func archive_adopted_expedition(path: String, town_path: String, expedition_id: String, player_id: String, manifest_path: String = SoloCombatSessionManifest.PATH) -> Dictionary:
+	if not MapWorldCommitService._valid_path(path) or not MapWorldCommitService._valid_path(town_path) or FileAccess.file_exists(manifest_path):
+		return {"ok":false,"reason":"archive_invalid_path_or_pending_combat"}
+	var old := ExpeditionSaveService.read(path,expedition_id,player_id)
+	if not bool(old.get("ok",false)):
+		return {"ok":false,"reason":"archive_expedition_invalid","detail":String(old.get("reason","unknown"))}
+	var expedition: ExpeditionState = old["expedition"]
+	if expedition.status != ExpeditionState.STATUS_EXITED or not expedition.world_state.has(SoloTownReturnService.RETURN_KEY):
+		return {"ok":false,"reason":"archive_requires_returned_expedition"}
+	var sealed := ExpeditionSaveService._read_payload_envelope(path)
+	if not bool(sealed.get("ok",false)):
+		return sealed
+	var town := SoloTownSaveService.read(town_path,player_id)
+	if not bool(town.get("ok",false)):
+		return {"ok":false,"reason":"archive_town_invalid","detail":String(town.get("reason","unknown"))}
+	var origin: Dictionary = town.get("return_origin",{})
+	if String(origin.get("expedition_id","")) != expedition_id or String(origin.get("snapshot_sha256","")) != String(sealed["sha256"]):
+		return {"ok":false,"reason":"archive_return_not_adopted"}
+	var archive_path := path + ".closed_" + String(sealed["sha256"]).substr(0,24)
+	if FileAccess.file_exists(archive_path):
+		return {"ok":false,"reason":"archive_already_exists","archive_path":archive_path}
+	var status := DirAccess.rename_absolute(ProjectSettings.globalize_path(path),ProjectSettings.globalize_path(archive_path))
+	if status != OK:
+		return {"ok":false,"reason":"archive_move_failed","code":status}
+	return {"ok":true,"archive_path":archive_path}
+
+
 static func town_matches_origin(expedition: ExpeditionState, town_player: CharacterState, town_repository: ItemRepository) -> bool:
 	if expedition == null or town_player == null or town_repository == null:
 		return false
