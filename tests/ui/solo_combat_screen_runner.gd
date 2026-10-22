@@ -114,14 +114,13 @@ func _run() -> void:
 	screen._choose_elixir(0)
 	screen.set_ability_options([{"id": "ABI003", "available": false}])
 	check(screen.shared_arena.ability_buttons[0].disabled, "ability availability updates after potion selection")
-	# A fighter without a manual block must not receive a phantom defense.
-	var unshielded: Dictionary = fixture.duplicate(true)
-	unshielded["controls"]["block_capacity"] = 0
-	screen.present(unshielded)
-	check(arena.defense_capacity == 0 and arena.defense_zones.is_empty(), "zero-block player has no automatically selected defense")
-	check(arena.defense_buttons[0].disabled, "zero-block player cannot click manual block")
+	# Unarmed fighters have one real manual block, not zero.
+	var fists: Dictionary = fixture.duplicate(true)
+	fists["controls"]["block_capacity"] = 1
+	screen.present(fists)
+	check(arena.defense_capacity == 1 and arena.defense_zones.size() == 1, "unarmed fighter retains one manual defense zone")
 	screen._submit()
-	check(last_orders.get("block_zones", ["wrong"]).is_empty(), "zero-block round submits no defense zones")
+	check(Array(last_orders.get("block_zones", [])).size() == 1, "unarmed round submits exactly one manual block")
 	var stunned: Dictionary = fixture.duplicate(true)
 	stunned["controls"]["stunned"] = true
 	screen.present(stunned)
