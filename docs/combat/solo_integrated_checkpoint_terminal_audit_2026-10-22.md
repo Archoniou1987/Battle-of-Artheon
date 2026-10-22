@@ -92,3 +92,12 @@ ABI #321 passed on `2f7d7f057a0aa93153296ac362966c10ba454d9c`, confirming hero a
 Next UI pass: each actor's HP bar has a read-only `HFlowContainer` for disclosed effect summaries. Source is `SoloLiveNpcCombat.combat_view` and `_disclosed_effects`, which already enforce revealed effect visibility and classify polarity using canonical `EffectPolarity`. Chips distinguish BUFF (▲) and DEBUFF (▼), show name and stacks, and expose remaining rounds via tooltip. A maximum of eight chips are shown; `+N` collapses additional effects with complete overflow details in its tooltip. Enemy panels are generated from the same per-NPC snapshot as their HP bars. Refresh removes old effects and defeated/absent NPC panels.
 
 Godot scene smoke now covers one buff, enemy debuff, two NPCs, zero HP, eleven-effect overflow, and stale effect removal. **Pending ABI CI**; this is presentation only and does not change damage, EFF resolution or checkpoint persistence.
+
+
+## ABI #322 — compact equipment projection
+
+ABI #322 succeeded on `3fd6f201eef2a2300f545e8f635d5e1fa4350b71` (HP and disclosed effect chips).
+
+`SoloLiveNpcCombat.combat_view()` now publishes a read-only ten-slot equipment list (head, chest, hands, waist, legs, main_hand, off_hand, ring1, ring2, feet) drawn directly from `CharacterState.equipment` and `ItemRepository`. Includes persistent instance ID, the existing item display name/template fallback, active/inactive validation and rarity. The Solo map combat panel renders a compact 5×2 grid of those slots. Occupied, empty and invalid/inactive slots are distinct; tooltips disclose item names without inventing bonuses or changing combat gear mid-fight.
+
+The scene smoke test checks all ten slots, exact names from input, noninteractive buttons, inactive gear, and removal on refresh. **Pending next ABI workflow verification.** Art-backed rarity frames, avatar and per-slot item icons will be a separate polish phase; this is the functional data-binding layer.
