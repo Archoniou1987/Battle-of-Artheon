@@ -1210,12 +1210,15 @@ func _prepend_combat_log(entry: String) -> void:
 ## there are more than five active/pending effects. Tap for details on mobile.
 func _effect_entries(is_player:bool,row_type:String) -> Array:
 	if external_combat_mode:
-		var side := "player" if is_player else "enemy"
-		var polarity := "BUFF" if row_type == "Баффы" else "DEBUFF"
+		var fighter_key: String = "player" if is_player else "enemy"
+		var expected_polarity: String = "BUFF" if row_type == "Баффы" else "DEBUFF"
 		var disclosed: Array = []
-		for raw in Array(external_effects.get(side, [])):
-			if raw is Dictionary and String(raw.get("polarity", "")).to_upper() == polarity:
-				disclosed.append(raw)
+		var entries: Array = external_effects.get(fighter_key, [])
+		for raw in entries:
+			if raw is Dictionary:
+				var effect: Dictionary = raw
+				if String(effect.get("polarity", "")).to_upper() == expected_polarity:
+					disclosed.append(effect)
 		return disclosed
 	if visual_lab_eff_index > 0:
 		return _visual_lab_effect_examples(is_player, row_type)
@@ -1313,7 +1316,7 @@ func _show_effect_detail(is_player:bool,row_type:String,index:int) -> void:
 		var lines: PackedStringArray = []
 		for entry in effects:
 			if entry is Dictionary:
-				lines.append(_effect_description(entry))
+				lines.append(_effect_description(Dictionary(entry)))
 		live_effect_inspected.emit("\n".join(lines))
 		return
 	if tabs != null:
