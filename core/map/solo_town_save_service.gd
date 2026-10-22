@@ -54,6 +54,27 @@ static func read(path: String, player_id: String) -> Dictionary:
 			return {"ok":false,"reason":"town_return_origin_invalid"}
 	return {"ok":true,"character":owner,"repository":repository,"return_origin":source,"sha256":String(raw["sha256"])}
 
+## Migration only: legacy repositories sometimes contain item records not
+## referenced by the character inventory. Preserve the original legacy file;
+## copy only provably owned items into the new canonical town snapshot.
+## Never use this to "repair" an existing canonical save.
+static func prepare_legacy_inventory_migration(player: CharacterState, repository: ItemRepository) -> Dictionary:
+	if player == null or repository == null or player.inventory == null:
+		return {"ok":false,"reason":"legacy_migration_missing_owner"}
+	var source: Dictionary = repository.to_dict().get("items", {})
+	var owned_ids: Array = player.inventory.instance_ids()
+	var owned: ItemRepository = ItemRepository.new()
+	for raw_id in owned_ids:
+		var id := String(raw_id)
+		if not source.has(id) or not source[id] is Dictionary:
+			return {"ok":false,"reason":"legacy_owned_item_missing","item_id":id}
+		if not owned.add_item(source[id]):
+			return {"ok":false,"reason":"legacy_owned_item_invalid","item_id":id}
+	if owned.size() != owned_ids.size():
+		return {"ok":false,"reason":"legacy_inventory_count_mismatch"}
+	return {"ok":true,"repository":owned,"orphan_count":maxi(0,repository.size()-owned.size())}
+
+
 static func _write(path: String, player: CharacterState, repository: ItemRepository, source: Dictionary) -> Dictionary:
 	var payload := {"version":VERSION,"player_id":player.character_id,"character":MapWorldCommitService._character_to_dict(player),"repository":repository.to_dict(),"return_origin":source.duplicate(true)}
 	var encoded := JSON.stringify(payload)
