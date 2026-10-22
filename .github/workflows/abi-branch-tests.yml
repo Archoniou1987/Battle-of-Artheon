@@ -63,6 +63,9 @@ jobs:
       - name: Persist Solo defeat, retreat and second NPC attempt after restart
         run: bash tools/run_godot_check.sh tests/map/solo_live_defeat_resume_runner.gd
 
+      - name: Use equipped production ABI and effects in a manual Solo combat round with recovery
+        run: bash tools/run_godot_check.sh tests/map/solo_live_manual_abi_runner.gd
+
       - name: Apply player-selected attack and block zones in real checkpointed Solo combat
         run: bash tools/run_godot_check.sh tests/map/solo_live_manual_combat_runner.gd
 
