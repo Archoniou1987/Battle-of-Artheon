@@ -16,6 +16,7 @@ var return_button: Button
 var combat_panel: VBoxContainer
 var combat_summary: Label
 var hero_hp_bar: ProgressBar
+var hero_effect_row: HFlowContainer
 var enemy_hp_rows: VBoxContainer
 var combat_log_label: Label
 var attack_zone_row: VBoxContainer
@@ -95,6 +96,10 @@ func _build_view() -> void:
 	hero_hp_bar.custom_minimum_size.y = 26
 	hero_hp_bar.show_percentage = false
 	combat_panel.add_child(hero_hp_bar)
+	hero_effect_row = HFlowContainer.new()
+	hero_effect_row.add_theme_constant_override("h_separation",4)
+	hero_effect_row.add_theme_constant_override("v_separation",4)
+	combat_panel.add_child(hero_effect_row)
 	enemy_hp_rows = VBoxContainer.new()
 	enemy_hp_rows.add_theme_constant_override("separation",6)
 	combat_panel.add_child(enemy_hp_rows)
@@ -201,10 +206,13 @@ func _refresh() -> void:
 ## Bars are read-only projections of combat_view() values, including
 ## provisional death masking via CombatantState.visible_hp().
 ## Multiple NPCs each have their own bar; no active-target inference.
+## Each combatant gets effects directly beneath the HP bar. The only
+## input is the disclosed combat_view snapshot (not the hidden effect state).
 func _update_combat_hp_bars(hero: Dictionary, enemies: Array) -> void:
-	if hero_hp_bar == null or enemy_hp_rows == null:
+	if hero_hp_bar == null or hero_effect_row == null or enemy_hp_rows == null:
 		return
 	_set_hp_bar(hero_hp_bar,hero)
+	_set_effect_chips(hero_effect_row,Array(hero.get("effects",[])))
 	for child in enemy_hp_rows.get_children():
 		enemy_hp_rows.remove_child(child)
 		child.queue_free()
@@ -212,14 +220,51 @@ func _update_combat_hp_bars(hero: Dictionary, enemies: Array) -> void:
 		if not raw is Dictionary:
 			continue
 		var npc: Dictionary = raw
+		var fighter := VBoxContainer.new()
+		enemy_hp_rows.add_child(fighter)
 		var label := Label.new()
 		label.text = String(npc.get("name","Противник"))
-		enemy_hp_rows.add_child(label)
+		fighter.add_child(label)
 		var bar := ProgressBar.new()
 		bar.custom_minimum_size.y = 22
 		bar.show_percentage = false
 		_set_hp_bar(bar,npc)
-		enemy_hp_rows.add_child(bar)
+		fighter.add_child(bar)
+		var badges := HFlowContainer.new()
+		fighter.add_child(badges)
+		_set_effect_chips(badges,Array(npc.get("effects",[])))
+
+## UI-only summaries: distinguish buff/debuff; show stack counts and
+## duration; bound visual density and expose all details via tooltip.
+func _set_effect_chips(row: HFlowContainer, effects: Array) -> void:
+	for child in row.get_children():
+		row.remove_child(child)
+		child.queue_free()
+	var visible: Array[Dictionary] = []
+	for raw in effects:
+		if raw is Dictionary:
+			visible.append(raw)
+	var capacity := 8
+	for i in range(mini(capacity,visible.size())):
+		var effect: Dictionary = visible[i]
+		var polarity := String(effect.get("polarity","")).to_upper()
+		var prefix := "▲" if polarity == "BUFF" else "▼" if polarity == "DEBUFF" else "◆"
+		var chip := Label.new()
+		var stacks := maxi(1,int(effect.get("stacks",1)))
+		var rounds := maxi(0,int(effect.get("remaining_rounds",0)))
+		chip.text = "%s%s ×%d" % [prefix,String(effect.get("name",effect.get("id","?"))),stacks]
+		chip.tooltip_text = "%s • %d р. • %s" % [String(effect.get("name",effect.get("id","?"))),rounds,polarity]
+		chip.add_theme_font_size_override("font_size",12)
+		row.add_child(chip)
+	if visible.size() > capacity:
+		var overflow := Label.new()
+		overflow.text = "+%d" % (visible.size()-capacity)
+		var detail: Array[String] = []
+		for i in range(capacity,visible.size()):
+			var effect: Dictionary = visible[i]
+			detail.append("%s ×%d (%d р.)" % [String(effect.get("name","?")),int(effect.get("stacks",1)),int(effect.get("remaining_rounds",0))])
+		overflow.tooltip_text = "\n".join(PackedStringArray(detail))
+		row.add_child(overflow)
 
 func _set_hp_bar(bar: ProgressBar, snapshot: Dictionary) -> void:
 	var maximum := maxi(1,int(snapshot.get("max_hp",1)))
