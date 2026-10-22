@@ -124,6 +124,16 @@ func _run() -> void:
 	check(screen.info_column.get_parent() == screen.arena_layout, "secondary tabs and header share outside-square host")
 	check(screen.tab_container.get_parent() == screen.info_column, "info tabs do not overlap Arena square")
 	check(screen.square_host.custom_minimum_size.x >= minf(480.0, screen.arena_layout.size.y) - 10.0, "landscape Arena maximizes available height instead of fixed 330px reservation")
+	# Regression: base Godot viewport is 720 logical px high. A 480px
+	# upper cap would render the battle square at only 260px in 390px landscape.
+	var arena_room := screen.arena_layout.size
+	var min_info := screen.info_column.custom_minimum_size.x
+	var fit_width := arena_room.x - min_info - float(screen.arena_layout.get_theme_constant("separation"))
+	var expected_edge := floorf(maxf(1.0, minf(fit_width, arena_room.y)))
+	check(absf(screen.square_host.custom_minimum_size.x - expected_edge) <= 1.0, "landscape uses full available edge, without legacy 480 design-size cap")
+	if expected_edge > 500.0:
+		check(screen.square_host.custom_minimum_size.x > 480.0, "Arena scales above its 480 logical design size when room permits")
+
 	screen.queue_free()
 	var map_scene := load("res://scenes/main/solo_live_map.tscn") as PackedScene
 	check(map_scene != null, "real expedition scene exists")
