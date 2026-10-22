@@ -77,7 +77,8 @@ func _run() -> void:
 	# The original Arena background and five ABI slots remain one stable
 	# 480x480 composition; long ability labels cannot widen individual cells.
 	check(arena.arena_background.position.is_equal_approx(Vector2.ZERO), "Arena background anchored to top-left")
-	check(arena.arena_background.size.is_equal_approx(Vector2(480, 480)), "Arena background covers native square exactly")
+	check(arena.arena_background.size.is_equal_approx(arena.square_content.size), "Arena background covers native square exactly: background=%s square=%s" % [str(arena.arena_background.size), str(arena.square_content.size)])
+	check(arena.arena_background.anchor_right == 1.0 and arena.arena_background.anchor_bottom == 1.0, "Arena background follows square boundaries on viewport changes")
 	arena.ability_buttons[0].text = "ABILITY_WITH_VERY_LONG_DISPLAY_NAME"
 	await process_frame
 	for abi in arena.ability_buttons:
