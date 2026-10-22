@@ -228,6 +228,7 @@ func combat_view() -> Dictionary:
 		if raw_option is Dictionary:
 			var option: Dictionary = raw_option
 			available_options[String(option.get("id",""))] = option
+	var elixir_loadout := SoloCombatElixirLoadout.inspect(owner.character,owner.repository)
 	var equipment_slots := EquipmentAbilityLoadout.build(owner.character,owner.repository)
 	var five_slots: Array[Dictionary] = []
 	for category in ["weapon","chest","head"]:
@@ -257,6 +258,7 @@ func combat_view() -> Dictionary:
 		"player":{"id":player_id,"name":hero.display_name,"hp":hero.visible_hp(),"max_hp":hero.max_hp,"mana":hero.mana,"max_mana":hero.max_mana,"dead":hero.is_death_finalized(),"effects":_disclosed_effects(hero)},
 		"enemies":enemy_views,
 		"ability_slots":five_slots,
+		"elixir_loadout":elixir_loadout,
 		"controls":controls,
 		"last_round_log":log_lines
 	}
