@@ -61,6 +61,26 @@ func _initialize() -> void:
 	var changed := SoloTownSaveService.save(TOWN,owner,owned_repo,String(previous["sha256"]))
 	check(bool(changed.get("ok",false)),"canonical_town_update")
 	check(not bool(SoloTownSaveService.read(TOWN,"different_player").get("ok",false)),"wrong_player_denied")
+	# Second visit: immutable history is archived only after canonical adoption.
+	var old_snapshot := FileAccess.get_file_as_string(EXPEDITION)
+	var archived := SoloTownExpeditionBridge.archive_adopted_expedition(EXPEDITION,TOWN,ID,"player",MANIFEST)
+	check(bool(archived.get("ok",false)),"closed_adopted_expedition_archived")
+	if bool(archived.get("ok",false)):
+		var archive_path := String(archived["archive_path"])
+		check(FileAccess.file_exists(archive_path) and not FileAccess.file_exists(EXPEDITION),"archive_preserves_old_file_and_frees_active_slot")
+		check(FileAccess.get_file_as_string(archive_path)==old_snapshot,"archive_keeps_exact_completed_world_bytes")
+		var next_town := SoloTownSaveService.read(TOWN,"player")
+		check(bool(next_town.get("ok",false)),"second_departure_reads_committed_city")
+		if bool(next_town.get("ok",false)):
+			var next := SoloTownExpeditionBridge.create_from_town(EXPEDITION,ID,78,Vector2i(5,5),next_town["character"],next_town["repository"],MANIFEST)
+			check(bool(next.get("ok",false)),"second_expedition_created")
+			var saved_second := ExpeditionSaveService.read(EXPEDITION,ID,"player")
+			check(bool(saved_second.get("ok",false)),"second_expedition_reopens")
+			if bool(saved_second.get("ok",false)):
+				check(saved_second["character"].inventory.owns("OLD_BLADE") and saved_second["character"].inventory.owns("EARNED_RING"),"second_expedition_inherits_owned_loot")
+				check(not saved_second["repository"].has_item("UNCLAIMED_DROP"),"ground_loot_not_minted_into_second_expedition")
+				check(saved_second["expedition"].is_active(),"second_expedition_active")
+		wipe(archive_path)
 	for path in [EXPEDITION,TOWN,MANIFEST]:
 		wipe(path)
 	print("TOWN_ADOPT_TEST="+("PASS" if errors.is_empty() else "FAIL")+" errors="+str(errors))
