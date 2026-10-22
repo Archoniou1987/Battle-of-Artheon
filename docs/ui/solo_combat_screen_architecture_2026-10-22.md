@@ -87,3 +87,10 @@ Reference: approved original Arena browser screenshots in phone portrait and lan
 The expedition host now puts the combat title and round label **inside the secondary information column**, not above the entire battle row. Therefore the Arena square can use the full layout height in landscape. Information tabs take the width that remains after the square, with a responsive minimum rather than the former fixed 330px reservation. Portrait places the same information column beneath the square. The original 480×480 composition and single host scaler are unchanged.
 
 The UI regression runner now requires the external column hierarchy and a near-full-height landscape square. This is a code change awaiting manual ABI / Solo Visual CI and actual screenshot review; no claim of visual verification yet.
+
+
+## Remove mistaken 480-pixel display cap (2026-10-22)
+
+Root cause verified against `project.godot`: `window/size/viewport_height=720` and `window/stretch/mode="canvas_items"`. The map host incorrectly used `minf(SQUARE_EDGE, available_width, available_height)` (nested two-argument form), capping the *display edge* at 480 logical pixels. On a 390px-tall landscape mobile test viewport this yields approximately 480 / 720 × 390 = **260 actual screen pixels**, unlike the full-height training Arena in the reference screenshots. `SQUARE_EDGE=480` is a **design coordinate system**, not a permitted upper limit.
+
+Now compute the host display edge as `floorf(maxf(1.0, minf(available_width, available_height)))`, preserving the existing responsive information-column allocation and one-only outer scale. The inner Arena remains native 480×480 with no secondary scaling. The regression runner checks the exact width/height bound and explicitly verifies edges >480 when space allows. **No CI has run on this change yet.**
