@@ -28,6 +28,38 @@ func _init() -> void:
 	var duplicate_slots: Dictionary = EquipmentAbilityLoadout.build(hero, repository)
 	var chest_priority: bool = updated and duplicate_slots.get("chest", []) == ["ABI004"] and duplicate_slots.get("head", []) == [null]
 	ok = ok and chest_priority
+	# Production catalogs: real item template -> equipped ABI -> EFF references.
+	# These opt-in templates are also selectable in the town item generator.
+	var production_templates := ItemTemplateService.load_templates()
+	var real_abilities := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	var real_effects: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/effects/catalog.json"))
+	var preview_hero := CharacterState.new("ABI_TEMPLATE_HERO","Template Hero",20)
+	var preview_repo := ItemRepository.new()
+	for pair in [
+		["training_fire_staff_abi003","main_hand"],
+		["training_healer_chest_abi004","chest"]
+	]:
+		var template_id: String = pair[0]
+		var equip_slot: String = pair[1]
+		if not production_templates.has(template_id):
+			ok = false
+			continue
+		var instance_id := "TEMPLATE_" + template_id
+		var generated := {"instance_id":instance_id,"template_id":template_id,"rarity":"green"}
+		ItemDurabilityService.initialize_item(generated,100)
+		if not preview_repo.add_item(generated) or not preview_hero.receive_item(instance_id,preview_repo) or not preview_hero.equip(equip_slot,instance_id,preview_repo):
+			ok = false
+	var actual_abilities := EquipmentAbilityLoadout.active_abilities(preview_hero,preview_repo)
+	ok = ok and actual_abilities == ["ABI003","ABI004"]
+	for ability_id in actual_abilities:
+		if not real_abilities.has(ability_id):
+			ok = false
+			continue
+		var definition: Dictionary = real_abilities[ability_id]
+		for component in Array(definition.get("components",[])):
+			if String(Dictionary(component).get("kind","")) == "effect":
+				ok = ok and real_effects is Dictionary and Dictionary(real_effects).has(String(Dictionary(component).get("effect_id","")))
+	print("ITEM_ABI_PRODUCTION_TEMPLATES=",actual_abilities," effects_valid=",ok)
 	print("ITEM_ABI_CHAIN weapon=", slots.get("weapon", []), " chest=", slots.get("chest", []), " head=", slots.get("head", []))
 	print("ITEM_ABI_CHAIN duplicate_deduped=", duplicate_deduped, " active=", active, " oh_excluded=", oh_excluded)
 	print("ITEM_ABI_CHAIN_TEST=", "PASS" if ok else "FAIL")
