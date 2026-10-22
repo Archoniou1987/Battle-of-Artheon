@@ -31,3 +31,14 @@ This new defeat-specific regression has NOT been CI-verified. The successful #31
 - Replaced the string comparison with a recursive value comparator checking ALL dictionary keys and array elements, allowing mathematically equivalent int/float values at any depth and requiring exact type/value for strings, booleans and null.
 - Expanded tests to reject different charge values, altered item names, nested elixir-component changes and missing unrelated inventory items. Victory and defeat paths use the same comparator.
 - This repair still requires a **new CI run**; do not infer a green test from this documentation.
+
+## Crash gap with consumed potions (post ABI #316)
+
+ABI #316 succeeded on `237336ad1c8eb7b4e5dadbc03878b0eed095cef5`, verifying that real NPC victory and defeat each persist exactly one consumed elixir charge and do not duplicate drops.
+
+The following *new* regression coverage is not yet CI-verified:
+
+- `tests/map/solo_live_elixir_defeat_runner.gd` now explicitly stages the **defeat terminal snapshot** after spending a potion and completing a checkpointed death. It checks that the expedition file still has original charges, then simulates relaunch with `SoloExpeditionLaunchGate.inspect`. Recovery must publish exactly one debit, full-health retreat and cleared manifest.
+- `tests/map/solo_live_elixir_victory_crash_runner.gd` stages the **victory world snapshot** from a genuine terminal GroupCombatSimulator with an elixir EFFECT journal, without publishing the expedition file. It checks the original save still has precombat charges, then simulates relaunch. Launch recovery must publish the verified victory, persist one debit and one loot settlement, clear the manifest, and remain unchanged on another reopen.
+
+Both exercises preserve the canonical combat engines and world commit services and modify only test coverage and CI registration. Do not call the crash-gap coverage complete until the user confirms a green ABI workflow on the new HEAD.
