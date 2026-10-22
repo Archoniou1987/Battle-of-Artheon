@@ -114,7 +114,10 @@ func _validate_player_orders(orders: Dictionary) -> Dictionary:
 		if not raw is String or not CombatCommandApi.BODY_ZONES.has(raw) or blocks.has(String(raw)):
 			return {"ok":false,"reason":"invalid_block_zone"}
 		blocks.append(String(raw))
-	if not bool(controls["stunned"]):
+	if bool(controls["stunned"]):
+		if not attacks.is_empty() or not blocks.is_empty():
+			return {"ok":false,"reason":"stunned_cannot_queue_physical_actions"}
+	else:
 		if attacks.size() != int(controls["attack_count"]):
 			return {"ok":false,"reason":"invalid_attack_zone_count","expected":int(controls["attack_count"])}
 		if blocks.size() != int(controls["block_capacity"]):
