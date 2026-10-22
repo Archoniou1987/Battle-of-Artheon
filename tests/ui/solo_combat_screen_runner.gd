@@ -59,6 +59,7 @@ func _run() -> void:
 	}
 	screen.present(fixture)
 	await process_frame # deferred binding runs after ItemIcon._ready()
+	await process_frame
 	var hero_panel := screen.fighters_column.get_child(0) as PanelContainer
 	var hero_column := hero_panel.get_child(0) as VBoxContainer
 	var equipment_grid: GridContainer
