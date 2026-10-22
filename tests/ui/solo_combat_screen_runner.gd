@@ -79,6 +79,9 @@ func _run() -> void:
 	check(arena._effect_entries(false, "Дебаффы").size() == 1, "enemy disclosed debuff appears in shared Arena")
 	check(arena._effect_entries(false, "Баффы").is_empty(), "effect polarity does not leak into wrong row")
 	check(arena.effects_rows["player_Баффы"].visible and arena.effects_rows["enemy_Дебаффы"].visible, "live buff/debuff overlay rows are visible")
+	arena._show_effect_detail(true, "Баффы", 0)
+	check(screen.detail_text.text.contains("Guard"), "tap on live effect opens details in owning battle UI")
+
 	screen.present(fixture)
 	check(arena._effect_entries(true, "Баффы").is_empty(), "effect projection clears on next empty snapshot")
 	check(arena.square_content.size == Vector2(480, 480), "original Arena square preserved")
