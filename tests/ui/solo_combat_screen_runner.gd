@@ -110,6 +110,7 @@ func _run() -> void:
 	screen._choose_ability(0)
 	screen._choose_elixir(0)
 	check(last_elixir == 0 and screen.chosen_abi == "ABI003", "ABI and potion selections coexist")
+	check(arena.player_elixir_slots[0].toggle_mode, "live potion uses selectable button mode")
 	check(arena.ability_buttons[0].button_pressed and arena.player_elixir_slots[0].button_pressed, "selected ABI and potion are visible on the shared Arena")
 	# Real Arena callbacks, not duplicate Solo widgets, produce one exact command.
 	last_orders.clear()
