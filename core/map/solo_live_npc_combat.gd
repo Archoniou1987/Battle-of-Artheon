@@ -154,10 +154,26 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 		return {"ok":false,"reason":"resume_checkpoint_missing_or_terminal"}
 	var match_cell := Vector2i(-1,-1)
 	var npc_id := ""
+	var receipt := ""
+	# Resume must use the ORIGINAL manifest identity, never _next_attempt:
+	# the current fight already owns a checkpoint and is not a new entry.
 	for id in session.npc_bridge.instances:
-		var expected := _paths(session.expedition.expedition_id,String(id),_next_attempt(session,String(id)))
-		if String(expected["encounter_key"]) == String(data["encounter_key"]) and String(expected["checkpoint"]) == checkpoint and String(expected["terminal"]) == String(data["terminal_path"]):
-			npc_id = String(id)
+		var candidate := String(id)
+		var base_key := "solo:live:" + session.expedition.expedition_id + ":" + candidate
+		var manifest_key := String(data["encounter_key"])
+		var attempt := 0
+		if manifest_key == base_key:
+			attempt = 1
+		elif manifest_key.begins_with(base_key + ":attempt_"):
+			var suffix := manifest_key.substr((base_key + ":attempt_").length())
+			if suffix.is_valid_int() and int(suffix) > 1:
+				attempt = int(suffix)
+		if attempt < 1 or attempt > 10000:
+			continue
+		var expected := _paths(session.expedition.expedition_id,candidate,attempt)
+		if String(expected["encounter_key"]) == manifest_key and String(expected["checkpoint"]) == checkpoint and String(expected["terminal"]) == String(data["terminal_path"]):
+			npc_id = candidate
+			receipt = String(expected["receipt"])
 			match_cell = session.map.entity_positions.get(npc_id,Vector2i(-1,-1))
 			break
 	if npc_id.is_empty() or HexGrid.distance(session.expedition.player_position,match_cell) != 1:
@@ -203,7 +219,7 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	instance.battle = opened
 	instance.encounter_key = String(data["encounter_key"])
 	instance.checkpoint_path = checkpoint
-	instance.receipt_path = String(_paths(session.expedition.expedition_id,npc_id,_next_attempt(session,npc_id))["receipt"])
+	instance.receipt_path = receipt
 	instance.terminal_path = String(data["terminal_path"])
 	instance.target_cell = match_cell
 	return {"ok":true,"combat":instance,"round":opened["simulator"].state.round_number}
