@@ -176,3 +176,12 @@ ABI CI run 39827693550 passed on c674c69cc0a90951098e285286204004fe3a650b. Added
 This is intentionally a **presentation boundary test**; it does not simulate combat damage or imply that a UI fixture validates engine checkpoint persistence. The authoritative round simulation and checkpoint are still owned by `SoloLiveNpcCombat.play_round()`. Combat math and the approved geometry remain unchanged.
 
 **Needs manual ABI Branch Tests for new HEAD.**
+
+
+## Real live-combat order boundary — checkpoint regression (2026-10-22)
+
+ABI Branch Tests run 39828567159 **passed** on SHA d00afff4a55eb20366eb2b5b0e891dd09365b332. Extended `tests/map/solo_live_npc_combat_runner.gd` to exercise the *real* `SoloLiveNpcCombat.play_round(orders)` path, rather than only its legacy empty-order auto-round path. The test uses the simulator's own `player_controls` to select required attack/block zones, with no invented weapon count or defense capacity. It also submits a deliberately invalid zone first and checks that rejection leaves round number and checkpoint bytes unchanged.
+
+After an accepted command, the test checks one round of progression; for ongoing combat, it verifies checkpoint presence and the freshly published `combat_view` round, visible player HP and mana match authoritative `GroupCombatSimulator.state`. This is live-engine integration regression, complementary to the UI fixture-based presentation tests. No Arena layout changes.
+
+**CI still required** for this new test; manually run ABI Branch Tests on the new HEAD.
