@@ -90,6 +90,21 @@ func _run() -> void:
 	var audit := SoloCombatElixirJournal.inspect(simulator.state,live.owner.character,live.owner.repository)
 	check(bool(audit.get("ok",false)) and int(Dictionary(audit.get("counts",{})).get(ELIXIR,0))==1,"one_use_derived_from_resolved_engine_events")
 	check(int(audit.get("next_available_round",-1))==3,"two_round_shared_cooldown_start")
+	# Malicious or damaged checkpoint events must not prove a paid use by
+	# merely carrying the same item ID and component count.
+	var forged_event: CombatEvent
+	for event in simulator.state.event_log:
+		if event.kind == CombatEvent.Kind.EFFECT and String(event.payload.get("source_type","")) == "elixir":
+			forged_event = event
+			break
+	check(forged_event != null,"real_elixir_component_event_found")
+	if forged_event != null:
+		var original_payload := forged_event.payload.duplicate(true)
+		forged_event.payload["inline_heal"] = 999999
+		var tamper := SoloCombatElixirJournal.inspect(simulator.state,live.owner.character,live.owner.repository)
+		check(not bool(tamper.get("ok",false)) and String(tamper.get("reason","")) == "elixir_journal_component_payload_mismatch","forged_elixir_component_rejected")
+		forged_event.payload = original_payload
+		check(bool(SoloCombatElixirJournal.inspect(simulator.state,live.owner.character,live.owner.repository).get("ok",false)),"original_elixir_journal_restored")
 	var base := ExpeditionSaveService.read(EXP,ID,PLAYER)
 	check(bool(base.get("ok",false)),"precombat_base_readable")
 	if bool(base.get("ok",false)):
