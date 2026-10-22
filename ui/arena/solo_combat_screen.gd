@@ -11,6 +11,7 @@ const ZONE_NAMES := ["Голова", "Грудь", "Руки", "Пояс", "Но
 const EQUIPMENT := ["head", "chest", "hands", "waist", "legs", "main_hand", "off_hand", "ring1", "ring2", "feet"]
 const ZONE_ATLAS := "res://assets/ui/slots/BOA_COMBAT_ZONES_v2.png"
 const HERO_AVATAR := "res://assets/avatars/hero_realistic_01.png"
+const NPC_PLACEHOLDER_AVATAR := "res://assets/avatars/wanderer_01.svg"
 const BACKGROUND := "res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png"
 
 var snapshot: Dictionary = {}
@@ -181,7 +182,7 @@ func _apply_orientation() -> void:
 	# Retain the same 480x480 logical composition, with one uniform scale.
 	# On landscape a separate scrollable command column sits alongside it.
 	var room: Vector2 = tab_container.size
-	var edge: float = minf(room.x - (0.0 if portrait else 340.0), room.y * (0.66 if portrait else 1.0))
+	var edge: float = minf(room.x - (0.0 if portrait else 340.0), maxf(1.0, room.y - 36.0) * (0.66 if portrait else 1.0))
 	edge = floorf(maxf(1.0, edge))
 	if portrait:
 		edge = minf(edge, room.x - 4.0)
@@ -338,8 +339,12 @@ func _build_face_actor(origin: Vector2, actor: Dictionary, hero: bool, equipment
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if hero and ResourceLoader.exists(HERO_AVATAR):
 		art.texture = load(HERO_AVATAR) as Texture2D
+	elif not hero and ResourceLoader.exists(NPC_PLACEHOLDER_AVATAR):
+		# Shared anonymous NPC artwork, not an assertion of NPC identity.
+		art.texture = load(NPC_PLACEHOLDER_AVATAR) as Texture2D
+		art.modulate = Color("#a8a4a7")
 	avatar.add_child(art)
-	if not hero:
+	if not hero and (art.texture == null or bool(actor.get("dead", false))):
 		var silhouette := Label.new()
 		silhouette.text = "†" if bool(actor.get("dead", false)) else "?"
 		silhouette.position = Vector2(53, 65)
