@@ -460,17 +460,16 @@ func _change_test_level(is_player: bool, delta: int) -> void:
 func _build_square() -> void:
 	arena_background = TextureRect.new()
 	arena_background.texture = load("res://assets/ui/arena/BOA_ARENA_BACKGROUND_V1.png") as Texture2D
-	# Fixed logical 480x480 image: the enclosing square is uniformly scaled.
-	# Full-rect anchors plus explicit size caused Godot _set_size warnings.
-	arena_background.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	arena_background.position = Vector2.ZERO
+	# The background belongs to the canonical 480x480 square, never to the
+	# surrounding viewport. Anchors are configured AFTER parenting, with no
+	# competing explicit size/texture minimum: the parent owns its geometry.
 	arena_background.custom_minimum_size = Vector2.ZERO
 	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	arena_background.stretch_mode = TextureRect.STRETCH_SCALE
-	arena_background.size = Vector2(ARENA_LOGICAL_EXTENT, ARENA_LOGICAL_EXTENT)
 	arena_background.clip_contents = false
 	arena_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	square_content.add_child(arena_background)
+	arena_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(242, 8), false)
 	var abilities := HBoxContainer.new()
