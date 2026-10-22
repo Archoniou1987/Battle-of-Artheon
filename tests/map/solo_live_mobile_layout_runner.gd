@@ -45,6 +45,34 @@ func _run() -> void:
 		check(ability.custom_minimum_size.y>=44 and elixir.custom_minimum_size.y>=44,"ability_and_elixir_touch_targets")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
 	check(grid != null and grid.columns==SoloLiveMapSession.WIDTH,"canonical_map_width_preserved")
+	# Exercise the real scene's selection handler without a fabricated
+	# combat engine. Capacity is exactly two zones for this UI fixture.
+	if block_row != null:
+		page.set("active_block_capacity",2)
+		var checks: Array[CheckBox] = []
+		for i in range(5):
+			var cb := CheckBox.new()
+			cb.button_pressed = i < 2
+			block_row.add_child(cb)
+			checks.append(cb)
+		page.set("block_controls",checks)
+		checks[2].button_pressed = true
+		page.call("_on_block_zone_toggled",true,2)
+		var count := 0
+		for cb in checks:
+			if cb.button_pressed:
+				count += 1
+		check(count==2 and checks[2].button_pressed,"new_block_zone_replaces_old_at_capacity")
+		checks[2].button_pressed = false
+		page.call("_on_block_zone_toggled",false,2)
+		check(checks[2].button_pressed,"cannot_submit_fewer_than_block_capacity")
+		checks[3].button_pressed = true
+		page.call("_on_block_zone_toggled",true,3)
+		count = 0
+		for cb in checks:
+			if cb.button_pressed:
+				count += 1
+		check(count==2 and checks[3].button_pressed,"repeated_block_changes_keep_exact_capacity")
 	page.queue_free()
 	print("SOLO_MOBILE_LAYOUT_TEST=", "PASS" if failures.is_empty() else "FAIL"," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
