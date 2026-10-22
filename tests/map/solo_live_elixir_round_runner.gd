@@ -50,6 +50,9 @@ func _run() -> void:
 	check(hero.equip("waist","elixir_test_belt_v1",repo),"belt_equip")
 	check(hero.assign_elixir(0,ELIXIR,repo),"potion_slot_zero")
 	check(hero.assign_elixir(1,"elixir_test_mana_v1",repo),"potion_slot_one")
+	var pools := hero.resource_snapshot(repo)
+	check(bool(pools.has("max_hp")),"real_character_hp_available")
+	hero.current_hp = maxi(1,int(pools.get("max_hp",100))-35)
 	var original_charges := int(repo.get_item(ELIXIR).get("charges",-1))
 	check(bool(SoloTownSaveService.save(TOWN,hero,repo).get("ok",false)),"town_saved")
 	check(bool(SoloTownExpeditionBridge.create_from_town(EXP,ID,993,START,hero,repo,MANIFEST).get("ok",false)),"expedition_saved")
@@ -79,6 +82,11 @@ func _run() -> void:
 	check(simulator.state.round_number==1,"exactly_one_round")
 	check(FileAccess.file_exists(live.checkpoint_path),"elixir_checkpoint_saved")
 	check(int(live.owner.repository.get_item(ELIXIR).get("charges",-1))==original_charges-1,"live_charge_decremented_once")
+	var actual_heal := false
+	for event in simulator.state.event_log:
+		if event.kind == CombatEvent.Kind.EFFECT and event.source_id == PLAYER and String(event.payload.get("source_type","")) == "elixir" and String(event.payload.get("source_instance_id","")) == ELIXIR and int(event.result.get("healed",0)) > 0:
+			actual_heal = true
+	check(actual_heal,"existing_combat_engine_applied_real_healing")
 	var audit := SoloCombatElixirJournal.inspect(simulator.state,live.owner.character,live.owner.repository)
 	check(bool(audit.get("ok",false)) and int(Dictionary(audit.get("counts",{})).get(ELIXIR,0))==1,"one_use_derived_from_resolved_engine_events")
 	check(int(audit.get("next_available_round",-1))==3,"two_round_shared_cooldown_start")
