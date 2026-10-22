@@ -11,6 +11,8 @@ var status_label: Label
 var tile_container: GridContainer
 var map_scroller: ScrollContainer
 var live_combat: SoloLiveNpcCombat
+var game_map_scroll: ScrollContainer
+var solo_combat_screen: SoloCombatScreen
 var round_button: Button
 var return_button: Button
 var combat_panel: VBoxContainer
@@ -164,6 +166,15 @@ func _build_view() -> void:
 	return_button.text = "Завершить экспедицию и вернуться в деревню"
 	return_button.pressed.connect(_return_town)
 	root.add_child(return_button)
+	# The map and its diagnostic controls never own the game's combat UI.
+	# Display one separate battle surface over the expedition during an encounter.
+	game_map_scroll = scroll
+	solo_combat_screen = SoloCombatScreen.new()
+	solo_combat_screen.name = "SoloCombatScreen"
+	add_child(solo_combat_screen)
+	solo_combat_screen.visible = false
+	solo_combat_screen.round_requested.connect(_play_combat_round)
+	solo_combat_screen.elixir_selected.connect(_refresh_game_ability_options)
 
 func _set_status(value: String) -> void:
 	if status_label != null:
@@ -315,6 +326,18 @@ func _update_equipment_grid(entries: Array) -> void:
 ## Read-only widgets for the real checkpointed combatant and log.
 ## Display never creates another CombatEngine or overwrites saved stats.
 func _refresh_combat_controls() -> void:
+	# Real expeditions use SoloCombatScreen. The old diagnostic controls are
+	# retained only for pre-existing development runners, beneath a hidden map.
+	if game_map_scroll != null:
+		game_map_scroll.visible = live_combat == null
+	if solo_combat_screen != null:
+		solo_combat_screen.visible = live_combat != null
+		if live_combat != null:
+			var live_view := live_combat.combat_view()
+			if bool(live_view.get("ok", false)):
+				solo_combat_screen.present(_game_combat_view(live_view))
+			else:
+				solo_combat_screen.show_problem("Боевой снимок недоступен")
 	combat_panel.visible = live_combat != null
 	attack_controls.clear()
 	block_controls.clear()
@@ -482,6 +505,50 @@ func _sync_abi_availability_with_elixir() -> void:
 	if selected_id > 0 and ability_selector.is_item_disabled(selected_id):
 		ability_selector.select(0)
 
+
+## Pure presentation snapshot: mutable item state is never handed to another
+## combat owner. The only authoritative actions remain live_combat.play_round().
+func _game_combat_view(view: Dictionary) -> Dictionary:
+	var display: Dictionary = view.duplicate(true)
+	var hero: Dictionary = display.get("player", {})
+	hero["level"] = session.character.level
+	display["player"] = hero
+	var simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
+	var enemies: Array = display.get("enemies", [])
+	for i in range(enemies.size()):
+		var record: Dictionary = enemies[i]
+		var actor := simulator.state.get_combatant(String(record.get("id", "")))
+		if actor != null:
+			record["level"] = actor.level
+			record["ap"] = actor.action_points
+			record["max_ap"] = actor.max_action_points
+		enemies[i] = record
+	display["enemies"] = enemies
+	var gear: Array = display.get("equipment_slots", [])
+	for i in range(gear.size()):
+		var slot: Dictionary = gear[i]
+		var instance_id := String(slot.get("instance_id", ""))
+		slot["item"] = session.repository.get_item(instance_id).duplicate(true) if not instance_id.is_empty() else {}
+		gear[i] = slot
+	display["equipment_slots"] = gear
+	var ready: Array[bool] = []
+	for index in range(4):
+		var check := SoloCombatElixirJournal.preflight(simulator.state, session.character, session.repository, index)
+		ready.append(bool(check.get("ok", false)) and not bool(view.get("finished", false)))
+	display["elixir_availability"] = ready
+	return display
+
+## The simulator predicts mana restoration for a selected potion without
+## spending it. This updates UI availability only, not the queued round.
+func _refresh_game_ability_options(elixir_slot: int) -> void:
+	if live_combat == null or session == null or solo_combat_screen == null:
+		return
+	var simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
+	if simulator == null or simulator.controller.combat_finished():
+		return
+	var controls := simulator.player_controls(session.character.character_id, elixir_slot)
+	solo_combat_screen.set_ability_options(Array(controls.get("abilities", [])) if bool(controls.get("ok", false)) else [])
+
 func _move(target: Vector2i) -> void:
 	if session == null or pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
 		return
@@ -513,12 +580,13 @@ func _start_combat(cell: Vector2i) -> void:
 	_refresh()
 	_set_status("Бой начался. Следующий раунд: базовые атаки обеих сторон.")
 
-func _play_combat_round() -> void:
+func _play_combat_round(submission: Dictionary = {}) -> void:
 	if live_combat == null:
 		return
-	var submission: Dictionary = {}
 	var before := live_combat.combat_view()
-	if bool(before.get("ok",false)) and not bool(before.get("finished",false)):
+	# Empty orders from the old diagnostic runner retain legacy behavior.
+	# The game screen supplies the entire immutable selection at submission.
+	if submission.is_empty() and bool(before.get("ok",false)) and not bool(before.get("finished",false)):
 		var attack_zones: Array[String] = []
 		for option in attack_controls:
 			var selected_index := option.get_selected_id()
