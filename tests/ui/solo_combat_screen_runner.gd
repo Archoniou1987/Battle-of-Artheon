@@ -60,23 +60,30 @@ func _run() -> void:
 	screen.present(fixture)
 	await process_frame # deferred binding runs after ItemIcon._ready()
 	await process_frame
-	var hero_panel := screen.fighters_column.get_child(0) as PanelContainer
-	var hero_column := hero_panel.get_child(0) as VBoxContainer
-	var equipment_grid: GridContainer
-	for node in hero_column.get_children():
-		if node is HBoxContainer:
-			for inside in node.get_children():
-				if inside is GridContainer:
-					equipment_grid = inside
-	check(equipment_grid != null and equipment_grid.get_child_count() == 10, "ten item icon controls")
-	if equipment_grid != null:
-		var helmet := equipment_grid.get_child(0) as ItemIcon
-		check(helmet != null and helmet.instance_id == "fixture_helm", "equipment survives child ready")
-		check(helmet != null and helmet._icon_texture != null and helmet._icon_texture.texture != null, "real item texture applied after ready")
+	check(screen.square_host != null and screen.square_content != null, "single 480x480 Face to Face stage")
+	check(screen.square_content.size == Vector2(480, 480), "arena keeps 1:1 logical geometry")
+	check(screen.tab_container.get_tab_count() == 3, "battle, participants, log tabs")
+	check(screen.roster_allies.get_child_count() == 2, "player occupies ally roster")
+	check(screen.roster_enemies.get_child_count() == 3, "two NPCs belong only to opponent roster")
+	var scene_fighters: Array[Panel] = []
+	for node in screen.square_content.get_children():
+		if node is Panel:
+			scene_fighters.append(node)
+	check(scene_fighters.size() == 2, "face stage draws exactly two fighters, even in group combat")
+	if scene_fighters.size() > 0:
+		var icons: Array[ItemIcon] = []
+		for node in scene_fighters[0].get_children():
+			if node is ItemIcon:
+				icons.append(node)
+		check(icons.size() == 10, "face stage shows ten real player equipment slots")
+		if icons.size() > 0:
+			var helmet := icons[0]
+			check(helmet.instance_id == "fixture_helm", "item data survives _ready")
+			check(helmet._icon_texture != null and helmet._icon_texture.texture != null, "item texture survives _ready")
 	check(screen.attack_buttons[0].custom_minimum_size.y >= 80, "mobile attack touch size compensates Godot canvas stretch")
 	check(screen.abi_buttons[0].custom_minimum_size.y >= 80, "mobile ABI touch size compensates Godot canvas stretch")
 	check(screen.round_button.custom_minimum_size.y >= 80, "mobile end-round touch height")
-	check(screen.fighters_column.get_child_count() == 3, "hero and two NPC cards")
+	check(screen.roster_enemies.get_child_count() == 3, "two NPCs remain in separate roster tab")
 	check(screen.attack_buttons.size() == 5 and screen.block_buttons.size() == 5, "five hit/block zones")
 	check(screen.abi_buttons.size() == 5 and screen.potion_buttons.size() == 4, "five ABI and four potions")
 	check(screen.chosen_attack.size() == 1 and screen.chosen_attack[0] == "chest", "one selected zone prepares all physical hits")
@@ -116,11 +123,11 @@ func _run() -> void:
 	root.size = Vector2i(390, 844)
 	await process_frame
 	screen._apply_orientation()
-	check(screen.arena_layout.vertical, "portrait stacks two panels")
+	check(screen.arena_layout.vertical and screen.square_host.custom_minimum_size.x == screen.square_host.custom_minimum_size.y, "portrait keeps square and scrolls actions below")
 	root.size = Vector2i(844, 390)
 	await process_frame
 	screen._apply_orientation()
-	check(not screen.arena_layout.vertical, "landscape uses two columns")
+	check(not screen.arena_layout.vertical and screen.square_host.custom_minimum_size.x == screen.square_host.custom_minimum_size.y, "landscape keeps square beside action column")
 	screen.queue_free()
 	var map_scene := load("res://scenes/main/solo_live_map.tscn") as PackedScene
 	check(map_scene != null, "real expedition scene exists")
