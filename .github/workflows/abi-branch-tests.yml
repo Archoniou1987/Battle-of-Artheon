@@ -144,6 +144,7 @@ jobs:
           status=0
           for script in \
             tests/ui/arena_open_smoke.gd \
+            tests/ui/solo_combat_screen_runner.gd \
             tests/ui/elixir_abi_press_runner.gd \
             tests/ui/square_slot_interaction_runner.gd \
             tests/ui/arena_terminal_persistence_runner.gd
