@@ -92,25 +92,18 @@ func _run() -> void:
 		await process_frame
 		await process_frame
 		screen._apply_orientation()
-		screen.scroll.scroll_vertical = 0
 		await RenderingServer.frame_post_draw
-		var max_scroll := maxi(0, int(screen.scroll.get_v_scroll_bar().max_value - screen.scroll.size.y))
-		for frame in range(8):
-			screen.scroll.scroll_vertical = mini(max_scroll, frame * maxi(1, int(screen.scroll.size.y) - 30))
-			await process_frame
-			await RenderingServer.frame_post_draw
-			var file := "%s/%s_%02d.png" % [OUTPUT, key, frame]
-			var err := root.get_texture().get_image().save_png(file)
-			if err != OK:
-				push_error("VISUAL_CAPTURE_FAIL: " + file + " code=" + str(err))
-				quit(1)
-				return
-			print("VISUAL_CAPTURE_FILE=", file, " scroll=", screen.scroll.scroll_vertical)
-			if screen.scroll.scroll_vertical >= max_scroll:
-				break
+		# The canonical Arena square has no trial scrollable command pane.
+		var file := "%s/%s_00.png" % [OUTPUT, key]
+		var err := root.get_texture().get_image().save_png(file)
+		if err != OK:
+			push_error("VISUAL_CAPTURE_FAIL: " + file + " code=" + str(err))
+			quit(1)
+			return
+		print("VISUAL_CAPTURE_FILE=", file, " shared_arena=true")
 		# In addition to Face to Face, capture the distinct two-column
 		# allies/enemies view. Its contents come from the same safe fixture.
-		screen.tab_container.current_tab = 1
+		screen.tab_container.current_tab = 0
 		await process_frame
 		await process_frame
 		await RenderingServer.frame_post_draw
