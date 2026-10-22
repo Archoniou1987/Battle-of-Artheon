@@ -70,6 +70,8 @@ func _run() -> void:
 	check(arena is ArenaScreen and arena.external_combat_mode, "real Arena template mounted for live map combat")
 	check(arena.combat_session == null, "expedition Arena never constructs a second test engine")
 	check(arena.square_content.size == Vector2(480, 480), "original Arena square preserved")
+	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "shared Arena never scales its 480px content internally")
+	check(screen.square_content.get_child_count() == 1 and screen.square_content.get_child(0) == arena, "host holds only the original Arena, no trial layers")
 	check(arena.player_slots.size() == 14 and arena.enemy_slots.size() == 14, "actual Arena equipment slots reused")
 	check(arena.ability_buttons.size() == 5 and arena.player_elixir_slots.size() == 4, "real Arena ABI and elixirs reused")
 	check(arena.attack_buttons.size() == 5 and arena.defense_buttons.size() == 5, "real Arena zone selectors reused")
@@ -111,10 +113,14 @@ func _run() -> void:
 	await process_frame
 	screen._apply_orientation()
 	check(screen.arena_layout.vertical and screen.square_host.custom_minimum_size.x == screen.square_host.custom_minimum_size.y, "portrait keeps square and scrolls actions below")
+	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "portrait retains native Arena geometry")
 	root.size = Vector2i(844, 390)
 	await process_frame
 	screen._apply_orientation()
 	check(not screen.arena_layout.vertical and screen.square_host.custom_minimum_size.x == screen.square_host.custom_minimum_size.y, "landscape keeps square beside action column")
+	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "landscape retains native Arena geometry")
+	check(screen.square_content.scale.is_equal_approx(Vector2.ONE * (screen.square_host.custom_minimum_size.x / 480.0)), "outer host is the only active scaler")
+	check(screen.square_host.custom_minimum_size.y <= screen.arena_layout.size.y + 1.0, "landscape Arena does not extend below available area")
 	screen.queue_free()
 	var map_scene := load("res://scenes/main/solo_live_map.tscn") as PackedScene
 	check(map_scene != null, "real expedition scene exists")
