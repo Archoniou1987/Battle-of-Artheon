@@ -20,6 +20,7 @@ var block_zone_row: GridContainer
 var ability_selector: OptionButton
 var ability_slot_ids: Array[String] = []
 var effects_label: Label
+var elixir_summary: Label
 var attack_controls: Array[OptionButton] = []
 var block_controls: Array[CheckBox] = []
 var ground_list: VBoxContainer
@@ -97,6 +98,9 @@ func _build_view() -> void:
 	combat_panel.add_child(ability_label)
 	ability_selector = OptionButton.new()
 	combat_panel.add_child(ability_selector)
+	elixir_summary = Label.new()
+	elixir_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	combat_panel.add_child(elixir_summary)
 	effects_label = Label.new()
 	effects_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(effects_label)
@@ -183,6 +187,21 @@ func _refresh_combat_controls() -> void:
 		combat_summary.text = "Боевые данные недоступны."
 		return
 	var hero: Dictionary = view["player"]
+	var elixir_view: Dictionary = view.get("elixir_loadout",{})
+	var elixir_lines: Array[String] = []
+	if bool(elixir_view.get("ok",false)):
+		for raw_slot in Array(elixir_view.get("slots",[])):
+			var slot: Dictionary = raw_slot
+			var number := int(slot.get("slot",0)) + 1
+			if not bool(slot.get("unlocked",false)):
+				elixir_lines.append(str(number)+": закрыт")
+			elif String(slot.get("instance_id","")).is_empty():
+				elixir_lines.append(str(number)+": пусто")
+			else:
+				elixir_lines.append("%d: %s (%d/%d)" % [number,String(slot.get("instance_id","")),int(slot.get("charges",0)),int(slot.get("max_charges",0))])
+		elixir_summary.text = "Эликсиры (просмотр; расход подключается отдельно): " + " • ".join(PackedStringArray(elixir_lines))
+	else:
+		elixir_summary.text = "Слоты эликсиров недоступны: "+String(elixir_view.get("reason","unknown"))
 	var enemies: Array = view.get("enemies",[])
 	var opponent_text := ""
 	for enemy in enemies:
