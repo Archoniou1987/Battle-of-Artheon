@@ -409,9 +409,9 @@ func _update_selection() -> void:
 		# Combat checkpoint is complete, but the world settlement is not
 		# published until the owning SoloLiveNpcCombat confirms it.
 		var winner := String(snapshot.get("winner", ""))
-		var player_won := winner == "players"
+		var outcome := "Победа" if winner == "players" else "Поражение" if not winner.is_empty() else "Бой завершён"
 		round_button.text = "ПОДТВЕРДИТЬ ИТОГ"
-		instruction_label.text = ("Победа" if player_won else "Поражение") + " — подтвердите результат боя"
+		instruction_label.text = outcome + " — подтвердите результат боя"
 		round_button.disabled = false
 	elif stunned:
 		round_button.text = "ПРОПУСТИТЬ РАУНД"
