@@ -463,6 +463,7 @@ func _build_square() -> void:
 	# Fixed logical 480x480 image: the enclosing square is uniformly scaled.
 	# Full-rect anchors plus explicit size caused Godot _set_size warnings.
 	arena_background.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	arena_background.position = Vector2.ZERO
 	arena_background.custom_minimum_size = Vector2.ZERO
 	arena_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	arena_background.stretch_mode = TextureRect.STRETCH_SCALE
@@ -479,16 +480,24 @@ func _build_square() -> void:
 	abilities.add_theme_constant_override("separation", 0)
 	square_content.add_child(abilities)
 	for index in range(5):
+		# Every ABI lives in a fixed 34x34 cell. Long IDs/names must never
+		# expand the HBoxContainer and misalign the five approved square slots.
+		var cell := Control.new()
+		cell.name = "ABICell%d" % (index + 1)
+		cell.custom_minimum_size = Vector2(34, 34)
+		abilities.add_child(cell)
 		var button := Button.new()
 		button.name = "ABI%d" % (index + 1)
-		button.custom_minimum_size = Vector2(34, 34)
+		button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		button.clip_text = true
+		button.add_theme_font_size_override("font_size", 8)
 		button.text = ""
 		SquareSlotFeedback.style_abi_square(button)
 		button.tooltip_text = SquareUiGeometry.abi_source(index) + " — пусто"
 		button.toggle_mode = true
 		button.disabled = true
 		button.pressed.connect(_select_ability.bind(index))
-		abilities.add_child(button)
+		cell.add_child(button)
 		SquareSlotFeedback.attach(button, "ability")
 		ability_buttons.append(button)
 	_build_resource_display(true)
