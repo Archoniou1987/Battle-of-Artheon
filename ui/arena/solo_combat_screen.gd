@@ -89,7 +89,7 @@ func _ready() -> void:
 	shared_arena.live_ability_selected.connect(_choose_ability)
 	shared_arena.live_elixir_selected.connect(_choose_elixir)
 	shared_arena.live_selection_changed.connect(_on_shared_selection)
-	# Actions are scrollable but the square remains visible as one entity.
+	# Secondary information tabs are outside the immutable Arena square.
 	tab_container = TabContainer.new()
 	tab_container.name = "CombatTabs"
 	tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -176,12 +176,12 @@ func _apply_orientation() -> void:
 	var portrait := size.y >= size.x
 	arena_layout.vertical = portrait
 	# Retain the same 480x480 logical composition, with one uniform scale.
-	# On landscape a separate scrollable command column sits alongside it.
+	# On landscape the participants and journal tabs sit beside the square.
 	var room: Vector2 = arena_layout.size
 	var edge: float = minf(room.x - (0.0 if portrait else 340.0), maxf(1.0, room.y - (210.0 if portrait else 0.0)))
 	edge = floorf(maxf(1.0, edge))
 	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
-	# The scroll pane fills the remaining area; no long group roster in combat.
+	# The external information zone fills the remaining area.
 	tab_container.custom_minimum_size = Vector2(0, 190) if portrait else Vector2(330, 0)
 
 func present(view: Dictionary) -> void:
@@ -375,14 +375,6 @@ func _update_selection() -> void:
 		var availability: Array = snapshot.get("elixir_availability", [])
 		potion_buttons[index].disabled = finished or index >= availability.size() or not bool(availability[index])
 		_style_button(potion_buttons[index], chosen_elixir == index, Color("#66ab8b"))
-	var description := square_content.get_node_or_null("PreparedActions") as Label
-	if description != null:
-		var selected_attacks := ", ".join(chosen_attack)
-		var selected_defense := ", ".join(chosen_blocks)
-		description.text = "АТАКА  %s    |    БЛОК  %s" % [
-			selected_attacks if not selected_attacks.is_empty() else "—",
-			selected_defense if not selected_defense.is_empty() else "—"
-		]
 	var count := int(controls.get("attack_count", 0))
 	var block_count := int(controls.get("block_capacity", 0))
 	var valid := bool(controls.get("ok", false)) and (stunned or (not chosen_attack.is_empty() and count > 0 and chosen_blocks.size() == block_count))
