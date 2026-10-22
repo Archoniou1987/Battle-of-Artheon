@@ -80,7 +80,7 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 		var rolls:=_attack_rolls()
 		var damage_roll:=float(rolls["damage"]) if rolls.has("damage") else rng.randf()
 		rolls["damage"]=damage_roll
-		var selected_zone := body_zones[zone_offset + hit_index] if zone_offset + hit_index < body_zones.size() else HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)]
+		var selected_zone: String = body_zones[zone_offset + hit_index] if zone_offset + hit_index < body_zones.size() else String(HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)])
 		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,selected_zone,{
 			"is_extra_attack":extra,
 			"generates_ap":not extra,
