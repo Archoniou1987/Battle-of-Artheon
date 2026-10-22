@@ -679,6 +679,34 @@ func _return_town() -> void:
 		return
 	var result := session.return_to_town(TOWN)
 	if not bool(result.get("ok",false)):
-		_set_status("Возврат заблокирован: "+String(result.get("detail",result.get("reason","unknown"))))
+		var reason := String(result.get("detail",result.get("reason","unknown")))
+		_set_status("Возврат заблокирован: "+reason)
+		if String(result.get("reason","")) == "town_adoption_failed" and reason == "town_snapshot_conflict":
+			_show_town_conflict_resolution()
 		return
+	get_tree().change_scene_to_file(SCENE_TOWN)
+
+
+## Never resolve two divergent player saves silently. This dialog is shown
+## only after the expedition was durably closed and normal adoption refused.
+func _show_town_conflict_resolution() -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Конфликт сохранений"
+	dialog.dialog_text = "Город и завершённая экспедиция содержат разные версии персонажа. Автоматический возврат остановлен.\n\nЕсли подтвердить, текущее сохранение города будет сначала сохранено в отдельном архивном файле. Затем город примет персонажа, HP и предметы из завершённой экспедиции. Изменения, существующие только в прежнем городе, не объединяются автоматически.\n\nОтмена ничего не меняет."
+	dialog.ok_button_text = "Сохранить город в архив и принять экспедицию"
+	dialog.cancel_button_text = "Отмена"
+	add_child(dialog)
+	dialog.confirmed.connect(func() -> void: _confirm_town_conflict_resolution())
+	dialog.popup_centered(Vector2i(640,440))
+
+
+func _confirm_town_conflict_resolution() -> void:
+	if session == null or live_combat != null or pickup_active or FileAccess.file_exists(MANIFEST):
+		_set_status("Возврат всё ещё заблокирован незавершённым действием.")
+		return
+	var resolved := SoloTownSaveService.adopt_closed_expedition_preserving_town(TOWN,SAVE,session.expedition.expedition_id,PLAYER,MANIFEST)
+	if not bool(resolved.get("ok",false)):
+		_set_status("Архивное восстановление отказано: "+String(resolved.get("reason","unknown")))
+		return
+	_set_status("Городское сохранение архивировано: "+String(resolved.get("city_backup_path","")))
 	get_tree().change_scene_to_file(SCENE_TOWN)
