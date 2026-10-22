@@ -224,6 +224,42 @@
       "par_stats": {
         "PAR057": 1
       }
+    },
+    {
+      "id": "training_fire_staff_abi003",
+      "name": "Учебный посох пламени",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "staff",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 10,
+        "max": 14,
+        "type": "blunt"
+      },
+      "par_stats": {
+        "PAR057": 1
+      },
+      "abilities": [
+        "ABI003"
+      ]
+    },
+    {
+      "id": "training_healer_chest_abi004",
+      "name": "Учебный нагрудник целителя",
+      "type": "armour",
+      "equip_slots": [
+        "chest"
+      ],
+      "slot": "chest",
+      "icon_id": "ICON_0025",
+      "par_stats": {},
+      "abilities": [
+        "ABI004"
+      ]
     }
   ]
 }
