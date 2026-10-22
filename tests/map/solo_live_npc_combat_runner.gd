@@ -49,13 +49,17 @@ func _initialize() -> void:
 	var controls: Dictionary = view_before.get("controls", {})
 	check(bool(controls.get("ok",false)), "canonical_player_controls_available")
 	var initial_round := sim.state.round_number
+	var checkpoint_existed := FileAccess.file_exists(combat.checkpoint_path)
+	var checkpoint_before := FileAccess.get_file_as_string(combat.checkpoint_path) if checkpoint_existed else ""
 	var rejected := combat.play_round({
 		"player_id":"player", "attack_zones":["invalid_zone"],
 		"block_zones":[], "ability_id":"", "elixir_slot":-1
 	})
 	check(not bool(rejected.get("ok",false)), "invalid_ui_order_rejected_before_round")
 	check(sim.state.round_number == initial_round, "rejected_ui_order_does_not_advance_engine")
-	check(not FileAccess.file_exists(combat.checkpoint_path), "rejected_ui_order_does_not_create_checkpoint")
+	check(FileAccess.file_exists(combat.checkpoint_path) == checkpoint_existed, "rejected_ui_order_preserves_checkpoint_existence")
+	if checkpoint_existed:
+		check(FileAccess.get_file_as_string(combat.checkpoint_path) == checkpoint_before, "rejected_ui_order_does_not_modify_checkpoint")
 	var chosen_blocks: Array[String] = []
 	for raw_zone in ["chest", "arms", "waist", "legs", "head"]:
 		if chosen_blocks.size() >= int(controls.get("block_capacity", 0)):
