@@ -29,4 +29,9 @@ This package does not alter the globally shared five-second `GroundLootService` 
 
 `tests/map/solo_live_elixir_round_runner.gd` runs a real mapped NPC fight with a real belt, two assigned potions, one consumable in round 1 and a recovery from the exact checkpoint. It proves the source expedition still contains precombat charges until settlement, only one charge is charged in the live repository, canonical elixir EFFECT events survive the restart without replay, attempted use of a different slot on cooldown does not start a round, and a no-elixir second round causes no extra deduction. It runs inside the existing ABI workflow along with all previous PAR/ABI/EFF/group checkpoint/defeat/ground loot runners.
 
+The checkpoint-derived journal now also validates each actual EFFECT payload against the elixir's authored component kind and values, not only component count. A forged heal value, unrelated effect ID, or duplicate component must fail closed. The regression temporarily corrupts one resolved heal event in memory, verifies rejection, then restores it without changing the durable checkpoint.
+
+### Known follow-up
+The normal ABI availability readout currently preflights mana before elixir recovery. Therefore a player starting with insufficient mana cannot yet select an otherwise valid ABI funded by a mana elixir **in the same submitted round**. This combined-action edge case needs a separate preflight adjustment and test; do not mark it complete. Also, the final CI workflow must verify compilation and the existing victory/defeat regressions.
+
 Do not claim this package is green until the user performs the ABI run.
