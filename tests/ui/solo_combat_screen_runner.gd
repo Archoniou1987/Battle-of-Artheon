@@ -123,6 +123,27 @@ func _run() -> void:
 	last_orders.clear()
 	screen._submit()
 	check(last_orders.is_empty(), "double End Turn does not emit a second round")
+	# Next-round data must come from the newly published canonical snapshot,
+	# never from the previous selected ABI/potion or stale resource values.
+	var next_round: Dictionary = fixture.duplicate(true)
+	next_round["round"] = 4
+	next_round["player"]["hp"] = 61
+	next_round["player"]["mana"] = 12
+	next_round["enemies"][0]["hp"] = 19
+	next_round["ability_slots"][0]["available"] = false
+	next_round["elixir_loadout"]["slots"][0]["charges"] = 1
+	next_round["elixir_availability"] = [false, false, false, false]
+	next_round["last_round_log"] = ["Round four: confirmed hit"]
+	screen.present(next_round)
+	check(screen.round_label.text.contains("5"), "next round label follows engine round snapshot")
+	check(arena.hp_overlays["player"].text.contains("61"), "player HP updates after round")
+	check(arena.hp_overlays["enemy"].text.contains("19"), "selected opponent HP updates after round")
+	check(arena.mana_labels["player"].text.contains("12"), "mana updates after round")
+	check(arena.player_elixir_slots[0].text == "1/3", "consumed elixir charge updates after round")
+	check(arena.ability_buttons[0].disabled and arena.player_elixir_slots[0].disabled, "cooldown and consumed potion become unavailable")
+	check(screen.chosen_abi.is_empty() and screen.chosen_elixir == -1, "previous ABI and elixir do not leak into next round")
+	check(not arena.ability_buttons[0].button_pressed and not arena.player_elixir_slots[0].button_pressed, "next round clears previous selection visual state")
+	check(not screen.round_button.disabled, "next round releases End Turn lock with valid choices")
 	screen.present(fixture)
 	screen.shared_arena._select_zone(false, "chest")
 	check(screen.round_button.disabled, "no attack selection cannot advance a round")
