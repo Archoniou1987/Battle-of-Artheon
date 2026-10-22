@@ -188,7 +188,7 @@ func _apply_orientation() -> void:
 	var gap := float(arena_layout.get_theme_constant("separation"))
 	var available_width := room.x - (info_min.x + gap if not portrait else 0.0)
 	var available_height := room.y - (info_min.y + gap if portrait else 0.0)
-	var edge := floorf(maxf(1.0, minf(SQUARE_EDGE, available_width, available_height)))
+	var edge := floorf(maxf(1.0, minf(SQUARE_EDGE, minf(available_width, available_height))))
 	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
 
 func present(view: Dictionary) -> void:
