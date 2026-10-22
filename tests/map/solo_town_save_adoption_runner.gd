@@ -23,6 +23,15 @@ func _initialize() -> void:
 	check(city_repo.add_item({"instance_id":"OLD_BLADE","weight":1.0}),"town_item")
 	check(city.inventory.add_instance("OLD_BLADE",city_repo),"town_owns_item")
 	check(bool(SoloTownSaveService.save(TOWN,city,city_repo).get("ok",false)),"city_snapshot_exists_before_departure")
+	# Generator/inventory discrepancy must identify the orphan and refuse
+	# to overwrite a previously valid canonical city save.
+	var city_revision := String(SoloTownSaveService.read(TOWN,"player").get("sha256",""))
+	check(city_repo.add_item({"instance_id":"GEN_ORPHAN_TEST"}),"orphan_diagnostic_fixture")
+	var invalid_save := SoloTownSaveService.save(TOWN,city,city_repo,city_revision)
+	check(not bool(invalid_save.get("ok",false)) and String(invalid_save.get("reason",""))=="town_snapshot_unowned_items","orphan_blocks_canonical_write")
+	check(String(invalid_save.get("detail","")).contains("GEN_ORPHAN_TEST"),"orphan_item_id_is_reported")
+	check(String(SoloTownSaveService.read(TOWN,"player").get("sha256",""))==city_revision,"failed_save_keeps_prior_town_revision")
+	check(city_repo.remove_item("GEN_ORPHAN_TEST"),"orphan_fixture_removed")
 	var created := SoloTownExpeditionBridge.create_from_town(EXPEDITION,ID,77,Vector2i(2,2),city,city_repo,MANIFEST)
 	check(bool(created.get("ok",false)),"expedition_started")
 	if not bool(created.get("ok",false)):
