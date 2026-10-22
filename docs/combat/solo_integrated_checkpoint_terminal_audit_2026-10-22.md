@@ -21,3 +21,13 @@ This new defeat-specific regression has NOT been CI-verified. The successful #31
 1. Get CI confirmation of the new loss + consumed-charge recovery scenario.
 2. Run focused adversarial tests for victory with potions, terminal crash between staged snapshot and publication, checkpoint tampering and abnormal restoration paths.
 3. Separately expand coverage for combined potion components, full depletion, stun and two NPC combatants; preserve the existing canonical engine instead of parallel formulas.
+
+
+## ABI #313–#314 failure diagnosis and repair
+
+- #313: terminal defeat recovery rejected the new elixir stage with `defeat_repository_changed`.
+- #314: a direct JSON round-trip of an otherwise untouched fixture repository failed the previous `numeric_json_roundtrip_preserves_item_identity` test **before** settlement.
+- That isolates the cause to representation-sensitive repository comparison, not an actual missing elixir deduction. The first patch normalized only `charges`; the fixture demonstrated that nested numeric metadata must be compared safely as well.
+- Replaced the string comparison with a recursive value comparator checking ALL dictionary keys and array elements, allowing mathematically equivalent int/float values at any depth and requiring exact type/value for strings, booleans and null.
+- Expanded tests to reject different charge values, altered item names, nested elixir-component changes and missing unrelated inventory items. Victory and defeat paths use the same comparator.
+- This repair still requires a **new CI run**; do not infer a green test from this documentation.
