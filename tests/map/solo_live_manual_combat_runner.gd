@@ -44,7 +44,7 @@ func _chosen_blocks(capacity: int, first: String) -> Array[String]:
 func _attack_zones_for_round(sim: GroupCombatSimulator, number: int) -> Array[String]:
 	var zones: Array[String] = []
 	for event in sim.state.event_log:
-		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == PLAYER and int(event.payload.get("round",-1)) == number and not bool(event.payload.get("is_extra_attack",false)):
+		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == PLAYER and int(event.payload.get("round",-1)) == number and not bool(event.payload.get("is_extra_attack",false)) and not bool(event.payload.get("is_counterattack",false)):
 			zones.append(String(event.payload.get("zone","")))
 	return zones
 
