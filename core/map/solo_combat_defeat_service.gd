@@ -72,6 +72,10 @@ static func stage(session, battle: Dictionary, encounter_key: String, checkpoint
 	var expedition: ExpeditionState = saved["expedition"]
 	var character: CharacterState = saved["character"]
 	var repository: ItemRepository = saved["repository"]
+	var elixir_reconciled := SoloCombatElixirJournal.apply_to_baseline(persisted.state,character,repository)
+	if not bool(elixir_reconciled.get("ok",false)):
+		return {"ok":false,"reason":"defeat_elixir_journal_invalid","detail":String(elixir_reconciled.get("reason","unknown"))}
+	repository = elixir_reconciled["repository"]
 	if not expedition.is_active():
 		return {"ok":false,"reason":"defeat_expedition_closed"}
 	var ledger: Dictionary = expedition.world_state.get(LEDGER_KEY,{})
@@ -150,7 +154,10 @@ static func recover(manifest: Dictionary) -> Dictionary:
 	# Prove that staging did not forge any NPC defeats, loot, equipment or
 	# unrelated world changes. The only allowed deltas are the defeat
 	# receipt, return position and the explicitly provisional full heal.
-	if JSON.stringify(current["repository"].to_dict()) != JSON.stringify(next_repo.to_dict()):
+	var valid_elixirs := SoloCombatElixirJournal.apply_to_baseline(simulator.state,current["character"],current["repository"])
+	if not bool(valid_elixirs.get("ok",false)):
+		return {"ok":false,"reason":"defeat_elixir_journal_invalid"}
+	if JSON.stringify(valid_elixirs["repository"].to_dict()) != JSON.stringify(next_repo.to_dict()):
 		return {"ok":false,"reason":"defeat_repository_changed"}
 	var before_character := MapWorldCommitService._character_to_dict(current["character"])
 	var after_character := MapWorldCommitService._character_to_dict(next_player)
