@@ -66,6 +66,7 @@ func _run() -> void:
 	var sword := {
 		"instance_id":"SOLO_ABI_TEST_SWORD","equip_slots":["main_hand"],
 		"slot_usage":["main_hand"],"abilities":["ABI003"],
+		"par_stats":{"PAR057":1},
 		"damage":{"min":1.0,"max":2.0,"type":"slashing"}
 	}
 	var chest := {
