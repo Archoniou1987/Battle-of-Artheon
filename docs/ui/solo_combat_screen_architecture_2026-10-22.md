@@ -104,3 +104,25 @@ Now compute the host display edge as `floorf(maxf(1.0, minf(available_width, ava
 - Automated UI/visual checks now assert all ABI widths, original background geometry, and that the final Arena square rect lies inside the full screen in portrait and landscape (including the bottom End Turn artwork).
 
 Status: **committed, not yet run on Godot CI**. Do not claim visual completion until ABI Branch Tests and Solo Visual Audit on the latest SHA pass, followed by screenshot inspection.
+
+
+## APPROVED / FROZEN: responsive battle UI geometry (2026-10-22)
+
+**Decision:** The project owner reviewed both final Solo Visual Audit screenshots (Portrait and Landscape) and explicitly approved the overall structure. This section supersedes earlier provisional `awaiting CI`/geometry notes above.
+
+**Verified baseline**
+- SHA `51081718384fd66d10077e40870411c9edc2d9c9`
+- ABI Branch Tests: run `39805762893` — success.
+- Solo Visual Audit: run `39813363741` — success; screenshots inspected and structure approved by owner.
+
+**Layout contract — do not redesign during feature integration**
+1. Reuse the original `ArenaScreen` inside the map combat overlay. Its **480×480 design coordinates and inner arrangement remain unchanged**.
+2. Apply **one responsive outer scale** to the Arena square; it must fit fully inside the visible screen, including the bottom round button.
+3. **Landscape:** the square is on the left and makes effective use of available height; secondary tabs are in the remaining space on the right.
+4. **Portrait:** the square is above the secondary information section.
+5. The Arena background covers its own square, not the entire device viewport or the separate information column. Five ABI slots have equal fixed cells; text length must not change their width.
+6. Preserve both screenshot/geometry regressions and ABI checks; avoid unrelated changes to scale, root sizing, anchors, orientation, or the approved square during combat-engine work.
+
+**Deliberately open for point changes:** the **presentation of participants** in the auxiliary roster (allies/enemies). The owner intends to display participants differently. This is *not* authorization to rebuild the square, move the information section, or change the overall screen structure. Adjust only roster content/components when the new participant design is specified.
+
+**Next functional milestone:** validate attack zone selection, block zone selection, ABI, elixirs, and End Turn -> authoritative live Combat Engine, retaining one Arena UI and one gameplay engine.
