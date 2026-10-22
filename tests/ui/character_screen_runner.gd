@@ -13,6 +13,18 @@ func _run() -> void:
 	instance.item_repository = ItemRepository.new()
 	instance.player_character.inventory = InventoryState.new(instance.player_character.character_id)
 	instance.player_character.equipment = EquipmentState.new()
+	# Four town actions must disclose a canonical storage failure rather
+	# than silently ignore mobile taps. Never auto-reset player data.
+	instance._town_storage_blocked = true
+	instance._town_storage_issue = "read: test_rejected"
+	for guarded_section in ["Персонаж", "Инвентарь", "Арена", "Карта"]:
+		instance.call("_open_panel", guarded_section)
+		assert(instance.popup.visible)
+		assert(instance.popup_description.text.contains("test_rejected"))
+		assert(instance.popup_description.text.contains("не удалены"))
+	instance._town_storage_blocked = false
+	instance._town_storage_issue = ""
+	instance.popup.visible = false
 	instance.call("_open_panel", "Персонаж")
 	await process_frame
 	var screen := instance.get_node_or_null("CharacterScreen") as CharacterScreen
