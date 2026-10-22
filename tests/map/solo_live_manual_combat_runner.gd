@@ -123,8 +123,9 @@ func _run() -> void:
 	check(CombatModifierService.manual_block_zones(sim2.state.get_combatant(PLAYER))==first_blocks,"manual_block_choices_survive_restart")
 	check(not bool(pending["session"].move_one_step(Vector2i(5,5)).get("ok",false)),"locked_map_does_not_move")
 	var second_controls := sim2.player_controls(PLAYER)
-	var second_attacks := _requested_zones(int(second_controls.get("attack_count",0)),"legs")
-	var second_blocks := _chosen_blocks(int(second_controls.get("block_capacity",0)),"arms")
+	var second_stunned := bool(second_controls.get("stunned",false))
+	var second_attacks := [] as Array[String] if second_stunned else _requested_zones(int(second_controls.get("attack_count",0)),"legs")
+	var second_blocks := [] as Array[String] if second_stunned else _chosen_blocks(int(second_controls.get("block_capacity",0)),"arms")
 	var turn2 := resumed.play_round({"player_id":PLAYER,"attack_zones":second_attacks,"block_zones":second_blocks})
 	check(bool(turn2.get("ok",false)),"second_selected_round_resolved")
 	if not bool(turn2.get("ok",false)):
