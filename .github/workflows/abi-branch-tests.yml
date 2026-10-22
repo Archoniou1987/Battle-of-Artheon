@@ -93,6 +93,9 @@ jobs:
       - name: Start real Solo NPC combat and persist its first engine round
         run: bash tools/run_godot_check.sh tests/map/solo_live_npc_combat_runner.gd
 
+      - name: Check Solo mobile map scrolling and combat touch controls
+        run: bash tools/run_godot_check.sh tests/map/solo_live_mobile_layout_runner.gd
+
       - name: Verify playable Solo map stepping, reload and town checkout
         run: bash tools/run_godot_check.sh tests/map/solo_live_map_roundtrip_runner.gd
 
