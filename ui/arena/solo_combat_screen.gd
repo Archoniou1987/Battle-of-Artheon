@@ -71,17 +71,12 @@ func _ready() -> void:
 
 	# The battle tab always holds ONE 1:1 Face to Face arena. A group roster
 	# never causes additional fighter cards to appear in the main arena.
-	tab_container = TabContainer.new()
-	tab_container.name = "CombatTabs"
-	tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shell.add_child(tab_container)
 	arena_layout = BoxContainer.new()
-	arena_layout.name = "Поединок"
+	arena_layout.name = "BattleLayout"
 	arena_layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena_layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena_layout.add_theme_constant_override("separation", 6)
-	tab_container.add_child(arena_layout)
+	shell.add_child(arena_layout)
 	square_host = Control.new()
 	square_host.name = "FaceToFaceSquare"
 	square_host.clip_contents = true
@@ -91,11 +86,18 @@ func _ready() -> void:
 	square_content.size = Vector2.ONE * SQUARE_EDGE
 	square_host.add_child(square_content)
 	# Actions are scrollable but the square remains visible as one entity.
+	tab_container = TabContainer.new()
+	tab_container.name = "CombatTabs"
+	tab_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	arena_layout.add_child(tab_container)
+	var command_page := Control.new()
+	command_page.name = "Действия"
+	tab_container.add_child(command_page)
 	scroll = ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	arena_layout.add_child(scroll)
+	command_page.add_child(scroll)
 	actions_column = VBoxContainer.new()
 	actions_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions_column.add_theme_constant_override("separation", 7)
@@ -181,16 +183,12 @@ func _apply_orientation() -> void:
 	arena_layout.vertical = portrait
 	# Retain the same 480x480 logical composition, with one uniform scale.
 	# On landscape a separate scrollable command column sits alongside it.
-	var room: Vector2 = tab_container.size
-	var edge: float = minf(room.x - (0.0 if portrait else 340.0), maxf(1.0, room.y - 36.0) * (0.66 if portrait else 1.0))
+	var room: Vector2 = arena_layout.size
+	var edge: float = minf(room.x - (0.0 if portrait else 340.0), maxf(1.0, room.y - (210.0 if portrait else 0.0)))
 	edge = floorf(maxf(1.0, edge))
-	if portrait:
-		edge = minf(edge, room.x - 4.0)
 	SquareUiGeometry.fit(square_host, square_content, edge, SQUARE_EDGE)
 	# The scroll pane fills the remaining area; no long group roster in combat.
-	scroll.custom_minimum_size = Vector2.ZERO
-	if not portrait:
-		scroll.custom_minimum_size.x = 330.0
+	tab_container.custom_minimum_size = Vector2(0, 190) if portrait else Vector2(330, 0)
 
 func present(view: Dictionary) -> void:
 	snapshot = view.duplicate(true)
