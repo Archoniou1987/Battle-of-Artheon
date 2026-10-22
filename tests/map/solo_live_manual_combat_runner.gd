@@ -104,6 +104,7 @@ func _run() -> void:
 	var after1 := live.combat_view()
 	check(bool(after1.get("ok",false)) and int(after1.get("round",-1))==1,"combat_view_after_first_round")
 	check(not Array(after1.get("last_round_log",[])).is_empty(),"canonical_combat_event_log_visible")
+	check(String(turn1.get("state",""))=="ongoing","first_round_not_terminal_before_resume")
 	if String(turn1.get("state",""))!="ongoing":
 		return
 	var pending := SoloLiveMapSession.open_pending(EXP,MANIFEST,ID,PLAYER)
