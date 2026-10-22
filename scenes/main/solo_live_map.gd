@@ -510,10 +510,14 @@ func _sync_abi_availability_with_elixir() -> void:
 ## combat owner. The only authoritative actions remain live_combat.play_round().
 func _game_combat_view(view: Dictionary) -> Dictionary:
 	var display: Dictionary = view.duplicate(true)
+	var simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
 	var hero: Dictionary = display.get("player", {})
 	hero["level"] = session.character.level
+	var player_actor := simulator.state.get_combatant(session.character.character_id)
+	if player_actor != null:
+		hero["ap"] = player_actor.action_points
+		hero["max_ap"] = player_actor.max_action_points
 	display["player"] = hero
-	var simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
 	var enemies: Array = display.get("enemies", [])
 	for i in range(enemies.size()):
 		var record: Dictionary = enemies[i]
@@ -606,6 +610,8 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 			_set_status("Неверный выбор зон: "+issue+". Проверьте количество зон атаки и защиты.")
 			return
 		round_button.disabled=true
+		if solo_combat_screen != null:
+			solo_combat_screen.show_problem("Бой приостановлен: " + issue)
 		_set_status("Бой приостановлен: "+issue+". Сохранения не удалены; дальнейшие действия заблокированы.")
 		return
 	var state := String(step.get("state",""))
