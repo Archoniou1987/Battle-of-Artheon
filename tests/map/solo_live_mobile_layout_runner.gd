@@ -73,6 +73,24 @@ func _run() -> void:
 		check(hero_effect_row.get_child_count()==9 and hero_effect_row.get_child(8).text=="+3","effects_overflow_is_collapsed")
 		page.call("_update_combat_hp_bars",{"name":"Hero","hp":150,"max_hp":100,"effects":[]},[])
 		check(int(hero_bar.value)==100 and enemy_rows.get_child_count()==0 and hero_effect_row.get_child_count()==0,"refresh_clears_stale_effects_and_enemies")
+	var gear := page.get("equipment_grid") as GridContainer
+	check(gear != null and gear.columns==5,"ten_slot_equipment_grid_exists")
+	if gear != null:
+		var slots: Array = []
+		for name in ["head","chest","hands","waist","legs","main_hand","off_hand","ring1","ring2","feet"]:
+			slots.append({"slot":name,"instance_id":"","name":"","active":false})
+		slots[0] = {"slot":"head","instance_id":"test_helmet","name":"Actual Helmet","active":true}
+		slots[5] = {"slot":"main_hand","instance_id":"test_sword","name":"Actual Sword","active":false}
+		page.call("_update_equipment_grid",slots)
+		check(gear.get_child_count()==10,"all_ten_equipment_slots_render")
+		if gear.get_child_count()==10:
+			var helm := gear.get_child(0) as Button
+			var sword := gear.get_child(5) as Button
+			check(helm.disabled and "Actual Helmet" in helm.tooltip_text,"equipment_identity_from_snapshot")
+			check(sword.disabled and "неактивно" in sword.tooltip_text,"inactive_equipment_not_shown_as_active")
+		slots[0] = {"slot":"head","instance_id":"","name":"","active":false}
+		page.call("_update_equipment_grid",slots)
+		check(gear.get_child_count()==10 and "Пусто" in String(gear.get_child(0).tooltip_text),"unequipped_slot_clears_on_refresh")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
 	check(grid != null and grid.columns==SoloLiveMapSession.WIDTH,"canonical_map_width_preserved")
 	# Exercise the real scene's selection handler without a fabricated
