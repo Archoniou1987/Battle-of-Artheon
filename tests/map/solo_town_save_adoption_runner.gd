@@ -63,6 +63,12 @@ func _initialize() -> void:
 	check(not bool(SoloTownSaveService.read(TOWN,"different_player").get("ok",false)),"wrong_player_denied")
 	# Second visit: immutable history is archived only after canonical adoption.
 	var old_snapshot := FileAccess.get_file_as_string(EXPEDITION)
+	var pending_lock := FileAccess.open(MANIFEST,FileAccess.WRITE)
+	if pending_lock != null:
+		pending_lock.store_string("pending")
+		pending_lock.close()
+	check(not bool(SoloTownExpeditionBridge.archive_adopted_expedition(EXPEDITION,TOWN,ID,"player",MANIFEST).get("ok",false)),"pending_combat_blocks_archive")
+	wipe(MANIFEST)
 	var archived := SoloTownExpeditionBridge.archive_adopted_expedition(EXPEDITION,TOWN,ID,"player",MANIFEST)
 	check(bool(archived.get("ok",false)),"closed_adopted_expedition_archived")
 	if bool(archived.get("ok",false)):
