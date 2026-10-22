@@ -1487,3 +1487,4 @@ func present_external(view: Dictionary) -> void:
 		potion.text = "%d/%d" % [int(entry.get("charges", 0)), int(entry.get("max_charges", 0))] if not String(entry.get("instance_id", "")).is_empty() else ""
 		potion.disabled = bool(view.get("finished", false)) or index >= available.size() or not bool(available[index])
 	set_combat_ready(true)
+	_refresh_effect_display()
