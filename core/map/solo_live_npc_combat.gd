@@ -263,6 +263,18 @@ func combat_view() -> Dictionary:
 		enemy_views.append({"id":npc.combatant_id,"name":npc.display_name,"hp":npc.visible_hp(),"max_hp":npc.max_hp,"mana":npc.mana,"max_mana":npc.max_mana,"dead":npc.is_death_finalized(),"effects":_disclosed_effects(npc)})
 	var ability_definitions: Dictionary = simulator.attack_pipeline.ability_scheduler.definitions
 	var log_lines: Array[String] = ArenaCombatLog.lines_for_round(simulator.state.event_log,simulator.state.round_number,player_id,ability_definitions)
+	# The journal may contain several EFFECT components for one drink;
+	# show one resolved item-use line, never recompute its actual effects.
+	var displayed_drinks: Dictionary = {}
+	for event in simulator.state.event_log:
+		if event.kind != CombatEvent.Kind.EFFECT or int(event.payload.get("round",-1)) != simulator.state.round_number or String(event.payload.get("source_type","")) != "elixir" or event.source_id != player_id:
+			continue
+		var consumed_id := String(event.payload.get("source_instance_id",""))
+		if displayed_drinks.has(consumed_id):
+			continue
+		displayed_drinks[consumed_id] = true
+		var item := owner.repository.get_item(consumed_id)
+		log_lines.append("Эликсир: " + String(item.get("name",consumed_id)) + " — использован")
 	return {
 		"ok":true,
 		"round":simulator.state.round_number,
