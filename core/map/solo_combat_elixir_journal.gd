@@ -9,6 +9,7 @@ static func inspect(state: CombatState, player: CharacterState, repository: Item
 		return {"ok":false,"reason":"elixir_journal_missing_owner"}
 	var uses: Array[Dictionary] = []
 	var by_round: Dictionary = {}
+	var components_by_round: Dictionary = {}
 	for event in state.event_log:
 		if event.kind != CombatEvent.Kind.EFFECT or String(event.payload.get("source_type","")) != "elixir":
 			continue
@@ -21,6 +22,7 @@ static func inspect(state: CombatState, player: CharacterState, repository: Item
 		var item: Dictionary = repository.get_item(item_id)
 		if item.is_empty() or not CombatElixirService.validate_components(item).is_empty():
 			return {"ok":false,"reason":"elixir_journal_invalid_item"}
+		components_by_round[round_number] = int(components_by_round.get(round_number,0)) + 1
 		if not by_round.has(round_number):
 			by_round[round_number] = item_id
 			uses.append({"round":round_number,"item_id":item_id})
@@ -34,6 +36,11 @@ static func inspect(state: CombatState, player: CharacterState, repository: Item
 	for record in uses:
 		var number := int(record["round"])
 		var id := String(record["item_id"])
+		# Each canonical elixir component generates one EFFECT record.
+		# A partial or replayed group is not a valid paid use.
+		var definition_item := repository.get_item(id)
+		if int(components_by_round.get(number,0)) != Array(definition_item.get("elixir_components",[])).size():
+			return {"ok":false,"reason":"elixir_journal_component_count_mismatch"}
 		if number < next_available:
 			return {"ok":false,"reason":"elixir_journal_shared_cooldown_broken"}
 		counts[id] = int(counts.get(id,0)) + 1
