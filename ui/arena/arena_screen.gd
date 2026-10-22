@@ -487,7 +487,6 @@ func _build_square() -> void:
 		abilities.add_child(cell)
 		var button := Button.new()
 		button.name = "ABI%d" % (index + 1)
-		button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		button.clip_text = true
 		button.add_theme_font_size_override("font_size", 8)
 		button.text = ""
@@ -497,6 +496,7 @@ func _build_square() -> void:
 		button.disabled = true
 		button.pressed.connect(_select_ability.bind(index))
 		cell.add_child(button)
+		button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		SquareSlotFeedback.attach(button, "ability")
 		ability_buttons.append(button)
 	_build_resource_display(true)
