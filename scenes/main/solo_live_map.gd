@@ -626,7 +626,10 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 		var reopened := SoloLiveMapSession.open(SAVE,MANIFEST,session.expedition.expedition_id,PLAYER)
 		if not bool(reopened.get("ok",false)):
 			round_button.disabled = true
-			_set_status("Результат боя сохранён, но карту не удалось обновить: "+String(reopened.get("reason","unknown")))
+			var reason := String(reopened.get("reason","unknown"))
+			if solo_combat_screen != null:
+				solo_combat_screen.show_problem("Результат записан, но возврат на карту заблокирован: " + reason)
+			_set_status("Результат боя сохранён, но карту не удалось обновить: " + reason)
 			return
 		session = reopened["session"]
 		live_combat=null
