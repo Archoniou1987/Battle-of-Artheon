@@ -46,3 +46,14 @@ The early ABI branch workflow runs the return runner alongside
 the existing town→expedition owner tests.
 
 New package is not yet Godot-CI-verified.
+
+
+## 2026-10-22 — Repeatable Solo expeditions
+
+The first real browser playtest confirmed three NPC victories, return to town and working out-of-combat HP regeneration, then exposed a terminal `expedition_closed` launch gate preventing the next expedition. Implemented a **verified archival handoff** rather than deleting or rewriting the closed snapshot.
+
+- Town Map gate offers **Начать новую экспедицию** for a closed expedition.
+- `SoloTownExpeditionBridge.archive_adopted_expedition` checks closed/returned status, no pending combat manifest and matching canonical-town `return_origin` for the exact closed expedition SHA. Failure is fail-closed. It moves the old expedition snapshot to a unique archive file before using the canonical town owner for the next trip.
+- `SoloLiveNpcCombat._next_attempt` skips preexisting checkpoint, receipt and terminal paths: identical stable NPC/player IDs across trips must never overwrite or confuse their durable combat artifacts.
+- `tests/map/solo_town_save_adoption_runner.gd` now validates a second expedition with acquired owned loot, immutable archived bytes, exclusion of unclaimed drops and pending-manifest archive refusal.
+- No battle mechanics or Arena layout were modified. **Run manual ABI Branch Tests before a new Web Preview deployment**. Keep browser storage intact; do not clear the site data.
