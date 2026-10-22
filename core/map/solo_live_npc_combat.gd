@@ -114,6 +114,9 @@ static func start(session: SoloLiveMapSession, cell: Vector2i) -> Dictionary:
 		_restore_precombat_position(session)
 		return scheduler
 	var live := SoloLiveNpcCombat.new()
+	var active_simulator: GroupCombatSimulator = opened["simulator"]
+	active_simulator.solo_elixir_owner = session.character
+	active_simulator.solo_elixir_repository = session.repository
 	live.owner=session
 	live.turns=turns_instance
 	live.battle=opened
@@ -173,6 +176,16 @@ static func resume(session: SoloLiveMapSession) -> Dictionary:
 	if not bool(validated_scheduler.get("ok",false)):
 		_restore_precombat_position(session)
 		return validated_scheduler
+	var checkpoint_sim: GroupCombatSimulator = opened["simulator"]
+	# Rehydrate charges from the original, manifest-pinned expedition's
+	# repository and the canonical checkpoint event journal. No event replay.
+	var restored_charges := SoloCombatElixirJournal.apply_to_baseline(checkpoint_sim.state,session.character,session.repository)
+	if not bool(restored_charges.get("ok",false)):
+		_restore_precombat_position(session)
+		return {"ok":false,"reason":"resume_elixir_journal_invalid","detail":String(restored_charges.get("reason","unknown"))}
+	session.repository = restored_charges["repository"]
+	checkpoint_sim.solo_elixir_owner = session.character
+	checkpoint_sim.solo_elixir_repository = session.repository
 	var instance := SoloLiveNpcCombat.new()
 	instance.owner = session
 	instance.turns = turn
