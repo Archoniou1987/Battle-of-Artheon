@@ -21,6 +21,7 @@ var ability_selector: OptionButton
 var ability_slot_ids: Array[String] = []
 var effects_label: Label
 var elixir_summary: Label
+var elixir_selector: OptionButton
 var attack_controls: Array[OptionButton] = []
 var block_controls: Array[CheckBox] = []
 var ground_list: VBoxContainer
@@ -101,6 +102,8 @@ func _build_view() -> void:
 	elixir_summary = Label.new()
 	elixir_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(elixir_summary)
+	elixir_selector = OptionButton.new()
+	combat_panel.add_child(elixir_selector)
 	effects_label = Label.new()
 	effects_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(effects_label)
@@ -199,9 +202,25 @@ func _refresh_combat_controls() -> void:
 				elixir_lines.append(str(number)+": пусто")
 			else:
 				elixir_lines.append("%d: %s (%d/%d)" % [number,String(slot.get("instance_id","")),int(slot.get("charges",0)),int(slot.get("max_charges",0))])
-		elixir_summary.text = "Эликсиры (просмотр; расход подключается отдельно): " + " • ".join(PackedStringArray(elixir_lines))
+		elixir_summary.text = "Эликсиры: " + " • ".join(PackedStringArray(elixir_lines))
 	else:
 		elixir_summary.text = "Слоты эликсиров недоступны: "+String(elixir_view.get("reason","unknown"))
+	elixir_selector.clear()
+	elixir_selector.add_item("Без эликсира",0)
+	var journal := SoloCombatElixirJournal.inspect(live_combat.battle["simulator"].state,session.character,session.repository)
+	var cooldown_until := int(journal.get("next_available_round",0))
+	var next_round := int(view.get("round",0))+1
+	for slot_index in range(4):
+		var slot_entries: Array = elixir_view.get("slots",[])
+		var slot: Dictionary = slot_entries[slot_index] if slot_index < slot_entries.size() else {}
+		var caption := "%d. %s" % [slot_index+1,String(slot.get("instance_id","Пусто"))]
+		if String(slot.get("instance_id","")).is_empty():
+			caption = str(slot_index+1)+". Пусто"
+		elixir_selector.add_item(caption,slot_index+1)
+		if not bool(slot.get("valid",false)) or not bool(slot.get("unlocked",false)) or int(slot.get("charges",0)) <= 0 or not bool(journal.get("ok",false)) or next_round < cooldown_until or bool(view.get("finished",false)):
+			elixir_selector.set_item_disabled(slot_index+1,true)
+	elixir_selector.select(0)
+	elixir_selector.disabled = bool(view.get("finished",false))
 	var enemies: Array = view.get("enemies",[])
 	var opponent_text := ""
 	for enemy in enemies:
@@ -316,11 +335,11 @@ func _play_combat_round() -> void:
 				block_zones.append(CombatCommandApi.BODY_ZONES[i])
 		var abi_position := ability_selector.get_selected_id() - 1
 		var ability_id := ability_slot_ids[abi_position] if abi_position >= 0 and abi_position < ability_slot_ids.size() else ""
-		submission = {"player_id":PLAYER,"attack_zones":attack_zones,"block_zones":block_zones,"ability_id":ability_id}
+		submission = {"player_id":PLAYER,"attack_zones":attack_zones,"block_zones":block_zones,"ability_id":ability_id,"elixir_slot":elixir_selector.get_selected_id()-1}
 	var step := live_combat.play_round(submission)
 	if not bool(step.get("ok",false)):
 		var issue := String(step.get("reason",step.get("state","unknown")))
-		if issue in ["invalid_attack_zone","invalid_block_zone","invalid_attack_zone_count","invalid_block_zone_count","invalid_player_order_format","invalid_player_orders_owner","manual_block_rejected","invalid_player_ability_format","stunned_cannot_cast","player_ability_unavailable","player_ability_not_equipped"]:
+		if issue in ["invalid_attack_zone","invalid_block_zone","invalid_attack_zone_count","invalid_block_zone_count","invalid_player_order_format","invalid_player_orders_owner","manual_block_rejected","invalid_player_ability_format","stunned_cannot_cast","player_ability_unavailable","player_ability_not_equipped","invalid_elixir_slot","elixir_slot_unavailable","elixir_shared_cooldown","elixir_actor_unavailable","elixir_journal_invalid_source","elixir_journal_invalid_charges"]:
 			_set_status("Неверный выбор зон: "+issue+". Проверьте количество зон атаки и защиты.")
 			return
 		round_button.disabled=true
