@@ -167,3 +167,12 @@ The approved responsive layout remains frozen. After the input command wiring au
 **Integration boundary:** `SoloCombatScreen` emits a structured command; `SoloLiveNpcCombat.play_round` owns authoritative validation, end-of-round death, elixir/ability resource spending and durable checkpoints; `_refresh_combat_controls` calls `present_external` with the next canonical view. This batch changes presentation and input safety, not engine ordering or calculations.
 
 **Status:** code committed; verify latest ABI Branch Tests (and Solo Visual Audit if checking screenshots). CI not invoked automatically.
+
+
+## Post-round UI snapshot regression (2026-10-22)
+
+ABI CI run 39827693550 passed on c674c69cc0a90951098e285286204004fe3a650b. Added a regression scenario in `tests/ui/solo_combat_screen_runner.gd` that emulates the **next published canonical combat_view snapshot** after accepting an action. It checks round number, player/enemy visible HP, mana, updated potion charges, ABI/potion availability and clearing of previous-round selections, together with re-enabling End Turn when the newly projected controls are valid.
+
+This is intentionally a **presentation boundary test**; it does not simulate combat damage or imply that a UI fixture validates engine checkpoint persistence. The authoritative round simulation and checkpoint are still owned by `SoloLiveNpcCombat.play_round()`. Combat math and the approved geometry remain unchanged.
+
+**Needs manual ABI Branch Tests for new HEAD.**
