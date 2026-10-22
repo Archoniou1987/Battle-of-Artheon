@@ -111,11 +111,6 @@ func _run() -> void:
 	check(published["expedition"].player_position==START,"defeat_retreats_to_start")
 	check(published["character"].current_hp>0,"hero_revived")
 	var once_sha := String(ExpeditionSaveService._read_payload_envelope(EXP).get("sha256",""))
-	var saved_manifest := {
-		"expedition_path":EXP,"terminal_path":combat.terminal_path,"checkpoint_path":combat.checkpoint_path,
-		"encounter_key":combat.encounter_key,"expedition_id":ID,"player_id":PLAYER,
-		"base_sha256":String(SoloCombatSessionManifest.read(MANIFEST).get("base_sha256",""))
-	}
 	# Published world is now authoritative; reopening cannot refund spent items.
 	var reopened := SoloLiveMapSession.open(EXP,MANIFEST,ID,PLAYER)
 	check(bool(reopened.get("ok",false)),"live_world_reopened_after_defeat")
