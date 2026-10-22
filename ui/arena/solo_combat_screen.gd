@@ -27,6 +27,7 @@ var block_buttons: Array[Button] = []
 var arena_layout: BoxContainer
 var square_host: Control
 var square_content: Control
+var shared_arena: ArenaScreen
 var roster_allies: VBoxContainer
 var roster_enemies: VBoxContainer
 var roster_page: HBoxContainer
@@ -85,6 +86,16 @@ func _ready() -> void:
 	square_content.name = "FaceToFaceContent"
 	square_content.size = Vector2.ONE * SQUARE_EDGE
 	square_host.add_child(square_content)
+	# Reuse the actual Arena UI. The expedition owns the engine, not this view.
+	shared_arena = ArenaScreen.new()
+	shared_arena.name = "SharedArenaUI"
+	shared_arena.external_combat_mode = true
+	shared_arena.size = Vector2.ONE * SQUARE_EDGE
+	square_content.add_child(shared_arena)
+	shared_arena.end_turn_requested.connect(func(_attacks: Array[String], _blocks: Array[String]) -> void: _submit())
+	shared_arena.live_ability_selected.connect(_choose_ability)
+	shared_arena.live_elixir_selected.connect(_choose_elixir)
+	shared_arena.live_selection_changed.connect(_on_shared_selection)
 	# Actions are scrollable but the square remains visible as one entity.
 	tab_container = TabContainer.new()
 	tab_container.name = "CombatTabs"
@@ -92,7 +103,7 @@ func _ready() -> void:
 	tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena_layout.add_child(tab_container)
 	var command_page := Control.new()
-	command_page.name = "Действия"
+	command_page.name = "Информация"
 	tab_container.add_child(command_page)
 	scroll = ScrollContainer.new()
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -154,6 +165,7 @@ func _ready() -> void:
 	round_button.add_theme_font_size_override("font_size", 18)
 	round_button.pressed.connect(_submit)
 	footer_row.add_child(round_button)
+	footer.visible = false # Arena owns the sole visible End Round button.
 
 	detail_popup = AcceptDialog.new()
 	detail_popup.title = "Информация"
@@ -204,9 +216,7 @@ func present(view: Dictionary) -> void:
 	for child in actions_column.get_children():
 		actions_column.remove_child(child)
 		child.queue_free()
-	for child in square_content.get_children():
-		square_content.remove_child(child)
-		child.queue_free()
+	# Shared Arena is persistent; never delete its square during snapshots.
 	var controls: Dictionary = snapshot.get("controls", {})
 	if not bool(controls.get("stunned", false)):
 		if int(controls.get("attack_count", 0)) > 0:
@@ -219,7 +229,7 @@ func present(view: Dictionary) -> void:
 	round_label.text = "Раунд %d" % (int(snapshot.get("round", 0)) + 1)
 	_build_face_to_face()
 	_build_roster()
-	_build_actions()
+	# No duplicate command widgets: all five zones, ABI and elixirs live in Arena.
 	_build_log()
 	_apply_orientation()
 	_update_selection()
@@ -227,6 +237,8 @@ func present(view: Dictionary) -> void:
 		scroll.scroll_vertical = 0
 
 func _build_face_to_face() -> void:
+	shared_arena.present_external(snapshot)
+	return
 	var background := TextureRect.new()
 	background.position = Vector2.ZERO
 	background.size = Vector2.ONE * SQUARE_EDGE
@@ -645,6 +657,10 @@ func set_ability_options(options: Array) -> void:
 				remains = true
 		if not remains:
 			chosen_abi = ""
+	if shared_arena != null:
+		for index in range(shared_arena.ability_buttons.size()):
+			var option: Dictionary = abi_slots[index] if index < abi_slots.size() else {}
+			shared_arena.ability_buttons[index].disabled = not bool(option.get("available", false))
 	_update_selection()
 
 func _style_button(button: Button, selected: bool, accent: Color) -> void:
@@ -660,6 +676,9 @@ func _style_button(button: Button, selected: bool, accent: Color) -> void:
 func _update_selection() -> void:
 	if round_button == null:
 		return
+	if shared_arena != null:
+		chosen_attack = shared_arena.attack_zones.duplicate()
+		chosen_blocks = shared_arena.defense_zones.duplicate()
 	var controls: Dictionary = snapshot.get("controls", {})
 	var finished := bool(snapshot.get("finished", false))
 	var stunned := bool(controls.get("stunned", false))
@@ -700,6 +719,11 @@ func _update_selection() -> void:
 		round_button.text = "ЗАВЕРШИТЬ РАУНД"
 		instruction_label.text = "%d удар(ов), %d блок(ов)" % [count, block_count] if valid else "Выберите зоны атаки и защиты"
 		round_button.disabled = not valid
+	if shared_arena != null:
+		shared_arena.set_combat_ready(not round_button.disabled)
+
+func _on_shared_selection() -> void:
+	_update_selection()
 
 func _submit() -> void:
 	if round_button.disabled:
@@ -722,11 +746,14 @@ func _submit() -> void:
 		orders["attack_zones"] = attacks
 		orders["block_zones"] = chosen_blocks.duplicate()
 	round_button.disabled = true
+	shared_arena.set_combat_ready(false)
 	round_requested.emit(orders)
 
 func show_problem(message: String) -> void:
 	instruction_label.text = message
 	round_button.disabled = true
+	if shared_arena != null:
+		shared_arena.set_combat_ready(false)
 
 func _show_item(description: String) -> void:
 	detail_text.text = description
