@@ -607,7 +607,12 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 	if not bool(step.get("ok",false)):
 		var issue := String(step.get("reason",step.get("state","unknown")))
 		if issue in ["invalid_attack_zone","invalid_block_zone","invalid_attack_zone_count","invalid_block_zone_count","invalid_player_order_format","invalid_player_orders_owner","manual_block_rejected","invalid_player_ability_format","stunned_cannot_cast","player_ability_unavailable","player_ability_not_equipped","invalid_elixir_slot","elixir_slot_unavailable","elixir_shared_cooldown","elixir_actor_unavailable","elixir_journal_invalid_source","elixir_journal_invalid_charges"]:
-			_set_status("Неверный выбор зон: "+issue+". Проверьте количество зон атаки и защиты.")
+			# Preflight rejection is recoverable. No checkpoint/round mutation:
+			# give the player fresh canonical choices instead of a dead button.
+			_refresh_combat_controls()
+			if solo_combat_screen != null:
+				solo_combat_screen.instruction_label.text = "Выбор отклонён: " + issue
+			_set_status("Выбор действий отклонён: "+issue)
 			return
 		round_button.disabled=true
 		if solo_combat_screen != null:
