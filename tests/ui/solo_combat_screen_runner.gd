@@ -69,6 +69,18 @@ func _run() -> void:
 	var arena := screen.shared_arena
 	check(arena is ArenaScreen and arena.external_combat_mode, "real Arena template mounted for live map combat")
 	check(arena.combat_session == null, "expedition Arena never constructs a second test engine")
+	# Engine-disclosed effects, not UI-generated fixture effects, must fill
+	# the approved avatar corner in live external combat mode.
+	var effects_fixture: Dictionary = fixture.duplicate(true)
+	effects_fixture["player"]["effects"] = [{"id":"EFF_A","name":"Guard","polarity":"BUFF","stacks":1,"remaining_rounds":2}]
+	effects_fixture["enemies"][0]["effects"] = [{"id":"EFF_B","name":"Poison","polarity":"DEBUFF","stacks":2,"remaining_rounds":3}]
+	screen.present(effects_fixture)
+	check(arena._effect_entries(true, "Баффы").size() == 1, "player disclosed buff appears in shared Arena")
+	check(arena._effect_entries(false, "Дебаффы").size() == 1, "enemy disclosed debuff appears in shared Arena")
+	check(arena._effect_entries(false, "Баффы").is_empty(), "effect polarity does not leak into wrong row")
+	check(arena.effects_rows["player_Баффы"].visible and arena.effects_rows["enemy_Дебаффы"].visible, "live buff/debuff overlay rows are visible")
+	screen.present(fixture)
+	check(arena._effect_entries(true, "Баффы").is_empty(), "effect projection clears on next empty snapshot")
 	check(arena.square_content.size == Vector2(480, 480), "original Arena square preserved")
 	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "shared Arena never scales its 480px content internally")
 	check(screen.square_content.get_child_count() == 1 and screen.square_content.get_child(0) == arena, "host holds only the original Arena, no trial layers")
