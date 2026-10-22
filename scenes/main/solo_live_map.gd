@@ -16,7 +16,7 @@ var combat_panel: VBoxContainer
 var combat_summary: Label
 var combat_log_label: Label
 var attack_zone_row: VBoxContainer
-var block_zone_row: HBoxContainer
+var block_zone_row: GridContainer
 var attack_controls: Array[OptionButton] = []
 var block_controls: Array[CheckBox] = []
 var ground_list: VBoxContainer
@@ -86,7 +86,8 @@ func _build_view() -> void:
 	var block_label := Label.new()
 	block_label.text = "Ручная защита — выберите доступные зоны"
 	combat_panel.add_child(block_label)
-	block_zone_row = HBoxContainer.new()
+	block_zone_row = GridContainer.new()
+	block_zone_row.columns = 3
 	combat_panel.add_child(block_zone_row)
 	combat_log_label = Label.new()
 	combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
