@@ -63,6 +63,9 @@ jobs:
       - name: Persist Solo defeat, retreat and second NPC attempt after restart
         run: bash tools/run_godot_check.sh tests/map/solo_live_defeat_resume_runner.gd
 
+      - name: Audit that winning Solo combat spends charges and settles loot once
+        run: bash tools/run_godot_check.sh tests/map/solo_live_elixir_victory_runner.gd
+
       - name: Audit that losing Solo combat spends potion charges permanently
         run: bash tools/run_godot_check.sh tests/map/solo_live_elixir_defeat_runner.gd
 
