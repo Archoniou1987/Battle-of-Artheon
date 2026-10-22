@@ -325,7 +325,7 @@ func _add_bar(parent: Control, current: int, maximum: int, fill: Color, resource
 	holder.add_child(numbers)
 
 func _choose_ability(index: int) -> void:
-	if index >= abi_slots.size():
+	if index < 0 or index >= abi_slots.size():
 		return
 	var slot: Dictionary = abi_slots[index]
 	if not bool(slot.get("available", false)):
@@ -336,7 +336,7 @@ func _choose_ability(index: int) -> void:
 
 func _choose_elixir(index: int) -> void:
 	var available: Array = snapshot.get("elixir_availability", [])
-	if index >= available.size() or not bool(available[index]):
+	if index < 0 or index >= available.size() or not bool(available[index]):
 		return
 	chosen_elixir = -1 if chosen_elixir == index else index
 	elixir_selected.emit(chosen_elixir)
@@ -417,6 +417,20 @@ func _update_selection() -> void:
 		instruction_label.text = "%d удар(ов), %d блок(ов)" % [count, block_count] if valid else "Выберите зоны атаки и защиты"
 		round_button.disabled = not valid
 	if shared_arena != null:
+		# Keep the real Arena's ABI and potion buttons in sync with the same
+		# chosen command that will be submitted to the live engine.
+		for index in range(shared_arena.ability_buttons.size()):
+			var slot: Dictionary = abi_slots[index] if index < abi_slots.size() else {}
+			var id := String(slot.get("id", ""))
+			var active := not chosen_abi.is_empty() and chosen_abi == id
+			var button := shared_arena.ability_buttons[index]
+			button.disabled = finished or not bool(slot.get("available", false))
+			button.set_pressed_no_signal(active)
+		for index in range(shared_arena.player_elixir_slots.size()):
+			var potion := shared_arena.player_elixir_slots[index]
+			var availability: Array = snapshot.get("elixir_availability", [])
+			potion.disabled = finished or index >= availability.size() or not bool(availability[index])
+			potion.set_pressed_no_signal(chosen_elixir == index)
 		shared_arena.set_combat_ready(not round_button.disabled)
 
 func _on_shared_selection() -> void:
