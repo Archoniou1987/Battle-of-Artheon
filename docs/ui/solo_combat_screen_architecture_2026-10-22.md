@@ -78,3 +78,12 @@ Implemented in `ArenaScreen` with `external_combat_mode`:
 The live map previously scaled `SoloCombatScreen.square_content` and also called `SquareUiGeometry.fit` within the embedded `ArenaScreen`, so the same 480px composition had independent layout calculations. **Contract now:** shared `ArenaScreen` stays at native 480×480, with internal scale exactly 1.0; the outer Solo host is the sole responsive scaler. The host computes the square edge using the **actual BattleLayout size**, after reserving the external info tabs and their separation in portrait/landscape. No Arena element is repositioned, no alternate combat square is introduced.
 
 Regression tests assert native internal scaling, exactly one Arena child in the visual host, outer-only scaling, and that the landscape square fits within the available layout. CI and visual screenshots are still required to validate this batch; do not infer success from committed code.
+
+
+## Full-height Arena / fluid information panel (2026-10-22)
+
+Reference: approved original Arena browser screenshots in phone portrait and landscape. Do not change the phone's real aspect ratio, impose an artificial 18:9 viewport, or scale any Arena child independently.
+
+The expedition host now puts the combat title and round label **inside the secondary information column**, not above the entire battle row. Therefore the Arena square can use the full layout height in landscape. Information tabs take the width that remains after the square, with a responsive minimum rather than the former fixed 330px reservation. Portrait places the same information column beneath the square. The original 480×480 composition and single host scaler are unchanged.
+
+The UI regression runner now requires the external column hierarchy and a near-full-height landscape square. This is a code change awaiting manual ABI / Solo Visual CI and actual screenshot review; no claim of visual verification yet.
