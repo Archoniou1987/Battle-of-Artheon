@@ -121,6 +121,9 @@ func _run() -> void:
 	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "landscape retains native Arena geometry")
 	check(screen.square_content.scale.is_equal_approx(Vector2.ONE * (screen.square_host.custom_minimum_size.x / 480.0)), "outer host is the only active scaler")
 	check(screen.square_host.custom_minimum_size.y <= screen.arena_layout.size.y + 1.0, "landscape Arena does not extend below available area")
+	check(screen.info_column.get_parent() == screen.arena_layout, "secondary tabs and header share outside-square host")
+	check(screen.tab_container.get_parent() == screen.info_column, "info tabs do not overlap Arena square")
+	check(screen.square_host.custom_minimum_size.x >= minf(480.0, screen.arena_layout.size.y) - 10.0, "landscape Arena maximizes available height instead of fixed 330px reservation")
 	screen.queue_free()
 	var map_scene := load("res://scenes/main/solo_live_map.tscn") as PackedScene
 	check(map_scene != null, "real expedition scene exists")
