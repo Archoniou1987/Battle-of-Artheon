@@ -185,3 +185,12 @@ ABI Branch Tests run 39828567159 **passed** on SHA d00afff4a55eb20366eb2b5b0e891
 After an accepted command, the test checks one round of progression; for ongoing combat, it verifies checkpoint presence and the freshly published `combat_view` round, visible player HP and mana match authoritative `GroupCombatSimulator.state`. This is live-engine integration regression, complementary to the UI fixture-based presentation tests. No Arena layout changes.
 
 **CI still required** for this new test; manually run ABI Branch Tests on the new HEAD.
+
+
+## Resumed encounter -> Arena-facing view consistency (2026-10-22)
+
+ABI Branch Tests #39830073201 passed on `6222ff94b08de6ad667ba16b467e9cb8c0bb57ed`. The next integration regression extends `tests/map/solo_live_combat_resume_runner.gd`. It captures the actual `SoloLiveNpcCombat.combat_view()` after a persisted round, unmounts/reopens the pending expedition, restores the original checkpoint and compares the live Arena-facing view **before and after recovery**. The asserted fields include current round, visible hero HP/max HP, mana/max mana and disclosed EFF, enemy views, ability slot availability/cooldowns, elixir loadout/charges, allowed attacks/manual blocks, and the disclosed round log. Existing assertions protect against event replay, changed checkpoint bytes, duplicate rewards and unlocked map movement.
+
+This preserves the single-source-of-truth boundary: the UI receives the reloaded simulator projection and does not own combat or restore selections from arbitrary UI state. The approved 480px Arena design coordinates and responsive orientation contract remain untouched.
+
+**Pending manual CI:** ABI Branch Tests on the new HEAD; this workflow already invokes the resume runner.
