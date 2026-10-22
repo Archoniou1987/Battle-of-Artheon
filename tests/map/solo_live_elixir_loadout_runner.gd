@@ -52,6 +52,11 @@ func _run() -> void:
 	var after := SoloCombatElixirLoadout.inspect(hero,repo)
 	check(bool(after.get("ok",false)) and int(Array(after.get("slots",[]))[0].get("charges",-1))==charges-1,"view_reflects_canonical_repository_charges")
 	check(not hero.assign_elixir(0,"elixir_test_hp_v1",repo),"slot_does_not_reassign_existing_instance")
+	var depleted: Dictionary = repo.get_item("elixir_test_hp_v1")
+	depleted["charges"] = 0
+	check(repo.update_item(depleted),"depleted_charge_fixture_updated")
+	var empty_charge := SoloCombatElixirLoadout.inspect(hero,repo)
+	check(bool(empty_charge.get("ok",false)) and String(Array(empty_charge.get("slots",[]))[0].get("reason",""))=="elixir_depleted","zero_charge_never_marked_available")
 	var invalid_owner := CharacterState.new("DIFFERENT_PLAYER","Impostor",5)
 	invalid_owner.elixir_slots[0] = "elixir_test_hp_v1"
 	var rejected := SoloCombatElixirLoadout.inspect(invalid_owner,repo)
