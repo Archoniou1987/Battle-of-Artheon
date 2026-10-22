@@ -9,6 +9,7 @@ const PLAYER := "player"
 var session: SoloLiveMapSession
 var status_label: Label
 var tile_container: GridContainer
+var map_scroller: ScrollContainer
 var live_combat: SoloLiveNpcCombat
 var round_button: Button
 var return_button: Button
@@ -66,6 +67,7 @@ func _build_view() -> void:
 	var root := VBoxContainer.new()
 	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	root.add_theme_constant_override("separation",12)
+	root.custom_minimum_size = Vector2(0,0)
 	scroll.add_child(root)
 	var header := Label.new()
 	header.text = "Экспедиция — первая игровая карта"
@@ -98,33 +100,42 @@ func _build_view() -> void:
 	ability_label.text = "ABI — до одной способности за раунд (5 слотов экипировки)"
 	combat_panel.add_child(ability_label)
 	ability_selector = OptionButton.new()
+	ability_selector.custom_minimum_size.y = 48
 	combat_panel.add_child(ability_selector)
 	elixir_summary = Label.new()
 	elixir_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(elixir_summary)
 	elixir_selector = OptionButton.new()
+	elixir_selector.custom_minimum_size.y = 48
 	elixir_selector.item_selected.connect(_on_elixir_selection_changed)
 	combat_panel.add_child(elixir_selector)
+	round_button = Button.new()
+	round_button.text = "Следующий раунд"
+	round_button.custom_minimum_size.y = 56
+	round_button.visible = false
+	round_button.pressed.connect(_play_combat_round)
+	combat_panel.add_child(round_button)
 	effects_label = Label.new()
 	effects_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(effects_label)
 	combat_log_label = Label.new()
 	combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(combat_log_label)
+	map_scroller = ScrollContainer.new()
+	map_scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	map_scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root.add_child(map_scroller)
 	tile_container = GridContainer.new()
 	tile_container.columns = SoloLiveMapSession.WIDTH
-	root.add_child(tile_container)
+	map_scroller.add_child(tile_container)
 	var ground_heading := Label.new()
 	ground_heading.text = "Добыча на текущей клетке • сбор 2 секунды"
 	root.add_child(ground_heading)
 	ground_list = VBoxContainer.new()
 	root.add_child(ground_list)
-	round_button = Button.new()
-	round_button.text = "Следующий раунд"
-	round_button.visible = false
-	round_button.pressed.connect(_play_combat_round)
-	combat_panel.add_child(round_button)
 	return_button = Button.new()
+	return_button.custom_minimum_size.y = 48
 	return_button.text = "Завершить экспедицию и вернуться в деревню"
 	return_button.pressed.connect(_return_town)
 	root.add_child(return_button)
@@ -161,7 +172,7 @@ func _refresh() -> void:
 		for x in range(SoloLiveMapSession.WIDTH):
 			var pos := Vector2i(x,y)
 			var btn := Button.new()
-			btn.custom_minimum_size = Vector2(37,35)
+			btn.custom_minimum_size = Vector2(44,44)
 			if pos == session.expedition.player_position:
 				btn.text = "◆"
 			elif not session.npc_bridge.npc_at(session.map,pos).is_empty() and HexGrid.distance(session.expedition.player_position,pos) <= 3:
@@ -277,6 +288,7 @@ func _refresh_combat_controls() -> void:
 	var zone_names := ["Голова","Грудь","Руки","Пояс","Ноги"]
 	for attack_index in range(int(controls.get("attack_count",0))):
 		var option := OptionButton.new()
+		option.custom_minimum_size.y = 48
 		for i in range(CombatCommandApi.BODY_ZONES.size()):
 			option.add_item(zone_names[i],i)
 		option.select(1)
@@ -284,6 +296,7 @@ func _refresh_combat_controls() -> void:
 		attack_controls.append(option)
 	for i in range(CombatCommandApi.BODY_ZONES.size()):
 		var cb := CheckBox.new()
+		cb.custom_minimum_size.y = 44
 		cb.text = zone_names[i]
 		cb.button_pressed = [1,2,3,4,0].find(i) < int(controls.get("block_capacity",0))
 		block_zone_row.add_child(cb)
