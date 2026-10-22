@@ -92,6 +92,29 @@ func _run() -> void:
 		await process_frame
 		await process_frame
 		screen._apply_orientation()
+		await process_frame
+		# Fail a visually incomplete capture: PASS must mean the whole Arena,
+		# especially its bottom button and background, is visible.
+		var screen_rect := screen.get_global_rect()
+		var square_rect := screen.square_host.get_global_rect()
+		if square_rect.end.y > screen_rect.end.y + 1.0 or square_rect.end.x > screen_rect.end.x + 1.0:
+			push_error("VISUAL_CAPTURE_FAIL: Arena clipped: screen=" + str(screen_rect) + " square=" + str(square_rect))
+			quit(1)
+			return
+		var arena := screen.shared_arena
+		if arena.arena_background.size != Vector2(480, 480):
+			push_error("VISUAL_CAPTURE_FAIL: Arena background no longer 480x480")
+			quit(1)
+			return
+		for button in arena.ability_buttons:
+			if absf(button.size.x - 34.0) > 1.0:
+				push_error("VISUAL_CAPTURE_FAIL: ABI slot width drift: " + str(button.size))
+				quit(1)
+				return
+		var background_texture := arena.arena_background.texture
+		print("ARENA_LAYOUT=", key, " screen=", screen_rect, " square=", square_rect,
+			" scale=", screen.square_content.scale,
+			" background_source=", background_texture.get_size() if background_texture != null else Vector2.ZERO)
 		await RenderingServer.frame_post_draw
 		# The canonical Arena square has no trial scrollable command pane.
 		var file := "%s/%s_00.png" % [OUTPUT, key]
