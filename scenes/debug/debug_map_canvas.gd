@@ -58,6 +58,13 @@ func set_generated(value:Dictionary)->void:
 	custom_minimum_size=_map_pixel_size()
 	queue_redraw()
 
+## Optional live-world role mapping. The same renderer is used by the
+## diagnostic viewer and the real Solo map without inventing NPC state.
+func set_live_entity_roles(roles: Dictionary) -> void:
+	for raw_id in roles.keys():
+		_entity_roles[String(raw_id)] = String(roles[raw_id])
+	queue_redraw()
+
 func _gui_input(event:InputEvent)->void:
 	if not event is InputEventMouseButton or not event.pressed or event.button_index!=MOUSE_BUTTON_LEFT:
 		return
