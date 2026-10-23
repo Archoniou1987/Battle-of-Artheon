@@ -395,7 +395,11 @@ static func reconcile_map(expedition: ExpeditionState, map, bridge: MapNpcBridge
 	if not cohorts is Dictionary:
 		return {"ok":false,"reason":"invalid_world_tombstone_registry"}
 	var positions: Dictionary = {}
-	for raw in cohorts.values():
+	var previous_map_receipts: Dictionary = expedition.world_state.get(MAP_BASELINE_KEY,{})
+	for encounter_key in cohorts:
+		if previous_map_receipts.has(String(encounter_key)):
+			continue
+		var raw: Variant = cohorts[encounter_key]
 		if not raw is Dictionary or not raw.get("npc_ids") is Array or not raw.get("npc_positions") is Dictionary:
 			return {"ok":false,"reason":"invalid_world_tombstone"}
 		for raw_id in Array(raw["npc_ids"]):
