@@ -199,7 +199,7 @@ func _draw_markers(map:TacticalMapState)->void:
 	var grouped:Dictionary={}
 	for entity_id in map.entity_positions.keys():
 		var pos:Vector2i=map.entity_positions[entity_id]
-		if entity_id=="PLAYER":
+		if entity_id=="PLAYER" or entity_id==String(generated.get("live_player_id","PLAYER")):
 			continue
 		if not grouped.has(pos):
 			grouped[pos]=[]
