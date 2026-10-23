@@ -92,7 +92,19 @@ static func bootstrap(player_id: String, path: String = PATH, legacy_town: Strin
 		return read(path,player_id)
 	if FileAccess.file_exists(legacy_expedition):
 		if FileAccess.file_exists(manifest):
-			return {"ok":false,"reason":"legacy_pending_combat_must_finish_before_migration"}
+			var pending := SoloCombatSessionManifest.read(manifest)
+			if not bool(pending.get("ok",false)):
+				return {"ok":false,"reason":"legacy_pending_combat_invalid","detail":String(pending.get("reason","unknown"))}
+			var pending_data: Dictionary = pending["data"]
+			if String(pending_data.get("expedition_path","")) != legacy_expedition or String(pending_data.get("player_id","")) != player_id:
+				return {"ok":false,"reason":"legacy_pending_combat_owner_mismatch"}
+			# Only a fully sealed terminal outcome can be reconciled here.
+			# An in-progress checkpoint stays untouched until the fight ends.
+			if not FileAccess.file_exists(String(pending_data["terminal_path"])):
+				return {"ok":false,"reason":"legacy_pending_combat_must_finish_before_migration"}
+			var recovered := SoloCombatSessionManifest.recover_on_launch(manifest)
+			if not bool(recovered.get("ok",false)):
+				return {"ok":false,"reason":"legacy_terminal_recovery_failed","detail":String(recovered.get("reason","unknown"))}
 		var previous := ExpeditionSaveService.read(legacy_expedition,_id(player_id),player_id)
 		if not bool(previous.get("ok",false)):
 			return {"ok":false,"reason":"legacy_expedition_invalid","detail":String(previous.get("reason","unknown"))}
