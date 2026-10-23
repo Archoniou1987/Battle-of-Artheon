@@ -221,6 +221,7 @@ func _refresh_hex_canvas() -> void:
 			"regions":[],
 			"patrols":[]
 		}
+	projection["live_player_id"] = session.character.character_id
 	if hex_canvas.generated.is_empty() or hex_canvas.generated.get("map",null) != session.map:
 		hex_canvas.set_generated(projection)
 	var npc_roles: Dictionary = {}
