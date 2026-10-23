@@ -97,9 +97,9 @@ func _run() -> void:
 	var stop := page.get("route_stop_button") as Button
 	var route_info := page.get("route_label") as Label
 	check(minimap != null and route_info != null and stop != null,"minimap_and_route_controls_present")
-	var panel := page.get("map_panel") as Control
-	check(panel != null and scroller != null and scroller.get_parent()==panel,"map_scroller_clipped_to_approved_viewport")
-	check(panel != null and minimap != null and minimap.get_parent()==panel,"minimap_overlaid_on_hex_viewport")
+	var map_panel := page.get("map_panel") as Control
+	check(map_panel != null and scroller != null and scroller.get_parent()==map_panel,"map_scroller_clipped_to_approved_viewport")
+	check(map_panel != null and minimap != null and minimap.get_parent()==map_panel,"minimap_overlaid_on_hex_viewport")
 	if minimap != null:
 		check(minimap.offset_right-minimap.offset_left==155.0 and minimap.offset_bottom-minimap.offset_top==155.0,"minimap_square_155px")
 	var upgrade := page.get("legacy_upgrade_button") as Button
