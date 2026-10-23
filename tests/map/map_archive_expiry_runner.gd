@@ -23,7 +23,7 @@ func _run() -> void:
 	var entry := SoloGameStateService.enter_generated_map(SAVE,"player",MANIFEST)
 	ok = ok and bool(entry.get("ok",false))
 	if not ok:
-		print("MAP_ARCHIVE_EXPIRY_TEST=FAIL initial")
+		print("MAP_CLOSURE_DISCARD_TEST=FAIL initial")
 		_cleanup()
 		quit(1)
 		return
@@ -38,35 +38,20 @@ func _run() -> void:
 	var fresh := SoloGameStateService.start_new_expedition(SAVE,"player",MANIFEST)
 	ok = ok and bool(fresh.get("ok",false))
 	if not ok:
-		print("MAP_ARCHIVE_EXPIRY_TEST=FAIL fresh ",fresh)
+		print("MAP_CLOSURE_DISCARD_TEST=FAIL fresh ",fresh)
 		_cleanup()
 		quit(1)
 		return
 	current = SoloGameStateService.read(SAVE,"player")
-	exp = current["expedition"]
-	var archives: Dictionary = exp.world_state[SoloGameStateService.MAP_ARCHIVES_KEY]
-	var original_id := String(fresh["previous_map_id"])
-	ok = ok and archives.has(original_id)
-	ok = ok and int(archives[original_id]["expires_at_unix"]) > int(Time.get_unix_time_from_system())
-	ok = ok and archives[original_id]["world_state"][GroundLootService.WORLD_KEY].has("ABANDONED_LOOT")
-	ok = ok and current["repository"].has_item("ABANDONED_LOOT")
-	ok = ok and current["character"].inventory.owns("OWNED_ITEM")
-	# Advance the archive's expiry only, not the system clock.
-	archives[original_id]["expires_at_unix"] = int(Time.get_unix_time_from_system())-1
-	exp.world_state[SoloGameStateService.MAP_ARCHIVES_KEY] = archives
-	ok = ok and bool(ExpeditionSaveService.save(SAVE,exp,current["character"],current["repository"]).get("ok",false))
-	ok = ok and bool(SoloGameStateService.set_location(SAVE,"player",SoloGameStateService.LOCATION_TOWN,MANIFEST).get("ok",false))
-	current = SoloGameStateService.read(SAVE,"player")
-	var saved := SoloGameStateService.save_town(SAVE,current["character"],current["repository"],String(current["sha256"]))
-	ok = ok and bool(saved.get("ok",false))
-	current = SoloGameStateService.read(SAVE,"player")
 	ok = ok and bool(current.get("ok",false))
 	if bool(current.get("ok",false)):
-		ok = ok and not current["expedition"].world_state[SoloGameStateService.MAP_ARCHIVES_KEY].has(original_id)
+		var world: Dictionary = current["expedition"].world_state
+		ok = ok and not world.has(SoloGameStateService.MAP_ARCHIVES_KEY)
+		ok = ok and not world.has(GroundLootService.WORLD_KEY)
 		ok = ok and not current["repository"].has_item("ABANDONED_LOOT")
 		ok = ok and current["repository"].has_item("OWNED_ITEM")
 		ok = ok and current["character"].inventory.owns("OWNED_ITEM")
-		ok = ok and current["expedition"].world_state[SoloLiveMapSession.MAP_INSTANCE_KEY]["instance_id"]==fresh["instance_id"]
+		ok = ok and String(world[SoloLiveMapSession.MAP_INSTANCE_KEY]["instance_id"])==String(fresh["instance_id"])
 	_cleanup()
-	print("MAP_ARCHIVE_EXPIRY_TEST="+("PASS" if ok else "FAIL"))
+	print("MAP_CLOSURE_DISCARD_TEST="+("PASS" if ok else "FAIL"))
 	quit(0 if ok else 1)
