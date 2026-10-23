@@ -47,6 +47,11 @@ jobs:
       - name: Generate map instances through existing regions, patrols and encounters
         run: bash tools/run_godot_check.sh tests/map/map_instance_generation_runner.gd
 
+      - name: Attach production NPC roster to generated hex MapInstance
+        run: |
+          bash tools/run_godot_check.sh tests/map/generated_map_population_runner.gd
+          bash tools/run_godot_check.sh tests/map/solo_generated_live_mount_runner.gd
+
       - name: Verify one Solo GameState across city, map, restart and legacy migration
         run: bash tools/run_godot_check.sh tests/map/solo_game_state_runner.gd
 
