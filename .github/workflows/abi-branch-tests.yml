@@ -51,6 +51,7 @@ jobs:
         run: |
           bash tools/run_godot_check.sh tests/map/generated_map_population_runner.gd
           bash tools/run_godot_check.sh tests/map/solo_generated_live_mount_runner.gd
+          bash tools/run_godot_check.sh tests/map/generated_town_launch_roundtrip_runner.gd
 
       - name: Verify one Solo GameState across city, map, restart and legacy migration
         run: bash tools/run_godot_check.sh tests/map/solo_game_state_runner.gd
