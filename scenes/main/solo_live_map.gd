@@ -21,6 +21,10 @@ var route_stop_button: Button
 var route_label: Label
 var map_scroller: ScrollContainer
 var live_combat: SoloLiveNpcCombat
+var result_overlay: ColorRect
+var result_window: PanelContainer
+var result_details: Label
+var result_pending := false
 var game_map_scroll: ScrollContainer
 var solo_combat_screen: SoloCombatScreen
 var round_button: Button
@@ -242,6 +246,67 @@ func _build_view() -> void:
 	solo_combat_screen.round_requested.connect(_play_combat_round)
 	solo_combat_screen.elixir_selected.connect(_refresh_game_ability_options)
 
+func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictionary) -> void:
+	# Settlement has already been durably committed. The overlay is display-only.
+	result_pending = true
+	_stop_route()
+	if result_overlay == null:
+		result_overlay = ColorRect.new()
+		result_overlay.name = "BattleResultOverlay"
+		result_overlay.color = Color(0.02,0.03,0.06,0.87)
+		result_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		result_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(result_overlay)
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		result_overlay.add_child(center)
+		result_window = PanelContainer.new()
+		result_window.custom_minimum_size = Vector2(300,280)
+		result_window.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		center.add_child(result_window)
+		var stack := VBoxContainer.new()
+		stack.add_theme_constant_override("separation",14)
+		result_window.add_child(stack)
+		result_details = Label.new()
+		result_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		stack.add_child(result_details)
+		var continue_button := Button.new()
+		continue_button.text = "Продолжить"
+		continue_button.custom_minimum_size.y = 54
+		continue_button.pressed.connect(_close_battle_result)
+		stack.add_child(continue_button)
+	var enemies: Array = final_view.get("enemies",[])
+	var fallen := 0
+	var enemy_names: Array[String] = []
+	for enemy in enemies:
+		if enemy is Dictionary:
+			enemy_names.append(String(enemy.get("name","NPC")))
+			if int(enemy.get("hp",1))<=0:
+				fallen += 1
+	var hero: Dictionary = final_view.get("player",{})
+	var lines: Array[String] = [
+		"ПОБЕДА" if outcome=="victory" else "ПОРАЖЕНИЕ",
+		"Раундов: %d" % int(step.get("round",0)),
+		"Противники: %d • Повержено: %d" % [enemies.size(),fallen],
+		"Состав: "+(", ".join(enemy_names) if not enemy_names.is_empty() else "нет данных"),
+		"HP героя: %d / %d" % [int(hero.get("hp",0)),int(hero.get("max_hp",0))]
+	]
+	if outcome=="victory":
+		lines.append("Добыча сохранена на клетке противников.")
+	else:
+		lines.append("Поражение сохранено. Возвращение к старту экспедиции.")
+	result_details.text = "\n".join(lines)
+	result_overlay.visible = true
+	result_overlay.move_to_front()
+
+func _close_battle_result() -> void:
+	if not result_pending:
+		return
+	result_pending = false
+	if result_overlay != null:
+		result_overlay.visible = false
+	_refresh()
+
 func _set_status(value: String) -> void:
 	if status_label != null:
 		status_label.text = value
@@ -381,7 +446,7 @@ func _stop_route() -> void:
 		mini_map.update_map(session.map,session.expedition.player_position)
 
 func _process(delta: float) -> void:
-	if session == null:
+	if session == null or result_pending:
 		return
 	if not pickup_active and live_combat == null and not FileAccess.file_exists(MANIFEST):
 		var patrol := session.advance_patrols(delta)
@@ -874,6 +939,12 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 		return
 	var state := String(step.get("state",""))
 	if state == "victory" or state == "defeat":
+		var final_view := before.duplicate(true)
+		var final_simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
+		if final_simulator != null:
+			var resolved_view := live_combat.combat_view()
+			if bool(resolved_view.get("ok",false)):
+				final_view = resolved_view
 		# Both outcomes publish new canonical owners. Never keep the
 		# pre-combat character/repository in the map scene.
 		var reopened := SoloLiveMapSession.open(SAVE,MANIFEST,session.expedition.expedition_id,PLAYER)
@@ -894,6 +965,7 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 			_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
 		else:
 			_set_status("Поражение сохранено. Герой вернулся на стартовую клетку экспедиции; враг и добыча не изменены.")
+		_show_battle_result(state,final_view,step)
 	else:
 		_refresh_combat_controls()
 		_set_status("Раунд "+str(step.get("round",0))+" завершён и сохранён.")
