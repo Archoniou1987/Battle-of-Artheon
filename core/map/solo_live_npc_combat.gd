@@ -313,8 +313,28 @@ func combat_view() -> Dictionary:
 		displayed_drinks[consumed_id] = true
 		var item := owner.repository.get_item(consumed_id)
 		log_lines.append("Эликсир: " + String(item.get("name",consumed_id)) + " — использован")
+	# The canonical event log is checkpointed with the simulator.
+	# Reconstruct ALL completed rounds on every snapshot, including resume
+	# after days offline. Never maintain a separate, fragile UI-side journal.
+	var battle_lines: Array[String] = []
+	for completed_round in range(1,simulator.state.round_number+1):
+		var round_lines := ArenaCombatLog.lines_for_round(simulator.state.event_log,completed_round,player_id,ability_definitions)
+		var used_potions: Dictionary = {}
+		for event in simulator.state.event_log:
+			if event.kind != CombatEvent.Kind.EFFECT or int(event.payload.get("round",-1)) != completed_round or String(event.payload.get("source_type","")) != "elixir" or event.source_id != player_id:
+				continue
+			var potion_id := String(event.payload.get("source_instance_id",""))
+			if used_potions.has(potion_id):
+				continue
+			used_potions[potion_id] = true
+			var potion_item: Dictionary = owner.repository.get_item(potion_id)
+			round_lines.append("Эликсир: "+String(potion_item.get("name",potion_id))+" — использован")
+		if not round_lines.is_empty():
+			battle_lines.append("── Раунд %d ──" % completed_round)
+			battle_lines.append_array(round_lines)
 	return {
 		"ok":true,
+		"battle_log":battle_lines,
 		"round":simulator.state.round_number,
 		"finished":simulator.controller.combat_finished(),
 		"winner":simulator.controller.winning_team(),
