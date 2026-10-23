@@ -4,6 +4,7 @@ extends RefCounted
 const WIDTH := 12
 const HEIGHT := 12
 const MAP_INSTANCE_KEY := "world_map_instance_v1"
+const EXPLORED_KEY := "world_explored_cells_v1"
 
 var expedition: ExpeditionState
 var character: CharacterState
@@ -110,6 +111,17 @@ static func _mount(path: String, manifest: String, saved_expedition: ExpeditionS
 			return {"ok":false,"reason":"live_npc_registration_failed"}
 	if not session.map.place_entity(session.character.character_id,session.expedition.player_position):
 		return {"ok":false,"reason":"saved_player_hex_invalid"}
+	if using_generated:
+		var explored: Variant = session.expedition.world_state.get(EXPLORED_KEY,[])
+		if not explored is Array:
+			return {"ok":false,"reason":"generated_exploration_corrupt"}
+		for coordinates in explored:
+			if not coordinates is Array or coordinates.size()!=2:
+				return {"ok":false,"reason":"generated_exploration_cell_invalid"}
+			var cell := Vector2i(int(coordinates[0]),int(coordinates[1]))
+			if not session.map.in_bounds(cell):
+				return {"ok":false,"reason":"generated_exploration_out_of_bounds"}
+			session.map.cell(cell).discovered=true
 	session.map.mark_visited(session.expedition.player_position)
 	session.map.reveal_from(session.expedition.player_position,3)
 	return {"ok":true,"session":session}
@@ -126,16 +138,25 @@ func move_one_step(to: Vector2i) -> Dictionary:
 	if bool(encountered.get("ok",false)):
 		return {"ok":false,"reason":"combat_ui_not_connected","npc_instance_ids":encountered.get("npc_instance_ids",[])}
 	var from := expedition.player_position
+	var previous_world: Dictionary = expedition.world_state.duplicate(true)
 	var moved := map.move_entity(character.character_id,to)
 	if not bool(moved.get("ok",false)):
 		return moved
 	expedition.player_position = to
+	map.reveal_from(to,3)
+	if not generated_content.is_empty():
+		var discovered: Array = []
+		for cell in map.cells.keys():
+			if map.cell(cell).discovered:
+				discovered.append([cell.x,cell.y])
+		expedition.world_state[EXPLORED_KEY] = discovered
 	var stored := ExpeditionSaveService.save(save_path,expedition,character,repository)
 	if not bool(stored.get("ok",false)):
 		map.entity_positions[character.character_id] = from
 		expedition.player_position = from
+		expedition.world_state = previous_world
+		# Reconstruct exploration from the durable snapshot on next mount.
 		return {"ok":false,"reason":"movement_save_failed","detail":String(stored.get("reason","unknown"))}
-	map.reveal_from(to,3)
 	return {"ok":true,"position":to}
 
 ## Solo's two-second pickup is a mode parameter; the shared service
