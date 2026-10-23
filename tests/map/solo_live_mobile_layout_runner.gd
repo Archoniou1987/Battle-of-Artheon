@@ -25,7 +25,7 @@ func _run() -> void:
 		return
 	root.add_child(page)
 	var scroller := page.get("map_scroller") as ScrollContainer
-	var grid := page.get("tile_container") as GridContainer
+	var hex := page.get("hex_canvas") as DebugMapCanvas
 	var round_button := page.get("round_button") as Button
 	var panel := page.get("combat_panel") as VBoxContainer
 	var log_label := page.get("combat_log_label") as Label
@@ -33,7 +33,7 @@ func _run() -> void:
 	var block_row := page.get("block_zone_row") as GridContainer
 	var ability := page.get("ability_selector") as OptionButton
 	var elixir := page.get("elixir_selector") as OptionButton
-	check(scroller != null and grid != null and grid.get_parent()==scroller,"map_has_horizontal_scroll_container")
+	check(scroller != null and hex != null and hex.get_parent()==scroller,"map_has_horizontal_scroll_container")
 	if scroller != null:
 		check(scroller.horizontal_scroll_mode==ScrollContainer.SCROLL_MODE_AUTO,"horizontal_scroll_enabled")
 		check(scroller.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_DISABLED,"map_keeps_parent_vertical_scroll")
@@ -92,7 +92,7 @@ func _run() -> void:
 		page.call("_update_equipment_grid",slots)
 		check(gear.get_child_count()==10 and "Пусто" in String(gear.get_child(0).tooltip_text),"unequipped_slot_clears_on_refresh")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
-	check(grid != null and grid.columns==SoloLiveMapSession.WIDTH,"canonical_map_width_preserved")
+	check(hex != null and hex.HEX_SIZE >= 20.0,"canonical_hex_renderer_reused")
 	# Exercise the real scene's selection handler without a fabricated
 	# combat engine. Capacity is exactly two zones for this UI fixture.
 	if block_row != null:
