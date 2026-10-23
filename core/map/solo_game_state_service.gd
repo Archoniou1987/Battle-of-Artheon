@@ -366,6 +366,25 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	fresh_world[MAP_SERIAL_KEY] = serial
 	fresh_world[SoloLiveMapSession.MAP_INSTANCE_KEY] = definition
 	fresh_world[ExpeditionState.SOLO_START_CELL_KEY] = [entrance.x,entrance.y]
+	# Combat receipts are immutable character-level transaction history, not
+	# reusable map entities. Retain their monotonic keys to satisfy the
+	# verified save/publish contract, but exclude old defeated NPCs from the
+	# new instance's spawn checks.
+	var durable_ledgers := [
+		MapWorldCommitService.TOMBSTONES_KEY,
+		MapCombatSettlementService.MARKER_KEY,
+		GroundLootSettlementAdapter.MIGRATED_KEY,
+		ExpeditionState.SOLO_DEFEAT_LEDGER_KEY
+	]
+	for ledger_key in durable_ledgers:
+		if old_world.has(ledger_key):
+			fresh_world[ledger_key] = Dictionary(old_world[ledger_key]).duplicate(true)
+	# Legacy archived worlds are discarded, but their immutable settlement
+	# proofs must also survive the monotonicity check.
+	var baseline: Dictionary = {}
+	for encounter_key in Dictionary(fresh_world.get(MapWorldCommitService.TOMBSTONES_KEY,{})).keys():
+		baseline[String(encounter_key)] = true
+	fresh_world[MapWorldCommitService.MAP_BASELINE_KEY] = baseline
 	expedition.world_state = fresh_world
 	expedition.seed_value = seed
 	expedition.player_position = entrance
