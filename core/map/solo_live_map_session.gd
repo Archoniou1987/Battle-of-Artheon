@@ -15,6 +15,16 @@ const SOLO_PICKUP_SECONDS := 2
 var loot_pickups: GroundLootService = GroundLootService.new()
 
 static func open(path: String, manifest: String, expedition_id: String, player_id: String) -> Dictionary:
+	if path == SoloGameStateService.PATH:
+		var gate := SoloExpeditionLaunchGate.inspect(path,manifest,expedition_id,player_id)
+		if not bool(gate.get("ok",false)):
+			return gate
+		var unified := SoloGameStateService.read(path,player_id)
+		if not bool(unified.get("ok",false)):
+			return unified
+		if String(unified.get("location","")) != SoloGameStateService.LOCATION_MAP:
+			return {"ok":false,"reason":"game_state_not_on_map"}
+		return _mount(path,manifest,unified["expedition"],unified["character"],unified["repository"])
 	var verified := SoloTownExpeditionBridge.open_existing(path,expedition_id,player_id,manifest)
 	if not bool(verified.get("ok",false)):
 		return verified
@@ -136,6 +146,8 @@ func finish_ground_pickup(ticket: String, now_unix: int = -1) -> Dictionary:
 	return {"ok":true,"instance_id":String(result["instance_id"]),"saved":true}
 
 func return_to_town(town_path: String) -> Dictionary:
+	if save_path == SoloGameStateService.PATH:
+		return SoloGameStateService.set_location(save_path,character.character_id,SoloGameStateService.LOCATION_TOWN,manifest_path)
 	var closed := SoloTownReturnService.close_for_town(save_path,expedition.expedition_id,character.character_id,manifest_path)
 	if not bool(closed.get("ok",false)):
 		return closed
