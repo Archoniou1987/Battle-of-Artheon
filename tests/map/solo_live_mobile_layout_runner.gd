@@ -36,7 +36,7 @@ func _run() -> void:
 	check(scroller != null and hex != null and hex.get_parent()==scroller,"map_has_horizontal_scroll_container")
 	if scroller != null:
 		check(scroller.horizontal_scroll_mode==ScrollContainer.SCROLL_MODE_AUTO,"horizontal_scroll_enabled")
-		check(scroller.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_DISABLED,"map_keeps_parent_vertical_scroll")
+		check(scroller.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_AUTO,"map_viewport_scrolls_both_axes")
 	check(round_button != null and panel != null and round_button.get_parent()==panel,"primary_button_in_combat_panel")
 	if round_button != null and log_label != null:
 		check(round_button.get_index() < log_label.get_index(),"primary_action_precedes_long_log")
@@ -97,6 +97,13 @@ func _run() -> void:
 	var stop := page.get("route_stop_button") as Button
 	var route_info := page.get("route_label") as Label
 	check(minimap != null and route_info != null and stop != null,"minimap_and_route_controls_present")
+	var panel := page.get("map_panel") as Control
+	check(panel != null and scroller != null and scroller.get_parent()==panel,"map_scroller_clipped_to_approved_viewport")
+	check(panel != null and minimap != null and minimap.get_parent()==panel,"minimap_overlaid_on_hex_viewport")
+	if minimap != null:
+		check(minimap.offset_right-minimap.offset_left==155.0 and minimap.offset_bottom-minimap.offset_top==155.0,"minimap_square_155px")
+	var upgrade := page.get("legacy_upgrade_button") as Button
+	check(upgrade != null and upgrade.text.contains("20×20"),"explicit_legacy_upgrade_action")
 	check(stop != null and stop.disabled,"stop_disabled_until_route_starts")
 	# Exercise the real scene's selection handler without a fabricated
 	# combat engine. Capacity is exactly two zones for this UI fixture.
