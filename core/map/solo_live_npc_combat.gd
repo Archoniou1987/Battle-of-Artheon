@@ -332,8 +332,48 @@ func combat_view() -> Dictionary:
 		if not round_lines.is_empty():
 			battle_lines.append("── Раунд %d ──" % completed_round)
 			battle_lines.append_array(round_lines)
+	# Final statistics are a read-only projection of resolved CombatEvents.
+	# Never use estimated weapon damage or infer a successful heal.
+	var damage_dealt := 0
+	var hp_healed := 0
+	var critical_hits := 0
+	var missed_attacks := 0
+	var round_attacks: Dictionary = {}
+	var round_blocks: Dictionary = {}
+	var zone_order := ["head","chest","arms","waist","legs"]
+	for event in simulator.state.event_log:
+		var event_round := int(event.payload.get("round",0))
+		if event_round <= 0:
+			continue
+		if event.kind == CombatEvent.Kind.DAMAGE and event.source_id == player_id:
+			damage_dealt += int(event.result.get("hp_removed",0))
+		if event.kind == CombatEvent.Kind.EFFECT and event.target_id == player_id:
+			hp_healed += int(event.result.get("healed",0))
+		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == player_id:
+			if bool(event.result.get("critical",false)):
+				critical_hits += 1
+			if String(event.result.get("outcome","")) in ["miss","magic_miss"]:
+				missed_attacks += 1
+			var zone := String(event.payload.get("zone",""))
+			if zone_order.has(zone):
+				var zones: Array = round_attacks.get(event_round,[])
+				zones.append(zone)
+				round_attacks[event_round] = zones
+		if event.kind == CombatEvent.Kind.ACTION and event.source_id == player_id and event.payload.has("block_zones"):
+			round_blocks[event_round] = Array(event.payload["block_zones"]).duplicate()
+	var strike_map: Array[String] = []
+	for completed_round in range(simulator.state.round_number,0,-1):
+		var attacks: Array = round_attacks.get(completed_round,[])
+		var blocks: Array = round_blocks.get(completed_round,[])
+		var attack_glyphs := ""
+		var block_glyphs := ""
+		for zone in zone_order:
+			attack_glyphs += "●" if attacks.has(zone) else "○"
+			block_glyphs += "●" if blocks.has(zone) else "○"
+		strike_map.append("%02d   %s / %s" % [completed_round,attack_glyphs,block_glyphs if round_blocks.has(completed_round) else "—"])
 	return {
 		"ok":true,
+		"battle_stats":{"damage":damage_dealt,"healed":hp_healed,"crits":critical_hits,"misses":missed_attacks,"strike_map":strike_map},
 		"battle_log":battle_lines,
 		"round":simulator.state.round_number,
 		"finished":simulator.controller.combat_finished(),
