@@ -271,6 +271,7 @@ func _refresh() -> void:
 		empty.text = "Здесь нет доступной добычи."
 		ground_list.add_child(empty)
 	_refresh_hex_canvas()
+	call_deferred("_center_hex_camera")
 
 ## The approved viewer uses a square map viewport, not an expanding
 ## document-height map or a full-width mini-map.
