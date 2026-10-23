@@ -11,6 +11,7 @@ const VERSION := 1
 const DEFAULT_PATH := "user://map_world_commit_v1.json"
 const MAX_BYTES := 8 * 1024 * 1024
 const TOMBSTONES_KEY := "completed_combat_npc_cohorts"
+const MAP_BASELINE_KEY := "world_map_prior_combat_receipts_v1"
 
 static func _valid_path(path: String) -> bool:
 	return GroupCombatCheckpointService._valid_path(path)
@@ -375,7 +376,11 @@ static func is_defeated_spawn(expedition: ExpeditionState, npc_id: String) -> bo
 	if expedition == null or npc_id.is_empty():
 		return false
 	var cohorts: Dictionary = expedition.world_state.get(TOMBSTONES_KEY,{})
-	for raw in cohorts.values():
+	var previous_map_receipts: Dictionary = expedition.world_state.get(MAP_BASELINE_KEY,{})
+	for encounter_key in cohorts:
+		if previous_map_receipts.has(String(encounter_key)):
+			continue
+		var raw: Variant = cohorts[encounter_key]
 		if raw is Dictionary and Array(raw.get("npc_ids",[])).has(npc_id):
 			return true
 	return false
