@@ -1,11 +1,141 @@
 {
   "schema_version": 1,
   "templates": [
-    {"id":"CHEST_15","name":"Iron Cuirass","item_level":15,"equip_slots":["chest"],"slot_usage":["chest"],"base_stats":{"END":3},"combat_stats":{"auto_block":2.0},"armour_all_zones_all_physical":4.0,"manual_block_zones_added":0},
-    {"id":"LEGS_16","name":"Guard Leggings","item_level":16,"equip_slots":["legs"],"slot_usage":["legs"],"base_stats":{"END":2,"DEX":1},"combat_stats":{"dodge":1.0},"armour_all_zones_all_physical":3.0,"manual_block_zones_added":0},
-    {"id":"HEAD_17","name":"Artheon Helm","item_level":17,"equip_slots":["head"],"slot_usage":["head"],"base_stats":{"END":1,"INTU":2},"combat_stats":{"anti_dodge":1.0},"armour_all_zones_all_physical":3.0,"manual_block_zones_added":0,"abilities":["ABI004"]},
-    {"id":"FEET_18","name":"Scout Boots","item_level":18,"equip_slots":["feet"],"slot_usage":["feet"],"base_stats":{"DEX":3},"combat_stats":{"dodge":2.0},"armour_all_zones_all_physical":1.0,"manual_block_zones_added":0},
-    {"id":"SWORD_19","name":"Artheon Sword","item_level":19,"equip_slots":["main_hand"],"slot_usage":["main_hand"],"damage_min":7,"damage_max":11,"damage_type":"slashing","base_stats":{"STR":2},"combat_stats":{"crit":2.0,"anti_dodge":2.0},"manual_block_zones_added":1,"abilities":["ABI001"],"on_hit_effect":{"effect_id":"EFF001","chance":15.0}},
-    {"id":"SHIELD_20","name":"Tower Shield","item_level":20,"equip_slots":["off_hand"],"slot_usage":["off_hand"],"base_stats":{"END":2},"combat_stats":{"auto_block":5.0},"armour_all_zones_all_physical":5.0,"manual_block_zones_added":1,"on_manual_block_effect":{"effect_id":"EFF004","chance":10.0}}
+    {
+      "id": "CHEST_15",
+      "name": "Iron Cuirass",
+      "item_level": 15,
+      "equip_slots": [
+        "chest"
+      ],
+      "slot_usage": [
+        "chest"
+      ],
+      "par_stats": {
+        "PAR006": 3,
+        "PAR071": 2.0,
+        "PAR073": 0
+      },
+      "combat_stats": {},
+      "armour_all_zones_all_physical": 4.0,
+      "manual_block_zones_added": 0
+    },
+    {
+      "id": "LEGS_16",
+      "name": "Guard Leggings",
+      "item_level": 16,
+      "equip_slots": [
+        "legs"
+      ],
+      "slot_usage": [
+        "legs"
+      ],
+      "par_stats": {
+        "PAR006": 2,
+        "PAR002": 1,
+        "PAR073": 0
+      },
+      "combat_stats": {
+        "dodge_direct_pct": 1.0
+      },
+      "armour_all_zones_all_physical": 3.0,
+      "manual_block_zones_added": 0
+    },
+    {
+      "id": "HEAD_17",
+      "name": "Artheon Helm",
+      "item_level": 17,
+      "equip_slots": [
+        "head"
+      ],
+      "slot_usage": [
+        "head"
+      ],
+      "par_stats": {
+        "PAR006": 1,
+        "PAR003": 2,
+        "PAR073": 0
+      },
+      "combat_stats": {
+        "anti_dodge_direct_pct": 1.0
+      },
+      "armour_all_zones_all_physical": 3.0,
+      "manual_block_zones_added": 0,
+      "abilities": [
+        "ABI004"
+      ]
+    },
+    {
+      "id": "FEET_18",
+      "name": "Scout Boots",
+      "item_level": 18,
+      "equip_slots": [
+        "feet"
+      ],
+      "slot_usage": [
+        "feet"
+      ],
+      "par_stats": {
+        "PAR002": 3,
+        "PAR073": 0
+      },
+      "combat_stats": {
+        "dodge_direct_pct": 2.0
+      },
+      "armour_all_zones_all_physical": 1.0,
+      "manual_block_zones_added": 0
+    },
+    {
+      "id": "SWORD_19",
+      "name": "Artheon Sword",
+      "item_level": 19,
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot_usage": [
+        "main_hand"
+      ],
+      "damage_min": 7,
+      "damage_max": 11,
+      "damage_type": "slashing",
+      "par_stats": {
+        "PAR001": 2
+      },
+      "combat_stats": {
+        "crit_chance_direct_pct": 2.0,
+        "anti_dodge_direct_pct": 2.0
+      },
+      "manual_block_zones_added": 1,
+      "abilities": [
+        "TEST_ABI_FIREBALL"
+      ],
+      "on_hit_effect": {
+        "effect_id": "EFF001",
+        "chance": 15.0
+      }
+    },
+    {
+      "id": "SHIELD_20",
+      "name": "Tower Shield",
+      "item_level": 20,
+      "equip_slots": [
+        "off_hand"
+      ],
+      "slot_usage": [
+        "off_hand"
+      ],
+      "par_stats": {
+        "PAR006": 2,
+        "PAR071": 5.0,
+        "PAR073": 1
+      },
+      "combat_stats": {},
+      "armour_all_zones_all_physical": 5.0,
+      "manual_block_zones_added": 1,
+      "on_manual_block_effect": {
+        "effect_id": "EFF004",
+        "chance": 10.0
+      }
+    }
   ]
 }

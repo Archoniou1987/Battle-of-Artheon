@@ -13,10 +13,10 @@ func _init() -> void:
 	var resolved: Dictionary = ItemResolver.resolve_equipped("main_hand", hero.equipment, repository)
 
 	var state := CombatState.new()
-	var fighter := CombatantState.new("EFF_HERO", "EFF Hero", 50, 100, 0)
-	var enemy := CombatantState.new("EFF_ENEMY", "EFF Enemy", 50, 200, 0)
+	var fighter := TestFixtureLoader.new_combatant("EFF_HERO", "EFF Hero", 50, 100, 0)
+	var enemy := TestFixtureLoader.new_combatant("EFF_ENEMY", "EFF Enemy", 50, 200, 0)
 	EquipmentBuilder.equip(fighter, resolved)
-	enemy.combat_stats = {"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}, true)
 	state.add_combatant(fighter)
 	state.add_combatant(enemy)
 
@@ -26,7 +26,7 @@ func _init() -> void:
 	for effect in effect_data.get("effects", []):
 		effect_map[String(effect.get("id", ""))] = effect
 	balance["effects"] = effect_map
-	var simulator := CombatSimulator.new(state, balance, 1001)
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 1001)
 	simulator.max_rounds = 6
 	var result: Dictionary = simulator.run_duel("EFF_HERO", "EFF_ENEMY")
 

@@ -1,0 +1,45 @@
+{
+  "ABI003": {
+    "name": "Fireball",
+    "delivery_type": "PROJECTILE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": true,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 100,
+        "damage_type": "fire"
+      },
+      {
+        "kind": "effect",
+        "effect_id": "EFF003",
+        "base_chance": 100,
+        "resist_type": "fire"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 10,
+    "application_timing": "standard"
+  },
+  "ABI004": {
+    "name": "Healing",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "heal",
+        "amount": 100
+      },
+      {
+        "kind": "effect",
+        "effect_id": "EFF004",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 10,
+    "application_timing": "standard"
+  }
+}

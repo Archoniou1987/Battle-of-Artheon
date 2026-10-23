@@ -1,7 +1,8 @@
 class_name EquipmentAbilityLoadout
 extends RefCounted
 
-const WEAPON_SLOTS := ["main_hand", "off_hand"]
+## Off-hand weapons contribute physical attacks and hit effects, NEVER active weapon ABI.
+const WEAPON_SLOTS := ["main_hand"]
 const MAX_WEAPON_ABILITIES := 3
 
 ## Builds five ABI slots from actual equipped item instances:
@@ -23,6 +24,8 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 			weapon[weapon_index] = ability_id
 			seen[ability_id] = true
 			weapon_index += 1
+	# Resolve in visible slot order: Chest 4 takes precedence over Head 5
+	# if two equipped items supply the same ABI ID.
 	chest[0] = _first_unique_ability("chest", character, repository, seen)
 	if chest[0] != null: seen[String(chest[0])] = true
 	head[0] = _first_unique_ability("head", character, repository, seen)

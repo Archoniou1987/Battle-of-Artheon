@@ -13,7 +13,7 @@
       },
       "manual_block_zones_added": 1,
       "combat_stats": {
-        "dodge": 7.5
+        "dodge_rating_percent": 7.5
       },
       "on_hit_effect": {
         "effect_id": "EFF001",
@@ -33,8 +33,8 @@
       },
       "manual_block_zones_added": 1,
       "combat_stats": {
-        "auto_block": 15,
-        "anti_dodge": 5
+        "shield_auto_block_rating_percent": 15,
+        "anti_dodge_rating_percent": 5
       },
       "on_hit_effect": {
         "effect_id": "EFF002",
@@ -68,10 +68,10 @@
       },
       "manual_block_zones_added": 1,
       "combat_stats": {
-        "crit": 10
+        "crit_chance_rating_percent": 10
       },
       "on_hit_effect": {
-        "effect_id": "EFF003",
+        "effect_id": "TEST_EFF_MADNESS",
         "chance": 10
       },
       "weapon_class": "axe",
@@ -86,7 +86,8 @@
       "on_manual_block_effect": {
         "effect_id": "EFF004",
         "chance": 5
-      }
+      },
+      "combat_stats": {}
     },
     {
       "id": "TEST_BOW",

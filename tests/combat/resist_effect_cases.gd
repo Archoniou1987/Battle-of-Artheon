@@ -15,16 +15,21 @@ static func run(base_balance:Dictionary) -> bool:
 
 static func _state() -> CombatState:
 	var state := CombatState.new()
-	state.add_combatant(CombatantState.new("source","Source",10,100))
-	state.add_combatant(CombatantState.new("target","Target",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("source","Source",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("target","Target",10,100))
 	state.begin_round()
 	return state
 
+static func _set_resist_percent(target: CombatantState, par_id: String, percent: float) -> void:
+	var per_100_rating := RatingMatrix.to_percent(100.0, target.level)
+	target.combat_stats["par_totals"]["PAR190"] = 0.0
+	target.combat_stats["par_totals"][par_id] = percent * 100.0 / per_100_rating
+
 static func _case_magic_damage_resist(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").magic_resists["fire"] = 0.40
+	_set_resist_percent(state.get_combatant("target"), "PAR191", 40.0)
 	var event := state.create_event(CombatEvent.Kind.DAMAGE,"source","target",{"amount":10.0,"damage_type":"fire"})
-	CombatEngine.new(state,balance).resolve_event(event)
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
 	return state.get_combatant("target").hp == 94 and is_equal_approx(float(event.result.get("magic_resist",0.0)),0.40)
 
 static func _effect_event(state:CombatState, chance:float, roll:int) -> CombatEvent:
@@ -34,21 +39,21 @@ static func _effect_event(state:CombatState, chance:float, roll:int) -> CombatEv
 
 static func _case_effect_chance_100_to_60(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").magic_resists["water"] = 40.0
+	_set_resist_percent(state.get_combatant("target"), "PAR192", 40.0)
 	var event := _effect_event(state,100.0,60)
-	CombatEngine.new(state,balance).resolve_event(event)
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
 	return bool(event.result.get("resolved",false)) and is_equal_approx(float(event.result.get("effective_chance",0.0)),60.0)
 
 static func _case_effect_chance_80_to_48(balance:Dictionary) -> bool:
 	var state := _state()
-	state.get_combatant("target").magic_resists["water"] = 0.40
+	_set_resist_percent(state.get_combatant("target"), "PAR192", 40.0)
 	var event := _effect_event(state,80.0,49)
-	CombatEngine.new(state,balance).resolve_event(event)
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
 	return not bool(event.result.get("resolved",true)) and String(event.result.get("outcome","")) == "resisted" and is_equal_approx(float(event.result.get("effective_chance",0.0)),48.0)
 
 static func _case_effect_immunity(balance:Dictionary) -> bool:
 	var state := _state()
 	state.get_combatant("target").effect_immunities.append("freeze")
 	var event := _effect_event(state,100.0,1)
-	CombatEngine.new(state,balance).resolve_event(event)
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
 	return not bool(event.result.get("resolved",true)) and String(event.result.get("outcome","")) == "immune" and state.get_combatant("target").active_effects.is_empty()

@@ -13,18 +13,44 @@
         "health": 55,
         "mana": 0,
         "stats": {
-          "STR": 5,
-          "DEX": 7,
-          "INTU": 5,
-          "WIS": 0,
-          "INT": 1,
-          "END": 4
+          "PAR001": 5,
+          "PAR002": 7,
+          "PAR003": 5,
+          "PAR005": 0,
+          "PAR004": 1,
+          "PAR006": 4
         },
         "combat_stats": {
-          "main_hand_damage_min": 4,
-          "main_hand_damage_max": 7,
-          "main_hand_damage_type": "slashing",
-          "dodge": 3
+          "weapon_profiles": [
+            {
+              "damage_min": 4,
+              "damage_max": 7,
+              "damage_type": "slashing",
+              "slot": "main_hand"
+            }
+          ],
+          "dodge_direct_pct": 3,
+          "shield_auto_block_direct_pct": 0
+        },
+        "par_totals": {
+          "PAR052": 0,
+          "PAR057": 1,
+          "PAR073": 1,
+          "PAR030": 0,
+          "PAR031": 0,
+          "PAR032": 0,
+          "PAR033": 0,
+          "PAR034": 0,
+          "PAR035": 0,
+          "PAR075": 0,
+          "PAR150": 0
+        },
+        "par_attack_ranges": {
+          "PAR050": {
+            "min": 4,
+            "max": 7,
+            "type": "slashing"
+          }
         }
       },
       "abilities": [],
@@ -48,17 +74,43 @@
         "health": 85,
         "mana": 0,
         "stats": {
-          "STR": 7,
-          "DEX": 3,
-          "INTU": 4,
-          "WIS": 0,
-          "INT": 1,
-          "END": 7
+          "PAR001": 7,
+          "PAR002": 3,
+          "PAR003": 4,
+          "PAR005": 0,
+          "PAR004": 1,
+          "PAR006": 7
         },
         "combat_stats": {
-          "main_hand_damage_min": 5,
-          "main_hand_damage_max": 8,
-          "main_hand_damage_type": "piercing"
+          "weapon_profiles": [
+            {
+              "damage_min": 5,
+              "damage_max": 8,
+              "damage_type": "piercing",
+              "slot": "main_hand"
+            }
+          ],
+          "shield_auto_block_direct_pct": 0
+        },
+        "par_totals": {
+          "PAR052": 0,
+          "PAR057": 1,
+          "PAR073": 1,
+          "PAR030": 0,
+          "PAR031": 0,
+          "PAR032": 0,
+          "PAR033": 0,
+          "PAR034": 0,
+          "PAR035": 0,
+          "PAR075": 0,
+          "PAR150": 0
+        },
+        "par_attack_ranges": {
+          "PAR050": {
+            "min": 5,
+            "max": 8,
+            "type": "piercing"
+          }
         }
       },
       "abilities": [],
@@ -82,17 +134,43 @@
         "health": 75,
         "mana": 0,
         "stats": {
-          "STR": 6,
-          "DEX": 6,
-          "INTU": 5,
-          "WIS": 2,
-          "INT": 3,
-          "END": 5
+          "PAR001": 6,
+          "PAR002": 6,
+          "PAR003": 5,
+          "PAR005": 2,
+          "PAR004": 3,
+          "PAR006": 5
         },
         "combat_stats": {
-          "main_hand_damage_min": 6,
-          "main_hand_damage_max": 9,
-          "main_hand_damage_type": "slashing"
+          "weapon_profiles": [
+            {
+              "damage_min": 6,
+              "damage_max": 9,
+              "damage_type": "slashing",
+              "slot": "main_hand"
+            }
+          ],
+          "shield_auto_block_direct_pct": 0
+        },
+        "par_totals": {
+          "PAR052": 0,
+          "PAR057": 1,
+          "PAR073": 1,
+          "PAR030": 0,
+          "PAR031": 0,
+          "PAR032": 0,
+          "PAR033": 0,
+          "PAR034": 0,
+          "PAR035": 0,
+          "PAR075": 0,
+          "PAR150": 0
+        },
+        "par_attack_ranges": {
+          "PAR050": {
+            "min": 6,
+            "max": 9,
+            "type": "slashing"
+          }
         }
       },
       "abilities": [],
@@ -116,18 +194,44 @@
         "health": 65,
         "mana": 0,
         "stats": {
-          "STR": 4,
-          "DEX": 9,
-          "INTU": 7,
-          "WIS": 2,
-          "INT": 3,
-          "END": 4
+          "PAR001": 4,
+          "PAR002": 9,
+          "PAR003": 7,
+          "PAR005": 2,
+          "PAR004": 3,
+          "PAR006": 4
         },
         "combat_stats": {
-          "main_hand_damage_min": 7,
-          "main_hand_damage_max": 10,
-          "main_hand_damage_type": "piercing",
-          "anti_dodge": 2
+          "weapon_profiles": [
+            {
+              "damage_min": 7,
+              "damage_max": 10,
+              "damage_type": "piercing",
+              "slot": "main_hand"
+            }
+          ],
+          "anti_dodge_direct_pct": 2,
+          "shield_auto_block_direct_pct": 0
+        },
+        "par_totals": {
+          "PAR052": 0,
+          "PAR057": 1,
+          "PAR073": 1,
+          "PAR030": 0,
+          "PAR031": 0,
+          "PAR032": 0,
+          "PAR033": 0,
+          "PAR034": 0,
+          "PAR035": 0,
+          "PAR075": 0,
+          "PAR150": 0
+        },
+        "par_attack_ranges": {
+          "PAR050": {
+            "min": 7,
+            "max": 10,
+            "type": "piercing"
+          }
         }
       },
       "abilities": [],
@@ -151,18 +255,44 @@
         "health": 140,
         "mana": 20,
         "stats": {
-          "STR": 10,
-          "DEX": 7,
-          "INTU": 8,
-          "WIS": 4,
-          "INT": 5,
-          "END": 9
+          "PAR001": 10,
+          "PAR002": 7,
+          "PAR003": 8,
+          "PAR005": 4,
+          "PAR004": 5,
+          "PAR006": 9
         },
         "combat_stats": {
-          "main_hand_damage_min": 10,
-          "main_hand_damage_max": 15,
-          "main_hand_damage_type": "slashing",
-          "crit": 3
+          "weapon_profiles": [
+            {
+              "damage_min": 10,
+              "damage_max": 15,
+              "damage_type": "slashing",
+              "slot": "main_hand"
+            }
+          ],
+          "crit_chance_direct_pct": 3,
+          "shield_auto_block_direct_pct": 0
+        },
+        "par_totals": {
+          "PAR052": 0,
+          "PAR057": 1,
+          "PAR073": 1,
+          "PAR030": 0,
+          "PAR031": 0,
+          "PAR032": 0,
+          "PAR033": 0,
+          "PAR034": 0,
+          "PAR035": 0,
+          "PAR075": 0,
+          "PAR150": 0
+        },
+        "par_attack_ranges": {
+          "PAR050": {
+            "min": 10,
+            "max": 15,
+            "type": "slashing"
+          }
         }
       },
       "abilities": [

@@ -9,20 +9,21 @@ func _initialize() -> void:
 	var table:Dictionary=(ld.get("loot_tables",[]) as Array)[0] as Dictionary
 	var repository:=ItemRepository.new()
 	var player:=CharacterState.new("PLAYER_CHAIN","Chain Hero",20)
-	var base:={"health":160,"mana":30,"stats":{"STR":10,"DEX":10,"INTU":10,"INT":10,"WIS":10,"END":10},"combat_stats":{"main_hand_damage_min":35.0,"main_hand_damage_max":35.0,"main_hand_damage_type":"slashing"}}
-	var npc:=CombatantState.new("NPC_WORN_BANDIT_001","Worn Bandit",10,25,0)
-	npc.combat_stats={"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	TestFixtureLoader.equip_character_weapon(player, repository, 35)
+	var base:={"health":160,"mana":30}
+	var npc:=TestFixtureLoader.new_combatant("NPC_WORN_BANDIT_001","Worn Bandit",10,25,0)
+	npc.combat_stats.merge({"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}, true)
 	var state:=CombatState.new()
 	state.add_combatant(CharacterCombatBuilder.build(player,repository,base))
 	state.add_combatant(npc)
-	var sim:=CombatSimulator.new(state,TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),7070)
+	var sim:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),TestFixtureLoader.load_json("res://data/balance/physical_combat.json"),7070)
 	sim.max_rounds=10
 	var result:=sim.run_duel(player.character_id,npc.combatant_id)
 	var pool:=CombatRewardService.create_duel_loot_pool(result,npc.combatant_id,player,table,templates,ItemGenerator.new(20261006),repository,LootService.new(4242))
 	var drops:Array[Dictionary]=[]
 	for item_id in pool.item_ids():
 		drops.append(repository.get_item(item_id))
-	var valid:=not pool.item_ids().is_empty() and player.inventory.size()==0
+	var valid:=not pool.item_ids().is_empty() and player.bag_item_count()==0
 	valid=valid and String(result.get("winner_id",""))==player.character_id and drops.size()==2
 	for item in drops:
 		var maximum:=int(item.get("durability_max",0))
@@ -34,7 +35,7 @@ func _initialize() -> void:
 		valid=valid and repository.has_item(String(item.get("instance_id","")))
 	for item_id in pool.item_ids().duplicate():
 		valid=valid and pool.claim(item_id,player,repository)
-	valid=valid and player.inventory.size()==2 and pool.item_ids().is_empty()
+	valid=valid and player.bag_item_count()==2 and pool.item_ids().is_empty()
 	print("NPC_LOOT_CONDITION_CHAIN outcome=%s drops=%d" % [String(result.get("outcome","")),drops.size()])
 	for item in drops:
 		print("NPC_LOOT_CONDITION_ITEM "+JSON.stringify(ItemDurabilityService.public_summary(item)))
