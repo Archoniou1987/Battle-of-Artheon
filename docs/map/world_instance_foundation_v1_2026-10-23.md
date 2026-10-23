@@ -44,3 +44,9 @@ Current SoloGameStateService and ExpeditionSaveService remain the **only** durab
 3. Bind active instance metadata to current SoloGameState using a one-way, once-only migration with regression fixtures. Preserve existing combat receipts, explored cells, defeated spawn IDs, loot and character ownership.
 4. Add settlement / region entry and exit gates, then travel graph and timer jobs.
 5. Build UI after engine and persistence regression tests pass.
+
+## Production generator integration checkpoint
+
+`MapInstanceGenerationService.generate(instance, settlements)` now validates immutable MapInstance identity and invokes the **existing** `LocationGenerator.generate`, which already calls `MapRegionGenerator` and produces region definitions, NPC placements, region NPCs, objects, encounters, patrols, guards, boss groups and traversable entrances. The existing generator remains the only source of generated content; no parallel map generator was created. `tests/map/map_instance_generation_runner.gd` verifies deterministic generated content and generation-version rejection.
+
+**Not yet implemented:** biome-specific terrain tuning (the production generator currently starts from grass and its existing thematic regions), authoritative runtime mounting of all generated NPC/patrol variants, live 12×12 replacement, settlement navigation, or Solo save migration. The adapter does not make these claims. Integrate those in subsequent tested commits without overwriting `solo_game_state_v1.json` or losing defeated-NPC receipts, ground items and combat checkpoints.
