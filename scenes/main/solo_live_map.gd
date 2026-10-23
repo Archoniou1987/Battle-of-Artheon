@@ -280,12 +280,16 @@ func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictiona
 		result_scroll.custom_minimum_size = Vector2(290,220)
 		result_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		stack.add_child(result_scroll)
+		var report_content := VBoxContainer.new()
+		report_content.add_theme_constant_override("separation",12)
+		report_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		result_scroll.add_child(report_content)
 		result_details = Label.new()
 		result_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		result_details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		result_scroll.add_child(result_details)
+		report_content.add_child(result_details)
 		result_maps = VBoxContainer.new()
-		stack.add_child(result_maps)
+		report_content.add_child(result_maps)
 		var continue_button := Button.new()
 		continue_button.text = "Продолжить"
 		continue_button.custom_minimum_size.y = 54
