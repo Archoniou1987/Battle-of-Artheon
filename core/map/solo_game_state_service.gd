@@ -159,6 +159,9 @@ static func save_town(path: String, player: CharacterState, repository: ItemRepo
 		return {"ok":false,"reason":"game_state_not_in_town"}
 	if String(current["sha256"]) != expected_sha256:
 		return {"ok":false,"reason":"game_state_stale_revision"}
+	var pruned := _prune_expired_archives(current["expedition"],player,repository,int(Time.get_unix_time_from_system()))
+	if pruned < 0:
+		return {"ok":false,"reason":"map_archives_corrupt"}
 	var committed := ExpeditionSaveService.save(path,current["expedition"],player,repository,true)
 	if not bool(committed.get("ok",false)):
 		return committed
@@ -272,6 +275,61 @@ static func upgrade_legacy_map(path: String, player_id: String, manifest: String
 ## Archives are snapshots of *map* state only, never player/item copies.
 const MAP_ARCHIVES_KEY := "world_expedition_archives_v1"
 const MAP_SERIAL_KEY := "world_expedition_serial_v1"
+const MAP_ARCHIVE_TTL_SECONDS := 3600
+
+## Prune expired map snapshots on the NEXT durable town save or expedition
+## creation. No background server job or unbounded archive retention.
+## Only item instances exclusive to the expired worlds are reclaimed.
+static func _archive_item_ids(world: Dictionary) -> Dictionary:
+	var ids: Dictionary = {}
+	var ground: Variant = world.get(GroundLootService.WORLD_KEY,{})
+	if ground is Dictionary:
+		for item_id in ground.keys():
+			ids[String(item_id)] = true
+	var pools: Variant = world.get("encounter_loot_pools",{})
+	if pools is Dictionary:
+		for data in pools.values():
+			if not data is Dictionary:
+				continue
+			var pool := EncounterLootPool.from_dict(data)
+			for item_id in pool.item_ids():
+				ids[String(item_id)] = true
+	return ids
+
+static func _prune_expired_archives(expedition: ExpeditionState, player: CharacterState, repository: ItemRepository, now_unix: int) -> int:
+	var value: Variant = expedition.world_state.get(MAP_ARCHIVES_KEY,{})
+	if not value is Dictionary:
+		return -1
+	var archives: Dictionary = value
+	if archives.is_empty():
+		return 0
+	var retired: Dictionary = {}
+	var remaining: Dictionary = {}
+	for id in archives.keys():
+		var entry: Variant = archives[id]
+		if not entry is Dictionary or not entry.get("world_state") is Dictionary:
+			# Corrupt entries cannot be safely pruned or restored.
+			return -1
+		var expires: int = int(entry.get("expires_at_unix",0))
+		if expires <= now_unix:
+			retired[id] = entry
+		else:
+			remaining[id] = entry
+	if retired.is_empty():
+		return 0
+	var keep: Dictionary = _archive_item_ids(expedition.world_state)
+	for id in remaining:
+		keep.merge(_archive_item_ids(remaining[id]["world_state"]),true)
+	for item_id in player.inventory.instance_ids():
+		keep[String(item_id)] = true
+	var candidates: Dictionary = {}
+	for id in retired:
+		candidates.merge(_archive_item_ids(retired[id]["world_state"]),true)
+	for item_id in candidates:
+		if not keep.has(item_id):
+			repository.remove_item(String(item_id))
+	expedition.world_state[MAP_ARCHIVES_KEY] = remaining
+	return retired.size()
 
 static func _active_map_identity(expedition: ExpeditionState) -> String:
 	var definition: Variant = expedition.world_state.get(SoloLiveMapSession.MAP_INSTANCE_KEY,null)
@@ -317,7 +375,10 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	var archives_value: Variant = expedition.world_state.get(MAP_ARCHIVES_KEY,{})
 	if not archives_value is Dictionary:
 		return {"ok":false,"reason":"map_archives_corrupt"}
-	var archives: Dictionary = Dictionary(archives_value).duplicate(true)
+	var removed := _prune_expired_archives(expedition,current["character"],current["repository"],int(Time.get_unix_time_from_system()))
+	if removed < 0:
+		return {"ok":false,"reason":"map_archives_corrupt"}
+	var archives: Dictionary = Dictionary(expedition.world_state.get(MAP_ARCHIVES_KEY,{})).duplicate(true)
 	# New map IDs are allocated from a monotonic counter in the durable
 	# owner, not a timestamp; never recycle an old ID on this save.
 	var serial := int(expedition.world_state.get(MAP_SERIAL_KEY,0))+1
@@ -336,6 +397,7 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	snapshot.erase(MAP_ARCHIVES_KEY)
 	snapshot.erase(MAP_SERIAL_KEY)
 	archives[old_id] = {
+		"expires_at_unix":int(Time.get_unix_time_from_system())+MAP_ARCHIVE_TTL_SECONDS,
 		"seed":expedition.seed_value,
 		"position":[expedition.player_position.x,expedition.player_position.y],
 		"world_state":snapshot
