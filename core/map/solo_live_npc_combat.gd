@@ -388,7 +388,7 @@ func combat_view() -> Dictionary:
 		var blocks_row: Array[String] = []
 		for zone in zone_order:
 			var attempts: Array = attack_zones.get(zone,[])
-			attacks_row.append("".join(attempts) if not attempts.is_empty() else "○")
+			attacks_row.append("".join(PackedStringArray(attempts)) if not attempts.is_empty() else "○")
 			blocks_row.append("●" if blocks.has(zone) else "○")
 		map_rounds.append({"round":completed_round,"attacks":attacks_row,"blocks":blocks_row if round_blocks.has(completed_round) else []})
 		strike_map.append("%02d   %s / %s" % [completed_round,"".join(attacks_row),"".join(blocks_row) if round_blocks.has(completed_round) else "—"])
