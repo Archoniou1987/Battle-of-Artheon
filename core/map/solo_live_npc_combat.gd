@@ -317,7 +317,7 @@ func combat_view() -> Dictionary:
 	# Reconstruct ALL completed rounds on every snapshot, including resume
 	# after days offline. Never maintain a separate, fragile UI-side journal.
 	var battle_lines: Array[String] = []
-	for completed_round in range(1,simulator.state.round_number+1):
+	for completed_round in range(simulator.state.round_number,0,-1):
 		var round_lines := ArenaCombatLog.lines_for_round(simulator.state.event_log,completed_round,player_id,ability_definitions)
 		var used_potions: Dictionary = {}
 		for event in simulator.state.event_log:
