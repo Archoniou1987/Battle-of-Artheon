@@ -232,7 +232,6 @@ func _refresh_hex_canvas() -> void:
 			hex_canvas.explored_hexes[pos] = true
 	hex_canvas.set_player_view(session.expedition.player_position,Vector2i(-1,-1),[])
 
-			tile_container.add_child(btn)
 
 ## Bars are read-only projections of combat_view() values, including
 ## provisional death masking via CombatantState.visible_hp().
