@@ -15,7 +15,8 @@ const SOLO_PICKUP_SECONDS := 2
 var loot_pickups: GroundLootService = GroundLootService.new()
 
 static func open(path: String, manifest: String, expedition_id: String, player_id: String) -> Dictionary:
-	if path == SoloGameStateService.PATH:
+	var existing := ExpeditionSaveService.read(path,expedition_id,player_id)
+	if bool(existing.get("ok",false)) and existing["expedition"].world_state.has(SoloGameStateService.LOCATION_KEY):
 		var gate := SoloExpeditionLaunchGate.inspect(path,manifest,expedition_id,player_id)
 		if not bool(gate.get("ok",false)):
 			return gate
@@ -146,7 +147,7 @@ func finish_ground_pickup(ticket: String, now_unix: int = -1) -> Dictionary:
 	return {"ok":true,"instance_id":String(result["instance_id"]),"saved":true}
 
 func return_to_town(town_path: String) -> Dictionary:
-	if save_path == SoloGameStateService.PATH:
+	if expedition != null and expedition.world_state.has(SoloGameStateService.LOCATION_KEY):
 		return SoloGameStateService.set_location(save_path,character.character_id,SoloGameStateService.LOCATION_TOWN,manifest_path)
 	var closed := SoloTownReturnService.close_for_town(save_path,expedition.expedition_id,character.character_id,manifest_path)
 	if not bool(closed.get("ok",false)):
