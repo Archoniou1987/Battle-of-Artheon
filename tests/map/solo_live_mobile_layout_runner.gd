@@ -104,6 +104,11 @@ func _run() -> void:
 		check(minimap.offset_right-minimap.offset_left==155.0 and minimap.offset_bottom-minimap.offset_top==155.0,"minimap_square_155px")
 	var upgrade := page.get("legacy_upgrade_button") as Button
 	check(upgrade != null and upgrade.text.contains("20×20"),"explicit_legacy_upgrade_action")
+	var diagnostic := page.get("reveal_test_toggle") as CheckButton
+	check(diagnostic != null and not diagnostic.button_pressed,"full_reveal_is_opt_in_diagnostic")
+	if diagnostic != null:
+		page.call("_toggle_map_diagnostic",true)
+		check(hex != null and hex.debug_reveal_all,"full_reveal_uses_original_canvas")
 	check(stop != null and stop.disabled,"stop_disabled_until_route_starts")
 	# Exercise the real scene's selection handler without a fabricated
 	# combat engine. Capacity is exactly two zones for this UI fixture.
