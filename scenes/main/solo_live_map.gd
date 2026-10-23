@@ -291,7 +291,27 @@ func _stop_route() -> void:
 		mini_map.update_map(session.map,session.expedition.player_position)
 
 func _process(delta: float) -> void:
-	if not route_running or session == null:
+	if session == null:
+		return
+	if not pickup_active and live_combat == null and not FileAccess.file_exists(MANIFEST):
+		var patrol := session.advance_patrols(delta)
+		if not bool(patrol.get("ok",false)):
+			_stop_route()
+			_set_status("Патруль: "+String(patrol.get("reason","unknown")))
+			return
+		if bool(patrol.get("changed",false)):
+			hex_canvas.queue_redraw()
+			if mini_map != null:
+				mini_map.queue_redraw()
+		var colliding_id := String(patrol.get("collision_entity_id",""))
+		if not colliding_id.is_empty():
+			session.patrol_runtime.collision_entity_id = ""
+			_stop_route()
+			var npc_cell: Vector2i = session.map.entity_positions.get(colliding_id,Vector2i(-1,-1))
+			if npc_cell.x>=0 and HexGrid.distance(session.expedition.player_position,npc_cell)==1:
+				_start_combat(npc_cell)
+			return
+	if not route_running:
 		return
 	if pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
 		_stop_route()
