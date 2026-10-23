@@ -338,9 +338,12 @@ func combat_view() -> Dictionary:
 	var hp_healed := 0
 	var critical_hits := 0
 	var missed_attacks := 0
+	var dodges := 0
 	var round_attacks: Dictionary = {}
 	var round_blocks: Dictionary = {}
 	var zone_order := ["head","chest","arms","waist","legs"]
+	# The round map uses resolved ATTACK events rather than chosen zones.
+	# Each cell is an array because dual attacks can hit the same zone.
 	for event in simulator.state.event_log:
 		var event_round := int(event.payload.get("round",0))
 		if event_round <= 0:
@@ -350,30 +353,48 @@ func combat_view() -> Dictionary:
 		if event.kind == CombatEvent.Kind.EFFECT and event.target_id == player_id:
 			hp_healed += int(event.result.get("healed",0))
 		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == player_id:
+			var outcome := String(event.result.get("outcome",""))
 			if bool(event.result.get("critical",false)):
 				critical_hits += 1
-			if String(event.result.get("outcome","")) in ["miss","magic_miss"]:
+			if outcome in ["miss","magic_miss"]:
 				missed_attacks += 1
+			if outcome == "dodge":
+				dodges += 1
 			var zone := String(event.payload.get("zone",""))
 			if zone_order.has(zone):
-				var zones: Array = round_attacks.get(event_round,[])
-				zones.append(zone)
+				var zones: Dictionary = round_attacks.get(event_round,{})
+				var attempts: Array = zones.get(zone,[])
+				var symbol := "●"
+				if outcome in ["miss","magic_miss"]:
+					symbol = "×"
+				elif outcome == "dodge":
+					symbol = "¤"
+				elif bool(event.result.get("critical",false)):
+					symbol = "✹"
+				elif outcome in ["manual_block","auto_block"]:
+					symbol = "■"
+				attempts.append(symbol)
+				zones[zone] = attempts
 				round_attacks[event_round] = zones
+		# Planned defensive zones, not successful block outcomes.
 		if event.kind == CombatEvent.Kind.ACTION and event.source_id == player_id and event.payload.has("block_zones"):
 			round_blocks[event_round] = Array(event.payload["block_zones"]).duplicate()
+	var map_rounds: Array[Dictionary] = []
 	var strike_map: Array[String] = []
-	for completed_round in range(simulator.state.round_number,0,-1):
-		var attacks: Array = round_attacks.get(completed_round,[])
+	for completed_round in range(1,simulator.state.round_number+1):
+		var attack_zones: Dictionary = round_attacks.get(completed_round,{})
 		var blocks: Array = round_blocks.get(completed_round,[])
-		var attack_glyphs := ""
-		var block_glyphs := ""
+		var attacks_row: Array[String] = []
+		var blocks_row: Array[String] = []
 		for zone in zone_order:
-			attack_glyphs += "●" if attacks.has(zone) else "○"
-			block_glyphs += "●" if blocks.has(zone) else "○"
-		strike_map.append("%02d   %s / %s" % [completed_round,attack_glyphs,block_glyphs if round_blocks.has(completed_round) else "—"])
+			var attempts: Array = attack_zones.get(zone,[])
+			attacks_row.append("".join(attempts) if not attempts.is_empty() else "○")
+			blocks_row.append("●" if blocks.has(zone) else "○")
+		map_rounds.append({"round":completed_round,"attacks":attacks_row,"blocks":blocks_row if round_blocks.has(completed_round) else []})
+		strike_map.append("%02d   %s / %s" % [completed_round,"".join(attacks_row),"".join(blocks_row) if round_blocks.has(completed_round) else "—"])
 	return {
 		"ok":true,
-		"battle_stats":{"damage":damage_dealt,"healed":hp_healed,"crits":critical_hits,"misses":missed_attacks,"strike_map":strike_map},
+		"battle_stats":{"damage":damage_dealt,"healed":hp_healed,"crits":critical_hits,"misses":missed_attacks,"dodges":dodges,"strike_map":strike_map,"map_rounds":map_rounds},
 		"battle_log":battle_lines,
 		"round":simulator.state.round_number,
 		"finished":simulator.controller.combat_finished(),
