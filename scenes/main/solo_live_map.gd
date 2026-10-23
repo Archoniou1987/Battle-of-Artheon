@@ -90,6 +90,7 @@ func _build_view() -> void:
 	scroll.add_child(root)
 	var header := Label.new()
 	header.text = "Экспедиция — первая игровая карта"
+	header.visible = false
 	header.add_theme_font_size_override("font_size",22)
 	root.add_child(header)
 	status_label = Label.new()
@@ -97,6 +98,7 @@ func _build_view() -> void:
 	var explanation := Label.new()
 	explanation.text = "Враги отмечены ⚔. Контакт запускает настоящий Combat Engine. Выберите зоны атаки, защиты и одну ABI (или пропустите её)."
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	explanation.visible = false
 	root.add_child(explanation)
 	combat_panel = VBoxContainer.new()
 	combat_panel.visible = false
@@ -168,6 +170,9 @@ func _build_view() -> void:
 	map_panel.custom_minimum_size.y = 430.0
 	map_panel.clip_contents = true
 	root.add_child(map_panel)
+	# Match approved debug viewer: square playable map FIRST, actions below.
+	root.move_child(map_panel,0)
+	map_panel.resized.connect(_size_hex_map_viewport)
 	map_scroller = ScrollContainer.new()
 	map_scroller.name = "LiveMapScroll"
 	map_scroller.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -207,6 +212,8 @@ func _build_view() -> void:
 	route_label = Label.new()
 	route_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(route_label)
+	# Position/status live directly below square map, before action buttons.
+	root.move_child(status_label,1)
 	route_stop_button = Button.new()
 	route_stop_button.text = "Остановить движение"
 	route_stop_button.custom_minimum_size.y = 44
@@ -267,6 +274,17 @@ func _refresh() -> void:
 
 ## The approved viewer uses a square map viewport, not an expanding
 ## document-height map or a full-width mini-map.
+## Camera is cosmetic: visibility always follows the player's hex, not
+## the number of hexes rendered on a large screen.
+func _center_hex_camera() -> void:
+	if session == null or hex_canvas == null or map_scroller == null or not is_inside_tree():
+		return
+	if hex_canvas.generated.is_empty():
+		return
+	var center: Vector2 = hex_canvas._hex_center(session.expedition.player_position)
+	map_scroller.scroll_horizontal = maxi(0,int(center.x-map_scroller.size.x*0.5))
+	map_scroller.scroll_vertical = maxi(0,int(center.y-map_scroller.size.y*0.5))
+
 func _size_hex_map_viewport() -> void:
 	if map_panel == null:
 		return
