@@ -3,7 +3,7 @@ extends Control
 const LOCATION_NAME := "Стартовая деревня"
 const PROGRESSION_SAVE_PATH := "user://character_progression_v1.json"
 const INVENTORY_SAVE_PATH := "user://character_inventory_v1.json"
-const CANONICAL_TOWN_PATH := SoloTownSaveService.DEFAULT_PATH
+const CANONICAL_TOWN_PATH := SoloGameStateService.PATH
 # Temporary browser preview fixture; disable before public gameplay release.
 const ENABLE_INVENTORY_PREVIEW_ITEMS := false
 const INVENTORY_RESET_MARKER_PATH := "user://inventory_reset_empty_v1.marker"
@@ -64,44 +64,39 @@ var _town_expedition_handed_off := false
 func _ready() -> void:
 	player_character = CharacterState.new("player", "Герой")
 	item_repository = ItemRepository.new()
-	var has_canonical := FileAccess.file_exists(CANONICAL_TOWN_PATH)
-	if has_canonical:
-		var restored: Dictionary = SoloTownSaveService.read(CANONICAL_TOWN_PATH,player_character.character_id)
-		if bool(restored.get("ok",false)):
-			_activate_canonical_owner(restored)
-		else:
-			# A broken canonical save must NEVER fall through to stale
-			# legacy files. Keep the scene inspectable but read-only.
-			_town_storage_blocked = true
-			_town_storage_issue = "read: " + String(restored.get("reason","unknown")) + " / " + String(restored.get("detail",""))
-			push_error("Canonical town save rejected: " + _town_storage_issue)
-	else:
+	var game := SoloGameStateService.bootstrap(player_character.character_id)
+	if bool(game.get("ok",false)):
+		_activate_canonical_owner(game)
+		if String(game.get("location","")) == SoloGameStateService.LOCATION_MAP:
+			_town_expedition_handed_off = true
+			call_deferred("_resume_saved_map")
+		if bool(game.get("legacy_town_preserved",false)):
+			push_warning("Legacy city file has been preserved alongside migrated map progress; it was not merged.")
+	elif String(game.get("reason","")) == "game_state_not_found":
+		# Import pre-canonical progression/inventory only if no previous world
+		# or town owner exists. Never fall back after a corrupt canonical read.
 		_load_saved_progression()
 		_load_saved_inventory()
 		if not _resources_loaded_from_save:
 			player_character.reset_resources_to_full(item_repository)
 		else:
 			player_character.resource_snapshot(item_repository)
-		# The existing preview seed sequence belongs to legacy migration,
-		# and must not run again after the canonical save is initialized.
 		_reset_preview_inventory_once()
 		_grant_combat_test_items_once()
 		_grant_combat_test_elixirs_once()
-		# The legacy repository can contain orphan records from old demo
-		# grants. Only items proven owned by this character enter the first
-		# canonical save; the legacy save itself remains untouched.
 		var migration := SoloTownSaveService.prepare_legacy_inventory_migration(player_character,item_repository)
 		if bool(migration.get("ok",false)):
-			if int(migration.get("orphan_count",0)) > 0:
-				push_warning("Legacy town migration excluded %d orphan item record(s); legacy file preserved." % int(migration["orphan_count"]))
 			item_repository = migration["repository"]
-		var initial: Dictionary = SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository) if bool(migration.get("ok",false)) else migration
-		if bool(initial.get("ok",false)):
-			_activate_canonical_owner(SoloTownSaveService.read(CANONICAL_TOWN_PATH,player_character.character_id))
+		var created: Dictionary = SoloGameStateService.create(CANONICAL_TOWN_PATH,player_character,item_repository,1) if bool(migration.get("ok",false)) else migration
+		if bool(created.get("ok",false)):
+			_activate_canonical_owner(created)
 		else:
 			_town_storage_blocked = true
-			_town_storage_issue = "init: " + String(initial.get("reason","unknown")) + " / " + String(initial.get("detail",""))
-			push_error("Canonical town migration failed: " + _town_storage_issue)
+			_town_storage_issue = "init: " + String(created.get("reason","unknown")) + " / " + String(created.get("detail",""))
+	else:
+		_town_storage_blocked = true
+		_town_storage_issue = "load: " + String(game.get("reason","unknown")) + " / " + String(game.get("detail",""))
+		push_error("Unified game save rejected: " + _town_storage_issue)
 	var now_unix := Time.get_unix_time_from_system()
 	if _canonical_town_active and _resources_loaded_from_save and not _regen_saved_paused and _regen_saved_unix > 0.0:
 		OutOfCombatRegenerationService.advance(player_character,item_repository,maxf(0.0,now_unix-_regen_saved_unix))
@@ -127,7 +122,7 @@ func _activate_canonical_owner(restored: Dictionary) -> void:
 func _save_canonical_town() -> void:
 	if _town_expedition_handed_off or _town_storage_blocked or not _canonical_town_active:
 		return
-	var saved := SoloTownSaveService.save(CANONICAL_TOWN_PATH,player_character,item_repository,_canonical_town_revision,true)
+	var saved := SoloGameStateService.save_town(CANONICAL_TOWN_PATH,player_character,item_repository,_canonical_town_revision)
 	if bool(saved.get("ok",false)):
 		_canonical_town_revision = String(saved["sha256"])
 	else:
@@ -482,88 +477,39 @@ func _open_panel(section: String) -> void:
 	popup.position = (size - popup.size) * 0.5
 
 
-## The real Solo map is not yet a playable scene. Keep this entry
-## fail-closed while honoring pending combat manifests on startup.
+## A location switch updates the SAME game snapshot. No expedition
+## character copies, origin fingerprints, adoption or archive on return.
 func _open_solo_map_gate() -> void:
-	if _town_storage_blocked:
-		_show_town_storage_problem()
-		return
-	popup_title.text = "Карта — экспедиция"
-	for child in popup_actions.get_children():
-		popup_actions.remove_child(child)
-		child.queue_free()
-	var identity := SoloTownExpeditionBridge.expedition_id_for_player(player_character.character_id)
-	var gate: Dictionary = SoloExpeditionLaunchGate.inspect(ExpeditionSaveService.DEFAULT_PATH,SoloCombatSessionManifest.PATH,identity,player_character.character_id)
-	var state := String(gate.get("state","blocked"))
-	match state:
-		"new_expedition_required":
-			popup_description.text = "Создать экспедицию с текущими предметами и перейти на карту."
-			_add_solo_map_button("Начать экспедицию",true)
-
-		"resume_combat_checkpoint":
-			popup_description.text = "Обнаружен незавершённый бой. Восстановить контрольную точку и вернуться к тому же NPC."
-			_add_solo_map_button("Продолжить бой",false,true)
-		"ready", "ready_after_recovery":
-			popup_description.text = "Продолжить сохранённую экспедицию с последней клетки."
-			_add_solo_map_button("Продолжить экспедицию",false)
-		"expedition_closed":
-			popup_description.text = "Экспедиция завершена. Её результат будет проверен и сохранён в архиве перед новым походом."
-			_add_solo_map_button("Начать новую экспедицию",true)
-		_:
-			popup_description.text = "Вход заблокирован: " + String(gate.get("reason","unknown")) + ". Прогресс не изменён."
-	popup.visible = true
-	popup.reset_size()
-	popup.position = (size - popup.size) * 0.5
-
-func _add_solo_map_button(title: String, create: bool, resume_pending: bool = false) -> void:
-	var button := Button.new()
-	button.text = title
-	button.pressed.connect(_enter_solo_map.bind(create,resume_pending))
-	popup_actions.add_child(button)
-
-func _enter_solo_map(create: bool, resume_pending: bool = false) -> void:
-	if _town_storage_blocked or player_character.in_combat:
-		return
-	var id := SoloTownExpeditionBridge.expedition_id_for_player(player_character.character_id)
-	if resume_pending:
-		# Inspect/restore the exact fight before changing scenes. An invalid
-		# checkpoint never falls through to a fresh expedition or map session.
-		var pending := SoloLiveMapSession.open_pending(ExpeditionSaveService.DEFAULT_PATH,SoloCombatSessionManifest.PATH,id,player_character.character_id)
-		if not bool(pending.get("ok",false)):
-			popup_description.text = "Нельзя открыть незавершённый бой: "+String(pending.get("reason","unknown"))
-			return
-		var resumed := SoloLiveNpcCombat.resume(pending["session"])
-		if not bool(resumed.get("ok",false)):
-			popup_description.text = "Checkpoint боя отклонён: "+String(resumed.get("detail",resumed.get("reason","unknown")))
-			return
-	elif create:
-		if FileAccess.file_exists(ExpeditionSaveService.DEFAULT_PATH):
-			var archived := SoloTownExpeditionBridge.archive_adopted_expedition(ExpeditionSaveService.DEFAULT_PATH,CANONICAL_TOWN_PATH,id,player_character.character_id,SoloCombatSessionManifest.PATH)
-			if not bool(archived.get("ok",false)):
-				popup_description.text = "Новая экспедиция заблокирована: " + String(archived.get("reason","unknown")) + " / " + String(archived.get("detail",""))
-				return
-		# City must be saved first, otherwise the one-time fingerprint
-		# could represent progress never persisted to the canonical town.
-		_save_canonical_town()
+	if _town_storage_blocked or player_character == null or player_character.in_combat:
 		if _town_storage_blocked:
-			return
-		var seed := randi_range(1,999999)
-		var started := SoloTownExpeditionBridge.create_from_town(ExpeditionSaveService.DEFAULT_PATH,id,seed,Vector2i(5,5),player_character,item_repository,SoloCombatSessionManifest.PATH)
-		if not bool(started.get("ok",false)):
-			popup_description.text = "Экспедиция не создана: "+String(started.get("reason","unknown"))
-			return
-	else:
-		var verified := SoloTownExpeditionBridge.open_existing(ExpeditionSaveService.DEFAULT_PATH,id,player_character.character_id,SoloCombatSessionManifest.PATH)
-		if not bool(verified.get("ok",false)):
-			popup_description.text = "Экспедиция не открыта: "+String(verified.get("reason","unknown"))
-			return
-	# The town state is now handed off to the expedition. Scene teardown
-	# must not write a second divergent town snapshot.
+			_show_town_storage_problem()
+		return
+	_save_canonical_town()
+	if _town_storage_blocked:
+		return
+	var entered := SoloGameStateService.set_location(CANONICAL_TOWN_PATH,player_character.character_id,SoloGameStateService.LOCATION_MAP)
+	if not bool(entered.get("ok",false)):
+		popup_title.text = "Карта недоступна"
+		popup_description.text = "Не удалось сохранить переход: " + String(entered.get("reason","unknown"))
+		popup.visible = true
+		return
 	_town_expedition_handed_off = true
 	var change_error := get_tree().change_scene_to_file("res://scenes/main/solo_live_map.tscn")
 	if change_error != OK:
 		_town_expedition_handed_off = false
+		SoloGameStateService.set_location(CANONICAL_TOWN_PATH,player_character.character_id,SoloGameStateService.LOCATION_TOWN)
+		popup_title.text = "Карта недоступна"
 		popup_description.text = "Не удалось открыть игровую карту."
+		popup.visible = true
+
+func _resume_saved_map() -> void:
+	if _town_storage_blocked:
+		return
+	var changed := get_tree().change_scene_to_file("res://scenes/main/solo_live_map.tscn")
+	if changed != OK:
+		_town_storage_blocked = true
+		_town_storage_issue = "map_scene_unavailable"
+		_show_town_storage_problem()
 
 func _add_debug_button(title: String, path: String) -> void:
 	var button := Button.new()
