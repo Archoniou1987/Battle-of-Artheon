@@ -291,6 +291,14 @@ func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictiona
 		"Состав: "+(", ".join(enemy_names) if not enemy_names.is_empty() else "нет данных"),
 		"HP героя: %d / %d" % [int(hero.get("hp",0)),int(hero.get("max_hp",0))]
 	]
+	var stats: Dictionary = final_view.get("battle_stats",{})
+	if not stats.is_empty():
+		lines.append("Нанесено урона: %d" % int(stats.get("damage",0)))
+		lines.append("Вылечено HP: %d" % int(stats.get("healed",0)))
+		lines.append("Критов: %d   Промахов: %d" % [int(stats.get("crits",0)),int(stats.get("misses",0))])
+		lines.append("Удары / Блоки (голова, грудь, руки, пояс, ноги):")
+		for raw_row in Array(stats.get("strike_map",[])):
+			lines.append(String(raw_row))
 	if outcome=="victory":
 		lines.append("Добыча сохранена на клетке противников.")
 	else:
