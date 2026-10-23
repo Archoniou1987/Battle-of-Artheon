@@ -342,13 +342,13 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	}
 	# The new instance gets its own local ledgers and NPC state. The old
 	# combat journals remain in the archived world and on disk.
-	expedition.world_state = {
-		LOCATION_KEY:LOCATION_MAP,
-		MAP_ARCHIVES_KEY:archives,
-		MAP_SERIAL_KEY:serial,
-		SoloLiveMapSession.MAP_INSTANCE_KEY:definition,
-		ExpeditionState.SOLO_START_CELL_KEY:[entrance.x,entrance.y]
-	}
+	var fresh_world: Dictionary = {}
+	fresh_world[LOCATION_KEY] = LOCATION_MAP
+	fresh_world[MAP_ARCHIVES_KEY] = archives
+	fresh_world[MAP_SERIAL_KEY] = serial
+	fresh_world[SoloLiveMapSession.MAP_INSTANCE_KEY] = definition
+	fresh_world[ExpeditionState.SOLO_START_CELL_KEY] = [entrance.x,entrance.y]
+	expedition.world_state = fresh_world
 	expedition.seed_value = seed
 	expedition.player_position = entrance
 	var committed := ExpeditionSaveService.save(path,expedition,current["character"],current["repository"])
