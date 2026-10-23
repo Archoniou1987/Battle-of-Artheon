@@ -3,10 +3,12 @@ extends RefCounted
 
 const WIDTH := 12
 const HEIGHT := 12
+const MAP_INSTANCE_KEY := "world_map_instance_v1"
 
 var expedition: ExpeditionState
 var character: CharacterState
 var repository: ItemRepository
+var generated_content: Dictionary = {}
 var map: TacticalMapState
 var npc_bridge: MapNpcBridge
 var save_path: String
@@ -59,20 +61,43 @@ static func _mount(path: String, manifest: String, saved_expedition: ExpeditionS
 	session.repository = saved_repository
 	session.save_path = path
 	session.manifest_path = manifest
-	session.map = TacticalMapState.new(WIDTH,HEIGHT)
+	var instance_data: Variant = session.expedition.world_state.get(MAP_INSTANCE_KEY,null)
+	var using_generated := instance_data is Dictionary
+	if using_generated:
+		var definition: Dictionary = instance_data
+		var town_id := String(definition.get("settlement_id",""))
+		var biome := String(definition.get("biome_id",""))
+		var towns := {town_id:WorldInstanceContract.settlement(town_id,biome,1)}
+		var built := MapInstanceGenerationService.generate(definition,towns)
+		if not bool(built.get("ok",false)):
+			return built
+		session.generated_content = built["generated"]
+		session.map = session.generated_content["map"]
+	else:
+		# Pre-existing saves retain their old fixed map until an explicit
+		# migration. Never reinterpret old NPC tombstones under a new seed.
+		session.map = TacticalMapState.new(WIDTH,HEIGHT)
 	session.npc_bridge = MapNpcBridge.new()
 	var npc_catalog := NpcRepository.new()
 	var npc_document: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/npc/starting_region_npcs.json"))
 	if not npc_document is Dictionary:
 		return {"ok":false,"reason":"live_npc_catalog_invalid"}
 	npc_catalog.load_definitions(npc_document)
-	# Stable instance IDs and cells across all saves/restarts. The
-	# encounter handler is intentionally not wired to the UI yet.
+	if using_generated:
+		var populated := GeneratedMapPopulationService.populate(session.generated_content,session.expedition,npc_catalog)
+		if not bool(populated.get("ok",false)):
+			return populated
+		session.npc_bridge = populated["bridge"]
+	else:
+		# Original test roster remains stable for saved live encounters.
+		pass
 	var placements: Array = [
 		{"id":"solo_npc_bandit_01","template":"NPC003","cell":Vector2i(7,5)},
 		{"id":"solo_npc_wolf_01","template":"NPC001","cell":Vector2i(8,8)},
 		{"id":"solo_npc_archer_01","template":"NPC004","cell":Vector2i(4,8)}
 	]
+	if using_generated:
+		placements.clear()
 	for placement in placements:
 		var npc_id := String(placement["id"])
 		if MapWorldCommitService.is_defeated_spawn(session.expedition,npc_id):
