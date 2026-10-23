@@ -487,7 +487,7 @@ func _open_solo_map_gate() -> void:
 	_save_canonical_town()
 	if _town_storage_blocked:
 		return
-	var entered := SoloGameStateService.set_location(CANONICAL_TOWN_PATH,player_character.character_id,SoloGameStateService.LOCATION_MAP)
+	var entered := SoloGameStateService.enter_generated_map(CANONICAL_TOWN_PATH,player_character.character_id)
 	if not bool(entered.get("ok",false)):
 		popup_title.text = "Карта недоступна"
 		popup_description.text = "Не удалось сохранить переход: " + String(entered.get("reason","unknown"))
