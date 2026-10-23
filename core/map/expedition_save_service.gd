@@ -6,6 +6,7 @@ extends RefCounted
 ## after any number of completed encounters. Combat receipts are still
 ## responsible for battle outcome verification and idempotent rewards.
 const FORMAT := "BOA_SOLO_EXPEDITION_SAVE_V1"
+const GAME_FORMAT := "BOA_SOLO_GAME_STATE_V1"
 const VERSION := 1
 const DEFAULT_PATH := "user://solo_game_state_v1.json"
 const MAX_BYTES := 8 * 1024 * 1024
@@ -107,7 +108,7 @@ static func read(path: String, expedition_id: String, player_id: String) -> Dict
 	var raw := file.get_as_text()
 	file.close()
 	var envelope: Variant = JSON.parse_string(raw)
-	if not envelope is Dictionary or String(envelope.get("format","")) != FORMAT or not envelope.get("payload_json") is String:
+	if not envelope is Dictionary or String(envelope.get("format","")) != (GAME_FORMAT if path == DEFAULT_PATH else FORMAT) or not envelope.get("payload_json") is String:
 		return {"ok":false,"reason":"expedition_save_invalid_envelope"}
 	var payload_json := String(envelope["payload_json"])
 	if payload_json.sha256_text() != String(envelope.get("sha256","")):
@@ -119,7 +120,7 @@ static func read(path: String, expedition_id: String, player_id: String) -> Dict
 
 static func _write(path: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
 	var payload_json := JSON.stringify(_snapshot(expedition,player,repository))
-	var raw := JSON.stringify({"format":FORMAT,"payload_json":payload_json,"sha256":payload_json.sha256_text()})
+	var raw := JSON.stringify({"format":GAME_FORMAT if path == DEFAULT_PATH else FORMAT,"payload_json":payload_json,"sha256":payload_json.sha256_text()})
 	if raw.to_utf8_buffer().size() > MAX_BYTES:
 		return {"ok":false,"reason":"expedition_save_too_large"}
 	var temp := path + ".tmp"
@@ -232,7 +233,7 @@ static func _read_payload_envelope(path: String) -> Dictionary:
 	var raw := file.get_as_text()
 	file.close()
 	var envelope: Variant = JSON.parse_string(raw)
-	if not envelope is Dictionary or String(envelope.get("format","")) != FORMAT or not envelope.get("payload_json") is String:
+	if not envelope is Dictionary or String(envelope.get("format","")) != (GAME_FORMAT if path == DEFAULT_PATH else FORMAT) or not envelope.get("payload_json") is String:
 		return {"ok":false,"reason":"expedition_envelope_invalid"}
 	var payload_json := String(envelope["payload_json"])
 	if payload_json.sha256_text() != String(envelope.get("sha256","")):
