@@ -70,7 +70,7 @@ func _ready() -> void:
 		if String(game.get("location","")) == SoloGameStateService.LOCATION_MAP:
 			_town_expedition_handed_off = true
 			call_deferred("_resume_saved_map")
-		if bool(game.get("legacy_town_preserved",false)):
+		if String(game.get("migrated_from","")) == "legacy_expedition" and bool(game.get("legacy_town_preserved",false)):
 			push_warning("Legacy city file has been preserved alongside migrated map progress; it was not merged.")
 	elif String(game.get("reason","")) == "game_state_not_found":
 		# Import pre-canonical progression/inventory only if no previous world
