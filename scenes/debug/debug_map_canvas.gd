@@ -27,7 +27,8 @@ func remember_visible()->void:
 	if generated.is_empty() or player_hex.x<0: return
 	var map:TacticalMapState=generated.map
 	for pos in map.cells.keys():
-		if _is_visible_hex(pos):
+		# Test-only full reveal MUST NOT expand persisted exploration.
+		if HexGrid.distance(pos,player_hex)<=effective_visibility_radius():
 			explored_hexes[pos]=true
 			map.cell(pos).discovered=true
 	queue_redraw()
