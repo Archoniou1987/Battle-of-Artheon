@@ -36,12 +36,19 @@ Original files are **never deleted, renamed or written during migration**:
 - `user://solo_expedition_save_v1.json`
 - older progression/inventory files when neither canonical legacy file exists.
 
-If there is a legacy expedition, its most recently saved character and world
-are chosen for import. If active, the new location is `map`. If fully exited,
-the new location is `town` (the world remains). A legacy city-only difference
-is **not silently merged** into an active expedition: the original legacy town
-file remains untouched for explicit future recovery. This is a migration-only
-historical ambiguity, not ongoing two-way reconciliation.
+If a legacy expedition is active, its most recently saved character and world
+are selected and location is `map`. A divergent city-only change is **not
+silently merged**: the old town file remains intact for explicit recovery.
+
+If the expedition is fully exited, the saved return receipt is checked. When
+it proves the city already adopted that exact expedition, the **later town
+character and inventory** are imported together with the expedition world and
+unclaimed world items (so subsequent town crafting is not rolled back). If
+the receipt cannot prove adoption, the returned expedition owner is selected
+and the old city remains untouched. A collision of item ownership between
+returned city and unclaimed world fails migration rather than duplicating
+an item. These are one-time historical migration checks, not ongoing
+city/expedition reconciliation.
 
 An unresolved legacy pending combat blocks migration rather than discarding
 checkpoint/terminal artifacts or importing an inconsistent player. Finish/
@@ -55,7 +62,7 @@ single GameState; no future handoff between town and expedition.
 
 `tests/map/solo_game_state_runner.gd`: atomic creation, city→map→city,
 world position, loot, restart, repeat map entry, failed stale city writer,
-legacy active expedition with diverged city, source files byte-for-byte intact,
+legacy active expedition with diverged city, closed return with later city crafting and world loot, source files byte-for-byte intact,
 legacy pending-combat fail-closed, idempotent migration.
 
 Legacy bridge and adoption regression runners remain untouched and run against
