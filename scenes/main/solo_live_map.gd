@@ -286,8 +286,7 @@ func _stop_route() -> void:
 		route_label.text = "Движение остановлено."
 	if session != null and hex_canvas != null:
 		hex_canvas.set_player_view(session.expedition.player_position,Vector2i(-1,-1),[])
-	if mini_map != null:
-		mini_map.set_regions(projection.get("regions",[]),false)
+	if mini_map != null and session != null:
 		mini_map.update_map(session.map,session.expedition.player_position)
 
 func _process(delta: float) -> void:
@@ -375,6 +374,9 @@ func _refresh_hex_canvas() -> void:
 		if session.map.cell(pos).discovered:
 			hex_canvas.explored_hexes[pos] = true
 	hex_canvas.set_player_view(session.expedition.player_position,Vector2i(-1,-1),[])
+	if mini_map != null:
+		mini_map.set_regions(projection.get("regions",[]),false)
+		mini_map.update_map(session.map,session.expedition.player_position)
 
 
 ## Bars are read-only projections of combat_view() values, including
