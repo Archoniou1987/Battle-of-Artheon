@@ -267,9 +267,14 @@ func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictiona
 		var stack := VBoxContainer.new()
 		stack.add_theme_constant_override("separation",14)
 		result_window.add_child(stack)
+		var result_scroll := ScrollContainer.new()
+		result_scroll.custom_minimum_size = Vector2(290,220)
+		result_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		stack.add_child(result_scroll)
 		result_details = Label.new()
 		result_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		stack.add_child(result_details)
+		result_details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		result_scroll.add_child(result_details)
 		var continue_button := Button.new()
 		continue_button.text = "Продолжить"
 		continue_button.custom_minimum_size.y = 54
