@@ -8,6 +8,7 @@ const PLAYER := "player"
 var session: SoloLiveMapSession
 var status_label: Label
 var tile_container: GridContainer
+var hex_canvas: DebugMapCanvas
 var map_scroller: ScrollContainer
 var live_combat: SoloLiveNpcCombat
 var game_map_scroll: ScrollContainer
@@ -152,9 +153,13 @@ func _build_view() -> void:
 	map_scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	map_scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(map_scroller)
-	tile_container = GridContainer.new()
-	tile_container.columns = SoloLiveMapSession.WIDTH
-	map_scroller.add_child(tile_container)
+	# Reuse the established hex canvas rather than rendering square buttons.
+	# Map ownership, combat and persistence remain exclusively in SoloLiveMapSession.
+	hex_canvas = DebugMapCanvas.new()
+	hex_canvas.name = "LiveHexMapCanvas"
+	hex_canvas.HEX_SIZE = 26.0
+	hex_canvas.hex_selected.connect(_move)
+	map_scroller.add_child(hex_canvas)
 	var ground_heading := Label.new()
 	ground_heading.text = "Добыча на текущей клетке • сбор 2 секунды"
 	root.add_child(ground_heading)
@@ -200,24 +205,29 @@ func _refresh() -> void:
 		var empty := Label.new()
 		empty.text = "Здесь нет доступной добычи."
 		ground_list.add_child(empty)
-	for n in tile_container.get_children():
-		tile_container.remove_child(n)
-		n.queue_free()
-	for y in range(SoloLiveMapSession.HEIGHT):
-		for x in range(SoloLiveMapSession.WIDTH):
-			var pos := Vector2i(x,y)
-			var btn := Button.new()
-			btn.custom_minimum_size = Vector2(44,44)
-			if pos == session.expedition.player_position:
-				btn.text = "◆"
-			elif not session.npc_bridge.npc_at(session.map,pos).is_empty() and HexGrid.distance(session.expedition.player_position,pos) <= 3:
-				btn.text = "⚔"
-			elif HexGrid.distance(session.expedition.player_position,pos) <= 3:
-				btn.text = "·"
-			else:
-				btn.text = " "
-			btn.disabled = pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST) or HexGrid.distance(session.expedition.player_position,pos) != 1
-			btn.pressed.connect(_move.bind(pos))
+	_refresh_hex_canvas()
+
+func _refresh_hex_canvas() -> void:
+	if hex_canvas == null or session == null:
+		return
+	# A read-only rendering projection of the SAME live TacticalMapState.
+	# The canvas does not own or regenerate the world.
+	var projection: Dictionary = {
+		"map":session.map,
+		"entrance":session.expedition.player_position,
+		"exit":session.expedition.player_position,
+		"regions":[],
+		"patrols":[]
+	}
+	if hex_canvas.generated.is_empty() or hex_canvas.generated.get("map",null) != session.map:
+		hex_canvas.set_generated(projection)
+	# The real live entity positions are authoritative. Treat saved visited
+	# cells as explored; do not reveal the whole map on every redraw.
+	for pos in session.map.cells.keys():
+		if session.map.cell(pos).discovered:
+			hex_canvas.explored_hexes[pos] = true
+	hex_canvas.set_player_view(session.expedition.player_position,Vector2i(-1,-1),[])
+
 			tile_container.add_child(btn)
 
 ## Bars are read-only projections of combat_view() values, including
