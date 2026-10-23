@@ -20,6 +20,9 @@ func wipe(path: String) -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func _initialize() -> void:
+	check(ExpeditionSaveService._format_for_path(SoloGameStateService.PATH)==ExpeditionSaveService.GAME_FORMAT,"production_game_envelope")
+	check(ExpeditionSaveService._format_for_path(SoloGameStateService.PATH+".tmp")==ExpeditionSaveService.GAME_FORMAT,"atomic_game_temp_envelope")
+	check(ExpeditionSaveService._format_for_path(OLD_MAP)==ExpeditionSaveService.FORMAT,"legacy_envelope_preserved")
 	for path in [GAME,TOWN,OLD_MAP,MANIFEST]:
 		wipe(path)
 	var hero := CharacterState.new(PLAYER,"Hero",5)
