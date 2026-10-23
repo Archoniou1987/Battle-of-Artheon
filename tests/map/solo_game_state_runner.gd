@@ -49,13 +49,20 @@ func _initialize() -> void:
 	check(items.add_item({"instance_id":"MAP_LOOT","weight":0.5}),"map_item_created")
 	check(combat_hero.inventory.add_instance("MAP_LOOT",items),"map_item_owned")
 	check(bool(ExpeditionSaveService.save(GAME,world,combat_hero,items).get("ok",false)),"map_progress_persisted")
+	var opened_map := SoloLiveMapSession.open(GAME,MANIFEST,ID,PLAYER)
+	check(bool(opened_map.get("ok",false)),"real_map_mounts_unified_owner")
+	if not bool(opened_map.get("ok",false)):
+		quit(1)
+		return
+	var live: SoloLiveMapSession = opened_map["session"]
+	check(live.expedition.player_position == Vector2i(8,7) and live.character.inventory.owns("MAP_LOOT"),"real_map_reads_one_save")
 	var locked := FileAccess.open(MANIFEST,FileAccess.WRITE)
 	if locked != null:
 		locked.store_string("unfinished")
 		locked.close()
-	check(not bool(SoloGameStateService.set_location(GAME,PLAYER,"town",MANIFEST).get("ok",false)),"pending_combat_blocks_return")
+	check(not bool(live.return_to_town(GAME).get("ok",false)),"pending_combat_blocks_return")
 	wipe(MANIFEST)
-	check(bool(SoloGameStateService.set_location(GAME,PLAYER,"town",MANIFEST).get("ok",false)),"return_without_adoption")
+	check(bool(live.return_to_town(GAME).get("ok",false)),"return_without_adoption")
 	var home := SoloGameStateService.read(GAME,PLAYER)
 	check(bool(home.get("ok",false)) and String(home.get("location","")) == "town","return_location")
 	if bool(home.get("ok",false)):
