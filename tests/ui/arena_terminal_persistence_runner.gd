@@ -71,6 +71,7 @@ func _run() -> void:
 	_check((arena.hp_overlays["player"] as Label).text == "%d / %d" % [victory_hp, player.max_hp], "victory_hp_overlay")
 	_check(arena.log_view.text.contains("Бой завершён: winner:player"), "victory_outcome_visible_in_journal")
 	_check(_saved_resources_match(victory_hp, victory_mana), "victory_resources_in_unified_game_state")
+	_check(not FileAccess.file_exists(LEGACY_TOWN_SAVE) and not FileAccess.file_exists(LEGACY_EXPEDITION_SAVE), "arena_does_not_create_second_character_save")
 	_assert_terminal_retry_atomic(arena, victory_session, "victory")
 	arena.back_requested.emit()
 	_check(not hero.in_combat, "victory_exit_unpauses_out_of_combat")
