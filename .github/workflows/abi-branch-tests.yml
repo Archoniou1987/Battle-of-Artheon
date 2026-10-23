@@ -55,6 +55,7 @@ jobs:
           bash tools/run_godot_check.sh tests/map/generated_patrol_persistence_runner.gd
           bash tools/run_godot_check.sh tests/map/solo_live_route_ui_runner.gd
           bash tools/run_godot_check.sh tests/map/legacy_generated_upgrade_runner.gd
+          bash tools/run_godot_check.sh tests/map/map_entry_choice_runner.gd
 
       - name: Verify one Solo GameState across city, map, restart and legacy migration
         run: bash tools/run_godot_check.sh tests/map/solo_game_state_runner.gd
