@@ -4,6 +4,7 @@ const SCENE_TOWN := "res://scenes/main/main.tscn"
 const SAVE := ExpeditionSaveService.DEFAULT_PATH
 const MANIFEST := SoloCombatSessionManifest.PATH
 const PLAYER := "player"
+const HISTORY_PATH := "user://boa_battle_history_v1.json"
 
 var session: SoloLiveMapSession
 var status_label: Label
@@ -24,6 +25,7 @@ var live_combat: SoloLiveNpcCombat
 var result_overlay: ColorRect
 var result_window: PanelContainer
 var result_details: Label
+var result_maps: VBoxContainer
 var result_pending := false
 var game_map_scroll: ScrollContainer
 var solo_combat_screen: SoloCombatScreen
@@ -245,6 +247,13 @@ func _build_view() -> void:
 	solo_combat_screen.visible = false
 	solo_combat_screen.round_requested.connect(_play_combat_round)
 	solo_combat_screen.elixir_selected.connect(_refresh_game_ability_options)
+	var history_button := Button.new()
+	history_button.text = "История боёв"
+	history_button.custom_minimum_size = Vector2(142,40)
+	history_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	history_button.position = Vector2(-150,6)
+	history_button.pressed.connect(_show_history)
+	add_child(history_button)
 
 func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictionary) -> void:
 	# Settlement has already been durably committed. The overlay is display-only.
@@ -275,6 +284,8 @@ func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictiona
 		result_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		result_details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		result_scroll.add_child(result_details)
+		result_maps = VBoxContainer.new()
+		stack.add_child(result_maps)
 		var continue_button := Button.new()
 		continue_button.text = "Продолжить"
 		continue_button.custom_minimum_size.y = 54
@@ -301,16 +312,120 @@ func _show_battle_result(outcome: String, final_view: Dictionary, step: Dictiona
 		lines.append("Нанесено урона: %d" % int(stats.get("damage",0)))
 		lines.append("Вылечено HP: %d" % int(stats.get("healed",0)))
 		lines.append("Критов: %d   Промахов: %d" % [int(stats.get("crits",0)),int(stats.get("misses",0))])
-		lines.append("Удары / Блоки (голова, грудь, руки, пояс, ноги):")
-		for raw_row in Array(stats.get("strike_map",[])):
-			lines.append(String(raw_row))
+		lines.append("Уклонений: %d" % int(stats.get("dodges",0)))
+		lines.append("✹ крит / × промах / ¤ уклонение / ■ блок")
 	if outcome=="victory":
 		lines.append("Добыча сохранена на клетке противников.")
 	else:
 		lines.append("Поражение сохранено. Возвращение к старту экспедиции.")
 	result_details.text = "\n".join(lines)
+	_render_round_map(Array(stats.get("map_rounds",[])))
+	if outcome != "history":
+		_save_history(outcome,final_view,step)
 	result_overlay.visible = true
 	result_overlay.move_to_front()
+
+func _render_round_map(rounds: Array) -> void:
+	for child in result_maps.get_children():
+		child.queue_free()
+	if rounds.is_empty():
+		return
+	for mode in ["attacks","blocks"]:
+		var heading := Label.new()
+		heading.text = "АТАКИ" if mode=="attacks" else "ВЫБРАННЫЕ БЛОКИ"
+		result_maps.add_child(heading)
+		var scroll := ScrollContainer.new()
+		scroll.custom_minimum_size.y = 170
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		result_maps.add_child(scroll)
+		var grid := GridContainer.new()
+		grid.columns = rounds.size()+1
+		grid.add_theme_constant_override("h_separation",5)
+		scroll.add_child(grid)
+		_add_map_cell(grid,"Зона",Color.WHITE)
+		for raw in rounds:
+			var round_data: Dictionary = raw
+			_add_map_cell(grid,str(round_data.get("round",0)),Color.WHITE)
+		var zones := ["Голова","Грудь","Руки","Пояс","Ноги"]
+		for i in range(5):
+			_add_map_cell(grid,String(zones[i]),Color.WHITE)
+			for raw in rounds:
+				var round_data: Dictionary = raw
+				var cells: Array = round_data.get(mode,[])
+				var glyph := String(cells[i]) if i < cells.size() else "—"
+				var color := Color(0.9,0.9,0.9)
+				if glyph.contains("✹"):
+					color = Color(1.0,0.3,0.3)
+				elif glyph.contains("¤"):
+					color = Color(0.3,0.85,1.0)
+				elif glyph.contains("×"):
+					color = Color(0.6,0.6,0.6)
+				_add_map_cell(grid,glyph,color)
+
+func _add_map_cell(grid: GridContainer, glyph: String, tint: Color) -> void:
+	var cell := Label.new()
+	cell.text = glyph
+	cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cell.custom_minimum_size.x = 42
+	cell.add_theme_color_override("font_color",tint)
+	grid.add_child(cell)
+
+func _read_history() -> Dictionary:
+	if not FileAccess.file_exists(HISTORY_PATH):
+		return {"pve":[],"pvp":[]}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(HISTORY_PATH))
+	if not parsed is Dictionary:
+		return {"pve":[],"pvp":[]}
+	return {"pve":Array(parsed.get("pve",[])),"pvp":Array(parsed.get("pvp",[]))}
+
+func _save_history(outcome: String, view: Dictionary, step: Dictionary) -> void:
+	var encounter_id := String(step.get("encounter_key",""))
+	if encounter_id.is_empty():
+		return
+	var history := _read_history()
+	var records: Array = history["pve"]
+	for raw in records:
+		if raw is Dictionary and String(raw.get("id","")) == encounter_id:
+			return
+	var enemies: Array[String] = []
+	for raw in Array(view.get("enemies",[])):
+		if raw is Dictionary:
+			enemies.append(String(raw.get("name","NPC")))
+	records.push_front({"id":encounter_id,"date":Time.get_datetime_string_from_system(),"outcome":outcome,"rounds":int(step.get("round",0)),"enemies":enemies,"stats":Dictionary(view.get("battle_stats",{})).duplicate(true)})
+	while records.size()>25:
+		records.pop_back()
+	history["pve"] = records
+	var tmp := HISTORY_PATH+".tmp"
+	var file := FileAccess.open(tmp,FileAccess.WRITE)
+	if file == null:
+		push_warning("Battle history write failed")
+		return
+	file.store_string(JSON.stringify(history))
+	file.flush()
+	file.close()
+	var status := DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp),ProjectSettings.globalize_path(HISTORY_PATH))
+	if status != OK:
+		push_warning("Battle history publish failed: "+str(status))
+
+func _show_history() -> void:
+	if session == null or live_combat != null or result_pending or pickup_active or FileAccess.file_exists(MANIFEST):
+		return
+	_show_battle_result("history",{},{"round":0})
+	var history := _read_history()
+	var lines: Array[String] = ["ИСТОРИЯ БОЁВ","PvE %d/25 • PvP %d/25" % [Array(history["pve"]).size(),Array(history["pvp"]).size()]]
+	for kind in ["pve","pvp"]:
+		lines.append("")
+		lines.append("PvE" if kind=="pve" else "PvP")
+		for raw in Array(history[kind]):
+			if not raw is Dictionary:
+				continue
+			var record: Dictionary = raw
+			var stats: Dictionary = record.get("stats",{})
+			lines.append("%s • %s • %d раундов" % [String(record.get("date","")),String(record.get("outcome","")),int(record.get("rounds",0))])
+			lines.append("Урон %d | Лечение %d | Криты %d | Промахи %d" % [int(stats.get("damage",0)),int(stats.get("healed",0)),int(stats.get("crits",0)),int(stats.get("misses",0))])
+	result_details.text = "\n".join(lines)
+	_render_round_map([])
 
 func _close_battle_result() -> void:
 	if not result_pending:
@@ -953,6 +1068,7 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 	var state := String(step.get("state",""))
 	if state == "victory" or state == "defeat":
 		var final_view := before.duplicate(true)
+		var completed_encounter_key := live_combat.encounter_key
 		var final_simulator: GroupCombatSimulator = live_combat.battle.get("simulator") as GroupCombatSimulator
 		if final_simulator != null:
 			var resolved_view := live_combat.combat_view()
@@ -978,7 +1094,7 @@ func _play_combat_round(submission: Dictionary = {}) -> void:
 			_set_status("Победа подтверждена и сохранена. Награды находятся на клетке противника.")
 		else:
 			_set_status("Поражение сохранено. Герой вернулся на стартовую клетку экспедиции; враг и добыча не изменены.")
-		_show_battle_result(state,final_view,step)
+		_show_battle_result(state,final_view,step.merged({"encounter_key":completed_encounter_key},true))
 	else:
 		_refresh_combat_controls()
 		_set_status("Раунд "+str(step.get("round",0))+" завершён и сохранён.")
