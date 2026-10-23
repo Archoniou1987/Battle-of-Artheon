@@ -114,7 +114,15 @@ static func _mount(path: String, manifest: String, saved_expedition: ExpeditionS
 	if using_generated:
 		session.patrol_runtime.configure(session.map,session.generated_content.get("patrols",[]),session.character.character_id)
 		var previous_patrols: Variant = session.expedition.world_state.get(PATROL_KEY,{})
-		if not previous_patrols is Dictionary or not session.patrol_runtime.restore(previous_patrols):
+		if not previous_patrols is Dictionary:
+			return {"ok":false,"reason":"generated_patrol_state_invalid"}
+		# A patrol killed by combat must stay dead even if its previous
+		# position was recorded before the terminal combat receipt.
+		var living_patrols: Dictionary = Dictionary(previous_patrols).duplicate(true)
+		for patrol_id in living_patrols.keys():
+			if MapWorldCommitService.is_defeated_spawn(session.expedition,String(patrol_id)):
+				living_patrols.erase(patrol_id)
+		if not session.patrol_runtime.restore(living_patrols):
 			return {"ok":false,"reason":"generated_patrol_state_invalid"}
 	if not session.map.place_entity(session.character.character_id,session.expedition.player_position):
 		return {"ok":false,"reason":"saved_player_hex_invalid"}
