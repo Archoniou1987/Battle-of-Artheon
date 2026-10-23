@@ -34,7 +34,7 @@ func _run() -> void:
 	if bool(active.get("ok",false)):
 		ok = ok and active["character"].inventory.owns("KEPT_ITEM")
 		ok = ok and active["expedition"].world_state.has(SoloLiveMapSession.MAP_INSTANCE_KEY)
-		ok = ok and active["expedition"].world_state.has(SoloGameStateService.MAP_ARCHIVES_KEY)
+		ok = ok and not active["expedition"].world_state.has(SoloGameStateService.MAP_ARCHIVES_KEY)
 	var returned := SoloGameStateService.set_location(SAVE,"player",SoloGameStateService.LOCATION_TOWN,MANIFEST)
 	ok = ok and bool(returned.get("ok",false))
 	var previous := SoloGameStateService.enter_generated_map(SAVE,"player",MANIFEST)
@@ -50,9 +50,9 @@ func _run() -> void:
 		ok = ok and bool(saved.get("ok",false))
 		if bool(saved.get("ok",false)):
 			var world: Dictionary = saved["expedition"].world_state
-			var archive: Dictionary = world[SoloGameStateService.MAP_ARCHIVES_KEY]
-			ok = ok and archive.has(first_id)
-			ok = ok and archive[first_id]["world_state"][SoloLiveMapSession.MAP_INSTANCE_KEY]["instance_id"]==first_id
+			ok = ok and not world.has(SoloGameStateService.MAP_ARCHIVES_KEY)
+			ok = ok and int(world[SoloGameStateService.MAP_SERIAL_KEY]) == 2
+			ok = ok and bool(second.get("previous_map_closed",false))
 			ok = ok and saved["character"].inventory.owns("KEPT_ITEM")
 			ok = ok and saved["repository"].has_item("KEPT_ITEM")
 	var refused := SoloGameStateService.start_new_expedition(SAVE,"player",MANIFEST)
