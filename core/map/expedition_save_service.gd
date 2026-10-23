@@ -7,13 +7,13 @@ extends RefCounted
 ## responsible for battle outcome verification and idempotent rewards.
 const FORMAT := "BOA_SOLO_EXPEDITION_SAVE_V1"
 const VERSION := 1
-const DEFAULT_PATH := "user://solo_expedition_save_v1.json"
+const DEFAULT_PATH := "user://solo_game_state_v1.json"
 const MAX_BYTES := 8 * 1024 * 1024
 const TOMBSTONES_KEY := MapWorldCommitService.TOMBSTONES_KEY
 const MARKERS_KEY := MapCombatSettlementService.MARKER_KEY
 
-static func _valid_identity(expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> bool:
-	return expedition != null and player != null and repository != null and MapWorldCommitService._valid_id(expedition.expedition_id) and MapWorldCommitService._valid_id(player.character_id) and not player.in_combat
+static func _valid_identity(expedition: ExpeditionState, player: CharacterState, repository: ItemRepository, allow_town_combat: bool = false) -> bool:
+	return expedition != null and player != null and repository != null and MapWorldCommitService._valid_id(expedition.expedition_id) and MapWorldCommitService._valid_id(player.character_id) and (not player.in_combat or allow_town_combat)
 
 static func _snapshot(expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
 	return {"schema":VERSION,"expedition_id":expedition.expedition_id,"player_id":player.character_id,"expedition":expedition.to_dict(),"character":MapWorldCommitService._character_to_dict(player),"repository":repository.to_dict()}
@@ -239,8 +239,8 @@ static func _read_payload_envelope(path: String) -> Dictionary:
 		return {"ok":false,"reason":"expedition_envelope_integrity_failed"}
 	return {"ok":true,"sha256":String(envelope["sha256"])}
 
-static func save(path: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
-	if not _valid_identity(expedition,player,repository) or not MapWorldCommitService._valid_path(path):
+static func save(path: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository, allow_town_combat: bool = false) -> Dictionary:
+	if not _valid_identity(expedition,player,repository,allow_town_combat) or not MapWorldCommitService._valid_path(path):
 		return {"ok":false,"reason":"expedition_save_invalid_context"}
 	if expedition.status not in [ExpeditionState.STATUS_ACTIVE,ExpeditionState.STATUS_COMPLETED,ExpeditionState.STATUS_EXITED,ExpeditionState.STATUS_EXPIRED]:
 		return {"ok":false,"reason":"expedition_save_invalid_status"}
