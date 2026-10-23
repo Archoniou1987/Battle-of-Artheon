@@ -367,6 +367,10 @@ func _refresh_hex_canvas() -> void:
 	var npc_roles: Dictionary = {}
 	for npc_id in session.npc_bridge.instances.keys():
 		npc_roles[String(npc_id)] = "NPC"
+	for patrol_def in session.generated_content.get("patrols",[]):
+		var patrol_id := String(patrol_def.get("patrol_id",""))
+		if session.npc_bridge.instances.has(patrol_id):
+			npc_roles[patrol_id] = "P"
 	hex_canvas.set_live_entity_roles(npc_roles)
 	# The real live entity positions are authoritative. Treat saved visited
 	# cells as explored; do not reveal the whole map on every redraw.
