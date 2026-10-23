@@ -35,8 +35,8 @@ func _run() -> void:
 	var elixir := page.get("elixir_selector") as OptionButton
 	check(scroller != null and hex != null and hex.get_parent()==scroller,"map_has_horizontal_scroll_container")
 	if scroller != null:
-		check(scroller.horizontal_scroll_mode==ScrollContainer.SCROLL_MODE_AUTO,"horizontal_scroll_enabled")
-		check(scroller.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_AUTO,"map_viewport_scrolls_both_axes")
+		check(scroller.horizontal_scroll_mode==ScrollContainer.SCROLL_MODE_SHOW_NEVER,"horizontal_scroll_without_overlay_bar")
+		check(scroller.vertical_scroll_mode==ScrollContainer.SCROLL_MODE_SHOW_NEVER,"vertical_scroll_without_overlay_bar")
 	check(round_button != null and panel != null and round_button.get_parent()==panel,"primary_button_in_combat_panel")
 	if round_button != null and log_label != null:
 		check(round_button.get_index() < log_label.get_index(),"primary_action_precedes_long_log")
@@ -92,7 +92,7 @@ func _run() -> void:
 		page.call("_update_equipment_grid",slots)
 		check(gear.get_child_count()==10 and "Пусто" in String(gear.get_child(0).tooltip_text),"unequipped_slot_clears_on_refresh")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
-	check(hex != null and hex.HEX_SIZE >= 20.0,"canonical_hex_renderer_reused")
+	check(hex != null and is_equal_approx(hex.HEX_SIZE,40.0),"approved_debug_viewer_hex_scale")
 	var minimap := page.get("mini_map") as DebugMiniMap
 	var stop := page.get("route_stop_button") as Button
 	var route_info := page.get("route_label") as Label
@@ -103,6 +103,9 @@ func _run() -> void:
 	if map_panel != null:
 		check(map_panel.get_index()==0,"approved_square_map_is_first_visible_panel")
 		check(map_panel.clip_contents,"map_viewport_clips_offscreen_hexes")
+		page.call("_size_hex_map_viewport")
+		if map_panel.size.x>0:
+			check(is_equal_approx(map_panel.custom_minimum_size.y,map_panel.size.x),"viewport_has_exact_square_dimensions")
 	if minimap != null:
 		check(minimap.offset_right-minimap.offset_left==155.0 and minimap.offset_bottom-minimap.offset_top==155.0,"minimap_square_155px")
 	var upgrade := page.get("legacy_upgrade_button") as Button
