@@ -183,3 +183,41 @@ static func set_location(path: String, player_id: String, destination: String, m
 	if not bool(result.get("ok",false)):
 		return result
 	return {"ok":true,"already_there":false}
+
+## Atomically enter an existing instance or create the first generated one.
+## Old expeditions with live world progress retain their original map identity.
+static func enter_generated_map(path: String, player_id: String, manifest: String = SoloCombatSessionManifest.PATH) -> Dictionary:
+	if FileAccess.file_exists(manifest):
+		return {"ok":false,"reason":"game_state_pending_combat"}
+	var current := read(path,player_id)
+	if not bool(current.get("ok",false)):
+		return current
+	if String(current["location"]) != LOCATION_TOWN:
+		return {"ok":false,"reason":"game_state_not_in_town"}
+	var expedition: ExpeditionState = current["expedition"]
+	var metadata: Variant = expedition.world_state.get(SoloLiveMapSession.MAP_INSTANCE_KEY,null)
+	if metadata == null:
+		# Do not silently reinterpret the original 12x12 map's defeated
+		# NPC receipts or unclaimed drops as outcomes in a new map.
+		if expedition.world_state.has(MapWorldCommitService.TOMBSTONES_KEY) or expedition.world_state.has(GroundLootService.WORLD_KEY) or expedition.world_state.has(MapCombatSettlementService.MARKER_KEY) or expedition.world_state.has("encounter_loot_pools"):
+			return set_location(path,player_id,LOCATION_MAP,manifest)
+		var seed := int(Time.get_unix_time_from_system())
+		var instance_id := "MAP-" + str(seed) + "-" + player_id
+		var definition := WorldInstanceContract.instance(instance_id,"starter_village","forest",seed,1,20,20,1)
+		var towns := {"starter_village":WorldInstanceContract.settlement("starter_village","forest",1)}
+		var generated := MapInstanceGenerationService.generate(definition,towns)
+		if not bool(generated.get("ok",false)):
+			return generated
+		var entrance: Vector2i = generated["generated"]["entrance"]
+		expedition.world_state[SoloLiveMapSession.MAP_INSTANCE_KEY] = definition
+		expedition.seed_value = seed
+		expedition.player_position = entrance
+		expedition.world_state[ExpeditionState.SOLO_START_CELL_KEY] = [entrance.x,entrance.y]
+	else:
+		if not metadata is Dictionary:
+			return {"ok":false,"reason":"game_state_map_instance_corrupt"}
+	expedition.world_state[LOCATION_KEY] = LOCATION_MAP
+	var saved := ExpeditionSaveService.save(path,expedition,current["character"],current["repository"])
+	if not bool(saved.get("ok",false)):
+		return saved
+	return {"ok":true,"instance_id":String(Dictionary(expedition.world_state.get(SoloLiveMapSession.MAP_INSTANCE_KEY,{})).get("instance_id","legacy"))}
