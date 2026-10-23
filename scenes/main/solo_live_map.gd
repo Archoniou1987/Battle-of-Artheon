@@ -212,13 +212,15 @@ func _refresh_hex_canvas() -> void:
 		return
 	# A read-only rendering projection of the SAME live TacticalMapState.
 	# The canvas does not own or regenerate the world.
-	var projection: Dictionary = {
-		"map":session.map,
-		"entrance":SoloGameStateService.START_CELL,
-		"exit":Vector2i(-1,-1),
-		"regions":[],
-		"patrols":[]
-	}
+	var projection: Dictionary = session.generated_content.duplicate()
+	if projection.is_empty():
+		projection = {
+			"map":session.map,
+			"entrance":SoloGameStateService.START_CELL,
+			"exit":Vector2i(-1,-1),
+			"regions":[],
+			"patrols":[]
+		}
 	if hex_canvas.generated.is_empty() or hex_canvas.generated.get("map",null) != session.map:
 		hex_canvas.set_generated(projection)
 	var npc_roles: Dictionary = {}
