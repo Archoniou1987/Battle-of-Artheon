@@ -100,6 +100,9 @@ func _run() -> void:
 	var map_panel := page.get("map_panel") as Control
 	check(map_panel != null and scroller != null and scroller.get_parent()==map_panel,"map_scroller_clipped_to_approved_viewport")
 	check(map_panel != null and minimap != null and minimap.get_parent()==map_panel,"minimap_overlaid_on_hex_viewport")
+	if map_panel != null:
+		check(map_panel.get_index()==0,"approved_square_map_is_first_visible_panel")
+		check(map_panel.clip_contents,"map_viewport_clips_offscreen_hexes")
 	if minimap != null:
 		check(minimap.offset_right-minimap.offset_left==155.0 and minimap.offset_bottom-minimap.offset_top==155.0,"minimap_square_155px")
 	var upgrade := page.get("legacy_upgrade_button") as Button
