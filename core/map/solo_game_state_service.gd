@@ -159,9 +159,6 @@ static func save_town(path: String, player: CharacterState, repository: ItemRepo
 		return {"ok":false,"reason":"game_state_not_in_town"}
 	if String(current["sha256"]) != expected_sha256:
 		return {"ok":false,"reason":"game_state_stale_revision"}
-	var pruned := _prune_expired_archives(current["expedition"],player,repository,int(Time.get_unix_time_from_system()))
-	if pruned < 0:
-		return {"ok":false,"reason":"map_archives_corrupt"}
 	var committed := ExpeditionSaveService.save(path,current["expedition"],player,repository,true)
 	if not bool(committed.get("ok",false)):
 		return committed
@@ -271,16 +268,12 @@ static func upgrade_legacy_map(path: String, player_id: String, manifest: String
 		return saved
 	return {"ok":true,"instance_id":instance_id}
 
-## One character/repository, multiple independently preserved map worlds.
-## Archives are snapshots of *map* state only, never player/item copies.
-const MAP_ARCHIVES_KEY := "world_expedition_archives_v1"
+## Closed Solo maps have no durable archive. Serial survives closure so
+## a retired instance ID is never reused on this character's save.
+const MAP_ARCHIVES_KEY := "world_expedition_archives_v1" # legacy cleanup only
 const MAP_SERIAL_KEY := "world_expedition_serial_v1"
-const MAP_ARCHIVE_TTL_SECONDS := WorldInstanceLifecyclePolicy.HOUR_SECONDS
 
-## Prune expired map snapshots on the NEXT durable town save or expedition
-## creation. No background server job or unbounded archive retention.
-## Only item instances exclusive to the expired worlds are reclaimed.
-static func _archive_item_ids(world: Dictionary) -> Dictionary:
+static func _closed_world_items(world: Dictionary) -> Dictionary:
 	var ids: Dictionary = {}
 	var ground: Variant = world.get(GroundLootService.WORLD_KEY,{})
 	if ground is Dictionary:
@@ -288,48 +281,20 @@ static func _archive_item_ids(world: Dictionary) -> Dictionary:
 			ids[String(item_id)] = true
 	var pools: Variant = world.get("encounter_loot_pools",{})
 	if pools is Dictionary:
-		for data in pools.values():
-			if not data is Dictionary:
-				continue
-			var pool := EncounterLootPool.from_dict(data)
-			for item_id in pool.item_ids():
-				ids[String(item_id)] = true
+		for raw in pools.values():
+			if raw is Dictionary:
+				var pool := EncounterLootPool.from_dict(raw)
+				for item_id in pool.item_ids():
+					ids[String(item_id)] = true
 	return ids
 
-static func _prune_expired_archives(expedition: ExpeditionState, player: CharacterState, repository: ItemRepository, now_unix: int) -> int:
-	var value: Variant = expedition.world_state.get(MAP_ARCHIVES_KEY,{})
-	if not value is Dictionary:
-		return -1
-	var archives: Dictionary = value
-	if archives.is_empty():
-		return 0
-	var retired: Dictionary = {}
-	var remaining: Dictionary = {}
-	for id in archives.keys():
-		var entry: Variant = archives[id]
-		if not entry is Dictionary or not entry.get("world_state") is Dictionary:
-			# Corrupt entries cannot be safely pruned or restored.
-			return -1
-		var expires: int = int(entry.get("expires_at_unix",0))
-		if expires <= now_unix:
-			retired[id] = entry
-		else:
-			remaining[id] = entry
-	if retired.is_empty():
-		return 0
-	var keep: Dictionary = _archive_item_ids(expedition.world_state)
-	for id in remaining:
-		keep.merge(_archive_item_ids(remaining[id]["world_state"]),true)
+static func _discard_closed_world_items(world: Dictionary, player: CharacterState, repository: ItemRepository) -> void:
+	var owned: Dictionary = {}
 	for item_id in player.inventory.instance_ids():
-		keep[String(item_id)] = true
-	var candidates: Dictionary = {}
-	for id in retired:
-		candidates.merge(_archive_item_ids(retired[id]["world_state"]),true)
-	for item_id in candidates:
-		if not keep.has(item_id):
+		owned[String(item_id)] = true
+	for item_id in _closed_world_items(world).keys():
+		if not owned.has(item_id):
 			repository.remove_item(String(item_id))
-	expedition.world_state[MAP_ARCHIVES_KEY] = remaining
-	return retired.size()
 
 static func _active_map_identity(expedition: ExpeditionState) -> String:
 	var definition: Variant = expedition.world_state.get(SoloLiveMapSession.MAP_INSTANCE_KEY,null)
@@ -356,10 +321,9 @@ static func map_entry_options(path: String, player_id: String, manifest: String 
 		"has_pending_combat":FileAccess.file_exists(manifest)
 	}
 
-## The previous map, including its combat ledgers, NPC tombstones and
-## uncollected ground loot, stays archived. No character or repository is
-## duplicated. The active map's state is replaced only after the new
-## generator succeeds; ExpeditionSaveService is the single commit boundary.
+## Starting a new Solo expedition irrevocably closes and discards the
+## previous world. Character and ItemRepository retain a single owner;
+## only items abandoned on the closed map are reclaimed.
 static func start_new_expedition(path: String, player_id: String, manifest: String = SoloCombatSessionManifest.PATH) -> Dictionary:
 	if FileAccess.file_exists(manifest):
 		return {"ok":false,"reason":"game_state_pending_combat"}
@@ -372,18 +336,10 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	var old_id := _active_map_identity(expedition)
 	if old_id.is_empty():
 		return {"ok":false,"reason":"previous_map_identity_invalid"}
-	var archives_value: Variant = expedition.world_state.get(MAP_ARCHIVES_KEY,{})
-	if not archives_value is Dictionary:
-		return {"ok":false,"reason":"map_archives_corrupt"}
-	var removed := _prune_expired_archives(expedition,current["character"],current["repository"],int(Time.get_unix_time_from_system()))
-	if removed < 0:
-		return {"ok":false,"reason":"map_archives_corrupt"}
-	var archives: Dictionary = Dictionary(expedition.world_state.get(MAP_ARCHIVES_KEY,{})).duplicate(true)
-	# New map IDs are allocated from a monotonic counter in the durable
-	# owner, not a timestamp; never recycle an old ID on this save.
+	# Keep the increasing serial even across legacy archive migrations.
 	var serial := int(expedition.world_state.get(MAP_SERIAL_KEY,0))+1
 	var new_id := "MAP-" + str(serial).pad_zeros(6)
-	while archives.has(new_id) or new_id==old_id:
+	while new_id==old_id:
 		serial += 1
 		new_id = "MAP-" + str(serial).pad_zeros(6)
 	var seed := int(Time.get_unix_time_from_system()) + serial*7919
@@ -393,29 +349,27 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	if not bool(built.get("ok",false)):
 		return built
 	var entrance: Vector2i = built["generated"]["entrance"]
-	var snapshot: Dictionary = expedition.world_state.duplicate(true)
-	snapshot.erase(MAP_ARCHIVES_KEY)
-	snapshot.erase(MAP_SERIAL_KEY)
-	var archive_policy := WorldInstanceLifecyclePolicy.solo_after_new_expedition(int(Time.get_unix_time_from_system()))
-	archives[old_id] = {
-		"archived_at_unix":int(archive_policy["archived_at_unix"]),
-		"expires_at_unix":int(archive_policy["expires_at_unix"]),
-		"seed":expedition.seed_value,
-		"position":[expedition.player_position.x,expedition.player_position.y],
-		"world_state":snapshot
-	}
-	# The new instance gets its own local ledgers and NPC state. The old
-	# combat journals remain in the archived world and on disk.
+	# Dispose of legacy archives too: no historical map snapshots survive.
+	var old_world := expedition.world_state
+	var legacy_archives: Variant = old_world.get(MAP_ARCHIVES_KEY,{})
+	if not legacy_archives is Dictionary:
+		return {"ok":false,"reason":"map_archives_corrupt"}
+	var repository: ItemRepository = current["repository"]
+	var player: CharacterState = current["character"]
+	_discard_closed_world_items(old_world,player,repository)
+	for archive in Dictionary(legacy_archives).values():
+		if not archive is Dictionary or not archive.get("world_state") is Dictionary:
+			return {"ok":false,"reason":"map_archives_corrupt"}
+		_discard_closed_world_items(archive["world_state"],player,repository)
 	var fresh_world: Dictionary = {}
 	fresh_world[LOCATION_KEY] = LOCATION_MAP
-	fresh_world[MAP_ARCHIVES_KEY] = archives
 	fresh_world[MAP_SERIAL_KEY] = serial
 	fresh_world[SoloLiveMapSession.MAP_INSTANCE_KEY] = definition
 	fresh_world[ExpeditionState.SOLO_START_CELL_KEY] = [entrance.x,entrance.y]
 	expedition.world_state = fresh_world
 	expedition.seed_value = seed
 	expedition.player_position = entrance
-	var committed := ExpeditionSaveService.save(path,expedition,current["character"],current["repository"])
+	var committed := ExpeditionSaveService.save(path,expedition,player,repository)
 	if not bool(committed.get("ok",false)):
 		return committed
-	return {"ok":true,"instance_id":new_id,"previous_map_id":old_id}
+	return {"ok":true,"instance_id":new_id,"previous_map_id":old_id,"previous_map_closed":true}
