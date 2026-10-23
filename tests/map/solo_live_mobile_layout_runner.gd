@@ -93,6 +93,11 @@ func _run() -> void:
 		check(gear.get_child_count()==10 and "Пусто" in String(gear.get_child(0).tooltip_text),"unequipped_slot_clears_on_refresh")
 	check(attack_row != null and block_row != null,"attack_and_defense_rows_preserved")
 	check(hex != null and hex.HEX_SIZE >= 20.0,"canonical_hex_renderer_reused")
+	var minimap := page.get("mini_map") as DebugMiniMap
+	var stop := page.get("route_stop_button") as Button
+	var route_info := page.get("route_label") as Label
+	check(minimap != null and route_info != null and stop != null,"minimap_and_route_controls_present")
+	check(stop != null and stop.disabled,"stop_disabled_until_route_starts")
 	# Exercise the real scene's selection handler without a fabricated
 	# combat engine. Capacity is exactly two zones for this UI fixture.
 	if block_row != null:
