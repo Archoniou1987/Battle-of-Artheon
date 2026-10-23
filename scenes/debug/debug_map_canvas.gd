@@ -46,8 +46,9 @@ func set_loot_markers(cells:Array[Vector2i])->void:
 	queue_redraw()
 
 func set_debug_reveal_all(enabled:bool)->void:
+	# A visual diagnostic must NEVER change the permanent explored map.
+	# Reveal only during drawing; real movement uses remember_visible().
 	debug_reveal_all=enabled
-	remember_visible()
 	queue_redraw()
 
 func set_generated(value:Dictionary)->void:
