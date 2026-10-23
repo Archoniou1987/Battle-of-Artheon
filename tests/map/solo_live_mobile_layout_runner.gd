@@ -112,6 +112,19 @@ func _run() -> void:
 	if diagnostic != null:
 		page.call("_toggle_map_diagnostic",true)
 		check(hex != null and hex.debug_reveal_all,"full_reveal_uses_original_canvas")
+	# Verify full-map diagnostic cannot write fog-of-war exploration.
+	var fog_canvas := DebugMapCanvas.new()
+	root.add_child(fog_canvas)
+	var fog_map := TacticalMapState.new(20,20)
+	var fog_projection := {"map":fog_map,"entrance":Vector2i(1,1),"exit":Vector2i(18,18),"regions":[],"patrols":[]}
+	fog_canvas.set_generated(fog_projection)
+	fog_canvas.set_player_view(Vector2i(1,1),Vector2i(-1,-1),[])
+	fog_canvas.set_debug_reveal_all(true)
+	fog_canvas.set_player_view(Vector2i(1,1),Vector2i(-1,-1),[])
+	check(not fog_map.cell(Vector2i(18,18)).discovered and fog_map.cell(Vector2i(2,1)).discovered,"debug_reveal_does_not_persist_out_of_radius_exploration")
+	fog_canvas.set_debug_reveal_all(false)
+	check(not fog_canvas.explored_hexes.has(Vector2i(18,18)),"fog_returns_without_losing_undiscovered_cells")
+	fog_canvas.queue_free()
 	check(stop != null and stop.disabled,"stop_disabled_until_route_starts")
 	# Exercise the real scene's selection handler without a fabricated
 	# combat engine. Capacity is exactly two zones for this UI fixture.
