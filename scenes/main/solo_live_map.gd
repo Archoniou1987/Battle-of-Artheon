@@ -214,13 +214,17 @@ func _refresh_hex_canvas() -> void:
 	# The canvas does not own or regenerate the world.
 	var projection: Dictionary = {
 		"map":session.map,
-		"entrance":session.expedition.player_position,
-		"exit":session.expedition.player_position,
+		"entrance":SoloGameStateService.START_CELL,
+		"exit":Vector2i(-1,-1),
 		"regions":[],
 		"patrols":[]
 	}
 	if hex_canvas.generated.is_empty() or hex_canvas.generated.get("map",null) != session.map:
 		hex_canvas.set_generated(projection)
+	var npc_roles: Dictionary = {}
+	for npc_id in session.npc_bridge.instances.keys():
+		npc_roles[String(npc_id)] = "NPC"
+	hex_canvas.set_live_entity_roles(npc_roles)
 	# The real live entity positions are authoritative. Treat saved visited
 	# cells as explored; do not reveal the whole map on every redraw.
 	for pos in session.map.cells.keys():
