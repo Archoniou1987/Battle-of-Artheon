@@ -5,11 +5,13 @@ const WIDTH := 12
 const HEIGHT := 12
 const MAP_INSTANCE_KEY := "world_map_instance_v1"
 const EXPLORED_KEY := "world_explored_cells_v1"
+const PATROL_KEY := "world_patrol_positions_v1"
 
 var expedition: ExpeditionState
 var character: CharacterState
 var repository: ItemRepository
 var generated_content: Dictionary = {}
+var patrol_runtime: MapPatrolRuntime = MapPatrolRuntime.new()
 var map: TacticalMapState
 var npc_bridge: MapNpcBridge
 var save_path: String
@@ -109,6 +111,11 @@ static func _mount(path: String, manifest: String, saved_expedition: ExpeditionS
 		var npc := NpcInstance.new(npc_id,template)
 		if not session.npc_bridge.register_npc(session.map,npc,placement["cell"]):
 			return {"ok":false,"reason":"live_npc_registration_failed"}
+	if using_generated:
+		session.patrol_runtime.configure(session.map,session.generated_content.get("patrols",[]),session.character.character_id)
+		var previous_patrols: Variant = session.expedition.world_state.get(PATROL_KEY,{})
+		if not previous_patrols is Dictionary or not session.patrol_runtime.restore(previous_patrols):
+			return {"ok":false,"reason":"generated_patrol_state_invalid"}
 	if not session.map.place_entity(session.character.character_id,session.expedition.player_position):
 		return {"ok":false,"reason":"saved_player_hex_invalid"}
 	if using_generated:
@@ -125,6 +132,26 @@ static func _mount(path: String, manifest: String, saved_expedition: ExpeditionS
 	session.map.mark_visited(session.expedition.player_position)
 	session.map.reveal_from(session.expedition.player_position,3)
 	return {"ok":true,"session":session}
+
+## Tick the existing patrol controller. Persist every completed move in
+## the same authoritative GameState as player movement and combat.
+## A collision is reported without moving into the player cell, so
+## SoloLiveNpcCombat.start can open the real encounter from adjacency.
+func advance_patrols(delta: float) -> Dictionary:
+	if generated_content.is_empty() or delta<=0.0 or FileAccess.file_exists(manifest_path):
+		return {"ok":true,"changed":false}
+	var before := patrol_runtime.snapshot()
+	var changed := patrol_runtime.advance(delta)
+	if not changed:
+		return {"ok":true,"changed":false,"collision_entity_id":patrol_runtime.collision_entity_id}
+	var old_world := expedition.world_state.duplicate(true)
+	expedition.world_state[PATROL_KEY] = patrol_runtime.snapshot()
+	var stored := ExpeditionSaveService.save(save_path,expedition,character,repository)
+	if not bool(stored.get("ok",false)):
+		expedition.world_state = old_world
+		patrol_runtime.restore(before)
+		return {"ok":false,"reason":"patrol_save_failed"}
+	return {"ok":true,"changed":true,"collision_entity_id":patrol_runtime.collision_entity_id}
 
 func move_one_step(to: Vector2i) -> Dictionary:
 	if expedition == null or map == null or not expedition.is_active():
