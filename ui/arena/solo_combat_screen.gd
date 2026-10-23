@@ -299,7 +299,7 @@ func _roster_card(actor: Dictionary, targeted: bool) -> Control:
 
 func _build_log() -> void:
 	var lines: PackedStringArray = []
-	for line in Array(snapshot.get("last_round_log", [])):
+	for line in Array(snapshot.get("battle_log", snapshot.get("last_round_log", []))):
 		lines.append(String(line))
 	log_view.text = "\n".join(lines) if not lines.is_empty() else "Боевые события появятся после первого раунда."
 
