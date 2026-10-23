@@ -112,6 +112,41 @@ func _initialize() -> void:
 	check(not migrated["character"].inventory.owns("CITY_ONLY"),"no_silent_divergent_item_merge")
 	var restarted_migration := SoloGameStateService.bootstrap(PLAYER,GAME,TOWN,OLD_MAP,MANIFEST)
 	check(bool(restarted_migration.get("ok",false)) and String(restarted_migration.get("location","")) == "map","migration_idempotent")
+	# The legacy expedition was closed, adopted, then more items were
+	# crafted in town. Import the LATER city owner and retain world drops.
+	for path in [GAME,TOWN,OLD_MAP,MANIFEST]:
+		wipe(path)
+	var later_city := CharacterState.new(PLAYER,"Hero",6)
+	var later_repo := ItemRepository.new()
+	check(later_repo.add_item({"instance_id":"ADOPTED_SWORD","weight":1.0}),"returned_fixture_item")
+	check(later_city.inventory.add_instance("ADOPTED_SWORD",later_repo),"returned_fixture_owner")
+	check(bool(SoloTownSaveService.save(TOWN,later_city,later_repo).get("ok",false)),"returned_fixture_town")
+	check(bool(SoloTownExpeditionBridge.create_from_town(OLD_MAP,ID,67,Vector2i(5,5),later_city,later_repo,MANIFEST).get("ok",false)),"returned_fixture_expedition")
+	var before_return := ExpeditionSaveService.read(OLD_MAP,ID,PLAYER)
+	if bool(before_return.get("ok",false)):
+		var trip: ExpeditionState = before_return["expedition"]
+		var trip_items: ItemRepository = before_return["repository"]
+		check(trip_items.add_item({"instance_id":"DROPPED_MAP_ITEM","weight":0.4}),"returned_ground_record")
+		check(bool(GroundLootService.place_unowned(trip,trip_items,"DROPPED_MAP_ITEM",Vector2i(5,5),"defeated").get("ok",false)),"returned_ground_owner")
+		check(bool(ExpeditionSaveService.save(OLD_MAP,trip,before_return["character"],trip_items).get("ok",false)),"returned_world_saved")
+	check(bool(SoloTownReturnService.close_for_town(OLD_MAP,ID,PLAYER,MANIFEST).get("ok",false)),"returned_world_closed")
+	check(bool(SoloTownSaveService.adopt_closed_expedition(TOWN,OLD_MAP,ID,PLAYER,MANIFEST).get("ok",false)),"returned_world_adopted")
+	var adopted_town := SoloTownSaveService.read(TOWN,PLAYER)
+	if bool(adopted_town.get("ok",false)):
+		var adopted_hero: CharacterState = adopted_town["character"]
+		var adopted_repo: ItemRepository = adopted_town["repository"]
+		check(adopted_repo.add_item({"instance_id":"AFTER_RETURN","weight":0.4}),"after_return_record")
+		check(adopted_hero.inventory.add_instance("AFTER_RETURN",adopted_repo),"after_return_owner")
+		check(bool(SoloTownSaveService.save(TOWN,adopted_hero,adopted_repo,String(adopted_town["sha256"])).get("ok",false)),"later_city_saved")
+	var latest_city_bytes := FileAccess.get_file_as_string(TOWN)
+	var latest_exp_bytes := FileAccess.get_file_as_string(OLD_MAP)
+	var migrated_return := SoloGameStateService.bootstrap(PLAYER,GAME,TOWN,OLD_MAP,MANIFEST)
+	check(bool(migrated_return.get("ok",false)) and String(migrated_return.get("migrated_from",""))=="legacy_returned_town","later_return_receipt_selected")
+	if bool(migrated_return.get("ok",false)):
+		check(migrated_return["character"].inventory.owns("AFTER_RETURN"),"later_city_progress_retained")
+		check(migrated_return["repository"].has_item("DROPPED_MAP_ITEM"),"world_ground_item_retained")
+		check(String(migrated_return.get("location",""))=="town","returned_location_town")
+	check(FileAccess.get_file_as_string(TOWN) == latest_city_bytes and FileAccess.get_file_as_string(OLD_MAP) == latest_exp_bytes,"returned_legacy_sources_untouched")
 	for path in [GAME,TOWN,OLD_MAP,MANIFEST]:
 		wipe(path)
 	if errors.is_empty():
