@@ -301,13 +301,16 @@ func _build_screen() -> void:
 	popup = PanelContainer.new()
 	popup.visible = false
 	popup.custom_minimum_size = Vector2(340, 170)
-	popup.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	# A fixed, explicitly centred dialog: PRESET_CENTER offsets can produce
+	# a viewport-height dark strip before child layout settles on mobile.
+	popup.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	add_child(popup)
 	var contents := VBoxContainer.new()
 	popup.add_child(contents)
 	popup_title = _label("", 22, Color("#f1ddbb"))
 	contents.add_child(popup_title)
 	popup_description = _label("", 16, Color("#d8dbe0"))
+	popup_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	contents.add_child(popup_description)
 	popup_actions = VBoxContainer.new()
 	contents.add_child(popup_actions)
@@ -341,8 +344,8 @@ func _layout_panorama() -> void:
 		if button != null:
 			var point: Vector2 = service["position"]
 			button.position = scaled * point - button.size * 0.5
-	if popup != null:
-		popup.position = (size - popup.size) * 0.5
+	if popup != null and popup.visible:
+		_layout_town_popup()
 
 
 func _on_panorama_input(event: InputEvent) -> void:
@@ -513,14 +516,36 @@ func _open_solo_map_gate() -> void:
 		warning.text = "На прежней карте осталась добыча. При создании новой экспедиции незабранная добыча будет потеряна."
 		warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		popup_actions.add_child(warning)
+	_present_town_popup()
+
+## Keep the dialog hidden until its final width is known. In particular,
+## do not show an oversized center-anchored panel before Godot wraps text.
+func _present_town_popup() -> void:
+	if popup == null:
+		return
+	popup.visible = false
+	call_deferred("_finish_town_popup_layout")
+
+func _finish_town_popup_layout() -> void:
+	if popup == null or not is_inside_tree():
+		return
+	_layout_town_popup()
 	popup.visible = true
+
+func _layout_town_popup() -> void:
+	if popup == null:
+		return
+	var width := maxf(220.0,minf(420.0,size.x-32.0))
+	popup.custom_minimum_size.x = width
+	popup.size.x = width
 	popup.reset_size()
-	popup.position = (size-popup.size)*0.5
+	popup.size.x = width
+	popup.position = Vector2((size.x-width)*0.5,maxf(12.0,(size.y-popup.size.y)*0.5))
 
 func _show_map_entry_error(reason: String) -> void:
 	popup_title.text = "Карта недоступна"
 	popup_description.text = "Не удалось сохранить переход: " + reason
-	popup.visible = true
+	_present_town_popup()
 
 func _enter_selected_expedition(start_new: bool) -> void:
 	if _town_storage_blocked or _town_expedition_handed_off or player_character == null or player_character.in_combat:
