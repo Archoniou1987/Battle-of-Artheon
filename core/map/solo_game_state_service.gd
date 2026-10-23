@@ -46,6 +46,43 @@ static func create(path: String, player: CharacterState, repository: ItemReposit
 		return written
 	return read(path,player.character_id)
 
+## After a completed, formally adopted legacy expedition the town may have
+## received further legitimate items and progression. Keep THAT later town
+## owner, plus unowned world loot from the sealed expedition. The receipt
+## proves its origin; never guess from item counts or character fingerprints.
+static func _adopted_town_owner(expedition_path: String, town_path: String, player_id: String, old_expedition: Dictionary) -> Dictionary:
+	if not FileAccess.file_exists(town_path):
+		return {"ok":false,"reason":"no_legacy_town"}
+	var town := SoloTownSaveService.read(town_path,player_id)
+	if not bool(town.get("ok",false)):
+		return town
+	var sealed := ExpeditionSaveService._read_payload_envelope(expedition_path)
+	if not bool(sealed.get("ok",false)):
+		return sealed
+	var receipt: Dictionary = town["return_origin"]
+	if String(receipt.get("expedition_id","")) != String(old_expedition["expedition"].expedition_id) or String(receipt.get("snapshot_sha256","")) != String(sealed["sha256"]):
+		return {"ok":false,"reason":"legacy_return_not_adopted"}
+	var legacy_hero: CharacterState = old_expedition["character"]
+	var legacy_repository: ItemRepository = old_expedition["repository"]
+	var city_hero: CharacterState = town["character"]
+	var city_repository: ItemRepository = town["repository"]
+	var merged := ItemRepository.new()
+	var all_old: Dictionary = legacy_repository.to_dict().get("items",{})
+	for raw_id in all_old.keys():
+		var id := String(raw_id)
+		if legacy_hero.inventory.owns(id):
+			continue
+		if city_hero.inventory.owns(id):
+			return {"ok":false,"reason":"legacy_return_world_item_collision","item_id":id}
+		if not merged.add_item(all_old[id]):
+			return {"ok":false,"reason":"legacy_return_world_item_invalid","item_id":id}
+	for raw_id in city_hero.inventory.instance_ids():
+		var id := String(raw_id)
+		if not merged.add_item(city_repository.get_item(id)):
+			return {"ok":false,"reason":"legacy_return_city_item_invalid","item_id":id}
+	return {"ok":true,"character":city_hero,"repository":merged}
+
+
 ## Once-only import. Legacy files are NEVER renamed, deleted or written by
 ## this service. An active map owns its latest progress; a closed map owns
 ## its returned result. The old town file stays available for manual recovery
@@ -63,15 +100,26 @@ static func bootstrap(player_id: String, path: String = PATH, legacy_town: Strin
 		if expedition.status not in [ExpeditionState.STATUS_ACTIVE,ExpeditionState.STATUS_EXITED]:
 			return {"ok":false,"reason":"legacy_expedition_status_unsupported"}
 		var location := LOCATION_MAP if expedition.is_active() else LOCATION_TOWN
+		var selected_character: CharacterState = previous["character"]
+		var selected_repository: ItemRepository = previous["repository"]
+		var migrated_from := "legacy_expedition"
+		if location == LOCATION_TOWN and FileAccess.file_exists(legacy_town):
+			var accepted := _adopted_town_owner(legacy_expedition,legacy_town,player_id,previous)
+			if bool(accepted.get("ok",false)):
+				selected_character = accepted["character"]
+				selected_repository = accepted["repository"]
+				migrated_from = "legacy_returned_town"
+			elif String(accepted.get("reason","")) in ["legacy_return_world_item_collision","legacy_return_world_item_invalid","legacy_return_city_item_invalid"]:
+				return accepted
 		expedition.status = ExpeditionState.STATUS_ACTIVE
 		expedition.world_state.erase(SoloTownExpeditionBridge.ORIGIN_KEY)
 		expedition.world_state.erase(SoloTownReturnService.RETURN_KEY)
 		expedition.world_state[LOCATION_KEY] = location
-		var saved := ExpeditionSaveService.save(path,expedition,previous["character"],previous["repository"])
+		var saved := ExpeditionSaveService.save(path,expedition,selected_character,selected_repository)
 		if not bool(saved.get("ok",false)):
 			return {"ok":false,"reason":"game_state_legacy_import_failed","detail":String(saved.get("reason","unknown"))}
 		var loaded := read(path,player_id)
-		loaded["migrated_from"] = "legacy_expedition"
+		loaded["migrated_from"] = migrated_from
 		loaded["legacy_town_preserved"] = FileAccess.file_exists(legacy_town)
 		return loaded
 	if FileAccess.file_exists(legacy_town):
