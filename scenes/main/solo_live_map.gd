@@ -176,14 +176,16 @@ func _build_view() -> void:
 	map_scroller = ScrollContainer.new()
 	map_scroller.name = "LiveMapScroll"
 	map_scroller.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	map_scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	map_scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	map_scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	map_scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	map_panel.add_child(map_scroller)
 	map_scroller.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# Production and diagnostic map share EXACTLY the same hex canvas.
 	hex_canvas = DebugMapCanvas.new()
 	hex_canvas.name = "LiveHexMapCanvas"
-	hex_canvas.HEX_SIZE = 28.0
+	# Approved diagnostic viewer uses 40px hex radius, not the old
+	# 28px compressed map. Gameplay vision remains three hexes.
+	hex_canvas.HEX_SIZE = 40.0
 	hex_canvas.hex_selected.connect(_select_hex_destination)
 	map_scroller.add_child(hex_canvas)
 	mini_map = DebugMiniMap.new()
@@ -291,7 +293,8 @@ func _size_hex_map_viewport() -> void:
 		return
 	var width := map_panel.size.x
 	if width>0.0:
-		map_panel.custom_minimum_size.y = minf(width,720.0)
+		# The playable surface is always 1:1 in both orientations.
+		map_panel.custom_minimum_size.y = width
 
 func _toggle_map_diagnostic(enabled: bool) -> void:
 	if hex_canvas != null:
