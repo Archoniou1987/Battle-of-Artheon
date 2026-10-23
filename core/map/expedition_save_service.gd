@@ -13,6 +13,9 @@ const MAX_BYTES := 8 * 1024 * 1024
 const TOMBSTONES_KEY := MapWorldCommitService.TOMBSTONES_KEY
 const MARKERS_KEY := MapCombatSettlementService.MARKER_KEY
 
+static func _format_for_path(path: String) -> String:
+	return GAME_FORMAT if path == DEFAULT_PATH or path == DEFAULT_PATH + ".tmp" else FORMAT
+
 static func _valid_identity(expedition: ExpeditionState, player: CharacterState, repository: ItemRepository, allow_town_combat: bool = false) -> bool:
 	return expedition != null and player != null and repository != null and MapWorldCommitService._valid_id(expedition.expedition_id) and MapWorldCommitService._valid_id(player.character_id) and (not player.in_combat or allow_town_combat)
 
@@ -108,7 +111,7 @@ static func read(path: String, expedition_id: String, player_id: String) -> Dict
 	var raw := file.get_as_text()
 	file.close()
 	var envelope: Variant = JSON.parse_string(raw)
-	if not envelope is Dictionary or String(envelope.get("format","")) != (GAME_FORMAT if path == DEFAULT_PATH else FORMAT) or not envelope.get("payload_json") is String:
+	if not envelope is Dictionary or String(envelope.get("format","")) != _format_for_path(path) or not envelope.get("payload_json") is String:
 		return {"ok":false,"reason":"expedition_save_invalid_envelope"}
 	var payload_json := String(envelope["payload_json"])
 	if payload_json.sha256_text() != String(envelope.get("sha256","")):
@@ -120,7 +123,7 @@ static func read(path: String, expedition_id: String, player_id: String) -> Dict
 
 static func _write(path: String, expedition: ExpeditionState, player: CharacterState, repository: ItemRepository) -> Dictionary:
 	var payload_json := JSON.stringify(_snapshot(expedition,player,repository))
-	var raw := JSON.stringify({"format":GAME_FORMAT if path == DEFAULT_PATH else FORMAT,"payload_json":payload_json,"sha256":payload_json.sha256_text()})
+	var raw := JSON.stringify({"format":_format_for_path(path),"payload_json":payload_json,"sha256":payload_json.sha256_text()})
 	if raw.to_utf8_buffer().size() > MAX_BYTES:
 		return {"ok":false,"reason":"expedition_save_too_large"}
 	var temp := path + ".tmp"
@@ -233,7 +236,7 @@ static func _read_payload_envelope(path: String) -> Dictionary:
 	var raw := file.get_as_text()
 	file.close()
 	var envelope: Variant = JSON.parse_string(raw)
-	if not envelope is Dictionary or String(envelope.get("format","")) != (GAME_FORMAT if path == DEFAULT_PATH else FORMAT) or not envelope.get("payload_json") is String:
+	if not envelope is Dictionary or String(envelope.get("format","")) != _format_for_path(path) or not envelope.get("payload_json") is String:
 		return {"ok":false,"reason":"expedition_envelope_invalid"}
 	var payload_json := String(envelope["payload_json"])
 	if payload_json.sha256_text() != String(envelope.get("sha256","")):
