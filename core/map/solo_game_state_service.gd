@@ -221,3 +221,49 @@ static func enter_generated_map(path: String, player_id: String, manifest: Strin
 	if not bool(saved.get("ok",false)):
 		return saved
 	return {"ok":true,"instance_id":String(Dictionary(expedition.world_state.get(SoloLiveMapSession.MAP_INSTANCE_KEY,{})).get("instance_id","legacy"))}
+
+## Explicit legacy-map transition. This is not an automatic save migration:
+## combat history and character ownership stay intact. Refuse to strand
+## unclaimed ground rewards on the retired prototype map.
+static func upgrade_legacy_map(path: String, player_id: String, manifest: String = SoloCombatSessionManifest.PATH) -> Dictionary:
+	if FileAccess.file_exists(manifest):
+		return {"ok":false,"reason":"game_state_pending_combat"}
+	var current := read(path,player_id)
+	if not bool(current.get("ok",false)):
+		return current
+	if String(current["location"]) != LOCATION_MAP:
+		return {"ok":false,"reason":"game_state_not_on_map"}
+	var expedition: ExpeditionState = current["expedition"]
+	if expedition.world_state.has(SoloLiveMapSession.MAP_INSTANCE_KEY):
+		return {"ok":false,"reason":"already_generated_map"}
+	var ground: Variant = expedition.world_state.get(GroundLootService.WORLD_KEY,{})
+	var pools: Variant = expedition.world_state.get("encounter_loot_pools",{})
+	if not ground is Dictionary or not pools is Dictionary:
+		return {"ok":false,"reason":"legacy_loot_state_invalid"}
+	if not Dictionary(ground).is_empty() or not Dictionary(pools).is_empty():
+		return {"ok":false,"reason":"legacy_loot_must_be_collected"}
+	var seed := int(Time.get_unix_time_from_system()) + int(Time.get_ticks_usec()%1000000)
+	var instance_id := "MAP-" + str(seed) + "-" + player_id
+	var definition := WorldInstanceContract.instance(instance_id,"starter_village","forest",seed,1,20,20,1)
+	var towns := {"starter_village":WorldInstanceContract.settlement("starter_village","forest",1)}
+	var built := MapInstanceGenerationService.generate(definition,towns)
+	if not bool(built.get("ok",false)):
+		return built
+	var entrance: Vector2i = built["generated"]["entrance"]
+	# Preserve original map identity/coordinates for later migration audit.
+	# Historical combat settlements/tombstones remain in their existing
+	# immutable ledger: generated NPC identities never reuse legacy IDs.
+	expedition.world_state["legacy_map_origin_v1"] = {
+		"seed":expedition.seed_value,
+		"position":[expedition.player_position.x,expedition.player_position.y]
+	}
+	expedition.world_state[SoloLiveMapSession.MAP_INSTANCE_KEY] = definition
+	expedition.world_state.erase(SoloLiveMapSession.EXPLORED_KEY)
+	expedition.world_state.erase(SoloLiveMapSession.PATROL_KEY)
+	expedition.seed_value = seed
+	expedition.player_position = entrance
+	expedition.world_state[ExpeditionState.SOLO_START_CELL_KEY] = [entrance.x,entrance.y]
+	var saved := ExpeditionSaveService.save(path,expedition,current["character"],current["repository"])
+	if not bool(saved.get("ok",false)):
+		return saved
+	return {"ok":true,"instance_id":instance_id}
