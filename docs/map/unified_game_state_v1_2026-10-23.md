@@ -31,7 +31,7 @@ These are *recovery journals*, not a second independently writable character.
 
 ## Legacy migration
 
-Original files are **never deleted, renamed or written during migration**:
+Original files are **never deleted or renamed during migration**:
 - `user://solo_town_save_v1.json`
 - `user://solo_expedition_save_v1.json`
 - older progression/inventory files when neither canonical legacy file exists.
@@ -50,9 +50,11 @@ returned city and unclaimed world fails migration rather than duplicating
 an item. These are one-time historical migration checks, not ongoing
 city/expedition reconciliation.
 
-An unresolved legacy pending combat blocks migration rather than discarding
-checkpoint/terminal artifacts or importing an inconsistent player. Finish/
-recover that fight using the old version before migration. A corrupted
+A legacy combat with a verified terminal outcome is reconciled using its
+existing idempotent recovery service before importing, which may legitimately
+update the old expedition result. An in-progress checkpoint without a terminal
+blocks migration rather than discarding the fight; complete it in the old
+version before migration. A corrupted
 existing GameState never silently falls back to a legacy owner.
 
 After successful migration all normal navigation and save writes use the
