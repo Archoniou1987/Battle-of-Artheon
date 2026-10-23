@@ -12,3 +12,9 @@ Verified user screenshots: generated 20x20 map now plays real combat; three batt
 The approved debug viewer has additional menus, selection states and cell-content tabs not yet wired to the live production scene. Do not add dead decorative buttons or a duplicate world/engine merely to imitate the screenshot. Establish exact gameplay navigation and cell-content integration as the next pass.
 
 An exit/entry tile rule for new maps is not implemented in this visual/UI patch. The current validated Solo save continues to resume at its saved hex, which the user explicitly accepted for now.
+
+## Square-only visual contract, focused revision
+
+Following the user's clarification, prioritize the **playable square** over all lower navigation, inventory and diagnostic panels. Match the approved debug viewer's `HEX_SIZE=40.0` (earlier live map had 28.0, rendering roughly 40% more map across the same display), constrain the map viewport to an actual 1:1 square at the current layout width, keep the mini-map 155x155 inside its bottom-right corner and hide visible scrollbars while preserving map panning. The viewport/camera does not alter the fixed default gameplay vision radius of three hexes; cells already explored by legitimate movement remain dimmed while unvisited cells remain unknown.
+
+This is a presentation contract, not a change to generation dimensions (still 20x20), movement timers, combat engine or player save. Next run ABI and Web Preview to verify actual mobile rendering.
