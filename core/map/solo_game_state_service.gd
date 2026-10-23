@@ -267,3 +267,91 @@ static func upgrade_legacy_map(path: String, player_id: String, manifest: String
 	if not bool(saved.get("ok",false)):
 		return saved
 	return {"ok":true,"instance_id":instance_id}
+
+## One character/repository, multiple independently preserved map worlds.
+## Archives are snapshots of *map* state only, never player/item copies.
+const MAP_ARCHIVES_KEY := "world_expedition_archives_v1"
+const MAP_SERIAL_KEY := "world_expedition_serial_v1"
+
+static func _active_map_identity(expedition: ExpeditionState) -> String:
+	var definition: Variant = expedition.world_state.get(SoloLiveMapSession.MAP_INSTANCE_KEY,null)
+	if definition is Dictionary:
+		return String(definition.get("instance_id",""))
+	return "LEGACY-" + expedition.expedition_id
+
+static func map_entry_options(path: String, player_id: String, manifest: String = SoloCombatSessionManifest.PATH) -> Dictionary:
+	var current := read(path,player_id)
+	if not bool(current.get("ok",false)):
+		return current
+	if String(current["location"]) != LOCATION_TOWN:
+		return {"ok":false,"reason":"game_state_not_in_town"}
+	var expedition: ExpeditionState = current["expedition"]
+	var ground: Variant = expedition.world_state.get(GroundLootService.WORLD_KEY,{})
+	var pools: Variant = expedition.world_state.get("encounter_loot_pools",{})
+	if not ground is Dictionary or not pools is Dictionary:
+		return {"ok":false,"reason":"map_loot_state_invalid"}
+	return {
+		"ok":true,
+		"previous_map_id":_active_map_identity(expedition),
+		"can_start_new":not FileAccess.file_exists(manifest),
+		"has_unclaimed_loot":not Dictionary(ground).is_empty() or not Dictionary(pools).is_empty(),
+		"has_pending_combat":FileAccess.file_exists(manifest)
+	}
+
+## The previous map, including its combat ledgers, NPC tombstones and
+## uncollected ground loot, stays archived. No character or repository is
+## duplicated. The active map's state is replaced only after the new
+## generator succeeds; ExpeditionSaveService is the single commit boundary.
+static func start_new_expedition(path: String, player_id: String, manifest: String = SoloCombatSessionManifest.PATH) -> Dictionary:
+	if FileAccess.file_exists(manifest):
+		return {"ok":false,"reason":"game_state_pending_combat"}
+	var current := read(path,player_id)
+	if not bool(current.get("ok",false)):
+		return current
+	if String(current["location"]) != LOCATION_TOWN:
+		return {"ok":false,"reason":"game_state_not_in_town"}
+	var expedition: ExpeditionState = current["expedition"]
+	var old_id := _active_map_identity(expedition)
+	if old_id.is_empty():
+		return {"ok":false,"reason":"previous_map_identity_invalid"}
+	var archives_value: Variant = expedition.world_state.get(MAP_ARCHIVES_KEY,{})
+	if not archives_value is Dictionary:
+		return {"ok":false,"reason":"map_archives_corrupt"}
+	var archives: Dictionary = Dictionary(archives_value).duplicate(true)
+	# New map IDs are allocated from a monotonic counter in the durable
+	# owner, not a timestamp; never recycle an old ID on this save.
+	var serial := int(expedition.world_state.get(MAP_SERIAL_KEY,0))+1
+	var new_id := "MAP-" + str(serial).pad_zeros(6)
+	while archives.has(new_id) or new_id==old_id:
+		serial += 1
+		new_id = "MAP-" + str(serial).pad_zeros(6)
+	var seed := int(Time.get_unix_time_from_system()) + serial*7919
+	var definition := WorldInstanceContract.instance(new_id,"starter_village","forest",seed,1,20,20,1)
+	var towns := {"starter_village":WorldInstanceContract.settlement("starter_village","forest",1)}
+	var built := MapInstanceGenerationService.generate(definition,towns)
+	if not bool(built.get("ok",false)):
+		return built
+	var entrance: Vector2i = built["generated"]["entrance"]
+	var snapshot: Dictionary = expedition.world_state.duplicate(true)
+	snapshot.erase(MAP_ARCHIVES_KEY)
+	snapshot.erase(MAP_SERIAL_KEY)
+	archives[old_id] = {
+		"seed":expedition.seed_value,
+		"position":[expedition.player_position.x,expedition.player_position.y],
+		"world_state":snapshot
+	}
+	# The new instance gets its own local ledgers and NPC state. The old
+	# combat journals remain in the archived world and on disk.
+	expedition.world_state = {
+		LOCATION_KEY:LOCATION_MAP,
+		MAP_ARCHIVES_KEY:archives,
+		MAP_SERIAL_KEY:serial,
+		SoloLiveMapSession.MAP_INSTANCE_KEY:definition,
+		ExpeditionState.SOLO_START_CELL_KEY:[entrance.x,entrance.y]
+	}
+	expedition.seed_value = seed
+	expedition.player_position = entrance
+	var committed := ExpeditionSaveService.save(path,expedition,current["character"],current["repository"])
+	if not bool(committed.get("ok",false)):
+		return committed
+	return {"ok":true,"instance_id":new_id,"previous_map_id":old_id}
