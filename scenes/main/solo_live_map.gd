@@ -9,6 +9,14 @@ var session: SoloLiveMapSession
 var status_label: Label
 var tile_container: GridContainer
 var hex_canvas: DebugMapCanvas
+var mini_map: DebugMiniMap
+var route_steps: Array[Vector2i] = []
+var route_target := Vector2i(-1,-1)
+var route_running := false
+var route_elapsed := 0.0
+var route_duration := 0.0
+var route_stop_button: Button
+var route_label: Label
 var map_scroller: ScrollContainer
 var live_combat: SoloLiveNpcCombat
 var game_map_scroll: ScrollContainer
@@ -158,8 +166,21 @@ func _build_view() -> void:
 	hex_canvas = DebugMapCanvas.new()
 	hex_canvas.name = "LiveHexMapCanvas"
 	hex_canvas.HEX_SIZE = 26.0
-	hex_canvas.hex_selected.connect(_move)
+	hex_canvas.hex_selected.connect(_select_hex_destination)
 	map_scroller.add_child(hex_canvas)
+	mini_map = DebugMiniMap.new()
+	mini_map.name = "LiveMiniMap"
+	mini_map.custom_minimum_size = Vector2(145,145)
+	root.add_child(mini_map)
+	route_label = Label.new()
+	route_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(route_label)
+	route_stop_button = Button.new()
+	route_stop_button.text = "Остановить движение"
+	route_stop_button.custom_minimum_size.y = 44
+	route_stop_button.disabled = true
+	route_stop_button.pressed.connect(_stop_route)
+	root.add_child(route_stop_button)
 	var ground_heading := Label.new()
 	ground_heading.text = "Добыча на текущей клетке • сбор 2 секунды"
 	root.add_child(ground_heading)
@@ -206,6 +227,106 @@ func _refresh() -> void:
 		empty.text = "Здесь нет доступной добычи."
 		ground_list.add_child(empty)
 	_refresh_hex_canvas()
+
+func _select_hex_destination(target: Vector2i) -> void:
+	if session == null or pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
+		return
+	if route_running:
+		_stop_route()
+		return
+	if _route_ready_for_confirmation and target == route_target and route_steps.size()>1:
+		route_running = true
+		_route_ready_for_confirmation = false
+		route_elapsed = 0.0
+		route_duration = SafeMapNavigation.terrain_seconds(session.map.cell(route_steps[1]).terrain_id)
+		route_stop_button.disabled = false
+		return
+	var origin := session.expedition.player_position
+	if target == origin:
+		_stop_route()
+		return
+	var explored: Dictionary = {}
+	var visible: Dictionary = {}
+	var roles: Dictionary = {}
+	for cell in session.map.cells.keys():
+		if session.map.cell(cell).discovered:
+			explored[cell] = true
+		if HexGrid.distance(origin,cell)<=3:
+			visible[cell] = true
+	for id in session.npc_bridge.instances.keys():
+		roles[id] = "NPC"
+	var has_enemy := not session.npc_bridge.npc_at(session.map,target).is_empty()
+	var calculated := SafeMapNavigation.find_route(session.map,explored,origin,target,visible,roles,has_enemy)
+	if calculated.size()<2:
+		_set_status("Безопасный маршрут недоступен.")
+		return
+	route_steps = calculated
+	route_target = target
+	var duration := 0.0
+	for i in range(1,route_steps.size()):
+		duration += SafeMapNavigation.terrain_seconds(session.map.cell(route_steps[i]).terrain_id)
+	if route_label != null:
+		route_label.text = "Маршрут: %d гексов, %.0f сек. Повторите нажатие для запуска." % [route_steps.size()-1,duration]
+	hex_canvas.set_player_view(origin,target,route_steps)
+	# A second tap confirms the route, as on the original debug map.
+	_route_ready_for_confirmation = true
+
+var _route_ready_for_confirmation := false
+
+func _stop_route() -> void:
+	route_running = false
+	_route_ready_for_confirmation = false
+	route_steps.clear()
+	route_target = Vector2i(-1,-1)
+	route_elapsed = 0.0
+	route_duration = 0.0
+	if route_stop_button != null:
+		route_stop_button.disabled = true
+	if route_label != null:
+		route_label.text = "Движение остановлено."
+	if session != null and hex_canvas != null:
+		hex_canvas.set_player_view(session.expedition.player_position,Vector2i(-1,-1),[])
+	if mini_map != null:
+		mini_map.set_regions(projection.get("regions",[]),false)
+		mini_map.update_map(session.map,session.expedition.player_position)
+
+func _process(delta: float) -> void:
+	if not route_running or session == null:
+		return
+	if pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
+		_stop_route()
+		return
+	if route_steps.size()<2:
+		_stop_route()
+		return
+	route_elapsed += delta
+	if route_label != null:
+		route_label.text = "Переход: %.1f / %.1f сек" % [minf(route_elapsed,route_duration),route_duration]
+	if route_elapsed < route_duration:
+		return
+	var next: Vector2i = route_steps[1]
+	# Every step is committed by the same single-step GameState service.
+	# NPC collision uses the canonical real combat entry, not debug combat.
+	route_running = false
+	if not session.npc_bridge.npc_at(session.map,next).is_empty():
+		_stop_route()
+		_start_combat(next)
+		return
+	var moved := session.move_one_step(next)
+	if not bool(moved.get("ok",false)):
+		_stop_route()
+		_set_status("Маршрут остановлен: "+String(moved.get("reason","unknown")))
+		return
+	route_steps.remove_at(0)
+	_refresh()
+	if route_steps.size()<2:
+		_stop_route()
+		return
+	route_elapsed = 0.0
+	route_duration = SafeMapNavigation.terrain_seconds(session.map.cell(route_steps[1]).terrain_id)
+	route_running = true
+	route_stop_button.disabled = false
+	hex_canvas.set_player_view(session.expedition.player_position,route_target,route_steps)
 
 func _refresh_hex_canvas() -> void:
 	if hex_canvas == null or session == null:
