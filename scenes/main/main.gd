@@ -487,20 +487,58 @@ func _open_solo_map_gate() -> void:
 	_save_canonical_town()
 	if _town_storage_blocked:
 		return
-	var entered := SoloGameStateService.enter_generated_map(CANONICAL_TOWN_PATH,player_character.character_id)
-	if not bool(entered.get("ok",false)):
-		popup_title.text = "Карта недоступна"
-		popup_description.text = "Не удалось сохранить переход: " + String(entered.get("reason","unknown"))
-		popup.visible = true
+	var options := SoloGameStateService.map_entry_options(CANONICAL_TOWN_PATH,player_character.character_id)
+	if not bool(options.get("ok",false)):
+		_show_map_entry_error(String(options.get("reason","unknown")))
 		return
+	popup_title.text = "Отправиться в экспедицию"
+	popup_description.text = "Продолжить прежнюю карту (" + String(options["previous_map_id"]) + ") или создать новую? Персонаж и инвентарь остаются прежними. Прежняя карта сохраняется в истории мира."
+	popup_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for child in popup_actions.get_children():
+		popup_actions.remove_child(child)
+		child.queue_free()
+	var continue_button := Button.new()
+	continue_button.text = "Вернуться на прежнюю карту"
+	continue_button.custom_minimum_size.y = 48
+	continue_button.pressed.connect(_enter_selected_expedition.bind(false))
+	popup_actions.add_child(continue_button)
+	var fresh_button := Button.new()
+	fresh_button.text = "Начать новую экспедицию"
+	fresh_button.custom_minimum_size.y = 48
+	fresh_button.disabled = not bool(options.get("can_start_new",false))
+	fresh_button.pressed.connect(_enter_selected_expedition.bind(true))
+	popup_actions.add_child(fresh_button)
+	if bool(options.get("has_unclaimed_loot",false)):
+		var warning := Label.new()
+		warning.text = "На прежней карте осталась добыча. Она сохранится вместе с прежней картой."
+		warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		popup_actions.add_child(warning)
+	popup.visible = true
+	popup.reset_size()
+	popup.position = (size-popup.size)*0.5
+
+func _show_map_entry_error(reason: String) -> void:
+	popup_title.text = "Карта недоступна"
+	popup_description.text = "Не удалось сохранить переход: " + reason
+	popup.visible = true
+
+func _enter_selected_expedition(start_new: bool) -> void:
+	if _town_storage_blocked or _town_expedition_handed_off or player_character == null or player_character.in_combat:
+		return
+	_save_canonical_town()
+	if _town_storage_blocked:
+		return
+	var entered := SoloGameStateService.start_new_expedition(CANONICAL_TOWN_PATH,player_character.character_id) if start_new else SoloGameStateService.enter_generated_map(CANONICAL_TOWN_PATH,player_character.character_id)
+	if not bool(entered.get("ok",false)):
+		_show_map_entry_error(String(entered.get("reason","unknown")))
+		return
+	popup.visible = false
 	_town_expedition_handed_off = true
 	var change_error := get_tree().change_scene_to_file("res://scenes/main/solo_live_map.tscn")
 	if change_error != OK:
 		_town_expedition_handed_off = false
 		SoloGameStateService.set_location(CANONICAL_TOWN_PATH,player_character.character_id,SoloGameStateService.LOCATION_TOWN)
-		popup_title.text = "Карта недоступна"
-		popup_description.text = "Не удалось открыть игровую карту."
-		popup.visible = true
+		_show_map_entry_error("Не удалось открыть игровую карту.")
 
 func _resume_saved_map() -> void:
 	if _town_storage_blocked:
