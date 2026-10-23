@@ -48,10 +48,12 @@ func _run() -> void:
 	var previous_world: ExpeditionState = before_second["expedition"]
 	var receipt_id := "solo:live:" + previous_world.expedition_id + ":GEN_NPC_00"
 	var hash := "a".repeat(64)
-	previous_world.world_state[MapWorldCommitService.TOMBSTONES_KEY] = {
-		receipt_id:{"receipt_sha256":hash,"npc_ids":["GEN_NPC_00"],"npc_positions":{}}
-	}
-	previous_world.world_state[MapCombatSettlementService.MARKER_KEY] = {receipt_id:hash}
+	var completed_receipts: Dictionary = {}
+	completed_receipts[receipt_id] = {"receipt_sha256":hash,"npc_ids":["GEN_NPC_00"],"npc_positions":{}}
+	previous_world.world_state[MapWorldCommitService.TOMBSTONES_KEY] = completed_receipts
+	var markers: Dictionary = {}
+	markers[receipt_id] = hash
+	previous_world.world_state[MapCombatSettlementService.MARKER_KEY] = markers
 	ok = ok and bool(ExpeditionSaveService.save(SAVE,previous_world,before_second["character"],before_second["repository"]).get("ok",false))
 	var second := SoloGameStateService.start_new_expedition(SAVE,"player",MANIFEST)
 	ok = ok and bool(second.get("ok",false))
