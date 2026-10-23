@@ -49,7 +49,8 @@ func advance(delta:float)->bool:
 			collision_entity_id=patrol_id
 			state["remaining"]=RETRY_SECONDS
 			return changed
-		var moved:Dictionary=map.move_entity(patrol_id,next)
+		# Patrolling NPCs never discover terrain for the player's minimap.
+		var moved:Dictionary=map.move_entity(patrol_id,next,false)
 		if not bool(moved.get("ok",false)):
 			state["remaining"]=RETRY_SECONDS
 			continue
