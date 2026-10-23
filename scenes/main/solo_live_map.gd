@@ -11,6 +11,7 @@ var hex_canvas: DebugMapCanvas
 var mini_map: DebugMiniMap
 var map_panel: Control
 var legacy_upgrade_button: Button
+var reveal_test_toggle: CheckButton
 var route_steps: Array[Vector2i] = []
 var route_target := Vector2i(-1,-1)
 var route_running := false
@@ -49,6 +50,8 @@ func _ready() -> void:
 	var id := SoloTownExpeditionBridge.expedition_id_for_player(PLAYER)
 	var opened := SoloLiveMapSession.open(SAVE,MANIFEST,id,PLAYER)
 	_build_view()
+	get_viewport().size_changed.connect(_size_hex_map_viewport)
+	call_deferred("_size_hex_map_viewport")
 	# Fail closed until a verified normal session is available.
 	return_button.disabled = true
 	if not bool(opened.get("ok",false)) and String(opened.get("state","")) == "resume_combat_checkpoint":
@@ -195,6 +198,12 @@ func _build_view() -> void:
 	legacy_upgrade_button.visible = false
 	legacy_upgrade_button.pressed.connect(_upgrade_legacy_map)
 	root.add_child(legacy_upgrade_button)
+	reveal_test_toggle = CheckButton.new()
+	reveal_test_toggle.name = "RevealMapDiagnostic"
+	reveal_test_toggle.text = "Открыть всю карту (тест)"
+	reveal_test_toggle.button_pressed = false
+	reveal_test_toggle.toggled.connect(_toggle_map_diagnostic)
+	root.add_child(reveal_test_toggle)
 	route_label = Label.new()
 	route_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(route_label)
@@ -235,6 +244,8 @@ func _refresh() -> void:
 	if legacy_upgrade_button != null:
 		legacy_upgrade_button.visible = session.generated_content.is_empty()
 		legacy_upgrade_button.disabled = pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST)
+	if reveal_test_toggle != null:
+		reveal_test_toggle.visible = not session.generated_content.is_empty()
 	_refresh_combat_controls()
 	for node in ground_list.get_children():
 		ground_list.remove_child(node)
@@ -253,6 +264,21 @@ func _refresh() -> void:
 		empty.text = "Здесь нет доступной добычи."
 		ground_list.add_child(empty)
 	_refresh_hex_canvas()
+
+## The approved viewer uses a square map viewport, not an expanding
+## document-height map or a full-width mini-map.
+func _size_hex_map_viewport() -> void:
+	if map_panel == null:
+		return
+	var width := map_panel.size.x
+	if width>0.0:
+		map_panel.custom_minimum_size.y = minf(width,720.0)
+
+func _toggle_map_diagnostic(enabled: bool) -> void:
+	if hex_canvas != null:
+		hex_canvas.set_debug_reveal_all(enabled)
+	if mini_map != null:
+		mini_map.set_reveal_all(enabled)
 
 func _upgrade_legacy_map() -> void:
 	if session == null or not session.generated_content.is_empty() or live_combat != null or pickup_active or FileAccess.file_exists(MANIFEST):
@@ -422,7 +448,7 @@ func _refresh_hex_canvas() -> void:
 			hex_canvas.explored_hexes[pos] = true
 	hex_canvas.set_player_view(session.expedition.player_position,Vector2i(-1,-1),[])
 	if mini_map != null:
-		mini_map.set_regions(projection.get("regions",[]),false)
+		mini_map.set_regions(projection.get("regions",[]),reveal_test_toggle.button_pressed if reveal_test_toggle!=null else false)
 		mini_map.update_map(session.map,session.expedition.player_position)
 
 
