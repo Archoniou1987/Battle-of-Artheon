@@ -7,9 +7,10 @@ const PLAYER := "player"
 
 var session: SoloLiveMapSession
 var status_label: Label
-var tile_container: GridContainer
 var hex_canvas: DebugMapCanvas
 var mini_map: DebugMiniMap
+var map_panel: Control
+var legacy_upgrade_button: Button
 var route_steps: Array[Vector2i] = []
 var route_target := Vector2i(-1,-1)
 var route_running := false
@@ -156,22 +157,44 @@ func _build_view() -> void:
 	combat_log_label = Label.new()
 	combat_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	combat_panel.add_child(combat_log_label)
+	# Approved diagnostic-map composition: a clipped map viewport with
+	# a small square mini-map OVER the bottom-right corner.
+	map_panel = Control.new()
+	map_panel.name = "LiveMapPanel"
+	map_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_panel.custom_minimum_size.y = 430.0
+	map_panel.clip_contents = true
+	root.add_child(map_panel)
 	map_scroller = ScrollContainer.new()
-	map_scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_scroller.name = "LiveMapScroll"
+	map_scroller.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	map_scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	map_scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	root.add_child(map_scroller)
-	# Reuse the established hex canvas rather than rendering square buttons.
-	# Map ownership, combat and persistence remain exclusively in SoloLiveMapSession.
+	map_scroller.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	map_panel.add_child(map_scroller)
+	map_scroller.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Production and diagnostic map share EXACTLY the same hex canvas.
 	hex_canvas = DebugMapCanvas.new()
 	hex_canvas.name = "LiveHexMapCanvas"
-	hex_canvas.HEX_SIZE = 26.0
+	hex_canvas.HEX_SIZE = 28.0
 	hex_canvas.hex_selected.connect(_select_hex_destination)
 	map_scroller.add_child(hex_canvas)
 	mini_map = DebugMiniMap.new()
 	mini_map.name = "LiveMiniMap"
-	mini_map.custom_minimum_size = Vector2(145,145)
-	root.add_child(mini_map)
+	mini_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_panel.add_child(mini_map)
+	mini_map.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	mini_map.offset_left = -165.0
+	mini_map.offset_top = -165.0
+	mini_map.offset_right = -10.0
+	mini_map.offset_bottom = -10.0
+	# Only old saved 12x12 worlds expose an explicit opt-in transition.
+	legacy_upgrade_button = Button.new()
+	legacy_upgrade_button.name = "GenerateModernHexMap"
+	legacy_upgrade_button.text = "Открыть полноценную карту 20×20"
+	legacy_upgrade_button.custom_minimum_size.y = 48.0
+	legacy_upgrade_button.visible = false
+	legacy_upgrade_button.pressed.connect(_upgrade_legacy_map)
+	root.add_child(legacy_upgrade_button)
 	route_label = Label.new()
 	route_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(route_label)
@@ -208,7 +231,10 @@ func _set_status(value: String) -> void:
 func _refresh() -> void:
 	if session == null:
 		return
-	_set_status("Позиция: %s   •   Персонаж: %s" % [str(session.expedition.player_position),session.character.display_name])
+	_set_status("Позиция: %s   •   Персонаж: %s%s" % [str(session.expedition.player_position),session.character.display_name," • Старая карта 12×12" if session.generated_content.is_empty() else " • "+String(session.expedition.world_state[SoloLiveMapSession.MAP_INSTANCE_KEY]["instance_id"])])
+	if legacy_upgrade_button != null:
+		legacy_upgrade_button.visible = session.generated_content.is_empty()
+		legacy_upgrade_button.disabled = pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST)
 	_refresh_combat_controls()
 	for node in ground_list.get_children():
 		ground_list.remove_child(node)
@@ -227,6 +253,23 @@ func _refresh() -> void:
 		empty.text = "Здесь нет доступной добычи."
 		ground_list.add_child(empty)
 	_refresh_hex_canvas()
+
+func _upgrade_legacy_map() -> void:
+	if session == null or not session.generated_content.is_empty() or live_combat != null or pickup_active or FileAccess.file_exists(MANIFEST):
+		return
+	_stop_route()
+	var converted := SoloGameStateService.upgrade_legacy_map(SAVE,PLAYER,MANIFEST)
+	if not bool(converted.get("ok",false)):
+		var reason := String(converted.get("reason","unknown"))
+		_set_status("Переход на новую карту запрещён: "+("сначала соберите добычу на старой карте." if reason=="legacy_loot_must_be_collected" else reason))
+		return
+	var id := SoloTownExpeditionBridge.expedition_id_for_player(PLAYER)
+	var opened := SoloLiveMapSession.open(SAVE,MANIFEST,id,PLAYER)
+	if not bool(opened.get("ok",false)):
+		_set_status("Не удалось открыть новую карту: "+String(opened.get("reason","unknown")))
+		return
+	session = opened["session"]
+	_refresh()
 
 func _select_hex_destination(target: Vector2i) -> void:
 	if session == null or pickup_active or live_combat != null or FileAccess.file_exists(MANIFEST):
