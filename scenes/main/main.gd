@@ -492,7 +492,7 @@ func _open_solo_map_gate() -> void:
 		_show_map_entry_error(String(options.get("reason","unknown")))
 		return
 	popup_title.text = "Отправиться в экспедицию"
-	popup_description.text = "Продолжить прежнюю карту (" + String(options["previous_map_id"]) + ") или создать новую? Персонаж и инвентарь остаются прежними. Прежняя карта сохраняется в истории мира."
+	popup_description.text = "Продолжить прежнюю карту (" + String(options["previous_map_id"]) + ") или создать новую? Персонаж и инвентарь остаются прежними. Архив предыдущей карты хранится 1 час и затем очищается при сохранении."
 	popup_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for child in popup_actions.get_children():
 		popup_actions.remove_child(child)
@@ -510,7 +510,7 @@ func _open_solo_map_gate() -> void:
 	popup_actions.add_child(fresh_button)
 	if bool(options.get("has_unclaimed_loot",false)):
 		var warning := Label.new()
-		warning.text = "На прежней карте осталась добыча. Она сохранится вместе с прежней картой."
+		warning.text = "На прежней карте осталась добыча. Она останется в архиве до 1 часа, затем будет удалена."
 		warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		popup_actions.add_child(warning)
 	popup.visible = true
