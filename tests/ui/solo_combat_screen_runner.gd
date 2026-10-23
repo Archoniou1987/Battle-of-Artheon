@@ -134,7 +134,9 @@ func _run() -> void:
 	next_round["elixir_loadout"]["slots"][0]["charges"] = 1
 	next_round["elixir_availability"] = [false, false, false, false]
 	next_round["last_round_log"] = ["Round four: confirmed hit"]
+	next_round["battle_log"] = ["── Раунд 3 ──","A hit B","── Раунд 4 ──","Round four: confirmed hit"]
 	screen.present(next_round)
+	check(screen.log_view.text.contains("Раунд 3") and screen.log_view.text.contains("Раунд 4"),"journal retains all prior rounds on update")
 	check(screen.round_label.text.contains("5"), "next round label follows engine round snapshot")
 	check(arena.hp_overlays["player"].text.contains("61"), "player HP updates after round")
 	check(arena.hp_overlays["enemy"].text.contains("19"), "selected opponent HP updates after round")
