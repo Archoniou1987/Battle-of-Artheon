@@ -275,7 +275,7 @@ static func upgrade_legacy_map(path: String, player_id: String, manifest: String
 ## Archives are snapshots of *map* state only, never player/item copies.
 const MAP_ARCHIVES_KEY := "world_expedition_archives_v1"
 const MAP_SERIAL_KEY := "world_expedition_serial_v1"
-const MAP_ARCHIVE_TTL_SECONDS := 3600
+const MAP_ARCHIVE_TTL_SECONDS := WorldInstanceLifecyclePolicy.HOUR_SECONDS
 
 ## Prune expired map snapshots on the NEXT durable town save or expedition
 ## creation. No background server job or unbounded archive retention.
@@ -396,8 +396,10 @@ static func start_new_expedition(path: String, player_id: String, manifest: Stri
 	var snapshot: Dictionary = expedition.world_state.duplicate(true)
 	snapshot.erase(MAP_ARCHIVES_KEY)
 	snapshot.erase(MAP_SERIAL_KEY)
+	var archive_policy := WorldInstanceLifecyclePolicy.solo_after_new_expedition(int(Time.get_unix_time_from_system()))
 	archives[old_id] = {
-		"expires_at_unix":int(Time.get_unix_time_from_system())+MAP_ARCHIVE_TTL_SECONDS,
+		"archived_at_unix":int(archive_policy["archived_at_unix"]),
+		"expires_at_unix":int(archive_policy["expires_at_unix"]),
 		"seed":expedition.seed_value,
 		"position":[expedition.player_position.x,expedition.player_position.y],
 		"world_state":snapshot
