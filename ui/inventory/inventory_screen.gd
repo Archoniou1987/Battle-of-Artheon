@@ -344,6 +344,21 @@ func _build_visual_lab() -> void:
 	note.text = "Эксперименты без изменения предметов и сохранений."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(note)
+	var sample_title := Label.new()
+	sample_title.text = "Новые иконки — шесть редкостей (тест)"
+	column.add_child(sample_title)
+	var sample_grid := GridContainer.new()
+	sample_grid.columns = 3
+	sample_grid.add_theme_constant_override("h_separation", 6)
+	sample_grid.add_theme_constant_override("v_separation", 6)
+	column.add_child(sample_grid)
+	var sample_rarities := ["grey", "green", "blue", "purple", "orange", "red"]
+	var sample_indices := [0, 9, 18, 27, 36, 45]
+	for i in range(sample_rarities.size()):
+		var sample := ItemIcon.new()
+		sample.name = "RarityPreview%d" % i
+		sample_grid.add_child(sample)
+		sample.set_item({"name": "Тест %d" % i, "rarity": sample_rarities[i], "icon_id": "ICON_%04d" % (sample_indices[i] + 1)})
 	visual_lab_theme = OptionButton.new()
 	visual_lab_theme.name = "Theme"
 	for theme_data in VisualLabPresets.THEMES:
