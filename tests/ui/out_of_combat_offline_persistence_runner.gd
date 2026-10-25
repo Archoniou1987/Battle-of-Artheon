@@ -2,6 +2,7 @@ extends SceneTree
 
 const PROGRESSION_SAVE := "user://character_progression_v1.json"
 const INVENTORY_SAVE := "user://character_inventory_v1.json"
+const GAME_SAVE := SoloGameStateService.PATH
 var errors: Array[String] = []
 
 func _initialize() -> void:
@@ -14,6 +15,7 @@ func verify(ok: bool, reason: String) -> void:
 func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PROGRESSION_SAVE))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(INVENTORY_SAVE))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GAME_SAVE))
 	var packed := load("res://scenes/main/main.tscn") as PackedScene
 	if packed == null:
 		verify(false, "missing main scene")
@@ -35,16 +37,34 @@ func _run() -> void:
 	await process_frame
 	# Simulate 40 seconds of an unloaded, non-combat session by adjusting
 	# only the persisted clock. This is deterministic and requires no wait.
-	var payload: Variant = JSON.parse_string(FileAccess.get_file_as_string(PROGRESSION_SAVE))
-	if not payload is Dictionary:
-		verify(false, "saved progression JSON missing")
+	# Edit the canonical checksum-protected envelope, not the retired progression file.
+	var envelope: Variant = JSON.parse_string(FileAccess.get_file_as_string(GAME_SAVE))
+	if not envelope is Dictionary or not envelope.get("payload_json") is String:
+		verify(false, "canonical Solo save missing")
 		_finish()
 		return
-	payload["regen_saved_unix"] = Time.get_unix_time_from_system() - 40.0
-	payload["regen_paused"] = false
-	var file := FileAccess.open(PROGRESSION_SAVE, FileAccess.WRITE)
-	file.store_string(JSON.stringify(payload))
+	var payload: Variant = JSON.parse_string(envelope["payload_json"])
+	if not payload is Dictionary:
+		verify(false, "canonical Solo payload missing")
+		_finish()
+		return
+	var expedition: Dictionary = payload["expedition"]
+	var world: Dictionary = expedition["world_state"]
+	world[SoloGameStateService.TOWN_REGEN_CLOCK_KEY] = Time.get_unix_time_from_system() - 40.0
+	world[SoloGameStateService.TOWN_REGEN_PAUSED_KEY] = false
+	expedition["world_state"] = world
+	payload["expedition"] = expedition
+	var payload_json := JSON.stringify(payload)
+	envelope["payload_json"] = payload_json
+	envelope["sha256"] = payload_json.sha256_text()
+	var file := FileAccess.open(GAME_SAVE, FileAccess.WRITE)
+	if file == null:
+		verify(false, "cannot update canonical Solo test fixture")
+		_finish()
+		return
+	file.store_string(JSON.stringify(envelope))
 	file.close()
+	verify(bool(SoloGameStateService.read(GAME_SAVE, hero.character_id).get("ok", false)), "modified canonical test save validates")
 	var second := packed.instantiate()
 	root.add_child(second)
 	await process_frame
@@ -69,6 +89,7 @@ func _run() -> void:
 	await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PROGRESSION_SAVE))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(INVENTORY_SAVE))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(GAME_SAVE))
 	_finish()
 
 func _finish() -> void:
