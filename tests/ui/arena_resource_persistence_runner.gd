@@ -5,6 +5,7 @@ extends SceneTree
 var failures: Array[String] = []
 const PROGRESSION_SAVE := "user://character_progression_v1.json"
 const INVENTORY_SAVE := "user://character_inventory_v1.json"
+const GAME_SAVE := SoloGameStateService.PATH
 
 func _initialize() -> void:
 	call_deferred("_run")
@@ -16,6 +17,7 @@ func check(ok: bool, description: String) -> void:
 func _run() -> void:
 	_remove_save(PROGRESSION_SAVE)
 	_remove_save(INVENTORY_SAVE)
+	_remove_save(GAME_SAVE)
 	var packed := load("res://scenes/main/main.tscn") as PackedScene
 	if packed == null:
 		check(false, "main scene missing")
@@ -53,14 +55,12 @@ func _run() -> void:
 	check(hero.current_mana == expected_mana, "Arena round updates persistent current mana")
 	check((arena.hp_overlays["player"] as Label).text == "%d / %d" % [expected_hp, player.max_hp], "Arena HP overlay shows current/max")
 	check((arena.mana_labels["player"] as Label).text == "%d / %d" % [expected_mana, player.max_mana], "Arena mana overlay shows current/max")
-	check(FileAccess.file_exists(PROGRESSION_SAVE), "Arena resource changes saved immediately")
-	if FileAccess.file_exists(PROGRESSION_SAVE):
-		var saved: Variant = JSON.parse_string(FileAccess.get_file_as_string(PROGRESSION_SAVE))
-		if saved is Dictionary and saved.get("resources", null) is Dictionary:
-			var stored_resources: Dictionary = saved["resources"]
-			check(int(stored_resources.get("hp", -1)) == expected_hp and int(stored_resources.get("mana", -1)) == expected_mana, "saved JSON has current Arena HP/mana")
-		else:
-			check(false, "saved JSON has valid resources object")
+	check(FileAccess.file_exists(GAME_SAVE), "Arena resource changes saved to canonical Solo owner immediately")
+	var stored := SoloGameStateService.read(GAME_SAVE, hero.character_id)
+	check(bool(stored.get("ok", false)), "canonical Solo save validates after Arena resource round")
+	if bool(stored.get("ok", false)):
+		var stored_hero: CharacterState = stored["character"]
+		check(stored_hero.current_hp == expected_hp and stored_hero.current_mana == expected_mana, "canonical Solo save has current Arena HP/mana")
 	village.call("_open_panel", "Инвентарь")
 	await process_frame
 	var inventory := village.get_node_or_null("InventoryScreen") as InventoryScreen
@@ -118,6 +118,7 @@ func _run() -> void:
 	await process_frame
 	_remove_save(PROGRESSION_SAVE)
 	_remove_save(INVENTORY_SAVE)
+	_remove_save(GAME_SAVE)
 	_finish()
 
 func _remove_save(path: String) -> void:
