@@ -299,7 +299,7 @@ func _apply_inner_clip(enabled: bool) -> void:
 		return
 	if _clip_shader == null:
 		_clip_shader = Shader.new()
-		_clip_shader.code = "shader_type canvas_item; uniform sampler2D clip_mask : filter_linear; void fragment() { vec4 item = texture(TEXTURE, UV); float mask_alpha = texture(clip_mask, UV).a; COLOR = item * vec4(1.0, 1.0, 1.0, mask_alpha); }"
+		_clip_shader.code = "shader_type canvas_item; uniform sampler2D clip_mask : filter_linear; void fragment() { vec4 item = texture(TEXTURE, UV); float mask_alpha = texture(clip_mask, UV * (1.0 - 2.0 * 0.055) + vec2(0.055)).a; COLOR = item * vec4(1.0, 1.0, 1.0, mask_alpha); }"
 	var material := ShaderMaterial.new()
 	material.shader = _clip_shader
 	material.set_shader_parameter("clip_mask", load(INNER_MASK_PATH) as Texture2D)
