@@ -11,6 +11,17 @@
       "cell_count": 64,
       "git_blob_sha1": "7888b4b9ee82e44dabf164a8f1cf5c86202730e5",
       "note": "Immutable v1; changes require a new atlas ID or version and new PNG path."
+    },
+    {
+      "atlas_id": "ATLAS_0002",
+      "version": 1,
+      "status": "active",
+      "path": "res://assets/items/BOA_ITEMS_LEVEL_1-5_ATLAS_RGBA.png",
+      "columns": 8,
+      "rows": 8,
+      "cell_count": 64,
+      "git_blob_sha1": "d77ef47cefa5d0eabe89a25af67af02a45ebd51f",
+      "note": "Starter items, tested through existing ICON_0001..ICON_0064 mappings; old atlas preserved."
     }
   ]
 }
