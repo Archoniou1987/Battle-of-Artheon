@@ -13,6 +13,8 @@ const LOCATION_KEY := "solo_game_location_v1"
 const LOCATION_TOWN := "town"
 const LOCATION_MAP := "map"
 const START_CELL := Vector2i(5,5)
+const TOWN_REGEN_CLOCK_KEY := "town_regen_saved_unix_v1"
+const TOWN_REGEN_PAUSED_KEY := "town_regen_paused_v1"
 
 static func _id(player_id: String) -> String:
 	return SoloTownExpeditionBridge.expedition_id_for_player(player_id)
@@ -159,7 +161,10 @@ static func save_town(path: String, player: CharacterState, repository: ItemRepo
 		return {"ok":false,"reason":"game_state_not_in_town"}
 	if String(current["sha256"]) != expected_sha256:
 		return {"ok":false,"reason":"game_state_stale_revision"}
-	var committed := ExpeditionSaveService.save(path,current["expedition"],player,repository,true)
+	var expedition: ExpeditionState = current["expedition"]
+	expedition.world_state[TOWN_REGEN_CLOCK_KEY] = Time.get_unix_time_from_system()
+	expedition.world_state[TOWN_REGEN_PAUSED_KEY] = player.in_combat
+	var committed := ExpeditionSaveService.save(path,expedition,player,repository,true)
 	if not bool(committed.get("ok",false)):
 		return committed
 	var revision := ExpeditionSaveService._read_payload_envelope(path)
