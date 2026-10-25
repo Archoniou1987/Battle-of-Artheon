@@ -118,6 +118,9 @@ func _activate_canonical_owner(restored: Dictionary) -> void:
 	_canonical_town_revision = String(restored["sha256"])
 	_canonical_town_active = true
 	_resources_loaded_from_save = true
+	var saved_world: Dictionary = (restored["expedition"] as ExpeditionState).world_state
+	_regen_saved_unix = float(saved_world.get(SoloGameStateService.TOWN_REGEN_CLOCK_KEY, 0.0))
+	_regen_saved_paused = bool(saved_world.get(SoloGameStateService.TOWN_REGEN_PAUSED_KEY, false))
 
 func _save_canonical_town() -> void:
 	if _town_expedition_handed_off or _town_storage_blocked or not _canonical_town_active:
