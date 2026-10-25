@@ -50,7 +50,13 @@ static func empty_slot_texture(slot: String) -> Texture2D:
 
 const ATLAS_REGISTRY := "res://data/graphics/atlas_registry.json"
 const ICON_REGISTRY := "res://data/graphics/icon_registry.json"
-const ATLAS_PATH := "res://assets/items/items_atlas_01.png"
+const ATLAS_PATH := "res://assets/items/BOA_ITEMS_LEVEL_1-5_ATLAS_RGBA.png"
+const RARITY_ATLAS_PATH := "res://assets/ui/slots/BOA_RARITY_BACKGROUNDS_3x2_768x512.png"
+const INNER_MASK_PATH := "res://assets/ui/slots/BOA_ITEM_INNER_RARITY_CLIP_MASK_256.png"
+const ICON_INSET := 0.055 # 5.5% from each edge; preserves already-cropped atlas art.
+static var _rarity_atlas: Texture2D
+static var _rarity_cells: Dictionary = {}
+static var _clip_shader: Shader
 const ATLAS_COLUMNS := 8
 const ATLAS_ROWS := 8
 const RARITY_COLORS := {
@@ -74,6 +80,7 @@ var _marker: Label
 var _empty_background: TextureRect
 var _slot_background: TextureRect
 var _slot_frame: TextureRect
+var _rarity_background: TextureRect
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(CELL_SIZE, CELL_SIZE)
@@ -89,6 +96,12 @@ func _ready() -> void:
 	if ResourceLoader.exists(SLOT_BACKGROUND_PATH):
 		_slot_background.texture = load(SLOT_BACKGROUND_PATH) as Texture2D
 	add_child(_slot_background)
+	_rarity_background = TextureRect.new()
+	_rarity_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_rarity_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_rarity_background.stretch_mode = TextureRect.STRETCH_SCALE
+	_rarity_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_rarity_background)
 	_empty_background = TextureRect.new()
 	_empty_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_empty_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -102,10 +115,10 @@ func _ready() -> void:
 	add_child(_empty_background)
 	_icon_texture = TextureRect.new()
 	_icon_texture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_icon_texture.offset_left = 5
-	_icon_texture.offset_top = 5
-	_icon_texture.offset_right = -5
-	_icon_texture.offset_bottom = -5
+	_icon_texture.offset_left = CELL_SIZE * ICON_INSET
+	_icon_texture.offset_top = CELL_SIZE * ICON_INSET
+	_icon_texture.offset_right = -CELL_SIZE * ICON_INSET
+	_icon_texture.offset_bottom = -CELL_SIZE * ICON_INSET
 	_icon_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_icon_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -162,12 +175,10 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 	var empty_texture: Texture2D = empty_slot_texture(empty_key) if item.is_empty() and show_empty_placeholder_icon and not empty_art_in_background else null
 	var border := Color(String(RARITY_COLORS.get(rarity, "#777f8a"))) if not item.is_empty() else Color("#66543d")
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#263346")
+	style.bg_color = Color.TRANSPARENT if not item.is_empty() else Color("#263346")
 	style.border_color = border
-	style.set_border_width_all(3)
-	if not item.is_empty():
-		style.shadow_color = Color(border.r, border.g, border.b, 0.32)
-		style.shadow_size = 2
+	style.set_border_width_all(0)
+	# The PNG rarity cell supplies the entire frame; no legacy colour outline.
 	style.set_corner_radius_all(4)
 	style.set_content_margin_all(0)
 	# Rarity border is exclusively the equipped item's UI; the empty
@@ -193,10 +204,13 @@ func set_item(item: Dictionary, slot_name: String = "", equipped: bool = false) 
 		return
 	var use_new_slot_art := show_empty_placeholder_icon and ResourceLoader.exists(NEW_EMPTY_ATLAS_PATH) and ResourceLoader.exists(SLOT_BACKGROUND_PATH)
 	_slot_background.visible = use_new_slot_art and item.is_empty() and not empty_art_in_background
+	_rarity_background.texture = _rarity_texture(rarity) if not item.is_empty() else null
+	_rarity_background.visible = _rarity_background.texture != null
 	_slot_frame.visible = use_new_slot_art and SHOW_DECORATIVE_SLOT_FRAMES and item.is_empty() and not empty_art_in_background
 	_empty_background.texture = empty_texture
 	_empty_background.visible = empty_texture != null
 	_icon_texture.texture = texture
+	_apply_inner_clip(not item.is_empty() and texture != null and _rarity_background.visible)
 	_fallback.visible = texture == null and empty_texture == null and not item.is_empty()
 	_fallback.text = _short_label(String(item.get("name", ""))) if not item.is_empty() else _short_label(slot_name)
 	_marker.text = ""
@@ -266,3 +280,27 @@ static func _atlas_cell(atlas: Texture2D, index: int, columns: int, rows: int) -
 	cropped.region = Rect2(Vector2i(x0, y0), cell)
 	cropped.filter_clip = true
 	return cropped
+
+
+static func _rarity_texture(rarity: String) -> Texture2D:
+	if not ResourceLoader.exists(RARITY_ATLAS_PATH):
+		return null
+	if _rarity_atlas == null:
+		_rarity_atlas = load(RARITY_ATLAS_PATH) as Texture2D
+	var indices := {"grey": 0, "gray": 0, "common": 0, "white": 0, "green": 1, "uncommon": 1, "blue": 2, "rare": 2, "purple": 3, "epic": 3, "orange": 4, "legendary": 4, "red": 5}
+	var index: int = int(indices.get(rarity, 0))
+	if not _rarity_cells.has(index):
+		_rarity_cells[index] = _atlas_cell(_rarity_atlas, index, 3, 2)
+	return _rarity_cells[index] as Texture2D
+
+func _apply_inner_clip(enabled: bool) -> void:
+	if not enabled or not ResourceLoader.exists(INNER_MASK_PATH):
+		_icon_texture.material = null
+		return
+	if _clip_shader == null:
+		_clip_shader = Shader.new()
+		_clip_shader.code = "shader_type canvas_item; uniform sampler2D clip_mask : filter_linear; void fragment() { vec4 item = texture(TEXTURE, UV); float mask_alpha = texture(clip_mask, UV).a; COLOR = item * vec4(1.0, 1.0, 1.0, mask_alpha); }"
+	var material := ShaderMaterial.new()
+	material.shader = _clip_shader
+	material.set_shader_parameter("clip_mask", load(INNER_MASK_PATH) as Texture2D)
+	_icon_texture.material = material
