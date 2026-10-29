@@ -233,16 +233,16 @@ func _build_archetype_tab() -> void:
 		_refresh_archetype())
 	quick.add_child(zero)
 	var simple := _row(body)
-	for preset in [
+	for preset_config in [
 		{"name":"Крит", "weights":{"PAR033":100.0}},
 		{"name":"Уворот", "weights":{"PAR031":100.0}},
 		{"name":"Сила", "weights":{"PAR001":100.0}},
 		{"name":"Крит + сила крита", "weights":{"PAR033":65.0,"PAR035":35.0}}
 	]:
 		var b := Button.new()
-		b.text = String(preset["name"])
-		var configuration: Dictionary = preset["weights"]
-		var display_name := String(preset["name"])
+		b.text = String(preset_config["name"])
+		var configuration: Dictionary = preset_config["weights"]
+		var display_name := String(preset_config["name"])
 		b.pressed.connect(func() -> void:
 			archetype_name.text = display_name
 			par_weights = configuration.duplicate(true)
