@@ -9,6 +9,16 @@ const PROFILE_VERSION := 1
 const QUALITY := ["white", "green", "blue", "purple"]
 const RARITY_LEVEL := {"white": 1, "green": 10, "blue": 25, "purple": 40}
 const ZONES := ["PAR100", "PAR101", "PAR102", "PAR103", "PAR104"]
+## Explicit, reviewable relation between item affixes and primary requirements.
+## The first requirement always comes from the item form.
+const AFFIX_PRIMARY := {
+	"PAR030": "PAR004", "PAR031": "PAR002", "PAR032": "PAR002",
+	"PAR033": "PAR003", "PAR034": "PAR003", "PAR035": "PAR003",
+	"PAR070": "PAR002", "PAR075": "PAR002",
+	"PAR010": "PAR006", "PAR016": "PAR006", "PAR017": "PAR006",
+	"PAR150": "PAR004"
+}
+const REQUIREMENT_RULE := "item_primary_plus_weighted_affix_secondary_v1"
 const SHAPE := [0.90, 1.00, 1.08, 1.16]
 const WEAPONS := [
 	{"name":"Меч 1H · Физ", "slot":"MH", "dmg":0.92, "req":["PAR001","PAR003"], "kind":"weapon"},
@@ -285,13 +295,56 @@ func _variant(definition: Dictionary,level: int,form: int,q: String,config: Dict
 		for key in bonus:
 			modifiers[key] = int(modifiers.get(key,0)) + int(bonus[key])
 	var req: Dictionary = {}
-	var requirement_ids: Array = definition["req"]
+	var requirement_ids := _requirement_ids(definition, config)
 	var pct := float(config.get("medium_requirement",40.0)) if kind == "focus" or kind == "jewelry" else float(config.get("high_requirement",70.0))
 	var needed := float(18+2*(level-1))*pct/100.0/float(maxi(1,requirement_ids.size()))*_requirement_open(level)
 	for par in requirement_ids:
 		req[par] = maxi(0,int(floor(needed+0.5)))
 	return {"quality":q,"damage":damage,"armour":armour,"fixed_par":{},
-		"rolls":rolled,"total_par":modifiers,"requirements":req}
+		"rolls":rolled,"total_par":modifiers,"requirements":req,
+		"requirement_rule":REQUIREMENT_RULE,"requirement_sources":{
+			"item_primary":String(definition["req"][0]),
+			"archetype_secondary":String(requirement_ids[1]) if requirement_ids.size() > 1 else ""
+		}}
+
+## Stable requirements: type identity first; strongest eligible archetype
+## affinity replaces only the secondary stat. A crit axe is STR + INTU.
+## Direct PAR001..PAR006 also map to themselves.
+func _requirement_ids(definition: Dictionary, config: Dictionary) -> Array:
+	var base: Array = definition["req"]
+	if base.is_empty():
+		return []
+	var primary := String(base[0])
+	var secondary := String(base[1]) if base.size() > 1 else ""
+	var weights: Dictionary = config.get("par_weights", {})
+	var overrides: Dictionary = config.get("par_settings", {})
+	var keys: Array = weights.keys()
+	keys.sort()
+	var best := -1.0
+	var best_par := ""
+	for raw in keys:
+		var par := String(raw)
+		var weight := maxf(0.0, float(weights[raw]))
+		if weight <= 0.0 or not registry.has(par) or not _compatible(par, definition):
+			continue
+		var extra: Dictionary = parameter_settings(par, overrides)
+		if float(extra["max"]) <= 0.0:
+			continue
+		var mapped := ""
+		if ParCalculationService.PRIMARY_IDS.has(par):
+			mapped = par
+		else:
+			mapped = String(AFFIX_PRIMARY.get(par, ""))
+		if mapped.is_empty() or mapped == primary:
+			continue
+		if weight > best:
+			best = weight
+			best_par = mapped
+	if not best_par.is_empty():
+		secondary = best_par
+	if secondary.is_empty() or secondary == primary:
+		return [primary]
+	return [primary, secondary]
 
 func _requirement_open(level: int) -> float:
 	if level <= 10:
