@@ -9,15 +9,10 @@ func _test() -> void:
 		print("ITEM_GENERATOR_LAB_UI=FAIL: scene missing")
 		quit(1)
 		return
-	print("UI_DIAG=instantiating")
-	var screen: Variant = scene.instantiate()
-	print("UI_DIAG=instantiated")
-	print("UI_DIAG=adding")
+	var screen: ItemGeneratorLabScreen = scene.instantiate() as ItemGeneratorLabScreen
 	root.add_child(screen)
-	print("UI_DIAG=added")
 	await process_frame
 	await process_frame
-	print("UI_DIAG=frames_passed")
 	var failed: Array[String] = []
 	if screen.tab.get_tab_count() != 4:
 		failed.append("Expected four tabs")
@@ -50,12 +45,10 @@ func _test() -> void:
 	screen.par_settings["PAR033"] = {"rating100_lv1":12.0,"max":5100.0}
 	screen.preview_level_spin.value = 30.0
 	screen.archetype_name.text = "Mobile test saved"
-	print("UI_DIAG=saving")
 	screen._save_profile()
 	screen.par_weights.clear()
 	screen.par_settings.clear()
 	screen.preview_level_spin.value = 5.0
-	print("UI_DIAG=loading")
 	screen._load_profile()
 	if not is_equal_approx(float(screen.par_weights.get("PAR033",0)),84.0):
 		failed.append("Archetype weight did not persist")
@@ -67,7 +60,6 @@ func _test() -> void:
 		failed.append("Archetype name did not persist")
 	if not screen.engine.registry.has("PAR033"):
 		failed.append("Local PAR registry missing")
-	print("UI_DIAG=keypad_start")
 	# Touch-safe number entry: field opens an in-game keypad on Web Preview.
 	var value_button := screen.preview_level_spin.get_meta("lab_numeric_button", null) as Button
 	if value_button == null:
@@ -98,7 +90,6 @@ func _test() -> void:
 					weight_edit_found = true
 	if not weight_edit_found:
 		failed.append("Archetype weights are not editable by keypad")
-	print("UI_DIAG=crit_preset")
 	var crit_preset: Button = null
 	for candidate in screen.find_children("*", "Button", true, false):
 		if candidate.text == "Крит":
