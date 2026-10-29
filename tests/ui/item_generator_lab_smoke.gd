@@ -136,7 +136,33 @@ func _test() -> void:
 	screen._load_profile()
 	if screen._selected_requirement_pars() != ["PAR002","PAR006"]:
 		failed.append("Requirement selections were not restored from saved profile")
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(ItemBalanceWorkbench.PROFILE_PATH))
+	
+	# The text name input may not invoke Android keyboard in Web Preview.
+	# The archetype ID must always be usable with the native lab number keypad.
+	var archetype_button := screen.archetype_number.get_meta("lab_numeric_button",null) as Button
+	if archetype_button == null:
+		failed.append("Archetype numeric ID has no phone-friendly keypad")
+	else:
+		archetype_button.pressed.emit()
+		screen.numeric_keypad._key("1")
+		screen.numeric_keypad._key("7")
+		if not screen.numeric_keypad.apply_value():
+			failed.append("Archetype number keypad could not apply ID")
+		if int(screen.archetype_number.value) != 17 or screen._archetype_code() != "ARC-0017":
+			failed.append("Archetype code not derived from entered number")
+	var captured: Dictionary = screen._settings()
+	if captured.get("archetype_id","") != "ARC-0017" or int(captured.get("archetype_number",0)) != 17:
+		failed.append("Generator settings missing stable numeric archetype ID")
+	screen._run_test()
+	var id_csv := ItemLabCsvExporter.build(screen.last_generation_config,screen.last_generation_output,screen.engine)
+	if not id_csv.contains("ARC-0017"):
+		failed.append("Exported CSV missing archetype ID")
+	screen._save_profile()
+	screen.archetype_number.value = 1
+	screen._load_profile()
+	if int(screen.archetype_number.value) != 17:
+		failed.append("Archetype numeric ID was not restored from profile")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(ItemBalanceWorkbench.PROFILE_PATH))
 	print("ITEM_GENERATOR_LAB_UI=", "PASS" if failed.is_empty() else "FAIL")
 	print(JSON.stringify({"tabs":screen.tab.get_tab_count(), "items":screen.result_rows.size(), "failures":failed}))
 	quit(0 if failed.is_empty() else 1)
