@@ -143,6 +143,50 @@ func _test() -> void:
 	var quotes := ItemLabCsvExporter._csv_line(["a;b", "x\"y"])
 	if quotes != "\"a;b\";\"x\"\"y\"":
 		failures.append("CSV escaping failed")
+		# Explicit archetype requirements override slot identity and affix choices.
+	config["types"] = ["Топор 2H · Физ", "Щит", "Ботинки / Лёгкая", "Нагрудник / Тяжёлая"]
+	config["min_level"] = 25
+	config["max_level"] = 25
+	config["requirement_pars"] = ["PAR002", "PAR006"]
+	config["par_weights"] = {"PAR033":100.0}
+	var custom_result: Dictionary = lab.generate(config)
+	if not bool(custom_result.get("ok",false)):
+		failures.append("Explicit DEX+STA archetype failed generation")
+	var amounts: Dictionary = {}
+	for item_raw in custom_result.get("rows",[]):
+		var item: Dictionary = item_raw
+		for variation_raw in item["variants"]:
+			var variation: Dictionary = variation_raw
+			var reqs: Dictionary = variation["requirements"]
+			if reqs.size() != 2 or not reqs.has("PAR002") or not reqs.has("PAR006"):
+				failures.append("Every item must require only DEX and STA")
+				break
+			if String(variation["requirement_rule"]) != ItemBalanceWorkbench.SELECTED_REQUIREMENT_RULE:
+				failures.append("Explicit requirement rule not recorded")
+				break
+			if String(variation["requirement_sources"]["mode"]) != "selected_archetype":
+				failures.append("Explicit requirement origin not recorded")
+				break
+			amounts[String(item["slot"])] = int(reqs["PAR002"])
+	if not amounts.has("2H") or not amounts.has("Ботинки") or int(amounts.get("2H",0)) <= int(amounts.get("Ботинки",0)):
+		failures.append("Required DEX/STA amount must vary by slot at same level")
+	config["min_level"] = 30
+	config["max_level"] = 30
+	var higher: Dictionary = lab.generate(config)
+	for item_raw in higher.get("rows",[]):
+		var item: Dictionary = item_raw
+		if String(item["slot"]) == "2H":
+			var requirements: Dictionary = (item["variants"][0] as Dictionary)["requirements"]
+			if int(requirements["PAR002"]) <= int(amounts.get("2H",0)):
+				failures.append("Required DEX/STA amount must grow with item level")
+			break
+	var csv_override := ItemLabCsvExporter.build(config,higher,lab)
+	if not csv_override.contains("selected_archetype_primary_pars_by_slot_level_v2") or not csv_override.contains("requirement_pars"):
+		failures.append("CSV must include explicit requirement choices and formula")
+	config["requirement_pars"] = ["PAR002","PAR002"]
+	if bool(lab.generate(config).get("ok",true)):
+		failures.append("Duplicate selected requirement stats must be rejected")
+	config.erase("requirement_pars")
 		# Editable laboratory settings must survive closing the screen.
 	var profile_path := "user://boa_item_lab_ci_profile.json"
 	var profile_data := {"archetype_name":"Mobile test","preview_level":30,
