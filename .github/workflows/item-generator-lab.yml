@@ -7,6 +7,7 @@ on:
     paths:
       - "core/items/item_generator_lab.gd"
       - "core/items/item_balance_workbench.gd"
+      - "core/items/item_lab_csv_exporter.gd"
       - "data/items/project25_generator_lab.json"
       - "scenes/debug/item_generator_lab.*"
       - "scenes/debug/item_lab_numeric_keypad.gd"
