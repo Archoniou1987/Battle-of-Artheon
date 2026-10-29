@@ -9,7 +9,7 @@ func _test() -> void:
 		print("ITEM_GENERATOR_LAB_UI=FAIL: scene missing")
 		quit(1)
 		return
-	var screen: ItemGeneratorLabScreen = scene.instantiate() as ItemGeneratorLabScreen
+	var screen: Variant = scene.instantiate()
 	root.add_child(screen)
 	await process_frame
 	await process_frame
