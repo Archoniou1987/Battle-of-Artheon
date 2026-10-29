@@ -23,6 +23,11 @@ static func effective_armour(raw_armour: float, flat_penetration: float, percent
 
 
 static func final_damage_floor(value: float) -> int:
+	# Correct tiny float drift such as 113.0 being stored as 112.999992.
+	# Genuinely fractional results still round down.
+	var nearest := roundf(value)
+	if absf(value - nearest) < 0.00001:
+		value = nearest
 	return maxi(0, int(floor(value)))
 
 

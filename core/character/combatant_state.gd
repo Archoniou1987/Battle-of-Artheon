@@ -9,11 +9,21 @@ var level: int
 var max_hp: int
 var hp: int
 var death_finalized: bool = false
+## Fatal single post-mitigation hit, resolved at the end of the round.
+var one_shot_kill: bool = false
 var max_mana: int
 var mana: int
 var action_points: int = 0
 var max_action_points: int = 5
+## Current accumulated Tempo; negative control debt has no artificial floor.
 var tempo: float = 0.0
+var base_tempo: float = 0.0
+var max_tempo: float = 100.0
+var tempo_regen: float = 0.0
+## A stun is scheduled for exactly one future round at the end-round threshold.
+var tempo_stun_round: int = -1
+## Inclusive last immune round, after the stunned round; 0 means none.
+var tempo_immunity_until_round: int = 0
 var stats: Dictionary = {}
 var combat_stats: Dictionary = {}
 var armour: Dictionary = {}
@@ -58,15 +68,20 @@ func _init(id: String, name: String, character_level: int, health: int, mana_poo
 
 
 func is_alive() -> bool:
-	return hp > 0
+	return not death_finalized and hp > 0
 
 func is_death_finalized() -> bool:
 	return death_finalized
 
 
 func apply_damage(amount: int) -> int:
+	# A finalized death is irreversible within this combat (no resurrection ABI).
+	if death_finalized:
+		return 0
 	var applied := maxi(0, amount)
 	hp -= applied
+	if applied >= max_hp and max_hp > 0:
+		one_shot_kill = true
 	return applied
 
 
@@ -74,15 +89,18 @@ func restore_hp(amount: int) -> int:
 	if death_finalized:
 		return 0
 	var before := hp
-	hp = mini(max_hp, hp + maxi(0, amount))
+	hp += maxi(0, amount)
 	return hp - before
 
 
 func visible_hp() -> int:
-	return clampi(hp, 0, max_hp)
+	# One-shot can finalize death even when provisional HP remains positive.
+	return 0 if death_finalized else clampi(hp, 0, max_hp)
 
 
 func spend_mana(amount: int) -> bool:
+	if death_finalized:
+		return false
 	var cost := maxi(0, amount)
 	if mana < cost:
 		return false
@@ -91,12 +109,16 @@ func spend_mana(amount: int) -> bool:
 
 
 func gain_action_points(amount: int) -> int:
+	if death_finalized:
+		return 0
 	var before := action_points
 	action_points = mini(max_action_points, action_points + maxi(0, amount))
 	return action_points - before
 
 
 func spend_action_points(amount: int) -> bool:
+	if death_finalized:
+		return false
 	var cost := maxi(0, amount)
 	if action_points < cost:
 		return false

@@ -2,7 +2,7 @@ class_name EquipmentState
 extends RefCounted
 
 const SLOTS := [
-	"head", "shoulders", "neck", "back", "chest", "wrists",
+	"head", "shoulders", "neck", "back", "chest", "wrists", "hands",
 	"ring1", "ring2", "waist", "legs", "feet", "main_hand", "off_hand", "tool"
 ]
 

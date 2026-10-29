@@ -3,8 +3,8 @@ extends RefCounted
 
 static func run()->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",10,100,10)
-	var enemy:=CombatantState.new("enemy","Enemy",10,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",10,100,10)
+	var enemy:=TestFixtureLoader.new_combatant("enemy","Enemy",10,100)
 	state.add_combatant(hero)
 	state.add_combatant(enemy)
 	var group:=GroupCombatState.new(state)
@@ -15,7 +15,7 @@ static func run()->bool:
 	zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("hero",CombatZoneState.ZONE_1)
 	zones.set_zone("enemy",CombatZoneState.ZONE_2)
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	var orchestrator:=RoundOrchestrator.new(state,engine,group,zones)
 	orchestrator.begin_round()
 	var scheduler:=AbilityScheduler.new({
@@ -24,17 +24,17 @@ static func run()->bool:
 	},{"hero":["RANGED","ZONE"]})
 	scheduler.cooldowns_by_combatant["hero"]={"COOLDOWN":state.round_number+2}
 	var api:=CombatCommandApi.new(state,group,zones,orchestrator,scheduler)
-	hero.combat_stats["weapon_profiles"]=[{
+	TestFixtureLoader.set_weapon_profiles(hero, [{
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
 		"attack_profiles":[
 			{"id":"staff_strike","delivery_type":"MELEE","min_zone_distance":0,"max_zone_distance":0},
 			{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2,"damage_min":6.0,"damage_max":6.0,"damage_type":"fire","uses_magic_hit":true}
 		]
-	}]
+	}])
 	if not bool(api.select_active_opponent("hero","enemy",{"max_zone_distance":1}).get("ok",false)): return false
 	if bool(api.basic_attack_intent("hero","staff_strike").get("ok",true)): return false
 	if not bool(api.basic_attack_intent("hero","arcane_bolt").get("ok",false)): return false
-	enemy.combat_stats["dodge"]=100.0
+	enemy.combat_stats["dodge_rating_percent"]=100.0
 	var ranged_basic:=api.queue_basic_attack("hero",{"hit":100,"magic_hit":1,"dodge":1,"crit":100},"arcane_bolt",0)
 	if not bool(ranged_basic.get("ok",false)): return false
 	engine.resolve_pending_events()
@@ -47,12 +47,25 @@ static func run()->bool:
 			break
 	if String(ranged_event.result.get("hit_system",""))!="magic": return false
 	if String(ranged_event.result.get("outcome",""))!="connected": return false
-	enemy.combat_stats["dodge"]=0.0
+	enemy.combat_stats["dodge_rating_percent"]=0.0
+	# Support ABI can select self or ally, never an enemy.
+	var support_definition:Dictionary={"target_team":"ALLY","delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"components":[{"kind":"heal","amount":5.0}]}
+	if not bool(api.ability_intent("hero","hero",support_definition).get("ok",false)): return false
+	if bool(api.ability_intent("hero","enemy",support_definition).get("ok",true)): return false
+	# Enemy dispel uses enemy targeting, not ally targeting.
+	var hostile_dispel:Dictionary={"combat_role":"CLEANSE","target_team":"ENEMY","delivery_type":"DIRECT","min_zone_distance":0,"max_zone_distance":1,"components":[{"kind":"cleanse","dispel_polarity":"BUFF"}]}
+	if not bool(api.ability_intent("hero","enemy",hostile_dispel).get("ok",false)): return false
+	if bool(api.ability_intent("hero","hero",hostile_dispel).get("ok",true)): return false
 	var zone_cast:=api.cast_zone_ability("hero",CombatZoneState.ZONE_2,"ZONE")
 	if not bool(zone_cast.get("ok",false)) or int(zone_cast.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
 	var zone_event:CombatEvent=state.pending_events.back()
 	if int(zone_event.payload.get("target_zone_id",-1))!=CombatZoneState.ZONE_2: return false
 	if hero.mana!=9: return false
+	# A zone ABI and a direct ABI cannot be used in the same round.
+	if bool(api.cast_ability("hero","enemy","RANGED").get("ok",true)): return false
+	if hero.mana!=9 or scheduler.cooldowns_by_combatant.get("hero",{}).has("RANGED"): return false
+	orchestrator.end_round()
+	orchestrator.begin_round()
 	if not bool(api.ability_intent("hero","enemy",{"min_zone_distance":0,"max_zone_distance":1}).get("ok",false)): return false
 	var actions:=api.available_actions("hero",{
 		"RANGED":{"min_zone_distance":0,"max_zone_distance":1,"mana_cost":5},
@@ -76,15 +89,26 @@ static func run()->bool:
 	if bool(Dictionary(ability_views.get("MELEE",{})).get("available",true)): return false
 	if bool(Dictionary(ability_views.get("EXPENSIVE",{})).get("resource_ready",true)): return false
 	if bool(Dictionary(ability_views.get("COOLDOWN",{})).get("cooldown_ready",true)): return false
-	hero.combat_stats["manual_block_zone_count"]=2
-	if bool(api.set_manual_block("hero",["head","arms"]).get("ok",true)): return false
+	hero.combat_stats["par_totals"]["PAR073"]=2
+	if not bool(api.set_manual_block("hero",["head","arms"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms"]: return false
 	if not bool(api.set_manual_block("hero",["chest","arms"]).get("ok",false)): return false
-	if Array(hero.combat_stats.get("manual_block_zones",[])).size()!=2: return false
+	if bool(api.set_manual_block("hero",["head"]).get("ok",true)): return false
+	hero.combat_stats["par_totals"]["PAR073"]=4
+	if not bool(api.set_manual_block("hero",["head","arms","waist","legs"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms","waist","legs"]: return false
+	# Changing a synthetic PAR073 fixture value does not silently mutate the
+	# player's explicitly selected defense; the next submission revalidates it.
+	hero.combat_stats["par_totals"]["PAR073"]=2
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["head","arms","waist","legs"]: return false
+	if not bool(api.set_manual_block("hero",["chest","legs"]).get("ok",false)): return false
+	if Array(hero.combat_stats.get("manual_block_zones",[])) != ["chest","legs"]: return false
 	if not bool(api.clear_manual_block("hero").get("ok",false)): return false
 	if hero.combat_stats.has("manual_block_zones"): return false
+	var before_ranged_mana:=hero.mana
 	var cast_result:=api.cast_ability("hero","enemy","RANGED")
 	if not bool(cast_result.get("ok",false)): return false
-	if hero.mana!=4: return false
+	if hero.mana!=before_ranged_mana-5: return false
 	engine.resolve_pending_events()
 	if enemy.hp!=83: return false
 	if AbilityRuntime.can_use("RANGED",scheduler.cooldowns_by_combatant.get("hero",{}),state.round_number+1): return false
@@ -101,11 +125,11 @@ static func run()->bool:
 	# Physical projectile profiles (bows) keep the physical Hit/Dodge path and distance penalty.
 	zones.set_zone("hero",CombatZoneState.ZONE_1)
 	zones.set_zone("enemy",CombatZoneState.ZONE_3)
-	hero.combat_stats["weapon_profiles"]=[{
+	TestFixtureLoader.set_weapon_profiles(hero, [{
 		"damage_min":5.0,"damage_max":7.0,"damage_type":"piercing",
 		"attack_profiles":[{"id":"bow_shot","delivery_type":"PROJECTILE","min_zone_distance":1,"max_zone_distance":2,"two_zone_hit_modifier":-50.0}]
-	}]
-	enemy.combat_stats["dodge"]=100.0
+	}])
+	enemy.combat_stats["dodge_rating_percent"]=100.0
 	var bow_attack:=api.queue_basic_attack("hero",{"hit":1,"dodge":1,"crit":100,"damage":0.0},"bow_shot",0)
 	if not bool(bow_attack.get("ok",false)): return false
 	engine.resolve_pending_events()
@@ -118,15 +142,15 @@ static func run()->bool:
 	if float(bow_event.result.get("distance_hit_modifier",0.0))!=-50.0: return false
 	if String(bow_event.result.get("outcome",""))!="dodge": return false
 	if enemy.hp!=75: return false
-	enemy.combat_stats["dodge"]=0.0
+	enemy.combat_stats["dodge_rating_percent"]=0.0
 	# Multi-hit is profile-driven: every hit gets an independent combat roll chain.
 	zones.set_zone("hero",CombatZoneState.ZONE_2)
 	zones.set_zone("enemy",CombatZoneState.ZONE_2)
-	hero.combat_stats["weapon_profiles"]=[{
+	TestFixtureLoader.set_weapon_profiles(hero, [{
 		"damage_min":4.0,"damage_max":4.0,"damage_type":"slashing",
 		"attack_profiles":[{"id":"dual_slash","delivery_type":"MELEE","hit_count":2}]
-	}]
-	enemy.combat_stats["dodge"]=50.0
+	}])
+	enemy.combat_stats["dodge_rating_percent"]=50.0
 	var multi:=api.queue_basic_attack("hero",{
 		"hits":[
 			{"hit":1,"dodge":1,"crit":100,"damage":0.0},
@@ -153,12 +177,12 @@ static func run()->bool:
 	var invalid_nested:=api.queue_basic_attack("hero",{"hits":[{"zone":"head"},{"zone":"hands"}]},"dual_slash",0)
 	if bool(invalid_nested.get("ok",true)) or String(invalid_nested.get("reason",""))!="invalid_body_zone": return false
 	if int(invalid_nested.get("hit_index",-1))!=1 or state.pending_events.size()!=nested_pending_before: return false
-	enemy.combat_stats["dodge"]=0.0
+	enemy.combat_stats["dodge_rating_percent"]=0.0
 	# MH/OH are independent weapon attacks and may target different body zones.
-	hero.combat_stats["weapon_profiles"]=[
+	TestFixtureLoader.set_weapon_profiles(hero, [
 		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"weapon_slash","delivery_type":"MELEE"}]},
 		{"damage_min":5.0,"damage_max":5.0,"damage_type":"chopping","attack_profiles":[{"id":"weapon_chop","delivery_type":"MELEE"}]}
-	]
+	])
 	var weapon_sequence:=api.queue_weapon_attack_sequence("hero",[
 		{"weapon_index":0,"attack_profile_id":"weapon_slash","zone":"chest","rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}},
 		{"weapon_index":1,"attack_profile_id":"weapon_chop","zone":"arms","rolls":{"hit":1,"dodge":100,"crit":100,"damage":0.0}}
@@ -213,13 +237,13 @@ static func run()->bool:
 			automatic_zones.append(String(logged_event.payload.get("zone","")))
 	if automatic_weapons!=[0,1] or automatic_zones!=["head","legs"]: return false
 	# Multiple profiles require an explicit default; never guess between e.g. staff strike and bolt.
-	hero.combat_stats["weapon_profiles"]=[{
+	TestFixtureLoader.set_weapon_profiles(hero, [{
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
 		"attack_profiles":[
 			{"id":"staff_strike","delivery_type":"MELEE"},
 			{"id":"arcane_bolt","delivery_type":"PROJECTILE","max_zone_distance":2}
 		]
-	}]
+	}])
 	var no_default:=api.default_weapon_attack_sequence("hero")
 	if bool(no_default.get("ok",true)) or String(no_default.get("reason",""))!="no_default_weapon_attacks": return false
 	hero.combat_stats["weapon_profiles"][0]["attack_profiles"][0]["is_default"]=true
@@ -228,10 +252,10 @@ static func run()->bool:
 	var default_attacks:Array=explicit_default.get("attacks",[])
 	if default_attacks.size()!=1 or String(Dictionary(default_attacks[0]).get("attack_profile_id",""))!="staff_strike": return false
 	# Restore independent weapons for sequence atomicity and shield coverage.
-	hero.combat_stats["weapon_profiles"]=[
+	TestFixtureLoader.set_weapon_profiles(hero, [
 		{"damage_min":3.0,"damage_max":3.0,"damage_type":"slashing","attack_profiles":[{"id":"weapon_slash","delivery_type":"MELEE"}]},
 		{"damage_min":5.0,"damage_max":5.0,"damage_type":"chopping","attack_profiles":[{"id":"weapon_chop","delivery_type":"MELEE"}]}
-	]
+	])
 	# Body-zone validation is also atomic across an MH/OH sequence.
 	var zone_pending_before:=state.pending_events.size()
 	var rejected_zone_sequence:=api.queue_weapon_attack_sequence("hero",[
@@ -259,9 +283,9 @@ static func run()->bool:
 	if state.pending_events.size()!=pending_before: return false
 	if not Array(rejected_sequence.get("queued_event_ids",[])).is_empty(): return false
 	# Shield sectors block only their explicit contiguous zones; open zones continue through defence.
-	enemy.combat_stats["manual_block_zone_count"]=2
+	enemy.combat_stats["par_totals"]["PAR073"]=2
 	enemy.combat_stats["manual_block_zones"]=["chest","arms"]
-	enemy.combat_stats["auto_block"]=0.0
+	enemy.combat_stats["shield_auto_block_rating_percent"]=0.0
 	var shield_sequence:=api.queue_weapon_attack_sequence("hero",[
 		{"weapon_index":0,"attack_profile_id":"weapon_slash","zone":"chest","rolls":{"hit":1,"dodge":100,"block_crush":100,"crit":100,"damage":0.0}},
 		{"weapon_index":1,"attack_profile_id":"weapon_chop","zone":"waist","rolls":{"hit":1,"dodge":100,"auto_block":100,"crit":100,"damage":0.0}}
@@ -276,13 +300,13 @@ static func run()->bool:
 	if shield_outcomes!=["manual_block","connected"]: return false
 	enemy.combat_stats.erase("manual_block_zones")
 	# Restore the staff fixture before duplicate-profile selection coverage.
-	hero.combat_stats["weapon_profiles"]=[{
+	TestFixtureLoader.set_weapon_profiles(hero, [{
 		"damage_min":8.0,"damage_max":10.0,"damage_type":"blunt",
 		"attack_profiles":[
 			{"id":"staff_strike","delivery_type":"MELEE","min_zone_distance":0,"max_zone_distance":0},
 			{"id":"arcane_bolt","delivery_type":"PROJECTILE","min_zone_distance":0,"max_zone_distance":2,"damage_min":6.0,"damage_max":6.0,"damage_type":"fire","uses_magic_hit":true}
 		]
-	}]
+	}])
 	zones.set_zone("hero",CombatZoneState.ZONE_2)
 	zones.set_zone("enemy",CombatZoneState.ZONE_2)
 	# Duplicate profile ids across weapons must never silently select the first weapon.

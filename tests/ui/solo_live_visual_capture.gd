@@ -1,0 +1,143 @@
+extends SceneTree
+
+## Screenshots of the real SoloCombatScreen layout hosted by SoloLiveMap.
+## Snapshot is a clearly labeled UI fixture, never a simulated fight or save.
+const OUTPUT := "res://test-results/solo-visual"
+const SIZES := {"portrait": Vector2i(390, 844), "landscape": Vector2i(844, 390)}
+
+func _initialize() -> void:
+	call_deferred("_run")
+
+func _run() -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUTPUT))
+	var scene := load("res://scenes/main/solo_live_map.tscn") as PackedScene
+	if scene == null:
+		push_error("VISUAL_CAPTURE_FAIL: cannot load SoloLiveMap")
+		quit(1)
+		return
+	var page := scene.instantiate() as Control
+	root.add_child(page)
+	await process_frame
+	var screen := page.get("solo_combat_screen") as SoloCombatScreen
+	var map_scroll := page.get("game_map_scroll") as ScrollContainer
+	if screen == null or map_scroll == null:
+		push_error("VISUAL_CAPTURE_FAIL: game combat screen missing")
+		quit(1)
+		return
+	var equipment: Array = []
+	for slot in SoloCombatScreen.EQUIPMENT:
+		equipment.append({"slot": slot, "instance_id": "", "active": false, "name": ""})
+	equipment[0] = {
+		"slot": "head", "instance_id": "fixture_helm", "name": "Шлем (демо)",
+		"active": true, "item": {"instance_id": "fixture_helm", "name": "Шлем", "rarity": "blue", "atlas_index": 1}
+	}
+	equipment[5] = {
+		"slot": "main_hand", "instance_id": "fixture_sword", "name": "Клинок (демо)",
+		"active": true, "item": {"instance_id": "fixture_sword", "name": "Клинок", "rarity": "green", "atlas_index": 2}
+	}
+	var fixture: Dictionary = {
+		"ok": true, "round": 4, "finished": false,
+		"player": {
+			"id": "player", "name": "Герой (демо)", "level": 12,
+			"hp": 74, "max_hp": 120, "mana": 18, "max_mana": 45,
+			"ap": 3, "max_ap": 5,
+			"effects": [
+				{"id": "BUFF01", "name": "Защита", "polarity": "BUFF", "stacks": 2, "remaining_rounds": 3},
+				{"id": "EFF02", "name": "Яд", "polarity": "DEBUFF", "stacks": 1, "remaining_rounds": 2}
+			]
+		},
+		"enemies": [
+			{"id": "npc_1", "name": "Бандит (демо)", "level": 11, "hp": 36, "max_hp": 75,
+			 "mana": 0, "max_mana": 0, "effects": [
+				{"id": "EFF03", "name": "Кровотечение", "polarity": "DEBUFF", "stacks": 1, "remaining_rounds": 2}
+			]},
+			{"id": "npc_2", "name": "Разбойник (демо)", "level": 11, "hp": 45, "max_hp": 65,
+			 "mana": 10, "max_mana": 20, "effects": []}
+		],
+		"equipment_slots": equipment,
+		"ability_slots": [
+			{"id": "ABI003", "name": "Огненный шар", "mana_cost": 12, "available": true},
+			{"id": "", "available": false}, {"id": "", "available": false},
+			{"id": "ABI004", "name": "Лечение", "mana_cost": 10, "available": true},
+			{"id": "", "available": false}
+		],
+		"elixir_loadout": {"slots": [
+			{"instance_id": "potion_1", "charges": 2, "max_charges": 3},
+			{"instance_id": "potion_2", "charges": 1, "max_charges": 4},
+			{"instance_id": "", "charges": 0, "max_charges": 0},
+			{"instance_id": "", "charges": 0, "max_charges": 0}
+		]},
+		"elixir_availability": [true, true, false, false],
+		"controls": {"ok": true, "attack_count": 2, "block_capacity": 2,
+			"stunned": false, "target_id": "npc_1"},
+		"last_round_log": [
+			"Герой атакует бандита (голова): 15 урона",
+			"Бандит отражает удар щитом",
+			"Яд наносит 4 урона"
+		]
+	}
+	map_scroll.visible = false
+	screen.visible = true
+	screen.present(fixture)
+	screen.round_label.text = "DEMO R5"
+	var notice := Label.new()
+	notice.text = "VISUAL FIXTURE • НЕ ИГРОВОЙ БОЙ"
+	notice.position = Vector2(74, 462)
+	notice.add_theme_font_size_override("font_size", 12)
+	notice.add_theme_color_override("font_color", Color("#f4c47d"))
+	screen.square_content.add_child(notice)
+	for key in ["portrait", "landscape"]:
+		var viewport_size: Vector2i = SIZES[key]
+		root.size = viewport_size
+		await process_frame
+		await process_frame
+		screen._apply_orientation()
+		await process_frame
+		# Fail a visually incomplete capture: PASS must mean the whole Arena,
+		# especially its bottom button and background, is visible.
+		var screen_rect := screen.get_global_rect()
+		var square_rect := screen.square_host.get_global_rect()
+		if square_rect.end.y > screen_rect.end.y + 1.0 or square_rect.end.x > screen_rect.end.x + 1.0:
+			push_error("VISUAL_CAPTURE_FAIL: Arena clipped: screen=" + str(screen_rect) + " square=" + str(square_rect))
+			quit(1)
+			return
+		var arena := screen.shared_arena
+		if arena.arena_background.size != Vector2(480, 480):
+			push_error("VISUAL_CAPTURE_FAIL: Arena background no longer 480x480")
+			quit(1)
+			return
+		for button in arena.ability_buttons:
+			if absf(button.size.x - 34.0) > 1.0:
+				push_error("VISUAL_CAPTURE_FAIL: ABI slot width drift: " + str(button.size))
+				quit(1)
+				return
+		var background_texture := arena.arena_background.texture
+		print("ARENA_LAYOUT=", key, " screen=", screen_rect, " square=", square_rect,
+			" scale=", screen.square_content.scale,
+			" background_source=", background_texture.get_size() if background_texture != null else Vector2.ZERO)
+		await RenderingServer.frame_post_draw
+		# The canonical Arena square has no trial scrollable command pane.
+		var file := "%s/%s_00.png" % [OUTPUT, key]
+		var err := root.get_texture().get_image().save_png(file)
+		if err != OK:
+			push_error("VISUAL_CAPTURE_FAIL: " + file + " code=" + str(err))
+			quit(1)
+			return
+		print("VISUAL_CAPTURE_FILE=", file, " shared_arena=true")
+		# In addition to Face to Face, capture the distinct two-column
+		# allies/enemies view. Its contents come from the same safe fixture.
+		screen.tab_container.current_tab = 0
+		await process_frame
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var roster_file := "%s/%s_roster.png" % [OUTPUT, key]
+		var roster_error := root.get_texture().get_image().save_png(roster_file)
+		if roster_error != OK:
+			push_error("VISUAL_CAPTURE_FAIL: " + roster_file + " code=" + str(roster_error))
+			quit(1)
+			return
+		print("VISUAL_CAPTURE_FILE=", roster_file, " tab=participants")
+		screen.tab_container.current_tab = 0
+	page.queue_free()
+	print("SOLO_VISUAL_CAPTURE=PASS")
+	quit(0)

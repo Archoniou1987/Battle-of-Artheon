@@ -42,6 +42,9 @@ func basic_attack_intent(source_id:String,attack_profile_id:String="basic",weapo
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
+	var status := ParCombatContract.action_status(combatant, state.round_number)
+	if not bool(status.ok):
+		return status
 	var target_id:=group.active_opponent(source_id)
 	if target_id.is_empty():
 		return {"ok":false,"reason":"no_active_opponent"}
@@ -78,7 +81,10 @@ func ability_intent(source_id:String,target_id:String,definition:Dictionary)->Di
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
-	if not action_policy.valid_targets(source_id,definition).has(target_id):
+	var status := ParCombatContract.action_status(combatant, state.round_number)
+	if not bool(status.ok):
+		return status
+	if not action_policy.valid_ability_targets(source_id,definition).has(target_id):
 		return {"ok":false,"reason":"target_out_of_reach"}
 	return {"ok":true,"reason":"ready","source_id":source_id,"target_id":target_id}
 
@@ -96,16 +102,12 @@ func set_manual_block(source_id:String,body_zones:Array[String])->Dictionary:
 			normalized.append(body_zone)
 	if normalized.is_empty():
 		return {"ok":false,"reason":"invalid_block_zone"}
-	var block_zone_count:=clampi(int(combatant.combat_stats.get("manual_block_zone_count",combatant.combat_stats.get("manual_block_zone_capacity",1))),1,3)
+	var block_zone_count:=CombatModifierService.manual_block_zone_capacity(combatant)
+	if block_zone_count < 1 or block_zone_count > 4:
+		return {"ok":false,"reason":"invalid_block_capacity","required_zone_count":block_zone_count}
 	if normalized.size()!=block_zone_count:
 		return {"ok":false,"reason":"invalid_block_zone_count","required_zone_count":block_zone_count}
-	var indices:Array[int]=[]
-	for body_zone in normalized:
-		indices.append(["head","chest","arms","waist","legs"].find(body_zone))
-	indices.sort()
-	for i in range(1,indices.size()):
-		if indices[i]!=indices[i-1]+1:
-			return {"ok":false,"reason":"non_contiguous_block_zones"}
+	# Arbitrary body zones are legal; equipment capacity is the only layout limit.
 	combatant.combat_stats["manual_block_zones"]=normalized
 	return {"ok":true,"reason":"ok","zones":normalized,"zone_count":block_zone_count}
 
@@ -114,13 +116,14 @@ func clear_manual_block(source_id:String)->Dictionary:
 	if combatant==null:
 		return {"ok":false,"reason":"invalid_combatant"}
 	combatant.combat_stats.erase("manual_block_zones")
-	combatant.combat_stats.erase("manual_block_zone")
 	return {"ok":true,"reason":"ok"}
 
 func available_actions(source_id:String,ability_definitions:Dictionary={})->Dictionary:
 	var combatant:=state.get_combatant(source_id)
 	if combatant==null or combatant.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
+	if CombatTempoService.is_stunned(combatant, state.round_number):
+		return {"ok":true,"reason":"stunned","basic_attack":false,"manual_block":false,"navigation":[],"abilities":{}}
 	var navigation:Array[int]=[]
 	if zones!=null and orchestrator!=null:
 		var current:=zones.zone_of(source_id)
@@ -131,15 +134,18 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 	for raw_id in ability_definitions.keys():
 		var ability_id:=String(raw_id)
 		var definition:Dictionary=ability_definitions[raw_id]
-		var targets:=action_policy.valid_targets(source_id,definition)
+		var targets:=action_policy.valid_ability_targets(source_id,definition)
 		var cooldown_ready:=true
 		if ability_scheduler!=null:
 			var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
 			cooldown_ready=AbilityRuntime.can_use(ability_id,cooldowns,state.round_number)
 		var mana_cost:=int(definition.get("mana_cost",0))
 		var resource_ready:=combatant.mana>=mana_cost
+		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number)
+		var equipped := ability_scheduler == null or AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id)
 		abilities[ability_id]={
-			"available":cooldown_ready and resource_ready and not targets.is_empty(),
+			"available":equipped and cooldown_ready and resource_ready and round_budget_ready and not targets.is_empty(),
+			"equipped":equipped,
 			"targets":targets,
 			"cooldown_ready":cooldown_ready,
 			"resource_ready":resource_ready,
@@ -168,6 +174,9 @@ func cast_zone_ability(source_id:String,zone_id:int,ability_id:String)->Dictiona
 	var source:=state.get_combatant(source_id)
 	if source==null or source.is_death_finalized():
 		return {"ok":false,"reason":"invalid_combatant"}
+	var status := ParCombatContract.action_status(source, state.round_number)
+	if not bool(status.ok):
+		return status
 	if zone_id<CombatZoneState.MIN_ZONE or zone_id>CombatZoneState.MAX_ZONE:
 		return {"ok":false,"reason":"invalid_zone"}
 	var definition:=AbilityCatalog.definition(ability_scheduler.definitions,ability_id)
@@ -215,6 +224,10 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 	return {"ok":true,"reason":"queued","event_id":event.event_id}
 
 
+func _abi001_damage_source(combatant:CombatantState,profile:Dictionary)->Dictionary:
+	return ParAttackContract.resolve(combatant, profile)
+
+
 func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:String="basic",weapon_index:int=-1)->Dictionary:
 	var zone_validation:=_validate_attack_roll_zones(rolls)
 	if not bool(zone_validation.get("ok",false)):
@@ -225,45 +238,41 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 		return intent
 	var target_id:=String(intent.get("target_id",""))
 	var profile:Dictionary=intent.get("attack_profile",{})
-	var damage_min:=float(profile.get("damage_min",0.0))
-	var damage_max:=float(profile.get("damage_max",damage_min))
+	var attacker:=state.get_combatant(source_id)
+	var abi_source:Dictionary={}
+	if String(profile.get("id","basic"))=="basic" and attacker!=null:
+		abi_source=_abi001_damage_source(attacker,profile)
+		if not bool(abi_source.get("ok",false)):
+			push_error("ABI001 invariant violated: "+String(abi_source.get("reason","")))
+			return abi_source
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	var event_ids:Array[int]=[]
 	# Every constituent hit of one Base Attack shares an AP group. AP is awarded
 	# by the engine to the first connected hit in that group, never more than once.
 	var ap_group_id:=int(rolls.get("ap_group_id",state.next_event_id))
 	for hit_index in range(hit_count):
-		var event_rolls:=_basic_attack_hit_rolls(rolls,hit_index)
-		var damage_roll:=float(event_rolls.get("damage",randf()))
+		var event_rolls:=orchestrator.engine.complete_attack_rolls(_basic_attack_hit_rolls(rolls,hit_index))
+		var damage_roll:=float(event_rolls["damage"])
 		event_rolls["damage"]=damage_roll
-		var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)
-		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{
-			"raw_damage":raw_damage,
-			"damage_min":damage_min,
-			"damage_max":damage_max,
-			"damage_roll":damage_roll,
-			"zone":String(event_rolls.get("zone",requested_zone)),
-			"damage_type":String(profile.get("damage_type","slashing")),
-			"rolls":event_rolls,
-			"weapon_index":int(profile.get("weapon_index",0)),
-			"is_weapon_attack":true,
-			"attack_profile_id":attack_profile_id,
-			"hit_index":hit_index,
-			"hit_count":hit_count,
-			"delivery_type":String(profile.get("delivery_type","MELEE")),
-			"min_zone_distance":int(profile.get("min_zone_distance",0)),
-			"max_zone_distance":int(profile.get("max_zone_distance",0)),
-			"two_zone_hit_modifier":float(profile.get("two_zone_hit_modifier",-50.0)),
-			"uses_magic_hit":bool(profile.get("uses_magic_hit",false)),
-			"magic_hit_modifier":float(profile.get("magic_hit_modifier",0.0)),
-			"magic_hit_roll":int(event_rolls.get("magic_hit",1)),
-			"uses_physical_block":not bool(profile.get("uses_magic_hit",false)),
-			"bypass_physical_mitigation":not String(profile.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"],
+		var payload:=WeaponAttackProfile.attack_payload(profile,event_rolls,String(event_rolls.get("zone",requested_zone)),{
 			# AP belongs to the whole Base Attack action. Any connected constituent
 			# may earn it; the engine deduplicates by ap_group_id.
 			"generates_ap":not bool(event_rolls.get("suppress_ap",false)),
-			"ap_group_id":ap_group_id
+			"ap_group_id":ap_group_id,
+			"hit_index":hit_index,
+			"hit_count":hit_count
 		})
+		if not abi_source.is_empty():
+			var source_range:Dictionary=abi_source["range"]
+			var bonus:=float(attacker.combat_stats["par_totals"]["PAR052"])
+			var low:=float(source_range["min"])+bonus
+			var high:=float(source_range["max"])+bonus
+			payload["source_par"]=String(abi_source["source_par"])
+			payload["damage_min"]=low
+			payload["damage_max"]=high
+			payload["damage_type"]=String(source_range["type"])
+			payload["raw_damage"]=CombatMath.roll_damage(low,high,damage_roll)
+		var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,payload)
 		state.queue_event(event)
 		event_ids.append(event.event_id)
 	return {"ok":true,"reason":"queued","event_id":event_ids[0],"event_ids":event_ids,"hit_count":hit_count,"target_id":target_id,"weapon_index":int(profile.get("weapon_index",-1)),"attack_profile_id":attack_profile_id}
@@ -285,6 +294,15 @@ func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary=
 	var attacks:Array[Dictionary]=[]
 	var weapon_indices:Array=by_weapon.keys()
 	weapon_indices.sort()
+	# Canonical PAR057 limits the ordinary MH/OH ABI001 sequence.
+	# No basic attack may bypass the canonical contract.
+	if combatant.combat_stats.has("par_totals"):
+		var checked := ParAttackContract.validate(combatant)
+		if not bool(checked.ok):
+			return checked
+		var allowed_attacks := int(checked.count)
+		while weapon_indices.size()>allowed_attacks:
+			weapon_indices.pop_back()
 	for raw_weapon_index in weapon_indices:
 		var weapon_index:=int(raw_weapon_index)
 		var profiles:Array=by_weapon[weapon_index]
@@ -301,7 +319,7 @@ func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary=
 			if selected.is_empty():
 				continue
 		var requirement:=String(selected.get("requires_off_hand_type",""))
-		if not requirement.is_empty() and not Array(combatant.combat_stats.get("equipped_item_types",[])).has(requirement):
+		if not requirement.is_empty() and not CombatModifierService.equipped_item_types(combatant).has(requirement):
 			continue
 		if not action_policy.valid_targets(source_id,selected).has(target_id):
 			continue
@@ -326,6 +344,22 @@ func queue_default_weapon_attacks(source_id:String,rolls_by_weapon:Dictionary={}
 func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->Dictionary:
 	if attacks.is_empty():
 		return {"ok":false,"reason":"empty_attack_sequence"}
+	var source:=state.get_combatant(source_id)
+	if source==null or source.is_death_finalized():
+		return {"ok":false,"reason":"invalid_combatant"}
+	if source.combat_stats.has("par_totals"):
+		var contract := ParAttackContract.validate(source)
+		if not bool(contract.ok):
+			return contract
+		var allowed := int(contract.count)
+		if attacks.size()>allowed:
+			return {"ok":false,"reason":"par057_attack_limit","allowed_attacks":allowed}
+		var seen_weapons:Dictionary={}
+		for request in attacks:
+			var index:=int(request.get("weapon_index",-1))
+			if index<0 or index>=allowed or seen_weapons.has(index):
+				return {"ok":false,"reason":"invalid_par057_attack_sequence"}
+			seen_weapons[index]=true
 	# Validate the whole sequence before queueing anything. A rejected OH/profile
 	# must never leave an already queued MH attack behind.
 	for attack_index in range(attacks.size()):
@@ -339,6 +373,11 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 		var intent:=basic_attack_intent(source_id,String(request.get("attack_profile_id","basic")),int(request.get("weapon_index",-1)))
 		if not bool(intent.get("ok",false)):
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
+		if String(request.get("attack_profile_id","basic"))=="basic":
+			var checked:Dictionary=_abi001_damage_source(source,Dictionary(intent.get("attack_profile",{})))
+			if not bool(checked.get("ok",false)):
+				push_error("ABI001 invariant violated: "+String(checked.get("reason","")))
+				return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(checked.get("reason","")),"queued_event_ids":[]}
 	var sequence_event_ids:Array[int]=[]
 	var attack_results:Array[Dictionary]=[]
 	var ap_group_id:=state.next_event_id

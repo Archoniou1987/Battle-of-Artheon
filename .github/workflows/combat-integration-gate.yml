@@ -1,0 +1,66 @@
+name: Combat Integration Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: combat-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrated-combat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Compile all scripts and import game resources
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
+      - name: Run integration ladder from one attack to full ABI/EFF lifecycle
+        shell: bash
+        run: |
+          status=0
+          # Every case executes even if one fails. This avoids repeated paid
+          # Actions runs just to reveal the next independent defect.
+          for script in \
+            tests/combat/arena_basic_round_runner.gd \
+            tests/combat/battle_baseline_runner.gd \
+            tests/parameters/final_par_combat_runner.gd \
+            tests/parameters/physical_par_boundary_runner.gd \
+            tests/combat/combat_regression_runner.gd \
+            tests/combat/abi003_fireball_runner.gd \
+            tests/combat/arena_ability_integration_runner.gd \
+            tests/combat/full_battle_vertical_slice_runner.gd \
+            tests/combat/arena_real_eff_chain_runner.gd \
+            tests/combat/integrated_round_phases_runner.gd \
+            tests/combat/arena_round_timing_interaction_runner.gd \
+            tests/combat/arena_dual_support_round_runner.gd \
+            tests/combat/group_combat_simulator_runner.gd \
+            tests/combat/round_effect_death_regression_runner.gd \
+            tests/combat/instant_effect_surprise_runner.gd \
+            tests/combat/elixir_mind_game_runner.gd \
+            tests/ui/square_slot_interaction_runner.gd
+          do
+            echo "::group::Combat integration: $script"
+            if ! GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh "$script"; then
+              echo "::error title=Combat integration regression::$script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
+      - name: Upload failed integration diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: combat-integration-diagnostics
+          path: test-results/final-par/*.log
+          if-no-files-found: warn
+          retention-days: 3

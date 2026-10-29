@@ -7,9 +7,16 @@ static func can_use(ability_id: String, cooldowns: Dictionary, round_number: int
 static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_number: int, cooldown_rounds: int) -> void:
 	cooldowns[ability_id] = round_number + cooldown_rounds + 1
 
+## Hand-authored ABI timing: both settings resolve in the SAME round.
+## "instant" executes before the shared calculations; "standard" is part
+## of the normal end-of-round combat calculation. Never infer from EFF type.
+static func application_timing(definition: Dictionary) -> String:
+	return String(definition.get("application_timing", "standard")).to_lower()
+
 static func normalized_definition(ability_id: String, definition: Dictionary) -> Dictionary:
 	var normalized := definition.duplicate(true)
 	normalized["ability_id"] = ability_id
+	normalized["application_timing"] = application_timing(definition)
 	normalized["delivery_type"] = String(definition.get("delivery_type", "DIRECT")).to_upper()
 	normalized["target_scope"] = String(definition.get("target_scope", "SINGLE")).to_upper()
 	normalized["duration_rounds"] = maxi(0, int(definition.get("duration_rounds", 0)))
@@ -33,6 +40,7 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 	var errors:Array[String]=[]
 	var normalized:=normalized_definition(ability_id,definition)
 	if ability_id.is_empty(): errors.append("ability_id_required")
+	if not ["instant","standard"].has(application_timing(definition)): errors.append("invalid_application_timing")
 	if not ["MELEE","PROJECTILE","DIRECT","AREA","CHAIN"].has(String(normalized.get("delivery_type",""))): errors.append("invalid_delivery_type")
 	if not ["SINGLE","ALL_MELEE","ALL_RANGED","ALL_ENEMIES","RANDOM_N","TARGET_ADJACENT"].has(String(normalized.get("target_scope",""))): errors.append("invalid_target_scope")
 	var components:Array=normalized.get("components",[])
@@ -42,9 +50,21 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 			errors.append("invalid_component")
 			continue
 		var kind:=String(raw_component.get("kind",""))
-		if not ["damage","effect","heal"].has(kind): errors.append("invalid_component_kind")
+		if not ["damage","effect","heal","cleanse"].has(kind): errors.append("invalid_component_kind")
+		if kind=="cleanse" and not ["BUFF","DEBUFF"].has(String(raw_component.get("dispel_polarity","")).to_upper()): errors.append("invalid_dispel_polarity")
 		if kind=="damage" and float(raw_component.get("amount",-1.0))<0.0: errors.append("invalid_damage_amount")
 		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
+		# Timings are hand-authored. Reject an incompatible instant ABI rather
+		# than silently rewriting it; periodic damage/healing still means Standard.
+		if application_timing(definition)=="instant":
+			if kind in ["damage","heal"]:
+				errors.append("instant_damage_or_heal_requires_standard")
+			elif kind=="effect":
+				var eff: Dictionary = EffectCatalog.definition(EffectCatalog.load_json(),String(raw_component.get("effect_id","")))
+				if String(eff.get("kind","")).to_lower() in ["dot","hot","heal"] or float(eff.get("damage",0.0))>0.0 or float(eff.get("healing",0.0))>0.0:
+					errors.append("instant_periodic_damage_or_heal_requires_standard")
+	if String(normalized.get("combat_role","")).to_upper()=="CLEANSE" and not ["ALLY","ENEMY"].has(String(normalized.get("target_team","")).to_upper()):
+		errors.append("cleanse_target_team_required")
 	return errors
 
 static func build_action_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
@@ -52,6 +72,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 	return state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
 		"ability_id": ability_id,
 		"source_kind": "ability",
+		"application_timing": normalized["application_timing"],
 		"delivery_type": normalized["delivery_type"],
 		"target_scope": normalized["target_scope"],
 		"duration_rounds": normalized["duration_rounds"],
@@ -60,9 +81,11 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"two_zone_hit_modifier": normalized["two_zone_hit_modifier"],
 		"uses_magic_hit": normalized["uses_magic_hit"],
 		"magic_hit_modifier": normalized["magic_hit_modifier"],
+		"target_team": String(definition.get("target_team", "")),
 		"engagement": normalized["engagement"],
 		"rolls": definition.get("rolls", {}).duplicate(true) if definition.get("rolls", {}) is Dictionary else {},
-		"magic_hit_roll": int(definition.get("magic_hit_roll",1)),
+		# Zero requests a seeded roll from CombatEngine; explicit 1..100 is a test override.
+		"magic_hit_roll": int(definition.get("magic_hit_roll",0)),
 		"target_zone_id": int(definition.get("target_zone_id", definition.get("zone_id",-1))),
 		"components": normalized["components"],
 		"target_ids": [target_id]

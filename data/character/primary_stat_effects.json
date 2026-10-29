@@ -1,0 +1,174 @@
+{
+  "version": 3,
+  "notes": "All percentage-derived attributes on Attack/Defense/Magic tabs use level-scaled ratings. Other tab retains direct percentages. ABI/EFF direct percentage points are separate overlays, never stored as ratings.",
+  "effects": {
+    "PAR001": {
+      "physical_damage_flat": 1
+    },
+    "PAR002": {
+      "dodge_rating": 5,
+      "anti_dodge_rating": 5,
+      "counterattack_rating": 5
+    },
+    "PAR003": {
+      "crit_chance_rating": 5,
+      "anti_crit_rating": 5,
+      "crit_damage_rating": 5
+    },
+    "PAR004": {
+      "hit_chance_rating": 5,
+      "crit_chance_rating": 5,
+      "magic_damage_rating": 5
+    },
+    "PAR005": {
+      "max_mana_flat": 10
+    },
+    "PAR006": {
+      "max_hp_flat": 20
+    }
+  },
+  "categories": {
+    "Атака": {
+      "Физический урон": [
+        "physical_damage_flat",
+        "slash_damage_rating",
+        "pierce_damage_rating",
+        "chop_damage_rating",
+        "blunt_damage_rating",
+        "main_hand_damage",
+        "off_hand_damage"
+      ],
+      "Точность и крит": [
+        "hit_chance_rating",
+        "anti_dodge_rating",
+        "crit_chance_rating",
+        "crit_damage_rating",
+        "armour_penetration_flat",
+        "armour_penetration_percent",
+        "block_penetration_flat",
+        "block_crush"
+      ],
+      "Темп и реакции": [
+        "tempo",
+        "attack_speed_rating",
+        "counterattack_rating",
+        "counterattack_damage_rating"
+      ]
+    },
+    "Защита": {
+      "Защитные шансы": [
+        "dodge_rating",
+        "anti_crit_rating",
+        "manual_block_rating",
+        "shield_auto_block_rating",
+        "block_strength",
+        "control_resistance_rating"
+      ],
+      "Броня по зонам": [
+        "armour_head",
+        "armour_arms",
+        "armour_chest",
+        "armour_waist",
+        "armour_legs"
+      ],
+      "Снижение урона": [
+        "physical_damage_reduction_rating",
+        "slash_resistance_rating",
+        "pierce_resistance_rating",
+        "chop_resistance_rating",
+        "blunt_resistance_rating"
+      ]
+    },
+    "Магия": {
+      "Магическая атака": [
+        "magic_damage_rating",
+        "magic_penetration_flat",
+        "magic_penetration_rating"
+      ],
+      "Урон по стихиям": [
+        "fire_damage_rating",
+        "water_damage_rating",
+        "air_damage_rating",
+        "earth_damage_rating",
+        "dark_damage_rating",
+        "light_damage_rating"
+      ],
+      "Сопротивления": [
+        "magic_resistance_rating",
+        "fire_resistance_rating",
+        "water_resistance_rating",
+        "air_resistance_rating",
+        "earth_resistance_rating",
+        "dark_resistance_rating",
+        "light_resistance_rating"
+      ]
+    },
+    "Прочее": {
+      "Ресурсы": [
+        "max_hp_flat",
+        "max_mana_flat",
+        "max_energy",
+        "max_rage",
+        "hp_regen",
+        "mana_regen",
+        "energy_regen"
+      ],
+      "Исследование": [
+        "vision_range",
+        "movement_speed_pct",
+        "gathering_speed_pct"
+      ],
+      "Прогресс": [
+        "experience_bonus_pct",
+        "loot_bonus_pct",
+        "carry_capacity"
+      ]
+    }
+  },
+  "rating_stats": [
+    "hit_chance_rating",
+    "anti_dodge_rating",
+    "crit_chance_rating",
+    "counterattack_rating",
+    "dodge_rating",
+    "anti_crit_rating",
+    "manual_block_rating",
+    "shield_auto_block_rating",
+    "control_resistance_rating",
+    "magic_penetration_rating",
+    "slash_damage_rating",
+    "pierce_damage_rating",
+    "chop_damage_rating",
+    "blunt_damage_rating",
+    "crit_damage_rating",
+    "attack_speed_rating",
+    "counterattack_damage_rating",
+    "physical_damage_reduction_rating",
+    "slash_resistance_rating",
+    "pierce_resistance_rating",
+    "chop_resistance_rating",
+    "blunt_resistance_rating",
+    "magic_damage_rating",
+    "fire_damage_rating",
+    "water_damage_rating",
+    "air_damage_rating",
+    "earth_damage_rating",
+    "dark_damage_rating",
+    "light_damage_rating",
+    "magic_resistance_rating",
+    "fire_resistance_rating",
+    "water_resistance_rating",
+    "air_resistance_rating",
+    "earth_resistance_rating",
+    "dark_resistance_rating",
+    "light_resistance_rating"
+  ],
+  "direct_percent_stats": [
+    "movement_speed_pct",
+    "gathering_speed_pct",
+    "experience_bonus_pct",
+    "loot_bonus_pct",
+    "armour_penetration_percent",
+    "block_crush"
+  ]
+}

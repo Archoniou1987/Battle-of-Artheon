@@ -1,0 +1,47 @@
+name: Item Generator Lab
+
+on:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - "core/items/item_generator_lab.gd"
+      - "core/items/item_balance_workbench.gd"
+      - "core/items/item_lab_csv_exporter.gd"
+      - "data/items/project25_generator_lab.json"
+      - "scenes/debug/item_generator_lab.*"
+      - "scenes/debug/item_lab_numeric_keypad.gd"
+      - "scenes/main/main.gd"
+      - "tests/items/item_generator_lab_runner.gd"
+      - "tests/items/item_balance_workbench_runner.gd"
+      - "tests/ui/item_generator_lab_smoke.gd"
+      - ".github/workflows/item-generator-lab.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: item-generator-lab-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  item-generator-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.5.1
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import scripts and check scene
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Test 100 item generation and rarity comparison
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_generator_lab_runner.gd
+      - name: Verify direct-PAR archetype and item template workbench
+        run: timeout 35s godot --headless --path . --script res://tests/items/item_balance_workbench_runner.gd
+      - name: "UI: render four editor tabs and compact item results"
+        run: timeout 35s godot --headless --path . --script res://tests/ui/item_generator_lab_smoke.gd

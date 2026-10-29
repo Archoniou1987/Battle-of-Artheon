@@ -22,12 +22,18 @@ func _init(combat_state:CombatState, combat_engine:CombatEngine, combat_groups:G
 	engine=combat_engine
 	group_state=combat_groups
 	zone_state=combat_zones
+	# Team ownership matters for healing/cleansing even without tactical zones.
+	if group_state!=null:
+		engine.configure_spatial_context(group_state,zone_state)
 	if group_state!=null and zone_state!=null:
 		movement_resolver=CombatMovementResolver.new(zone_state)
-		engine.configure_spatial_context(group_state,zone_state)
 
 func begin_round() -> CombatRound:
 	state.begin_round()
+	# Opening phase: recover only combatants alive from the previous round.
+	# Resource regeneration is not a healing action and cannot revive the dead.
+	CombatResourceService.apply_round_regeneration(state)
+	CombatTempoService.begin_round(state)
 	start_snapshot=_capture_start_snapshot()
 	movement_requests.clear()
 	return CombatRound.new(state.round_number)
@@ -112,12 +118,14 @@ func _contest_definition_power(combatant_id:String,contest:Dictionary)->float:
 	var combatant:=state.get_combatant(combatant_id)
 	if combatant==null:
 		return 0.0
-	var stats:Array=Array(contest.get("stats",["STR","STA"]))
+	var stats:Array=Array(contest.get("stats",["PAR001","PAR006"]))
 	var power:=float(contest.get("flat_power",0.0))
 	for raw_stat in stats:
 		var stat:=String(raw_stat)
-		var fallback:float=float(combatant.stats.get("END",0.0)) if stat=="STA" else 0.0
-		power+=float(combatant.stats.get(stat,fallback))
+		if not combatant.stats.has(stat):
+			push_error("Movement contest missing mandatory parameter: " + stat)
+			return 0.0
+		power+=float(combatant.stats[stat])
 	return power*float(contest.get("multiplier",1.0))
 
 func _movement_contest_power(combatant_id:String,request:Dictionary)->float:
@@ -171,16 +179,28 @@ func register_persistent_action(source_id:String, target_ids:Array[String], payl
 func resolve_active_timed_effects() -> Array[int]:
 	var event_ids:Array[int]=[]
 	for combatant in state.combatants.values():
+		# Timed effects remain eligible during the lethal round, not after it.
+		if combatant.is_death_finalized():
+			continue
 		for active in combatant.active_effects:
 			if state.round_number<int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0))<=0:
 				continue
 			var definition:Dictionary=active.get("definition",{})
-			if String(definition.get("kind",""))!="dot":
+			if not String(definition.get("kind","")) in ["dot", "hot"]:
 				continue
-			var amount:=float(definition.get("damage",0.0))
+			# Shared-duration EFF has one DoT packet per round, multiplied
+			# by the current stack count (independent-stack EFF stay unchanged).
+			var shared_stacks := int(active.get("active_stacks", active.get("stacks", 1))) if String(definition.get("stacking", "")) == "shared_duration" else 1
+			var is_hot := String(definition.get("kind", "")) == "hot"
+			var amount:=float(definition.get("healing",0.0) if is_hot else definition.get("damage",0.0)) * float(shared_stacks)
+			var source := state.get_combatant(String(active.get("source_id", "")))
+			if not is_hot and source != null and CombatDamagePayload.is_magic_damage_type(String(definition.get("damage_type", ""))):
+				# The source's current PAR150 is applied once, on each DoT tick.
+				amount *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(source, "magic_damage_rating", state.round_number) / 100.0)
 			if amount<=0.0:
 				continue
-			var event:=state.create_event(CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
+			var event:=state.create_event(CombatEvent.Kind.EFFECT if is_hot else CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
+				"inline_heal":CombatMath.final_damage_floor(amount) if is_hot else null,
 				"amount":amount,
 				"raw_damage":amount,
 				"damage_type":String(definition.get("damage_type","physical")),
@@ -241,13 +261,24 @@ func end_round() -> Dictionary:
 	var effect_event_ids:=resolve_effect_phase()
 	effect_event_ids.append_array(resolve_active_timed_effects())
 	for combatant in state.combatants.values():
-		if not combatant.is_alive():
+		# Existing corpses must not be reported as newly killed every round.
+		if combatant.is_death_finalized():
+			continue
+		if combatant.one_shot_kill or not combatant.is_alive():
 			combatant.death_finalized=true
 			finalized_dead_ids.append(combatant.combatant_id)
 			var killers:=state.fatal_round_killers(combatant.combatant_id)
 			if not killers.is_empty():
 				kill_attribution[combatant.combatant_id]=killers
+		else:
+			combatant.hp = mini(combatant.hp, combatant.max_hp)
+	# Death is finalized before threshold checks; dead fighters cannot stun/rebound.
+	CombatTempoService.end_round(state)
 	_tick_effect_durations()
+	# Instant ABI effects were mechanically active throughout this round;
+	# only now can observers see them. Cleanse remains unavailable until
+	# next round via dispel_available_round, never through display state.
+	_reveal_instant_effects()
 	return {
 		"dead_ids":finalized_dead_ids.duplicate(),
 		"kill_attribution":kill_attribution,
@@ -281,11 +312,11 @@ func _capture_start_snapshot() -> Dictionary:
 	var snapshot:Dictionary={}
 	for combatant_id in state.combatants.keys():
 		var combatant:CombatantState=state.get_combatant(String(combatant_id))
-		var movement_locked:=_has_active_movement_lock(combatant)
+		var movement_locked := _has_active_movement_lock(combatant) or CombatTempoService.is_stunned(combatant, state.round_number)
 		snapshot[String(combatant_id)]={
 			"hp":combatant.hp,
 			"death_finalized":combatant.is_death_finalized(),
-			"tempo":combatant.tempo,
+			"tempo":CombatModifierService.effective_tempo(combatant, state.round_number),
 			"movement_locked":movement_locked,
 			"zone":zone_state.zone_of(String(combatant_id)) if zone_state!=null else -1
 		}
@@ -329,11 +360,24 @@ func _deferred_valid(record:Dictionary) -> bool:
 		return false
 	return true
 
+func _reveal_instant_effects() -> void:
+	for combatant in state.combatants.values():
+		for active in combatant.active_effects:
+			if not bool(active.get("revealed",true)):
+				active["revealed"] = true
+			# Newly gained instant stacks and timer refreshes were concealed
+			# during this round. Disclose the aggregate only at round end.
+			active.erase("undisclosed_stacks")
+			active.erase("visible_remaining_rounds")
+
 func _tick_effect_durations() -> void:
 	for combatant in state.combatants.values():
 		for active in combatant.active_effects:
 			if state.round_number>=int(active.get("start_round",999999)):
 				active["remaining_rounds"]=int(active.get("remaining_rounds",0))-1
+			if String(Dictionary(active.get("definition", {})).get("stacking", "")) == "shared_duration":
+				# Promote newly applied stacks only AFTER this round's DoT phase.
+				active["active_stacks"] = int(active.get("stacks", 1))
 		var kept:Array[Dictionary]=[]
 		for active in combatant.active_effects:
 			if int(active.get("remaining_rounds",0))>0:

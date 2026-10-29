@@ -10,9 +10,9 @@ static func run(base_balance:Dictionary) -> bool:
 
 static func _state(count:int)->CombatState:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("source","Source",10,1000))
+	state.add_combatant(TestFixtureLoader.new_combatant("source","Source",10,1000))
 	for i in range(count):
-		state.add_combatant(CombatantState.new("t%d"%i,"Target",10,1000))
+		state.add_combatant(TestFixtureLoader.new_combatant("t%d"%i,"Target",10,1000))
 	state.begin_round()
 	return state
 
@@ -35,7 +35,7 @@ static func _blizzard(state:CombatState,count:int)->CombatEvent:
 static func _damage_budget(balance:Dictionary)->bool:
 	var state:=_state(10)
 	var event:=_blizzard(state,10)
-	state.queue_event(event); CombatEngine.new(state,balance).resolve_pending_events()
+	state.queue_event(event); CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_pending_events()
 	for id in _targets(10):
 		if state.get_combatant(id).hp != 988: return false
 	return true
@@ -46,7 +46,7 @@ static func _effect_budget(balance:Dictionary)->bool:
 	event.payload["effect_roll"]=24
 	var components:Array=event.payload["components"]
 	components[1]["effect_roll"]=24
-	state.queue_event(event); CombatEngine.new(state,balance).resolve_pending_events()
+	state.queue_event(event); CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_pending_events()
 	var effect_events:=0
 	for logged in state.event_log:
 		if logged.kind==CombatEvent.Kind.EFFECT and logged.parent_event_id==event.event_id:
@@ -57,7 +57,7 @@ static func _effect_budget(balance:Dictionary)->bool:
 static func _no_upscale(balance:Dictionary)->bool:
 	var state:=_state(3)
 	var event:=_blizzard(state,3)
-	state.queue_event(event); CombatEngine.new(state,balance).resolve_pending_events()
+	state.queue_event(event); CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_pending_events()
 	for id in _targets(3):
 		if state.get_combatant(id).hp != 975: return false
 	return true
@@ -66,5 +66,5 @@ static func _deduplicates_targets(balance:Dictionary)->bool:
 	var state:=_state(2)
 	var event:=_blizzard(state,2)
 	event.payload["target_ids"]=["t0","t0","t1","missing"]
-	state.queue_event(event); CombatEngine.new(state,balance).resolve_pending_events()
+	state.queue_event(event); CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_pending_events()
 	return event.result.get("resolved_target_ids",[]).size()==2 and state.get_combatant("t0").hp==975 and state.get_combatant("t1").hp==975

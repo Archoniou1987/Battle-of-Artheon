@@ -50,10 +50,19 @@ func _run()->void:
 	valid=valid and claim_player.inventory.owns("CLAIM_ITEM")
 	valid=valid and not canvas.loot_markers.has(Vector2i(5,6))
 	valid=valid and not viewer._loot_dialog.visible
+	# Synthetic/debug map must refuse to bind an uncommitted or
+	# nonexistent expedition snapshot. No fabricated loot authority.
+	var rejected:Dictionary=viewer.attach_verified_cell_world("user://missing_cell_world.json","enc","exp","PLAYER",MapNpcBridge.new())
+	valid=valid and not bool(rejected.get("ok",false))
+	valid=valid and viewer._verified_cell_world==null
+	# Regenerating the map discards any previous cell-world owners.
+	viewer.set_cell_content_context(expedition,claim_player,MapNpcBridge.new(),claim_repo,"CLAIM_ENCOUNTER","user://not_a_world.json")
 	seed_input.value=1234
 	viewer.call("_regenerate")
 	await process_frame
 	valid=valid and canvas.generated.get("seed",-1)==1234
+	valid=valid and viewer.cell_content_repository==null and viewer.cell_content_expedition!=expedition
+	valid=valid and viewer.cell_content_encounter_key.is_empty()
 	valid=valid and not canvas.generated.get("boss_groups",[]).is_empty()
 	print("DEBUG_MAP_VIEWER_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)

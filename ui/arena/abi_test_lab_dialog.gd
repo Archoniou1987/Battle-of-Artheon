@@ -1,0 +1,571 @@
+class_name AbiTestLabDialog
+extends AcceptDialog
+
+## Development-only ABI sandbox UI. Actions are always visible below the tabs.
+## Uses AbiTestLabSession; the live ArenaCombatSession is never modified.
+const PAR_CHOICES := {
+	"caster:PAR030": "Игрок · PAR030 Точность (рейтинг)",
+	"caster:PAR033": "Игрок · PAR033 Шанс крита (рейтинг)",
+	"caster:PAR035": "Игрок · PAR035 Сила крита (рейтинг)",
+	"caster:PAR125": "Игрок · PAR125 Плоское пробитие брони",
+	"caster:PAR126": "Игрок · PAR126 Пробитие брони, %",
+	"caster:PAR150": "Игрок · PAR150 Магический урон (рейтинг)",
+	"dummy:PAR034": "Манекен · PAR034 Антикрит (рейтинг)",
+	"dummy:PAR101": "Манекен · PAR101 Броня груди",
+	"dummy:PAR135": "Манекен · PAR135 Общее снижение урона, %",
+	"dummy:PAR190": "Манекен · PAR190 Общее сопротивление магии",
+	"dummy:PAR191": "Манекен · PAR191 Сопротивление огню",
+	"dummy:PAR192": "Манекен · PAR192 Сопротивление воде",
+	"dummy:PAR193": "Манекен · PAR193 Сопротивление воздуху",
+	"dummy:PAR194": "Манекен · PAR194 Сопротивление земле",
+	"dummy:PAR195": "Манекен · PAR195 Сопротивление тьме",
+	"dummy:PAR196": "Манекен · PAR196 Сопротивление свету"
+}
+const TYPE_NAMES := {
+	"slashing": "Рубящий (slashing)", "piercing": "Колющий (piercing)",
+	"chopping": "Секущий (chopping)", "blunt": "Дробящий (blunt)",
+	"fire": "Огонь", "water": "Вода", "air": "Воздух",
+	"earth": "Земля", "dark": "Тьма", "light": "Свет"
+}
+
+var session: AbiTestLabSession
+var preset_select: OptionButton
+var type_select: OptionButton
+var target_select: OptionButton
+var target_row: HBoxContainer
+var initial_hp_row: HBoxContainer
+var max_hp_row: HBoxContainer
+var amount_row: HBoxContainer
+var injection_row: HBoxContainer
+var hits_row: HBoxContainer
+var order_row: HBoxContainer
+var order_select: OptionButton
+var numeric_popup: ConfirmationDialog
+var numeric_display: LineEdit
+var numeric_target: SpinBox
+var numeric_buffer: String = ""
+var custom_name: LineEdit
+var fields: Dictionary = {}
+var par_select: OptionButton
+var par_value: SpinBox
+var par_label: Label
+var output: TextEdit
+var par_values: Dictionary = {}
+var round_history: Array[Dictionary] = []
+var copy_log_button: Button
+var export_log_button: Button
+
+var pages: TabContainer
+var ability_scroll: ScrollContainer
+var par_scroll: ScrollContainer
+var status_label: Label
+var locked_details: Label
+var custom_name_row: HBoxContainer
+var type_row: HBoxContainer
+var mana_row: HBoxContainer
+var cooldown_row: HBoxContainer
+var action_toolbar: HBoxContainer
+var reset_button: Button
+var cast_button: Button
+var skip_button: Button
+
+func _ready() -> void:
+	title = "ABI Test Lab · Физика / Магия"
+	min_size = Vector2i(310, 340)
+	get_ok_button().text = "Закрыть"
+
+	# AcceptDialog measures its first Control child for its minimum size.
+	# Do NOT add the VBoxContainer directly: TabContainer otherwise propagates
+	# the full height of the long ability form and makes the popup full-screen.
+	# A plain Control host creates a bounded viewport for the flexible layout.
+	var host := Control.new()
+	host.custom_minimum_size = Vector2(300, 310)
+	host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(host)
+
+	var frame := VBoxContainer.new()
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_theme_constant_override("separation", 6)
+	host.add_child(frame)
+
+	status_label = Label.new()
+	status_label.text = "Изолированный тест · HP и мана героя не изменяются"
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	frame.add_child(status_label)
+
+	# A second non-Container boundary prevents any tab's full form height
+	# from enlarging the toolbar's parent. The tab pages scroll internally.
+	var tab_viewport := Control.new()
+	tab_viewport.custom_minimum_size = Vector2(295, 225)
+	tab_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab_viewport.clip_contents = true
+	frame.add_child(tab_viewport)
+	pages = TabContainer.new()
+	tab_viewport.add_child(pages)
+	pages.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pages.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	ability_scroll = ScrollContainer.new()
+	ability_scroll.name = "Способность"
+	ability_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	ability_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	pages.add_child(ability_scroll)
+	var ability_page := VBoxContainer.new()
+	ability_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ability_page.add_theme_constant_override("separation", 5)
+	ability_scroll.add_child(ability_page)
+	_build_ability_page(ability_page)
+	_build_numeric_keypad()
+
+	par_scroll = ScrollContainer.new()
+	par_scroll.name = "PAR"
+	par_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	par_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	pages.add_child(par_scroll)
+	var par_page := VBoxContainer.new()
+	par_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	par_page.add_theme_constant_override("separation", 7)
+	par_scroll.add_child(par_page)
+	_build_par_page(par_page)
+
+	var results_page := VBoxContainer.new()
+	results_page.name = "Результаты"
+	results_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	results_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pages.add_child(results_page)
+	var result_hint := Label.new()
+	result_hint.text = "Журнал реального CombatEngine · ACTION / ATTACK / DAMAGE / EFF"
+	result_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	results_page.add_child(result_hint)
+	output = TextEdit.new()
+	output.editable = false
+	output.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	output.custom_minimum_size = Vector2(360, 230)
+	output.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	output.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	results_page.add_child(output)
+	var log_actions := HBoxContainer.new()
+	results_page.add_child(log_actions)
+	copy_log_button = Button.new()
+	copy_log_button.text = "Копировать JSON"
+	copy_log_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy_log_button.pressed.connect(_copy_log)
+	log_actions.add_child(copy_log_button)
+	export_log_button = Button.new()
+	export_log_button.text = "Экспорт JSON"
+	export_log_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	export_log_button.pressed.connect(_export_log)
+	log_actions.add_child(export_log_button)
+
+	# This toolbar is a sibling of the tab container, never in its scroll area.
+	action_toolbar = HBoxContainer.new()
+	action_toolbar.add_theme_constant_override("separation", 4)
+	frame.add_child(action_toolbar)
+	reset_button = _add_action("Новый тест", _reset_session)
+	cast_button = _add_action("Применить ABI", _cast)
+	skip_button = _add_action("Пропустить", _skip)
+	_preset_changed(0)
+	_reset_session()
+
+func _build_ability_page(page: VBoxContainer) -> void:
+	preset_select = OptionButton.new()
+	for id in ["ABI003", "ABI004", "LAB_PHYSICAL", "LAB_MAGIC"]:
+		preset_select.add_item("%s — %s" % [id, String(AbiTestLabSession.PRESETS[id])])
+		preset_select.set_item_metadata(preset_select.item_count - 1, id)
+	_add_full_row(page, "Способность", preset_select)
+	preset_select.item_selected.connect(_preset_changed)
+
+	locked_details = Label.new()
+	locked_details.text = "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
+	locked_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(locked_details)
+
+	custom_name = LineEdit.new()
+	custom_name.text = "Тестовая способность"
+	custom_name_row = _add_compact_row(page, "Название", custom_name)
+	custom_name.text_changed.connect(_mark_dirty)
+
+	type_select = OptionButton.new()
+	type_row = _add_compact_row(page, "Тип урона", type_select)
+	type_select.item_selected.connect(_mark_dirty)
+
+	target_select = OptionButton.new()
+	target_row = _add_compact_row(page, "Цель", target_select)
+	target_select.item_selected.connect(_mark_dirty)
+	max_hp_row = _add_spin(page, "MaxHP цели", "target_max_hp", 10000, 1, 100000)
+	initial_hp_row = _add_spin(page, "CurrentHP цели", "initial_hp", 5000, 1, 100000)
+	injection_row = _add_spin(page, "Урон за удар", "incoming_damage", 0, 0, 100000)
+	hits_row = _add_spin(page, "Число ударов", "incoming_hits", 1, 1, 2)
+	order_select = OptionButton.new()
+	order_select.add_item("Урон → лечение")
+	order_select.set_item_metadata(0, "damage_first")
+	order_select.add_item("Лечение → урон")
+	order_select.set_item_metadata(1, "heal_first")
+	order_row = _add_compact_row(page, "Порядок", order_select)
+	order_select.item_selected.connect(_mark_dirty)
+	amount_row = _add_spin(page, "Базовый урон", "damage", 100, 0, 100000)
+	mana_row = _add_spin(page, "Мана (тест)", "mana_cost", 0, 0, 1000)
+	cooldown_row = _add_spin(page, "КД (тест)", "cooldown_rounds", 0, 0, 20)
+	_add_spin(page, "Уровень игрока", "caster_level", 1, 1, 100)
+	_add_spin(page, "Уровень манекена", "dummy_level", 1, 1, 100)
+	_add_spin(page, "Бросок попадания", "hit_roll", 1, 1, 100)
+	_add_spin(page, "Бросок крита", "crit_roll", 100, 1, 100)
+
+	var hint := Label.new()
+	hint.text = "Броски от 1 до 100. Изменение настроек начинает новый тест."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(hint)
+
+func _build_par_page(page: VBoxContainer) -> void:
+	var caption := Label.new()
+	caption.text = "Изменения действуют только на манекен и тестового героя. Выбирайте только реализованные PAR."
+	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(caption)
+
+	par_select = OptionButton.new()
+	var keys: Array = PAR_CHOICES.keys()
+	keys.sort()
+	for raw_key in keys:
+		var key := String(raw_key)
+		par_select.add_item(String(PAR_CHOICES[key]))
+		par_select.set_item_metadata(par_select.item_count - 1, key)
+	_add_full_row(page, "Параметр", par_select)
+
+	par_value = SpinBox.new()
+	par_value.min_value = 0
+	par_value.max_value = 100000
+	par_value.step = 1
+	par_value.value = 100
+	par_value.allow_greater = false
+	par_value.select_all_on_focus = true
+	_add_compact_row(page, "Новое значение", par_value)
+
+	var add_par := Button.new()
+	add_par.text = "Добавить / обновить PAR"
+	add_par.pressed.connect(_add_par)
+	page.add_child(add_par)
+
+	var clear_par := Button.new()
+	clear_par.text = "Очистить изменения PAR"
+	clear_par.pressed.connect(_clear_par)
+	page.add_child(clear_par)
+
+	par_label = Label.new()
+	par_label.text = "Изменения: нет"
+	par_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(par_label)
+
+func _add_full_row(host: VBoxContainer, caption: String, control: Control) -> void:
+	var label := Label.new()
+	label.text = caption
+	host.add_child(label)
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.add_child(control)
+
+func _add_compact_row(host: VBoxContainer, caption: String, control: Control) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host.add_child(row)
+	var label := Label.new()
+	label.text = caption
+	label.custom_minimum_size.x = 132
+	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_child(label)
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(control)
+	return row
+
+func _add_spin(host: VBoxContainer, title_text: String, key: String, value: int, minimum: int, maximum: int) -> HBoxContainer:
+	var spin := SpinBox.new()
+	spin.min_value = minimum
+	spin.max_value = maximum
+	spin.step = 1
+	spin.value = value
+	spin.select_all_on_focus = true
+	spin.editable = true
+	spin.get_line_edit().virtual_keyboard_enabled = true
+	spin.get_line_edit().context_menu_enabled = true
+	spin.get_line_edit().gui_input.connect(_numeric_field_input.bind(spin))
+	spin.custom_minimum_size.x = 95
+	fields[key] = spin
+	var row := _add_compact_row(host, title_text, spin)
+	spin.value_changed.connect(_mark_dirty)
+	return row
+
+
+func _build_numeric_keypad() -> void:
+	numeric_popup = ConfirmationDialog.new()
+	numeric_popup.title = "Ввод числа"
+	numeric_popup.min_size = Vector2i(260, 300)
+	numeric_popup.get_ok_button().text = "Применить"
+	numeric_popup.get_cancel_button().text = "Отмена"
+	add_child(numeric_popup)
+	var layout := VBoxContainer.new()
+	numeric_popup.add_child(layout)
+	numeric_display = LineEdit.new()
+	numeric_display.editable = false
+	numeric_display.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	numeric_display.add_theme_font_size_override("font_size", 24)
+	layout.add_child(numeric_display)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	layout.add_child(grid)
+	for key in ["1","2","3","4","5","6","7","8","9","C","0","⌫"]:
+		var button := Button.new()
+		button.text = key
+		button.custom_minimum_size = Vector2(70, 48)
+		button.pressed.connect(_numeric_key_pressed.bind(key))
+		grid.add_child(button)
+	numeric_popup.confirmed.connect(_numeric_confirmed)
+	numeric_popup.canceled.connect(_numeric_cancelled)
+
+func _numeric_field_input(event: InputEvent, spin: SpinBox) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_open_numeric_keypad.call_deferred(spin)
+	elif event is InputEventScreenTouch and event.pressed:
+		_open_numeric_keypad.call_deferred(spin)
+
+func _open_numeric_keypad(spin: SpinBox) -> void:
+	if numeric_popup.visible:
+		return
+	numeric_target = spin
+	numeric_buffer = str(int(spin.value))
+	numeric_display.text = numeric_buffer
+	numeric_popup.popup_centered(Vector2i(270, 360))
+
+func _numeric_key_pressed(key: String) -> void:
+	match key:
+		"C":
+			numeric_buffer = ""
+		"⌫":
+			numeric_buffer = numeric_buffer.substr(0, maxi(0, numeric_buffer.length() - 1))
+		_:
+			if numeric_buffer.length() < 9:
+				numeric_buffer = key if numeric_buffer == "0" else numeric_buffer + key
+	numeric_display.text = numeric_buffer
+
+func _numeric_confirmed() -> void:
+	if numeric_target == null or numeric_buffer.is_empty():
+		return
+	var number := int(numeric_buffer)
+	numeric_target.value = clampf(float(number), numeric_target.min_value, numeric_target.max_value)
+	numeric_target = null
+
+func _numeric_cancelled() -> void:
+	numeric_target = null
+
+func _add_action(caption: String, callback: Callable) -> Button:
+	var button := Button.new()
+	button.text = caption
+	button.clip_text = true
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 13)
+	button.pressed.connect(callback)
+	action_toolbar.add_child(button)
+	return button
+
+func _cast() -> void:
+	_next_round(true)
+
+func _skip() -> void:
+	_next_round(false)
+
+func _preset_id() -> String:
+	return String(preset_select.get_item_metadata(preset_select.selected))
+
+func _selected_type() -> String:
+	return String(type_select.get_item_metadata(type_select.selected))
+
+func _preset_changed(_index: int) -> void:
+	var preset := _preset_id()
+	var locked := preset in ["ABI003", "ABI004"]
+	locked_details.visible = locked
+	locked_details.text = "Healing · прямое HP настраивается · EFF004 HoT +10 HP/стак · 10 маны · КД 1" if preset == "ABI004" else "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
+	target_row.visible = preset == "ABI004"
+	initial_hp_row.visible = preset == "ABI004"
+	max_hp_row.visible = preset == "ABI004"
+	injection_row.visible = preset == "ABI004"
+	hits_row.visible = preset == "ABI004"
+	order_row.visible = preset == "ABI004"
+	(amount_row.get_child(0) as Label).text = "Прямое лечение" if preset == "ABI004" else "Базовый урон"
+	target_select.clear()
+	if preset == "ABI004":
+		for pair in [["ally", "Союзник"], ["caster", "На себя"]]:
+			target_select.add_item(String(pair[1]))
+			target_select.set_item_metadata(target_select.item_count - 1, pair[0])
+	else:
+		target_select.add_item("Манекен")
+		target_select.set_item_metadata(0, "dummy")
+	custom_name_row.visible = not locked
+	type_row.visible = not locked
+	mana_row.visible = not locked
+	cooldown_row.visible = not locked
+
+	# Never offer invalid physical/magical combinations.
+	type_select.clear()
+	for id in AbiTestLabSession.DAMAGE_TYPES:
+		var physical := CombatDamagePayload.is_physical_damage_type(String(id))
+		if locked and id != "fire":
+			continue
+		if preset == "LAB_PHYSICAL" and not physical:
+			continue
+		if preset == "LAB_MAGIC" and physical:
+			continue
+		type_select.add_item(String(TYPE_NAMES.get(id, id)))
+		type_select.set_item_metadata(type_select.item_count - 1, id)
+	type_select.select(0)
+	(fields["mana_cost"] as SpinBox).value = 10 if locked else 0
+	(fields["cooldown_rounds"] as SpinBox).value = 1 if locked else 0
+	_mark_dirty()
+
+func _mark_dirty(_value: Variant = null) -> void:
+	session = null
+	if status_label != null:
+		status_label.text = "Параметры изменены · следующий запуск начнёт новый тест"
+	_set_round_controls_enabled(true)
+	if output != null:
+		output.text = "Настройки изменены. Примените ABI или нажмите «Новый тест»."
+
+func _add_par() -> void:
+	var id := String(par_select.get_item_metadata(par_select.selected))
+	par_values[id] = par_value.value
+	_update_par_label()
+	_mark_dirty()
+
+func _clear_par() -> void:
+	par_values.clear()
+	_update_par_label()
+	_mark_dirty()
+
+func _update_par_label() -> void:
+	if par_values.is_empty():
+		par_label.text = "Изменения: нет"
+		return
+	var lines: Array[String] = []
+	var keys: Array = par_values.keys()
+	keys.sort()
+	for raw_key in keys:
+		var key := String(raw_key)
+		lines.append("%s = %s" % [key, str(par_values[key])])
+	par_label.text = "\n".join(lines)
+
+func _settings() -> Dictionary:
+	var result := {"preset": _preset_id(), "damage_type": _selected_type(),
+		"target": String(target_select.get_item_metadata(target_select.selected)),
+		"name": custom_name.text, "par_values": par_values.duplicate(true),
+		"event_order": String(order_select.get_item_metadata(order_select.selected))}
+	for key in fields:
+		result[key] = int((fields[key] as SpinBox).value)
+	return result
+
+func _set_round_controls_enabled(enabled: bool) -> void:
+	if cast_button != null:
+		cast_button.disabled = not enabled
+	if skip_button != null:
+		skip_button.disabled = not enabled
+
+func _reset_session() -> void:
+	round_history.clear()
+	var candidate := AbiTestLabSession.new()
+	var result: Dictionary = candidate.reset(_settings())
+	if not bool(result.get("ok", false)):
+		session = null
+		_set_round_controls_enabled(false)
+		status_label.text = "Ошибка настройки лаборатории"
+		output.text = "ABI LAB ERROR: " + JSON.stringify(result)
+		pages.current_tab = 2
+		return
+	session = candidate
+	_set_round_controls_enabled(true)
+	status_label.text = "Раунд 0 · цель %s · тестовая мана 500" % String(_settings().get("target", "dummy"))
+	output.text = "ABI Test Lab запущен\n" + JSON.stringify(result) + "\n"
+	output.text += "Исходы и формулы — из CombatEngine. Броски заданы для диагностики.\n"
+	output.text += "PAR018 и незавершённые магические PAR недоступны.\n"
+	pages.current_tab = 0
+
+func _next_round(cast_ability: bool) -> void:
+	if session == null:
+		_reset_session()
+	if session == null:
+		return
+	var result: Dictionary = session.next_round(cast_ability)
+	pages.current_tab = 2
+	if not bool(result.get("ok", false)):
+		status_label.text = "Тест остановлен: " + String(result.get("reason", "error"))
+		output.text += "\nОТКАЗ: " + JSON.stringify(result)
+		if bool(result.get("lab_finished", false)):
+			_set_round_controls_enabled(false)
+		return
+	round_history.append(result.duplicate(true))
+	status_label.text = "Раунд %d · %s %d/%d HP · мана %d · ΔHP %+d" % [
+		int(result["round"]), String(result.get("target_name", "Цель")), int(result["hp_after"]), int(result.get("max_hp", 10000)),
+		int(result["mana_after"]), int(result["hp_after"]) - int(result["hp_before"])]
+	var lines: Array[String] = []
+	lines.append("\n──── Раунд %d ────" % int(result["round"]))
+	lines.append("ABI: %s | %s" % [String(result["ability_id"]), String(result["cast_status"])])
+	lines.append("Мана: %d → %d | HP %s: %d → %d/%d | ΔHP: %+d" % [
+		int(result["mana_before"]), int(result["mana_after"]), String(result.get("target_name", "цели")),
+		int(result["hp_before"]), int(result["hp_after"]), int(result.get("max_hp", 10000)), int(result["hp_after"]) - int(result["hp_before"])])
+	if int(result.get("incoming_damage_per_hit", 0)) > 0:
+		lines.append("Входящий урон: %d × %d | порядок: %s | One Shot: %s | смерть: %s" % [
+			int(result["incoming_damage_per_hit"]), int(result["incoming_hits"]),
+			String(result["event_order"]), str(result["one_shot_kill"]), str(result["death_finalized"])])
+	for raw_effect in result["effects"]:
+		var eff: Dictionary = raw_effect
+		lines.append("%s: %d стак(ов), общий таймер %d" % [
+			String(eff.get("effect_id", "")), int(eff.get("stacks", 1)),
+			int(eff.get("remaining_rounds", 0))])
+	for line in result["report"]:
+		lines.append(String(line))
+	if bool(result.get("lab_finished", false)):
+		lines.append("Тест завершён: %s. Для нового сценария нажмите «Новый тест»." % String(result.get("lab_outcome", "finished")))
+		status_label.text = "Тест завершён · %s" % String(result.get("lab_outcome", "finished"))
+		_set_round_controls_enabled(false)
+	output.text += "\n".join(lines) + "\n"
+	output.set_caret_line(output.get_line_count() - 1)
+
+func _log_json() -> String:
+	var snapshot := {
+		"format": "BOA_ABI_LAB_V1",
+		"settings": _settings(),
+		"rounds": round_history.duplicate(true),
+		"visible_log": output.text,
+		"active_session": session != null and not session.is_finished(),
+		"lab_finished": session != null and session.is_finished()
+	}
+	return JSON.stringify(snapshot, "\t")
+
+
+func _copy_log() -> void:
+	DisplayServer.clipboard_set(_log_json())
+	status_label.text = "JSON журнала скопирован"
+
+
+func _export_log() -> void:
+	var json_text := _log_json()
+	if OS.has_feature("web"):
+		# Use a browser Blob to download the complete structured log on mobile.
+		var script := "(function(){const blob=new Blob([%s],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='boa_abi_lab_log.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);})();" % JSON.stringify(json_text)
+		JavaScriptBridge.eval(script)
+		status_label.text = "JSON отправлен на скачивание"
+	else:
+		var file := FileAccess.open("user://boa_abi_lab_log.json", FileAccess.WRITE)
+		if file == null:
+			status_label.text = "Не удалось сохранить JSON"
+			return
+		file.store_string(json_text)
+		file.close()
+		status_label.text = "JSON сохранён: user://boa_abi_lab_log.json"
+
+
+func open_lab() -> void:
+	# Window.get_viewport() refers to this popup's OWN viewport (initially ~367px),
+	# not the game's root viewport. Use root dimensions to avoid a permanently
+	# tiny dialog on mobile. Tabs scroll; the toolbar stays fixed.
+	var viewport_size := get_tree().root.get_visible_rect().size
+	var preferred_width := mini(900, int(viewport_size.x * 0.96))
+	var preferred_height := mini(760, int(viewport_size.y * 0.88))
+	popup_centered(Vector2i(maxi(310, preferred_width), maxi(340, preferred_height)))
