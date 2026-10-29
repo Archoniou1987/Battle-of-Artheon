@@ -19,6 +19,15 @@ const AFFIX_PRIMARY := {
 	"PAR150": "PAR004"
 }
 const REQUIREMENT_RULE := "item_primary_plus_weighted_affix_secondary_v1"
+const SELECTED_REQUIREMENT_RULE := "selected_archetype_primary_pars_by_slot_level_v2"
+## These are intentionally visible formula coefficients, not random modifiers.
+const REQUIREMENT_SLOT_FACTOR := {
+	"2H":1.15, "MH":1.0, "MH/OH":0.9, "OH":0.85,
+	"Шлем":1.0, "Плечи":1.1, "Нагрудник":1.2,
+	"Наручи":0.9, "Перчатки":0.8, "Пояс":0.85,
+	"Штаны":1.0, "Ботинки":0.8,
+	"Кольцо":0.65, "Амулет":0.7
+}
 const SHAPE := [0.90, 1.00, 1.08, 1.16]
 const WEAPONS := [
 	{"name":"Меч 1H · Физ", "slot":"MH", "dmg":0.92, "req":["PAR001","PAR003"], "kind":"weapon"},
@@ -182,6 +191,16 @@ func expected_affix(par: String, level: int, overrides: Dictionary, global_scale
 		float(p["value_scale"])*global_scale)
 
 func generate(config: Dictionary) -> Dictionary:
+	var picked: Variant = config.get("requirement_pars", [])
+	if picked is Array and not picked.is_empty():
+		var used := {}
+		if picked.size() > 2:
+			return {"ok":false,"reason":"Требований можно выбрать не больше двух","rows":[]}
+		for raw in picked:
+			var par := String(raw)
+			if not ParCalculationService.PRIMARY_IDS.has(par) or used.has(par):
+				return {"ok":false,"reason":"Требования должны быть разными PAR001–PAR006","rows":[]}
+			used[par] = true
 	var low := clampi(int(config.get("min_level",10)),1,100)
 	var high := clampi(int(config.get("max_level",30)),low,100)
 	var selected: Array = config.get("types",[])
@@ -297,20 +316,37 @@ func _variant(definition: Dictionary,level: int,form: int,q: String,config: Dict
 	var req: Dictionary = {}
 	var requirement_ids := _requirement_ids(definition, config)
 	var pct := float(config.get("medium_requirement",40.0)) if kind == "focus" or kind == "jewelry" else float(config.get("high_requirement",70.0))
-	var needed := float(18+2*(level-1))*pct/100.0/float(maxi(1,requirement_ids.size()))*_requirement_open(level)
+	var slot := String(definition.get("slot",""))
+	var slot_factor := float(REQUIREMENT_SLOT_FACTOR.get(slot,1.0))
+	var total_requirement := float(18+2*(level-1))*pct/100.0*_requirement_open(level)*slot_factor
+	var per_par := total_requirement / float(maxi(1,requirement_ids.size()))
 	for par in requirement_ids:
-		req[par] = maxi(0,int(floor(needed+0.5)))
+		req[par] = maxi(0,int(floor(per_par+0.5)))
+	var explicit := config.get("requirement_pars",[]) is Array and not (config.get("requirement_pars",[]) as Array).is_empty()
+	var rule := SELECTED_REQUIREMENT_RULE if explicit else REQUIREMENT_RULE
 	return {"quality":q,"damage":damage,"armour":armour,"fixed_par":{},
 		"rolls":rolled,"total_par":modifiers,"requirements":req,
-		"requirement_rule":REQUIREMENT_RULE,"requirement_sources":{
-			"item_primary":String(definition["req"][0]),
-			"archetype_secondary":String(requirement_ids[1]) if requirement_ids.size() > 1 else ""
+		"requirement_rule":rule,"requirement_sources":{
+			"mode":"selected_archetype" if explicit else "automatic_legacy",
+			"selected_pars":requirement_ids.duplicate(),
+			"item_slot":slot, "slot_factor":slot_factor,
+			"requirement_percent":pct,
+			"level_factor":_requirement_open(level)
 		}}
 
 ## Stable requirements: type identity first; strongest eligible archetype
 ## affinity replaces only the secondary stat. A crit axe is STR + INTU.
 ## Direct PAR001..PAR006 also map to themselves.
 func _requirement_ids(definition: Dictionary, config: Dictionary) -> Array:
+	var explicit: Variant = config.get("requirement_pars", [])
+	if explicit is Array and not explicit.is_empty():
+		var selected: Array = []
+		for raw in explicit:
+			var par := String(raw)
+			if ParCalculationService.PRIMARY_IDS.has(par) and not selected.has(par):
+				selected.append(par)
+		if not selected.is_empty():
+			return selected
 	var base: Array = definition["req"]
 	if base.is_empty():
 		return []
