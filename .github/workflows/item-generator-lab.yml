@@ -43,4 +43,4 @@ jobs:
       - name: Verify direct-PAR archetype and item template workbench
         run: timeout 120s godot --headless --path . --script res://tests/items/item_balance_workbench_runner.gd
       - name: "UI: render four editor tabs and compact item results"
-        run: timeout 120s godot --headless --path . --script res://tests/ui/item_generator_lab_smoke.gd
+        run: timeout 35s godot --headless --path . --script res://tests/ui/item_generator_lab_smoke.gd
