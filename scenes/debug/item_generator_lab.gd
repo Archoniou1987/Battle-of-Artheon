@@ -465,8 +465,8 @@ func _compact_line(v: Dictionary, level: int) -> String:
 		keys.sort()
 		for par in keys:
 			req_text.append("%s %d" % [SHORT.get(par, par), int(req[par])])
-		parts.append("треб.: " + ", ".join(req_text))
-	return "   ".join(parts)
+		parts.append("треб.: " + ", ".join(PackedStringArray(req_text)))
+	return "   ".join(PackedStringArray(parts))
 
 func _compact_pars(stats: Dictionary, level: int) -> String:
 	var strings: Array[String] = []
@@ -480,4 +480,4 @@ func _compact_pars(stats: Dictionary, level: int) -> String:
 		if engine.is_percentage(key):
 			text_line += " (%.2f%%)" % engine.percentage(key, float(amount), level, par_settings)
 		strings.append(text_line)
-	return ", ".join(strings)
+	return ", ".join(PackedStringArray(strings))
