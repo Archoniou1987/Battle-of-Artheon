@@ -96,6 +96,7 @@ func default_par_settings(par: String) -> Dictionary:
 	return {"max":maximum, "min_level":first_level,
 		"rating100_lv1":10.0, "rating100_lv100":1.0,
 		"growth":1.0, "value_scale":1.0,
+		"gear_target_pct":15.0 if par == "PAR033" else 0.0,
 		"diminish_start_pct":0.0, "diminish_width_pct":15.0}
 
 func parameter_settings(par: String, overrides: Dictionary) -> Dictionary:
@@ -136,6 +137,14 @@ func required_rating(par: String, desired_percent: float, level: int, overrides:
 	var p := parameter_settings(par,overrides)
 	var k := lerpf(float(p["rating100_lv1"]),float(p["rating100_lv100"]),float(level-1)/99.0)
 	return 100.0 * desired_percent / maxf(0.00001,k)
+
+func expected_affix(par: String, level: int, overrides: Dictionary, global_scale: float = 1.0) -> float:
+	var p := parameter_settings(par,overrides)
+	if float(p["max"]) <= 0.0 or level < int(p["min_level"]):
+		return 0.0
+	var level_ratio := pow(float(level)/25.0,clampf(float(p["growth"]),0.1,5.0))
+	return minf(float(p["max"]),float(p["max"])*0.011*level_ratio*
+		float(p["value_scale"])*global_scale)
 
 func generate(config: Dictionary) -> Dictionary:
 	var low := clampi(int(config.get("min_level",10)),1,100)
