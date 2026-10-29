@@ -16,6 +16,7 @@ static func build(config: Dictionary, result: Dictionary, lab: ItemBalanceWorkbe
 	var lines: Array[String] = []
 	lines.append(_csv_line(COLUMNS))
 	_append_meta(lines, "format", SCHEMA)
+	_append_meta(lines, "archetype_id", config.get("archetype_id", "ARC-%04d" % int(config.get("archetype_number",1))))
 	_append_meta(lines, "generator", "ItemBalanceWorkbench: independent BoA formulas")
 	_append_meta(lines, "generator_version", 1)
 	_append_meta(lines, "requirement_rule", ItemBalanceWorkbench.REQUIREMENT_RULE)
