@@ -144,7 +144,6 @@ func _knob(parent: Control, label_text: String, key: String, value: float, minim
 	spin.step = step
 	spin.value = value
 	spin.custom_minimum_size.x = 126
-	spin.select_all_on_focus = true
 	field.add_child(spin)
 	knobs[key] = spin
 
@@ -158,7 +157,7 @@ func _settings() -> Dictionary:
 		c[key] = knobs[key].value
 	c["count"] = int(c["count"])
 	c["level_min"] = int(c["level_min"])
-	c["level_max"] = maxi(c["level_min"], int(c["level_max"]))
+	c["level_max"] = maxi(int(c["level_min"]), int(c["level_max"]))
 	c["seed"] = int(c["seed"])
 	c["viewer_level"] = int(c["viewer_level"])
 	c["comparison"] = mode_select.selected == 1
@@ -265,7 +264,7 @@ func _values_text(values: Dictionary, viewer_level: int, bonus: bool = true) -> 
 			var share := float(amount) / 100.0 * (10.0 - 9.0 * float(viewer_level - 1) / 99.0)
 			line += " (%.2f%%)" % share
 		result.append(line)
-	return "\n".join(result)
+	return "\n".join(PackedStringArray(result))
 
 func _panel(border: Color = BORDER) -> PanelContainer:
 	var pane := PanelContainer.new()
