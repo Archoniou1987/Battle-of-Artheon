@@ -88,7 +88,62 @@ func _test() -> void:
 		failures.append("Diminishing must reduce marginal gear crit, not raw base")
 	if lab.default_par_settings("PAR033")["gear_target_pct"] != 15.0:
 		failures.append("Gear contribution target not exposed")
-	# Editable laboratory settings must survive closing the screen.
+
+	# Requirement attributes must represent both form identity and the specialization.
+	config["par_weights"] = {"PAR033": 100.0}
+	config["par_settings"] = {}
+	var crit_axe: Dictionary = lab.generate(config)
+	for item_raw in crit_axe.get("rows", []):
+		var item: Dictionary = item_raw
+		for version_raw in item["variants"]:
+			var version: Dictionary = version_raw
+			var requirements: Dictionary = version["requirements"]
+			if not requirements.has("PAR001") or not requirements.has("PAR003") or requirements.has("PAR006"):
+				failures.append("Critical 2H axe requirements must be STR+INTU")
+				break
+			if version.get("requirement_rule", "") != ItemBalanceWorkbench.REQUIREMENT_RULE:
+				failures.append("Requirement provenance missing from generated item")
+				break
+	config["par_weights"] = {"PAR031": 100.0}
+	var dodge_axe: Dictionary = lab.generate(config)
+	for item_raw in dodge_axe.get("rows", []):
+		var item: Dictionary = item_raw
+		var requirements: Dictionary = (item["variants"][0] as Dictionary)["requirements"]
+		if not requirements.has("PAR001") or not requirements.has("PAR002"):
+			failures.append("Dodge 2H axe requirements must be STR+DEX")
+			break
+	config["par_weights"] = {}
+	var fallback: Dictionary = lab.generate(config)
+	var fallback_req: Dictionary = (((fallback.get("rows",[]) as Array)[0] as Dictionary)["variants"][0] as Dictionary)["requirements"]
+	if not fallback_req.has("PAR001") or not fallback_req.has("PAR006"):
+		failures.append("Without a specialization the axe should keep STR+END")
+	config["par_weights"] = {"PAR033": 100.0}
+	config["archetype_name"] = "Крит; двойные \"кавычки\""
+	var export_result: Dictionary = lab.generate(config)
+	var csv := ItemLabCsvExporter.build(config, export_result, lab)
+	if not csv.begins_with("\uFEFF"):
+		failures.append("CSV missing UTF-8 BOM")
+	if not csv.contains("BOA_ITEM_LAB_CSV_V1") or not csv.contains("PAR_EFFECTIVE") or not csv.contains("requirements_json"):
+		failures.append("CSV missing metadata, effective PAR or explicit columns")
+	if not csv.contains("Крит; двойные"):
+		failures.append("CSV lost semicolon/Cyrillic inside archetype")
+	if not csv.contains("item_primary_plus_weighted_affix_secondary_v1"):
+		failures.append("CSV missing requirement formula provenance")
+	var item_rows := 0
+	var rarity_variants := 0
+	for item_raw in export_result["rows"]:
+		rarity_variants += ((item_raw as Dictionary)["variants"] as Array).size()
+	for line in csv.split("\n"):
+		if line.begins_with("\"ITEM\";"):
+			item_rows += 1
+	if item_rows != rarity_variants:
+		failures.append("CSV must contain exactly one row per generated rarity variant")
+	if csv != ItemLabCsvExporter.build(config, export_result, lab):
+		failures.append("Identical snapshot must produce identical CSV")
+	var quotes := ItemLabCsvExporter._csv_line(["a;b", "x\"y"])
+	if quotes != "\"a;b\";\"x\"\"y\"":
+		failures.append("CSV escaping failed")
+		# Editable laboratory settings must survive closing the screen.
 	var profile_path := "user://boa_item_lab_ci_profile.json"
 	var profile_data := {"archetype_name":"Mobile test","preview_level":30,
 		"par_weights":{"PAR033":75.0,"PAR031":25.0},
