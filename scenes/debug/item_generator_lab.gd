@@ -10,6 +10,7 @@ const SHORT := {"PAR001":"STR", "PAR002":"DEX", "PAR003":"INTU",
 	"PAR004":"INT", "PAR005":"WIS", "PAR006":"END"}
 
 var engine := ItemBalanceWorkbench.new()
+var numeric_keypad: ItemLabNumericKeypad
 var tab: TabContainer
 var archetype_name: LineEdit
 var par_picker: OptionButton
@@ -79,6 +80,8 @@ func _build() -> void:
 	_build_par_tab()
 	_build_items_tab()
 	_build_results_tab()
+	numeric_keypad = ItemLabNumericKeypad.new()
+	add_child(numeric_keypad)
 
 func _save_profile() -> void:
 	var stored := _settings()
@@ -161,7 +164,21 @@ func _spin(parent: Control, label_text: String, val: float, low: float,
 	s.value = val
 	s.custom_minimum_size.x = 128
 	field.add_child(s)
+	_attach_numeric_input(field, s, label_text)
 	return s
+
+func _attach_numeric_input(parent: Control, spin: SpinBox, caption_text: String) -> void:
+	# Numeric controls still expose SpinBox.value, so existing generator/formula
+	# bindings and save/load remain unchanged. The touch target opens a keypad.
+	spin.hide()
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(118, 42)
+	button.text = ItemLabNumericKeypad._display_number(spin.value, spin.step) + "  ⌨"
+	button.pressed.connect(func() -> void: numeric_keypad.open_for(spin, caption_text))
+	spin.value_changed.connect(func(_value: float) -> void:
+		button.text = ItemLabNumericKeypad._display_number(spin.value, spin.step) + "  ⌨")
+	spin.set_meta("lab_numeric_button", button)
+	parent.add_child(button)
 
 func _row(parent: Control) -> HFlowContainer:
 	var h := HFlowContainer.new()
@@ -215,6 +232,22 @@ func _build_archetype_tab() -> void:
 		par_weights.clear()
 		_refresh_archetype())
 	quick.add_child(zero)
+	var simple := _row(body)
+	for preset in [
+		{"name":"Крит", "weights":{"PAR033":100.0}},
+		{"name":"Уворот", "weights":{"PAR031":100.0}},
+		{"name":"Сила", "weights":{"PAR001":100.0}},
+		{"name":"Крит + сила крита", "weights":{"PAR033":65.0,"PAR035":35.0}}
+	]:
+		var b := Button.new()
+		b.text = String(preset["name"])
+		var configuration: Dictionary = preset["weights"]
+		var display_name := String(preset["name"])
+		b.pressed.connect(func() -> void:
+			archetype_name.text = display_name
+			par_weights = configuration.duplicate(true)
+			_refresh_archetype())
+		simple.add_child(b)
 	_refresh_archetype()
 
 func _add_selected_par() -> void:
@@ -254,6 +287,7 @@ func _refresh_archetype() -> void:
 			par_weights[key] = v
 			_update_weight_label())
 		line.add_child(weight)
+		_attach_numeric_input(line, weight, "Вес %s" % key)
 		var remove := Button.new()
 		remove.text = "×"
 		remove.pressed.connect(func() -> void:
