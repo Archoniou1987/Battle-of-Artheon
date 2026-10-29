@@ -1,7 +1,7 @@
 class_name ItemGeneratorLabScreen
 extends Control
 
-## Four standard editor tabs. All changes are session-only and do not touch game saves.
+## Four standard editor tabs. Editable lab profiles live separately in user://.
 const TINT := {
 	"white": Color("#dddddd"), "green": Color("#71d88b"),
 	"blue": Color("#73adff"), "purple": Color("#c795ed")
@@ -17,6 +17,8 @@ var par_rows: VBoxContainer
 var weights_label: Label
 var par_weights: Dictionary = {}
 var par_settings: Dictionary = {}
+var preview_level_spin: SpinBox
+var profile_status: Label
 var par_search: LineEdit
 var par_list: ItemList
 var detail: VBoxContainer
@@ -36,7 +38,11 @@ var result_rows: Array = []
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	par_weights = engine.default_archetype()
+	var saved := engine.load_profile()
 	_build()
+	if not saved.is_empty():
+		_apply_profile(saved)
+		profile_status.text = "Профиль восстановлен из памяти устройства"
 	call_deferred("_run_test")
 
 func _build() -> void:
@@ -53,6 +59,19 @@ func _build() -> void:
 	close.text = "В город"
 	close.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
 	header.add_child(close)
+	var profile_line := HBoxContainer.new()
+	panel.add_child(profile_line)
+	var save_button := Button.new()
+	save_button.text = "Сохранить настройки"
+	save_button.pressed.connect(_save_profile)
+	profile_line.add_child(save_button)
+	var load_button := Button.new()
+	load_button.text = "Загрузить"
+	load_button.pressed.connect(_load_profile)
+	profile_line.add_child(load_button)
+	profile_status = _text("Несохранённый лабораторный профиль · отдельный от сохранений игрока", 12, Color("#b6c0ce"))
+	profile_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	profile_line.add_child(profile_status)
 	tab = TabContainer.new()
 	tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.add_child(tab)
@@ -60,6 +79,55 @@ func _build() -> void:
 	_build_par_tab()
 	_build_items_tab()
 	_build_results_tab()
+
+func _save_profile() -> void:
+	var stored := _settings()
+	stored["preview_level"] = int(preview_level_spin.value)
+	if engine.save_profile(stored):
+		profile_status.text = "Настройки сохранены локально (не в игровых сохранениях)"
+	else:
+		profile_status.text = "Не удалось сохранить настройки!"
+
+func _load_profile() -> void:
+	var saved := engine.load_profile()
+	if saved.is_empty():
+		profile_status.text = "Сохранённого профиля нет"
+		return
+	_apply_profile(saved)
+	profile_status.text = "Настройки загружены"
+	_run_test()
+
+func _apply_profile(saved: Dictionary) -> void:
+	var weights: Variant = saved.get("par_weights", null)
+	if weights is Dictionary:
+		par_weights.clear()
+		for raw in weights:
+			var key := String(raw)
+			if engine.registry.has(key) and (weights[raw] is float or weights[raw] is int):
+				par_weights[key] = clampf(float(weights[raw]),0.0,10000.0)
+	var overrides: Variant = saved.get("par_settings", null)
+	if overrides is Dictionary:
+		par_settings.clear()
+		for raw in overrides:
+			var key := String(raw)
+			if engine.registry.has(key) and overrides[raw] is Dictionary:
+				par_settings[key] = (overrides[raw] as Dictionary).duplicate(true)
+	archetype_name.text = String(saved.get("archetype_name",archetype_name.text)).substr(0,100)
+	_refresh_archetype()
+	preview_level_spin.value = clampf(float(saved.get("preview_level",25)),1.0,100.0)
+	_filter_pars()
+	for key in controls:
+		if saved.has(key):
+			(controls[key] as SpinBox).value = clampf(float(saved[key]),(controls[key] as SpinBox).min_value,(controls[key] as SpinBox).max_value)
+	mode_picker.select(0 if bool(saved.get("unique_templates",true)) else 1)
+	var rarities: Variant = saved.get("rarities",null)
+	if rarities is Dictionary:
+		for key in quality_checks:
+			(quality_checks[key] as CheckBox).button_pressed = float(rarities.get(key,1.0)) > 0.0
+	var types: Variant = saved.get("types",null)
+	if types is Array:
+		for key in type_checks:
+			(type_checks[key] as CheckBox).button_pressed = types.has(key)
 
 func _page(title: String) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
@@ -202,7 +270,10 @@ func _update_weight_label() -> void:
 func _build_par_tab() -> void:
 	var body := _page("2 · PAR шкала")
 	body.add_child(_text("PAR = MAX = % · по уровням", 16))
-	body.add_child(_text("Выбери PAR, настрой его максимум, уровень появления, рост значения и перевод рейтинга в %. Изменения действуют только в лаборатории.", 12, Color("#aab9c9")))
+	body.add_child(_text("Главный ориентир: сколько % дают 100 рейтинга на выбранном уровне. Настройки независимы от боевого движка.", 12, Color("#aab9c9")))
+	var preview_row := _row(body)
+	preview_level_spin = _spin(preview_row, "Уровень героя для 100 рейтинга", 25.0, 1.0, 100.0, 1.0)
+	preview_level_spin.value_changed.connect(func(_v: float) -> void: _update_par_preview())
 	par_search = LineEdit.new()
 	par_search.placeholder_text = "Найти PAR по номеру или названию"
 	par_search.text_changed.connect(func(_v: String) -> void: _filter_pars())
@@ -289,22 +360,28 @@ func _update_par_preview() -> void:
 		existing.name = "ParPreview"
 		detail.add_child(existing)
 	var options: Dictionary = engine.parameter_settings(selected_par, par_settings)
-	var sample_level := 25
+	var sample_level := int(preview_level_spin.value)
 	if engine.is_percentage(selected_par):
-		existing.text = "Lv%d: 100 рейтинга = %.2f%%; MAX %.0f ≈ %.2f%%." % [
-			sample_level, engine.percentage(selected_par,100.0,sample_level,par_settings),
-			float(options["max"]),engine.percentage(selected_par,float(options["max"]),sample_level,par_settings)]
+		var hundred := engine.percentage(selected_par,100.0,sample_level,par_settings)
+		var at_max := engine.percentage(selected_par,float(options["max"]),sample_level,par_settings)
+		existing.text = "100 рейтинга = %.2f%% на Lv%d | MAX %.0f = %.2f%%" % [
+			hundred,sample_level,float(options["max"]),at_max]
+		existing.text += "\nДля сравнения: Lv1 %.2f%% · Lv25 %.2f%% · Lv30 %.2f%% · Lv100 %.2f%% за 100 рейтинга." % [
+			engine.percentage(selected_par,100.0,1,par_settings),
+			engine.percentage(selected_par,100.0,25,par_settings),
+			engine.percentage(selected_par,100.0,30,par_settings),
+			engine.percentage(selected_par,100.0,100,par_settings)]
 		var target := float(options["gear_target_pct"])
 		if target > 0.0:
-			var rating25 := engine.required_rating(selected_par,target,25,par_settings)
-			var rating30 := engine.required_rating(selected_par,target,30,par_settings)
-			var one_roll := engine.expected_affix(selected_par,25,par_settings)
-			existing.text += "\nЦель от вещей: %.1f%%. Lv25 ≈ %.0f рейтинга, Lv30 ≈ %.0f; один бонус Lv25 ≈ %.0f, потребуется ≈%.1f таких бонусов." % [
-				target,rating25,rating30,one_roll,rating25/maxf(1.0,one_roll)]
+			var goal := engine.required_rating(selected_par,target,sample_level,par_settings)
+			var one_roll := engine.expected_affix(selected_par,sample_level,par_settings)
+			existing.text += "\nЦель от вещей: %.1f%% ≈ %.0f рейтинга (без DR). Один бонус на Lv%d ≈ %.0f рейтинга." % [
+				target,goal,sample_level,one_roll]
 		if float(options["diminish_start_pct"]) > 0.0:
-			existing.text += "\nВключён DR: реальный прирост от вещей зависит от уже накопленных очков персонажа."
+			existing.text += "\nDR активен: прирост от 100 рейтинга зависит от уже накопленных рейтингов."
 	else:
-		existing.text = "MAX %.0f · первый Item Lv %d." % [float(options["max"]), int(options["min_level"])]
+		existing.text = "Не процентный PAR: MAX %.0f · первый Item Lv %d." % [
+			float(options["max"]),int(options["min_level"])]
 
 func _par_name(par: String) -> String:
 	return engine.par_name(par)
