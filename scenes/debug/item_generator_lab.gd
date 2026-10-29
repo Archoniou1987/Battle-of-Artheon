@@ -116,11 +116,11 @@ func _build_archetype_tab() -> void:
 	var add_line := _row(body)
 	par_picker = OptionButton.new()
 	par_picker.custom_minimum_size.x = 220
-	var keys: Array = engine.source.database.get("parameters", {}).keys()
+	var keys: Array = engine.parameter_ids()
 	keys.sort()
 	for par in keys:
 		var p := String(par)
-		var meta: Dictionary = engine.source.database["parameters"][p]
+		var meta: Dictionary = engine.registry[p]
 		par_picker.add_item("%s · %s" % [p, String(meta.get("name", ""))])
 		par_picker.set_item_metadata(par_picker.item_count - 1, p)
 	add_line.add_child(par_picker)
@@ -221,7 +221,7 @@ func _filter_pars() -> void:
 		return
 	par_list.clear()
 	var search := par_search.text.strip_edges().to_lower()
-	var keys: Array = engine.source.database.get("parameters", {}).keys()
+	var keys: Array = engine.parameter_ids()
 	keys.sort()
 	for raw in keys:
 		var key := String(raw)
@@ -256,6 +256,9 @@ func _selected_par(index: int) -> void:
 		var percents := _row(detail)
 		_detail_spin(percents, "100 рейтинга на Lv1 = %", "rating100_lv1", float(current["rating100_lv1"]), 0.0, 100.0, 0.1)
 		_detail_spin(percents, "100 рейтинга на Lv100 = %", "rating100_lv100", float(current["rating100_lv100"]), 0.0, 100.0, 0.1)
+		var dimin := _row(detail)
+		_detail_spin(dimin, "DR с % (0 = выкл.)", "diminish_start_pct", float(current["diminish_start_pct"]), 0.0, 100.0, 1.0)
+		_detail_spin(dimin, "DR ширина %", "diminish_width_pct", float(current["diminish_width_pct"]), 0.1, 100.0, 0.5)
 	else:
 		detail.add_child(_text("Этот PAR не является процентным рейтингом; его значение показывается числом.", 12, Color("#aab9c9")))
 	var reset := Button.new()
@@ -287,14 +290,15 @@ func _update_par_preview() -> void:
 	var options: Dictionary = engine.parameter_settings(selected_par, par_settings)
 	var sample_level := 25
 	if engine.is_percentage(selected_par):
-		existing.text = "На Lv%d: 100 рейтинга ≈ %.2f%%; MAX %.0f ≈ %.2f%% (до боевых ограничений)." % [
+		existing.text = "Lv%d: 100 рейтинга = %.2f%%; MAX %.0f = %.2f%%. Для +15%% от экипировки на Lv25 требуется ≈%.0f рейтинга (до DR). При DR вклад зависит от уже накопленного рейтинга." % [
 			sample_level, engine.percentage(selected_par, 100.0, sample_level, par_settings),
-			float(options["max"]), engine.percentage(selected_par, float(options["max"]), sample_level, par_settings)]
+			float(options["max"]), engine.percentage(selected_par, float(options["max"]), sample_level, par_settings),
+			engine.required_rating(selected_par, 15.0, 25, par_settings)]
 	else:
 		existing.text = "MAX %.0f · первый Item Lv %d." % [float(options["max"]), int(options["min_level"])]
 
 func _par_name(par: String) -> String:
-	return String(engine.source.database.get("parameters", {}).get(par, {}).get("name", par))
+	return engine.par_name(par)
 
 func _build_items_tab() -> void:
 	var body := _page("3 · Предметы")
