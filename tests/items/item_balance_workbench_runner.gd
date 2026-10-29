@@ -88,6 +88,23 @@ func _test() -> void:
 		failures.append("Diminishing must reduce marginal gear crit, not raw base")
 	if lab.default_par_settings("PAR033")["gear_target_pct"] != 15.0:
 		failures.append("Gear contribution target not exposed")
+	# Editable laboratory settings must survive closing the screen.
+	var profile_path := "user://boa_item_lab_ci_profile.json"
+	var profile_data := {"archetype_name":"Mobile test","preview_level":30,
+		"par_weights":{"PAR033":75.0,"PAR031":25.0},
+		"par_settings":{"PAR033":{"rating100_lv1":12.0,"max":4200.0}},
+		"types":["Топор 2H · Физ"]}
+	if not lab.save_profile(profile_data,profile_path):
+		failures.append("Cannot save local test profile")
+	else:
+		var restored := lab.load_profile(profile_path)
+		if JSON.stringify(restored) != JSON.stringify(profile_data):
+			failures.append("Saved lab profile was not restored correctly")
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(profile_path))
+	if not lab.load_profile(profile_path).is_empty():
+		failures.append("Missing profile should load as empty")
+	if not is_equal_approx(lab.percentage("PAR033",100.0,25,{}),7.818181818):
+		failures.append("100 rating must equal 7.82% at Lv25")
 		print("ITEM_WORKBENCH_TEST=", "PASS" if failures.is_empty() else "FAIL")
 	print(JSON.stringify({"templates":rows.size(),"samples":(random_run.get("rows",[]) as Array).size(),
 		"crit_before":before_value,"crit_after":after_value,"errors":failures}))
