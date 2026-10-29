@@ -40,6 +40,27 @@ func _test() -> void:
 	if screen.par_list.item_count != 1:
 		failed.append("PAR search failed")
 	screen.tab.current_tab = 1
+	# Real controls must save/load all edit states, not just render them.
+	screen.par_weights["PAR033"] = 84.0
+	screen.par_settings["PAR033"] = {"rating100_lv1":12.0,"max":5100.0}
+	screen.preview_level_spin.value = 30.0
+	screen.archetype_name.text = "Mobile test saved"
+	screen._save_profile()
+	screen.par_weights.clear()
+	screen.par_settings.clear()
+	screen.preview_level_spin.value = 5.0
+	screen._load_profile()
+	if not is_equal_approx(float(screen.par_weights.get("PAR033",0)),84.0):
+		failed.append("Archetype weight did not persist")
+	if not is_equal_approx(float((screen.par_settings.get("PAR033",{}) as Dictionary).get("max",0)),5100.0):
+		failed.append("PAR max did not persist")
+	if int(screen.preview_level_spin.value) != 30:
+		failed.append("PAR comparison level did not persist")
+	if screen.archetype_name.text != "Mobile test saved":
+		failed.append("Archetype name did not persist")
+	if not screen.engine.registry.has("PAR033"):
+		failed.append("Local PAR registry missing")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(ItemBalanceWorkbench.PROFILE_PATH))
 	print("ITEM_GENERATOR_LAB_UI=", "PASS" if failed.is_empty() else "FAIL")
 	print(JSON.stringify({"tabs":screen.tab.get_tab_count(), "items":screen.result_rows.size(), "failures":failed}))
 	quit(0 if failed.is_empty() else 1)
