@@ -73,7 +73,22 @@ func _test() -> void:
 	if not is_equal_approx(lab.percentage("PAR033",100,25,config["par_settings"]),
 		2.0 * lab.percentage("PAR033",100,25,{})):
 		failures.append("Edited rating scale did not affect percentages")
-	print("ITEM_WORKBENCH_TEST=", "PASS" if failures.is_empty() else "FAIL")
+	# 50/50 specialization benchmark: roughly 15% from primary stats, 15% from gear.
+	var target25 := lab.required_rating("PAR033",15.0,25,{})
+	var target30 := lab.required_rating("PAR033",15.0,30,{})
+	if target25 < 190.0 or target25 > 195.0 or target30 < 200.0 or target30 > 208.0:
+		failures.append("Unexpected gear rating target at Lv25-30")
+	if not is_equal_approx(lab.expected_affix("PAR033",25,{}),41.25):
+		failures.append("Standalone item formula no longer produces expected crit budget")
+	var soft_cap := {"PAR033":{"diminish_start_pct":20.0,"diminish_width_pct":15.0}}
+	var primary_rating := 185.0
+	var raw_gain := lab.equipment_contribution("PAR033",primary_rating,target25,25,{})
+	var dampened_gain := lab.equipment_contribution("PAR033",primary_rating,target25,25,soft_cap)
+	if not is_equal_approx(raw_gain,15.0) or dampened_gain >= raw_gain:
+		failures.append("Diminishing must reduce marginal gear crit, not raw base")
+	if lab.default_par_settings("PAR033")["gear_target_pct"] != 15.0:
+		failures.append("Gear contribution target not exposed")
+		print("ITEM_WORKBENCH_TEST=", "PASS" if failures.is_empty() else "FAIL")
 	print(JSON.stringify({"templates":rows.size(),"samples":(random_run.get("rows",[]) as Array).size(),
 		"crit_before":before_value,"crit_after":after_value,"errors":failures}))
 	quit(0 if failures.is_empty() else 1)
