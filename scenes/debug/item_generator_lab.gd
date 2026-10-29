@@ -7,13 +7,15 @@ const TINT := {
 	"blue": Color("#73adff"), "purple": Color("#c795ed")
 }
 const SHORT := {"PAR001":"STR", "PAR002":"DEX", "PAR003":"INTU",
-	"PAR004":"INT", "PAR005":"WIS", "PAR006":"END"}
+	"PAR004":"INT", "PAR005":"WIS", "PAR006":"STA"}
 
 var engine := ItemBalanceWorkbench.new()
 var numeric_keypad: ItemLabNumericKeypad
 var tab: TabContainer
 var archetype_name: LineEdit
 var par_picker: OptionButton
+var requirement_first: OptionButton
+var requirement_second: OptionButton
 var par_rows: VBoxContainer
 var weights_label: Label
 var par_weights: Dictionary = {}
@@ -119,6 +121,7 @@ func _apply_profile(saved: Dictionary) -> void:
 			if engine.registry.has(key) and overrides[raw] is Dictionary:
 				par_settings[key] = (overrides[raw] as Dictionary).duplicate(true)
 	archetype_name.text = String(saved.get("archetype_name",archetype_name.text)).substr(0,100)
+	_restore_requirement_choices(saved)
 	_refresh_archetype()
 	preview_level_spin.value = clampf(float(saved.get("preview_level",25)),1.0,100.0)
 	_filter_pars()
@@ -201,6 +204,11 @@ func _build_archetype_tab() -> void:
 	archetype_name.text = "Мобильный"
 	archetype_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(archetype_name)
+	body.add_child(_text("Требования ко ВСЕМ предметам архетипа (только PAR, без чисел)", 14))
+	var req_row := _row(body)
+	requirement_first = _requirement_choice(req_row, "Требование 1")
+	requirement_second = _requirement_choice(req_row, "Требование 2")
+	body.add_child(_text("Например DEX + STA (PAR002 + PAR006). Значение каждого требования зависит от уровня и слота. При выборе «Авто» для обоих действует прежнее правило.", 12, Color("#aab9c9")))
 	var add_line := _row(body)
 	par_picker = OptionButton.new()
 	par_picker.custom_minimum_size.x = 220
@@ -252,6 +260,46 @@ func _build_archetype_tab() -> void:
 			_refresh_archetype())
 		simple.add_child(b)
 	_refresh_archetype()
+
+func _requirement_choice(parent: Control, caption: String) -> OptionButton:
+	var box := VBoxContainer.new()
+	box.custom_minimum_size.x = 140
+	parent.add_child(box)
+	box.add_child(_text(caption, 12, Color("#bfcad6")))
+	var picker := OptionButton.new()
+	picker.custom_minimum_size = Vector2(140, 42)
+	picker.add_item("Авто / нет")
+	picker.set_item_metadata(0, "")
+	for par in ParCalculationService.PRIMARY_IDS:
+		var key := String(par)
+		var shorthand := String(SHORT.get(key,key))
+		var suffix := " (END)" if key == "PAR006" else ""
+		picker.add_item("%s%s · %s" % [shorthand,suffix,key])
+		picker.set_item_metadata(picker.item_count-1,key)
+	box.add_child(picker)
+	return picker
+
+func _selected_requirement_pars() -> Array:
+	var chosen: Array = []
+	for picker in [requirement_first, requirement_second]:
+		if picker == null or picker.selected < 0:
+			continue
+		var par := String(picker.get_item_metadata(picker.selected))
+		if not par.is_empty():
+			chosen.append(par)
+	return chosen
+
+func _restore_requirement_choices(saved: Dictionary) -> void:
+	var chosen: Variant = saved.get("requirement_pars", [])
+	var values: Array = chosen if chosen is Array else []
+	for n in range(2):
+		var picker: OptionButton = [requirement_first, requirement_second][n]
+		var requested := String(values[n]) if n < values.size() else ""
+		picker.select(0)
+		for i in range(picker.item_count):
+			if String(picker.get_item_metadata(i)) == requested:
+				picker.select(i)
+				break
 
 func _add_selected_par() -> void:
 	if par_picker.item_count == 0:
@@ -509,7 +557,7 @@ func _build_results_tab() -> void:
 	csv_button.pressed.connect(_export_csv)
 	body.add_child(csv_button)
 	body.add_child(_text("CSV отражает настройки последней генерации. После изменения PAR или типов предметов запусти генерацию заново.", 12, Color("#acb9c5")))
-	body.add_child(_text("Одна строка = один исходный/производный шаблон; ниже 1–4 строки доступных редкостей. В режиме экземпляров каждая строка — отдельный бросок.", 12, Color("#acb9c5")))
+	body.add_child(_text("Одна строка = один шаблон; ниже варианты редкости. Требования: выбранные PAR архетипа, а числовые значения зависят от слота и уровня.", 12, Color("#acb9c5")))
 	result_box = VBoxContainer.new()
 	result_box.add_theme_constant_override("separation", 3)
 	body.add_child(result_box)
@@ -547,6 +595,7 @@ func _settings() -> Dictionary:
 		rarities[quality] = 1.0 if quality_checks[quality].button_pressed else 0.0
 	var c := {
 		"types":types, "par_weights":par_weights.duplicate(true),
+		"requirement_pars":_selected_requirement_pars(),
 		"par_settings":par_settings.duplicate(true),
 		"unique_templates":mode_picker.selected == 0,
 		"rarities":rarities, "archetype_name":archetype_name.text
@@ -625,7 +674,7 @@ func _compact_line(v: Dictionary, level: int) -> String:
 		keys.sort()
 		for par in keys:
 			req_text.append("%s %d" % [SHORT.get(par, par), int(req[par])])
-		parts.append("треб. (тип + арх.): " + ", ".join(PackedStringArray(req_text)))
+		parts.append("треб.: " + ", ".join(PackedStringArray(req_text)))
 	return "   ".join(PackedStringArray(parts))
 
 func _compact_pars(stats: Dictionary, level: int) -> String:
