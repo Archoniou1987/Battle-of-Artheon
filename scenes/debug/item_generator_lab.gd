@@ -1,289 +1,483 @@
 class_name ItemGeneratorLabScreen
 extends Control
 
-## Standalone developer UI. Does not grant generated items or alter real equipment.
-const BG := Color("#111922")
-const PANEL := Color("#202936")
-const BORDER := Color("#52606e")
-const PALETTE := {
-	"white": Color("#e4e4e4"),
-	"green": Color("#57d779"),
-	"blue": Color("#65a9f9"),
-	"purple": Color("#c38cf4")
+## Four standard editor tabs. All changes are session-only and do not touch game saves.
+const TINT := {
+	"white": Color("#dddddd"), "green": Color("#71d88b"),
+	"blue": Color("#73adff"), "purple": Color("#c795ed")
 }
-const PERCENT_PARS := ["PAR030", "PAR031", "PAR032", "PAR033", "PAR034", "PAR035",
-	"PAR100", "PAR101", "PAR102", "PAR103", "PAR104", "PAR105", "PAR106",
-	"PAR107", "PAR108", "PAR109", "PAR110", "PAR111", "PAR112",
-	"PAR113", "PAR114", "PAR115", "PAR116", "PAR117", "PAR118",
-	"PAR119", "PAR120", "PAR121", "PAR122", "PAR123", "PAR124",
-	"PAR151", "PAR190", "PAR191", "PAR192", "PAR193", "PAR194", "PAR195", "PAR196"]
+const SHORT := {"PAR001":"STR", "PAR002":"DEX", "PAR003":"INTU",
+	"PAR004":"INT", "PAR005":"WIS", "PAR006":"END"}
 
-var engine := ItemGeneratorLab.new()
-var knobs: Dictionary = {}
-var archetype_list: ItemList
-var mode_select: OptionButton
-var card_grid: GridContainer
-var status: Label
+var engine := ItemBalanceWorkbench.new()
+var tab: TabContainer
+var archetype_name: LineEdit
+var par_picker: OptionButton
+var par_rows: VBoxContainer
+var weights_label: Label
+var par_weights: Dictionary = {}
+var par_settings: Dictionary = {}
+var par_search: LineEdit
+var par_list: ItemList
+var detail: VBoxContainer
+var detail_fields: Dictionary = {}
+var selected_par := ""
+var controls: Dictionary = {}
+var type_list: VBoxContainer
+var type_search: LineEdit
+var type_checks: Dictionary = {}
+var quality_checks: Dictionary = {}
+var mode_picker: OptionButton
+var result_box: VBoxContainer
+var summary: Label
 var result_items: Array = []
-var _last_columns := 0
+var result_rows: Array = []
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	par_weights = engine.default_archetype()
 	_build()
-	get_viewport().size_changed.connect(_resize_cards)
-	call_deferred("_generate")
+	call_deferred("_run_test")
 
 func _build() -> void:
-	var bg := ColorRect.new()
-	bg.color = BG
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var outer := MarginContainer.new()
-	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	outer.add_theme_constant_override("margin_left", 12)
-	outer.add_theme_constant_override("margin_right", 12)
-	outer.add_theme_constant_override("margin_top", 12)
-	outer.add_theme_constant_override("margin_bottom", 12)
-	add_child(outer)
-	var scroller := ScrollContainer.new()
-	scroller.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroller.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	outer.add_child(scroller)
-	var root := VBoxContainer.new()
-	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root.add_theme_constant_override("separation", 12)
-	scroller.add_child(root)
+	var panel := VBoxContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_theme_constant_override("separation", 4)
+	add_child(panel)
 	var header := HBoxContainer.new()
-	root.add_child(header)
-	var title := _text("BoA · ITEM GENERATOR LAB", 22, Color("#e8d6a5"))
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
-	var back := Button.new()
-	back.text = "← В город"
-	back.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
-	header.add_child(back)
-	root.add_child(_text("Реальные шаблоны Project 25 · экспериментальные экземпляры · никаких изменений лута и сохранений.", 13, Color("#a8bac8")))
-	var settings := _panel()
-	root.add_child(settings)
-	var settings_body := VBoxContainer.new()
-	settings_body.add_theme_constant_override("separation", 8)
-	settings.add_child(settings_body)
-	settings_body.add_child(_text("ПАРАМЕТРЫ ГЕНЕРАЦИИ", 17, Color("#f2dbb6")))
-	var group := HFlowContainer.new()
-	group.add_theme_constant_override("h_separation", 10)
-	group.add_theme_constant_override("v_separation", 6)
-	settings_body.add_child(group)
-	_knob(group, "Количество", "count", 100, 4, 200, 1)
-	_knob(group, "Item Lv от", "level_min", 10, 1, 100, 1)
-	_knob(group, "Item Lv до", "level_max", 30, 1, 100, 1)
-	_knob(group, "Seed", "seed", 20261029, 1, 99999999, 1)
-	_knob(group, "Треб. высок. %", "high_requirement_pct", 70, 0, 150, 5)
-	_knob(group, "Треб. средн. %", "medium_requirement_pct", 40, 0, 150, 5)
-	_knob(group, "Вес GRP011 ×", "crit_weight", 1, 0, 10, 0.25)
-	_knob(group, "Величина PAR ×", "par_value_scale", 1, 0.1, 5, 0.1)
-	_knob(group, "Разброс ± %", "spread_pct", 5, 0, 20, 1)
-	_knob(group, "Урон ×", "damage_scale", 1, 0.25, 3, 0.1)
-	_knob(group, "Броня ×", "armour_scale", 1, 0.25, 3, 0.1)
-	_knob(group, "Уровень расчёта %", "viewer_level", 25, 1, 100, 1)
-	settings_body.add_child(_text("Веса редкостей (используются только среди разрешённых уровнем):", 13, Color("#bbc8d7")))
-	var rarities := HFlowContainer.new()
-	rarities.add_theme_constant_override("h_separation", 8)
-	rarities.add_theme_constant_override("v_separation", 6)
-	settings_body.add_child(rarities)
-	_knob(rarities, "Белая", "weight_white", 15, 0, 100, 5)
-	_knob(rarities, "Зелёная", "weight_green", 60, 0, 100, 5)
-	_knob(rarities, "Синяя", "weight_blue", 25, 0, 100, 5)
-	_knob(rarities, "Фиолетовая", "weight_purple", 0, 0, 100, 5)
-	var filters := HBoxContainer.new()
-	settings_body.add_child(filters)
-	filters.add_child(_text("Архетипы (можно несколько):", 14, Color("#f1dbb7")))
-	var all_button := Button.new()
-	all_button.text = "Все"
-	all_button.pressed.connect(_select_all_archetypes)
-	filters.add_child(all_button)
-	var none_button := Button.new()
-	none_button.text = "Снять выбор"
-	none_button.pressed.connect(func() -> void: archetype_list.deselect_all())
-	filters.add_child(none_button)
-	archetype_list = ItemList.new()
-	archetype_list.select_mode = ItemList.SELECT_MULTI
-	archetype_list.custom_minimum_size.y = 170
-	archetype_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for archetype in engine.archetypes():
-		archetype_list.add_item(String(archetype))
-	settings_body.add_child(archetype_list)
-	settings_body.add_child(_text("Без выделения — все архетипы. Выбор нескольких — только эти архетипы.", 12, Color("#95a5b6")))
-	var actions := HFlowContainer.new()
-	actions.add_theme_constant_override("h_separation", 12)
-	settings_body.add_child(actions)
-	mode_select = OptionButton.new()
-	mode_select.add_item("Список · независимые предметы", 0)
-	mode_select.add_item("Сравнение · 4 редкости", 1)
-	actions.add_child(mode_select)
-	var run := Button.new()
-	run.text = "⚙ Сгенерировать"
-	run.pressed.connect(_generate)
-	actions.add_child(run)
-	status = _text("Готово к генерации", 14, Color("#e1c38a"))
-	root.add_child(status)
-	root.add_child(_text("Карточка: база → постоянные PAR → бонусы редкости → требования. Заблокированные цвета в сравнении помечаются как лабораторные.", 12, Color("#9aaaba")))
-	card_grid = GridContainer.new()
-	card_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card_grid.add_theme_constant_override("h_separation", 10)
-	card_grid.add_theme_constant_override("v_separation", 10)
-	root.add_child(card_grid)
+	panel.add_child(header)
+	var heading := _text("BoA · Генератор / баланс", 19)
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(heading)
+	var close := Button.new()
+	close.text = "В город"
+	close.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/main/main.tscn"))
+	header.add_child(close)
+	tab = TabContainer.new()
+	tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(tab)
+	_build_archetype_tab()
+	_build_par_tab()
+	_build_items_tab()
+	_build_results_tab()
 
-func _knob(parent: Control, label_text: String, key: String, value: float, minimum: float, maximum: float, step: float) -> void:
-	var field := VBoxContainer.new()
-	field.custom_minimum_size.x = 126
-	parent.add_child(field)
-	field.add_child(_text(label_text, 12, Color("#c3d0de")))
-	var spin := SpinBox.new()
-	spin.min_value = minimum
-	spin.max_value = maximum
-	spin.step = step
-	spin.value = value
-	spin.custom_minimum_size.x = 126
-	field.add_child(spin)
-	knobs[key] = spin
+func _page(title: String) -> VBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.name = title
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 8)
+	scroll.add_child(box)
+	return box
 
-func _select_all_archetypes() -> void:
-	for i in range(archetype_list.item_count):
-		archetype_list.select(i, false)
-
-func _settings() -> Dictionary:
-	var c := {}
-	for key in knobs:
-		c[key] = knobs[key].value
-	c["count"] = int(c["count"])
-	c["level_min"] = int(c["level_min"])
-	c["level_max"] = maxi(int(c["level_min"]), int(c["level_max"]))
-	c["seed"] = int(c["seed"])
-	c["viewer_level"] = int(c["viewer_level"])
-	c["comparison"] = mode_select.selected == 1
-	c["rarity_weights"] = {
-		"white": c["weight_white"], "green": c["weight_green"],
-		"blue": c["weight_blue"], "purple": c["weight_purple"]
-	}
-	var selected: Array = []
-	for i in archetype_list.get_selected_items():
-		selected.append(archetype_list.get_item_text(i))
-	c["archetypes"] = selected
-	return c
-
-func _generate() -> void:
-	var settings := _settings()
-	var output := engine.generate(settings)
-	if not bool(output.get("ok", false)):
-		status.text = String(output.get("reason", "Ошибка генерации"))
-		return
-	result_items = output.get("items", [])
-	var counts := {"white": 0, "green": 0, "blue": 0, "purple": 0}
-	var crit_count := 0
-	for item in result_items:
-		var q := String(item.get("quality", "white"))
-		counts[q] = int(counts.get(q, 0)) + 1
-		if (item.get("total_par", {}) as Dictionary).has("PAR033"):
-			crit_count += 1
-	status.text = "Создано %d · доступных шаблонов %d · PAR033 у %d · Б %d / З %d / С %d / Ф %d" % [
-		result_items.size(), int(output.get("templates_available", 0)), crit_count,
-		counts["white"], counts["green"], counts["blue"], counts["purple"]]
-	_render(settings)
-
-func _render(config: Dictionary) -> void:
-	for node in card_grid.get_children():
-		card_grid.remove_child(node)
-		node.queue_free()
-	_resize_cards()
-	for item in result_items:
-		card_grid.add_child(_card(item, int(config.get("viewer_level", 25))))
-	_resize_cards()
-
-func _resize_cards() -> void:
-	if card_grid == null:
-		return
-	var width := get_viewport_rect().size.x
-	var comparison := mode_select != null and mode_select.selected == 1
-	var columns := 1
-	if comparison and width >= 1320:
-		columns = 4
-	elif width >= 860:
-		columns = 2
-	if columns != _last_columns:
-		card_grid.columns = columns
-		_last_columns = columns
-
-func _card(item: Dictionary, viewer_level: int) -> PanelContainer:
-	var quality := String(item.get("quality", "white"))
-	var tint: Color = PALETTE.get(quality, Color.WHITE)
-	var panel := _panel(tint)
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size = Vector2(272, 100)
-	var body := VBoxContainer.new()
-	body.add_theme_constant_override("separation", 4)
-	panel.add_child(body)
-	var name := String(item.get("archetype", "Предмет"))
-	body.add_child(_text(name, 17, tint))
-	body.add_child(_text("%s · %s · Item Lv %d" % [item.get("rarity_name", ""), item.get("slot", ""), int(item.get("level", 1))], 13, Color("#d1d9e2")))
-	body.add_child(_text("%s · %s" % [item.get("instance_id", ""), item.get("template_id", "")], 11, Color("#94a6b9")))
-	if bool(item.get("comparison_only", false)):
-		body.add_child(_text("ТЕСТ: в обычной игре эта редкость недоступна", 12, Color("#f3af71")))
-	body.add_child(HSeparator.new())
-	var damage: Array = item.get("damage", [])
-	if damage.size() >= 2:
-		body.add_child(_text("Урон: %d–%d" % [int(damage[0]), int(damage[1])], 14, Color("#ecedf1")))
-	var armour: Dictionary = item.get("base_armour", {})
-	if not armour.is_empty():
-		body.add_child(_text("Броня: " + _values_text(armour, viewer_level), 13, Color("#c0d2e2")))
-	var fixed: Dictionary = item.get("fixed_par", {})
-	if not fixed.is_empty():
-		body.add_child(_text("Постоянные PAR:", 12, Color("#dacfae")))
-		body.add_child(_text(_values_text(fixed, viewer_level), 13, Color("#dbe3ed")))
-	var bonuses: Array = item.get("bonuses", [])
-	if bonuses.is_empty():
-		body.add_child(_text("Бонусов редкости нет", 12, Color("#9babb8")))
-	for bonus in bonuses:
-		body.add_child(_text("%s · %s" % [String(bonus.get("group", "")), _values_text(bonus.get("values", {}), viewer_level)], 13, tint))
-	body.add_child(HSeparator.new())
-	var req: Dictionary = item.get("requirements", {})
-	body.add_child(_text("Требования: " + ("нет" if req.is_empty() else _values_text(req, viewer_level, false)), 12, Color("#ebb780")))
-	return panel
-
-func _values_text(values: Dictionary, viewer_level: int, bonus: bool = true) -> String:
-	var result: Array[String] = []
-	var keys: Array = values.keys()
-	keys.sort()
-	for raw_key in keys:
-		var key := String(raw_key)
-		var amount := int(values[key])
-		var info: Dictionary = engine.database.get("parameters", {}).get(key, {})
-		var label := String(info.get("name", key))
-		var prefix := "+" if bonus and amount >= 0 else ""
-		var line := "%s %s%s" % [label, prefix, str(amount)]
-		if bonus and PERCENT_PARS.has(key):
-			var share := float(amount) / 100.0 * (10.0 - 9.0 * float(viewer_level - 1) / 99.0)
-			line += " (%.2f%%)" % share
-		result.append(line)
-	return "\n".join(PackedStringArray(result))
-
-func _panel(border: Color = BORDER) -> PanelContainer:
-	var pane := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = PANEL
-	style.border_color = border
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(6)
-	style.content_margin_left = 10
-	style.content_margin_right = 10
-	style.content_margin_top = 10
-	style.content_margin_bottom = 10
-	pane.add_theme_stylebox_override("panel", style)
-	return pane
-
-func _text(value: String, size_px: int, tint: Color) -> Label:
+func _text(label: String, font_size: int = 14, color: Color = Color("#e0e4e8")) -> Label:
 	var l := Label.new()
-	l.text = value
-	l.add_theme_font_size_override("font_size", size_px)
-	l.add_theme_color_override("font_color", tint)
+	l.text = label
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
+
+func _spin(parent: Control, label_text: String, val: float, low: float,
+	high: float, step: float = 1.0) -> SpinBox:
+	var field := VBoxContainer.new()
+	field.custom_minimum_size.x = 135
+	parent.add_child(field)
+	field.add_child(_text(label_text, 12, Color("#bfcad6")))
+	var s := SpinBox.new()
+	s.min_value = low
+	s.max_value = high
+	s.step = step
+	s.value = val
+	s.custom_minimum_size.x = 128
+	field.add_child(s)
+	return s
+
+func _row(parent: Control) -> HFlowContainer:
+	var h := HFlowContainer.new()
+	h.add_theme_constant_override("h_separation", 10)
+	h.add_theme_constant_override("v_separation", 6)
+	parent.add_child(h)
+	return h
+
+func _build_archetype_tab() -> void:
+	var body := _page("1 · Архетип")
+	body.add_child(_text("Архетип из конкретных PAR (без GRP)", 16))
+	body.add_child(_text("Выбирай характеристики и задавай их относительный вес. Один PAR может выпадать несколько раз. Вес 0 отключает его.", 12, Color("#aab9c9")))
+	var line := HBoxContainer.new()
+	body.add_child(line)
+	line.add_child(_text("Название:", 13))
+	archetype_name = LineEdit.new()
+	archetype_name.text = "Мобильный"
+	archetype_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(archetype_name)
+	var add_line := _row(body)
+	par_picker = OptionButton.new()
+	par_picker.custom_minimum_size.x = 220
+	var keys: Array = engine.source.database.get("parameters", {}).keys()
+	keys.sort()
+	for par in keys:
+		var p := String(par)
+		var meta: Dictionary = engine.source.database["parameters"][p]
+		par_picker.add_item("%s · %s" % [p, String(meta.get("name", ""))])
+		par_picker.set_item_metadata(par_picker.item_count - 1, p)
+	add_line.add_child(par_picker)
+	var add_button := Button.new()
+	add_button.text = "+ Добавить PAR"
+	add_button.pressed.connect(_add_selected_par)
+	add_line.add_child(add_button)
+	weights_label = _text("", 13, Color("#e3d19e"))
+	body.add_child(weights_label)
+	par_rows = VBoxContainer.new()
+	par_rows.add_theme_constant_override("separation", 4)
+	body.add_child(par_rows)
+	var quick := _row(body)
+	var preset := Button.new()
+	preset.text = "Мобильный · по умолчанию"
+	preset.pressed.connect(func() -> void:
+		par_weights = engine.default_archetype()
+		archetype_name.text = "Мобильный"
+		_refresh_archetype())
+	quick.add_child(preset)
+	var zero := Button.new()
+	zero.text = "Очистить"
+	zero.pressed.connect(func() -> void:
+		par_weights.clear()
+		_refresh_archetype())
+	quick.add_child(zero)
+	_refresh_archetype()
+
+func _add_selected_par() -> void:
+	if par_picker.item_count == 0:
+		return
+	var key := String(par_picker.get_item_metadata(par_picker.selected))
+	if not par_weights.has(key):
+		par_weights[key] = 10.0
+	_refresh_archetype()
+
+func _refresh_archetype() -> void:
+	if par_rows == null:
+		return
+	for child in par_rows.get_children():
+		par_rows.remove_child(child)
+		child.queue_free()
+	var total := 0.0
+	for key in par_weights:
+		total += maxf(0.0, float(par_weights[key]))
+	weights_label.text = "Сумма весов: %.1f. Вероятности нормализуются автоматически." % total
+	var keys: Array = par_weights.keys()
+	keys.sort()
+	for raw in keys:
+		var key := String(raw)
+		var line := HBoxContainer.new()
+		par_rows.add_child(line)
+		var caption := _text("%s · %s" % [key, _par_name(key)], 13)
+		caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(caption)
+		var weight := SpinBox.new()
+		weight.min_value = 0
+		weight.max_value = 10000
+		weight.step = 1
+		weight.value = float(par_weights[key])
+		weight.custom_minimum_size.x = 90
+		weight.value_changed.connect(func(v: float) -> void:
+			par_weights[key] = v
+			_update_weight_label())
+		line.add_child(weight)
+		var remove := Button.new()
+		remove.text = "×"
+		remove.pressed.connect(func() -> void:
+			par_weights.erase(key)
+			_refresh_archetype())
+		line.add_child(remove)
+
+func _update_weight_label() -> void:
+	var total := 0.0
+	for v in par_weights.values():
+		total += maxf(0.0, float(v))
+	weights_label.text = "Сумма весов: %.1f. Вероятности нормализуются автоматически." % total
+
+func _build_par_tab() -> void:
+	var body := _page("2 · PAR шкала")
+	body.add_child(_text("PAR = MAX = % · по уровням", 16))
+	body.add_child(_text("Выбери PAR, настрой его максимум, уровень появления, рост значения и перевод рейтинга в %. Изменения действуют только в лаборатории.", 12, Color("#aab9c9")))
+	par_search = LineEdit.new()
+	par_search.placeholder_text = "Найти PAR по номеру или названию"
+	par_search.text_changed.connect(func(_v: String) -> void: _filter_pars())
+	body.add_child(par_search)
+	par_list = ItemList.new()
+	par_list.select_mode = ItemList.SELECT_SINGLE
+	par_list.custom_minimum_size.y = 180
+	par_list.item_selected.connect(_selected_par)
+	body.add_child(par_list)
+	detail = VBoxContainer.new()
+	body.add_child(detail)
+	_filter_pars()
+
+func _filter_pars() -> void:
+	if par_list == null:
+		return
+	par_list.clear()
+	var search := par_search.text.strip_edges().to_lower()
+	var keys: Array = engine.source.database.get("parameters", {}).keys()
+	keys.sort()
+	for raw in keys:
+		var key := String(raw)
+		var title := "%s  %s" % [key, _par_name(key)]
+		if not search.is_empty() and not title.to_lower().contains(search):
+			continue
+		par_list.add_item(title)
+		par_list.set_item_metadata(par_list.item_count - 1, key)
+	if par_list.item_count > 0:
+		var idx := 0
+		for i in range(par_list.item_count):
+			if String(par_list.get_item_metadata(i)) == selected_par:
+				idx = i
+				break
+		par_list.select(idx)
+		_selected_par(idx)
+
+func _selected_par(index: int) -> void:
+	selected_par = String(par_list.get_item_metadata(index))
+	for child in detail.get_children():
+		detail.remove_child(child)
+		child.queue_free()
+	detail_fields.clear()
+	detail.add_child(_text("%s · %s" % [selected_par, _par_name(selected_par)], 15, Color("#d8c88f")))
+	var current := engine.parameter_settings(selected_par, par_settings)
+	var fields := _row(detail)
+	_detail_spin(fields, "MAX (рейтинг)", "max", float(current["max"]), 0.0, 100000.0, 1.0)
+	_detail_spin(fields, "Первый Item Lv", "min_level", float(current["min_level"]), 1.0, 999.0, 1.0)
+	_detail_spin(fields, "Рост по Lv ^", "growth", float(current["growth"]), 0.1, 5.0, 0.1)
+	_detail_spin(fields, "Значение ×", "value_scale", float(current["value_scale"]), 0.0, 20.0, 0.1)
+	if engine.is_percentage(selected_par):
+		var percents := _row(detail)
+		_detail_spin(percents, "100 рейтинга на Lv1 = %", "rating100_lv1", float(current["rating100_lv1"]), 0.0, 100.0, 0.1)
+		_detail_spin(percents, "100 рейтинга на Lv100 = %", "rating100_lv100", float(current["rating100_lv100"]), 0.0, 100.0, 0.1)
+	else:
+		detail.add_child(_text("Этот PAR не является процентным рейтингом; его значение показывается числом.", 12, Color("#aab9c9")))
+	var reset := Button.new()
+	reset.text = "Сбросить настройки этого PAR"
+	reset.pressed.connect(func() -> void:
+		par_settings.erase(selected_par)
+		_selected_par(par_list.get_selected_items()[0]))
+	detail.add_child(reset)
+	_update_par_preview()
+
+func _detail_spin(parent: Control, caption: String, field: String, val: float, low: float, high: float, step: float) -> void:
+	var spin := _spin(parent, caption, val, low, high, step)
+	var key := selected_par
+	spin.value_changed.connect(func(value: float) -> void:
+		if not par_settings.has(key):
+			par_settings[key] = {}
+		par_settings[key][field] = value
+		_update_par_preview())
+	detail_fields[field] = spin
+
+func _update_par_preview() -> void:
+	if detail == null or selected_par.is_empty():
+		return
+	var existing := detail.get_node_or_null("ParPreview") as Label
+	if existing == null:
+		existing = _text("")
+		existing.name = "ParPreview"
+		detail.add_child(existing)
+	var options: Dictionary = engine.parameter_settings(selected_par, par_settings)
+	var sample_level := 25
+	if engine.is_percentage(selected_par):
+		existing.text = "На Lv%d: 100 рейтинга ≈ %.2f%%; MAX %.0f ≈ %.2f%% (до боевых ограничений)." % [
+			sample_level, engine.percentage(selected_par, 100.0, sample_level, par_settings),
+			float(options["max"]), engine.percentage(selected_par, float(options["max"]), sample_level, par_settings)]
+	else:
+		existing.text = "MAX %.0f · первый Item Lv %d." % [float(options["max"]), int(options["min_level"])]
+
+func _par_name(par: String) -> String:
+	return String(engine.source.database.get("parameters", {}).get(par, {}).get("name", par))
+
+func _build_items_tab() -> void:
+	var body := _page("3 · Предметы")
+	body.add_child(_text("Меню предметов", 16))
+	body.add_child(_text("Отметь 1, 5 или все типы галочками. Уникальные шаблоны не повторяются; случайные экземпляры могут повторять основу.", 12, Color("#aab9c9")))
+	var basic := _row(body)
+	controls["min_level"] = _spin(basic, "Уровень от", 10, 1, 100)
+	controls["max_level"] = _spin(basic, "Уровень до", 30, 1, 100)
+	controls["count"] = _spin(basic, "Количество", 100, 1, 500)
+	controls["seed"] = _spin(basic, "Seed", 20261029, 1, 99999999)
+	var options := _row(body)
+	controls["high_requirement"] = _spin(options, "Требования 70%", 70, 0, 150)
+	controls["medium_requirement"] = _spin(options, "Требования 40%", 40, 0, 150)
+	controls["bonus_scale"] = _spin(options, "Бонус PAR ×", 1, 0, 20, 0.1)
+	controls["spread"] = _spin(options, "Разброс ±%", 5, 0, 20)
+	controls["damage_scale"] = _spin(options, "База урона ×", 1, 0.1, 5, 0.1)
+	controls["armour_scale"] = _spin(options, "База брони ×", 1, 0.1, 5, 0.1)
+	var modes := HBoxContainer.new()
+	body.add_child(modes)
+	modes.add_child(_text("Режим:", 13))
+	mode_picker = OptionButton.new()
+	mode_picker.add_item("Уникальные шаблоны (без дублей)", 0)
+	mode_picker.add_item("Экземпляры (повторы допустимы)", 1)
+	modes.add_child(mode_picker)
+	body.add_child(_text("Редкости для режима экземпляров (в уникальном режиме показываются все доступные цвета):", 12))
+	var qualities := _row(body)
+	for quality in ItemBalanceWorkbench.QUALITY:
+		var check := CheckBox.new()
+		check.text = {"white":"Белая", "green":"Зелёная", "blue":"Синяя", "purple":"Фиолетовая"}[quality]
+		check.button_pressed = true
+		qualities.add_child(check)
+		quality_checks[quality] = check
+	var actions := _row(body)
+	var select_all := Button.new()
+	select_all.text = "Выбрать все"
+	select_all.pressed.connect(func() -> void:
+		for check in type_checks.values():
+			check.button_pressed = true)
+	actions.add_child(select_all)
+	var clear := Button.new()
+	clear.text = "Снять все"
+	clear.pressed.connect(func() -> void:
+		for check in type_checks.values():
+			check.button_pressed = false)
+	actions.add_child(clear)
+	var axes := Button.new()
+	axes.text = "Только топоры 2H"
+	axes.pressed.connect(func() -> void: _select_2h_axes())
+	actions.add_child(axes)
+	type_search = LineEdit.new()
+	type_search.placeholder_text = "Фильтр типов предметов"
+	type_search.text_changed.connect(func(_v: String) -> void: _filter_types())
+	body.add_child(type_search)
+	type_list = VBoxContainer.new()
+	body.add_child(type_list)
+	for raw in engine.available_types():
+		var key := String(raw)
+		var check := CheckBox.new()
+		check.text = key
+		check.button_pressed = key.contains("Топор 2H")
+		type_list.add_child(check)
+		type_checks[key] = check
+	var run := Button.new()
+	run.text = "СГЕНЕРИРОВАТЬ → РЕЗУЛЬТАТЫ"
+	run.pressed.connect(_run_test)
+	body.add_child(run)
+
+func _filter_types() -> void:
+	var term := type_search.text.to_lower()
+	for name in type_checks:
+		(type_checks[name] as CheckBox).visible = term.is_empty() or String(name).to_lower().contains(term)
+
+func _select_2h_axes() -> void:
+	for key in type_checks:
+		(type_checks[key] as CheckBox).button_pressed = String(key).contains("Топор 2H")
+
+func _build_results_tab() -> void:
+	var body := _page("4 · Результаты")
+	summary = _text("Сначала сгенерируй предметы на вкладке 3.", 13)
+	body.add_child(summary)
+	body.add_child(_text("Одна строка = один исходный/производный шаблон; ниже 1–4 строки доступных редкостей. В режиме экземпляров каждая строка — отдельный бросок.", 12, Color("#acb9c5")))
+	result_box = VBoxContainer.new()
+	result_box.add_theme_constant_override("separation", 3)
+	body.add_child(result_box)
+
+func _settings() -> Dictionary:
+	var types: Array = []
+	for key in type_checks:
+		if (type_checks[key] as CheckBox).button_pressed:
+			types.append(key)
+	var rarities := {}
+	for quality in quality_checks:
+		rarities[quality] = 1.0 if quality_checks[quality].button_pressed else 0.0
+	var c := {
+		"types":types, "par_weights":par_weights.duplicate(true),
+		"par_settings":par_settings.duplicate(true),
+		"unique_templates":mode_picker.selected == 0,
+		"rarities":rarities, "archetype_name":archetype_name.text
+	}
+	for key in controls:
+		c[key] = controls[key].value
+	return c
+
+func _run_test() -> void:
+	var c := _settings()
+	if (c["types"] as Array).is_empty():
+		summary.text = "Не выбрано ни одного типа предметов."
+		tab.current_tab = 3
+		return
+	var result := engine.generate(c)
+	if not bool(result.get("ok", false)):
+		summary.text = String(result.get("reason", "Ошибка"))
+		tab.current_tab = 3
+		return
+	result_rows = result.get("rows", [])
+	result_items = result_rows
+	var lines := 0
+	for record in result_rows:
+		lines += (record.get("variants", []) as Array).size()
+	summary.text = "%s · %d шаблонов/экземпляров · %d цветных строк · %d уникальных основ+уровней доступно · запрошено %d" % [
+		String(c["archetype_name"]), result_rows.size(), lines,
+		int(result.get("available_unique", 0)), int(result.get("requested", 0))]
+	_render_results()
+	tab.current_tab = 3
+
+func _render_results() -> void:
+	for node in result_box.get_children():
+		result_box.remove_child(node)
+		node.queue_free()
+	for raw in result_rows:
+		var record: Dictionary = raw
+		var title := _text("%s — Lv%d — %s (%s)" % [
+			String(record.get("item_type", "")), int(record.get("level", 1)),
+			String(record.get("id", "")), String(record.get("source_template", ""))], 13, Color("#e2d6b9"))
+		result_box.add_child(title)
+		for v in record.get("variants", []):
+			var variant: Dictionary = v
+			var line := HBoxContainer.new()
+			line.add_theme_constant_override("separation", 6)
+			result_box.add_child(line)
+			var color := String(variant.get("quality", "white"))
+			var marker := ColorRect.new()
+			marker.color = TINT.get(color, Color.WHITE)
+			marker.custom_minimum_size = Vector2(7, 12)
+			line.add_child(marker)
+			var label := _text(_compact_line(variant, int(record.get("level", 1))), 12, TINT.get(color, Color.WHITE))
+			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			line.add_child(label)
+		result_box.add_child(HSeparator.new())
+
+func _compact_line(v: Dictionary, level: int) -> String:
+	var parts: Array[String] = []
+	var quality := String(v.get("quality", "white"))
+	parts.append({"white":"Б", "green":"З", "blue":"С", "purple":"Ф"}[quality])
+	var damage: Array = v.get("damage", [])
+	if damage.size() >= 2:
+		parts.append("%d–%d урон" % [int(damage[0]), int(damage[1])])
+	var armour: Dictionary = v.get("armour", {})
+	if not armour.is_empty():
+		parts.append("броня " + _compact_pars(armour, level))
+	var bonuses: Dictionary = v.get("total_par", {})
+	if not bonuses.is_empty():
+		parts.append(_compact_pars(bonuses, level))
+	var req: Dictionary = v.get("requirements", {})
+	if not req.is_empty():
+		var req_text: Array[String] = []
+		var keys: Array = req.keys()
+		keys.sort()
+		for par in keys:
+			req_text.append("%s %d" % [SHORT.get(par, par), int(req[par])])
+		parts.append("треб.: " + ", ".join(req_text))
+	return "   ".join(parts)
+
+func _compact_pars(stats: Dictionary, level: int) -> String:
+	var strings: Array[String] = []
+	var keys: Array = stats.keys()
+	keys.sort()
+	for raw in keys:
+		var key := String(raw)
+		var amount := int(stats[key])
+		var name := _par_name(key)
+		var text_line := "+%d %s [%s]" % [amount, name, key]
+		if engine.is_percentage(key):
+			text_line += " (%.2f%%)" % engine.percentage(key, float(amount), level, par_settings)
+		strings.append(text_line)
+	return ", ".join(strings)
