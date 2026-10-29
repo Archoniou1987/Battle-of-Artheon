@@ -111,6 +111,31 @@ func _test() -> void:
 		crit_preset.pressed.emit()
 		if screen.par_weights.size() != 1 or not is_equal_approx(float(screen.par_weights.get("PAR033",0)),100.0):
 			failed.append("Simple single-PAR archetype not applied")
+		# User selects required primary stats by names, independently of PAR affixes.
+	for i in range(screen.requirement_first.item_count):
+		if String(screen.requirement_first.get_item_metadata(i)) == "PAR002":
+			screen.requirement_first.select(i)
+		if String(screen.requirement_second.get_item_metadata(i)) == "PAR006":
+			screen.requirement_second.select(i)
+	var chosen: Array = screen._selected_requirement_pars()
+	if chosen != ["PAR002","PAR006"]:
+		failed.append("DEX+STA requirement selectors not captured")
+	screen._run_test()
+	for item_raw in screen.result_rows:
+		var item: Dictionary = item_raw
+		for variation_raw in item["variants"]:
+			var reqs: Dictionary = (variation_raw as Dictionary)["requirements"]
+			if reqs.size() != 2 or not reqs.has("PAR002") or not reqs.has("PAR006"):
+				failed.append("Displayed generated items did not honor selected DEX+STA")
+				break
+	if not (screen.last_generation_config.get("requirement_pars",[]) as Array) == ["PAR002","PAR006"]:
+		failed.append("Generation snapshot lost requirement selection")
+	screen._save_profile()
+	screen.requirement_first.select(0)
+	screen.requirement_second.select(0)
+	screen._load_profile()
+	if screen._selected_requirement_pars() != ["PAR002","PAR006"]:
+		failed.append("Requirement selections were not restored from saved profile")
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(ItemBalanceWorkbench.PROFILE_PATH))
 	print("ITEM_GENERATOR_LAB_UI=", "PASS" if failed.is_empty() else "FAIL")
 	print(JSON.stringify({"tabs":screen.tab.get_tab_count(), "items":screen.result_rows.size(), "failures":failed}))
