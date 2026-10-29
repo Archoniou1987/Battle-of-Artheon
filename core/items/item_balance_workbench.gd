@@ -4,6 +4,8 @@ extends RefCounted
 ## Independent v1 laboratory. Generates item forms from local formulas, not Project 25.
 ## The immutable BoA PAR registry is used only for valid IDs and names.
 ## Does not modify player saves, ItemRepository or the live combat RatingMatrix.
+const PROFILE_PATH := "user://boa_item_balance_lab_profile_v1.json"
+const PROFILE_VERSION := 1
 const QUALITY := ["white", "green", "blue", "purple"]
 const RARITY_LEVEL := {"white": 1, "green": 10, "blue": 25, "purple": 40}
 const ZONES := ["PAR100", "PAR101", "PAR102", "PAR103", "PAR104"]
@@ -41,6 +43,29 @@ var rng := RandomNumberGenerator.new()
 
 func _init() -> void:
 	registry = ParCalculationService.registry()
+
+## Separate local lab profile. Never mixes with the game's unified save.
+func save_profile(profile: Dictionary, path: String = PROFILE_PATH) -> bool:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify({"version": PROFILE_VERSION, "settings": profile}))
+	file.flush()
+	file.close()
+	return true
+
+func load_profile(path: String = PROFILE_PATH) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not parsed is Dictionary:
+		return {}
+	if int(parsed.get("version", -1)) != PROFILE_VERSION:
+		return {}
+	var data: Variant = parsed.get("settings", null)
+	if not data is Dictionary:
+		return {}
+	return data.duplicate(true)
 
 func parameter_ids() -> Array:
 	var ids: Array = registry.keys()
