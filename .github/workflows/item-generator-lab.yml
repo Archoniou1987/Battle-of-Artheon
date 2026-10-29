@@ -42,6 +42,6 @@ jobs:
       - name: Test 100 item generation and rarity comparison
         run: timeout 120s godot --headless --path . --script res://tests/items/item_generator_lab_runner.gd
       - name: Verify direct-PAR archetype and item template workbench
-        run: timeout 120s godot --headless --path . --script res://tests/items/item_balance_workbench_runner.gd
+        run: timeout 35s godot --headless --path . --script res://tests/items/item_balance_workbench_runner.gd
       - name: "UI: render four editor tabs and compact item results"
         run: timeout 35s godot --headless --path . --script res://tests/ui/item_generator_lab_smoke.gd
