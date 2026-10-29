@@ -35,6 +35,9 @@ var result_box: VBoxContainer
 var summary: Label
 var result_items: Array = []
 var result_rows: Array = []
+var last_generation_config: Dictionary = {}
+var last_generation_output: Dictionary = {}
+var csv_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -499,10 +502,40 @@ func _build_results_tab() -> void:
 	var body := _page("4 · Результаты")
 	summary = _text("Сначала сгенерируй предметы на вкладке 3.", 13)
 	body.add_child(summary)
+	csv_button = Button.new()
+	csv_button.text = "Скачать CSV: настройки + все предметы"
+	csv_button.disabled = true
+	csv_button.custom_minimum_size.y = 44
+	csv_button.pressed.connect(_export_csv)
+	body.add_child(csv_button)
+	body.add_child(_text("CSV отражает настройки последней генерации. После изменения PAR или типов предметов запусти генерацию заново.", 12, Color("#acb9c5")))
 	body.add_child(_text("Одна строка = один исходный/производный шаблон; ниже 1–4 строки доступных редкостей. В режиме экземпляров каждая строка — отдельный бросок.", 12, Color("#acb9c5")))
 	result_box = VBoxContainer.new()
 	result_box.add_theme_constant_override("separation", 3)
 	body.add_child(result_box)
+
+func _export_csv() -> void:
+	if last_generation_config.is_empty() or result_rows.is_empty():
+		summary.text = "Сначала создай предметы — сохранять пока нечего."
+		return
+	var csv := ItemLabCsvExporter.build(last_generation_config, last_generation_output, engine)
+	var time := Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
+	var name := "BOA_Item_Lab_%s.csv" % time
+	if OS.has_feature("web"):
+		# Download synchronously within the actual button click: mobile browsers
+		# may block download_buffer() if invoked after a deferred callback.
+		JavaScriptBridge.download_buffer(csv.to_utf8_buffer(), name, "text/csv;charset=utf-8")
+		summary.text = "Запрошено скачивание %s · %d шаблонов" % [name, result_rows.size()]
+		return
+	var local_path := "user://" + name
+	var output := FileAccess.open(local_path, FileAccess.WRITE)
+	if output == null:
+		summary.text = "Ошибка сохранения CSV (%d)" % FileAccess.get_open_error()
+		return
+	output.store_string(csv)
+	output.flush()
+	output.close()
+	summary.text = "CSV сохранён: " + ProjectSettings.globalize_path(local_path)
 
 func _settings() -> Dictionary:
 	var types: Array = []
@@ -535,6 +568,9 @@ func _run_test() -> void:
 		return
 	result_rows = result.get("rows", [])
 	result_items = result_rows
+	last_generation_config = c.duplicate(true)
+	last_generation_output = result.duplicate(true)
+	csv_button.disabled = false
 	var lines := 0
 	for record in result_rows:
 		lines += (record.get("variants", []) as Array).size()
@@ -589,7 +625,7 @@ func _compact_line(v: Dictionary, level: int) -> String:
 		keys.sort()
 		for par in keys:
 			req_text.append("%s %d" % [SHORT.get(par, par), int(req[par])])
-		parts.append("треб.: " + ", ".join(PackedStringArray(req_text)))
+		parts.append("треб. (тип + арх.): " + ", ".join(PackedStringArray(req_text)))
 	return "   ".join(PackedStringArray(parts))
 
 func _compact_pars(stats: Dictionary, level: int) -> String:
