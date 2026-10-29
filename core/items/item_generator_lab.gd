@@ -178,7 +178,7 @@ func _roll_bonus(t: Dictionary, config: Dictionary, spread: float) -> Dictionary
 		candidates.append({"id": group_id, "pars": eligible, "cutoff": weight_sum})
 	if candidates.is_empty():
 		return {}
-	var picked := candidates.back()
+	var picked: Dictionary = candidates.back()
 	var n := rng.randf() * weight_sum
 	for c in candidates:
 		if n < float(c["cutoff"]):
