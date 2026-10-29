@@ -243,13 +243,13 @@ func _roll_direct(t: Dictionary, level: int, config: Dictionary, spread: float) 
 	amount *= rng.randf_range(1.0 - spread, 1.0 + spread)
 	var value := maxi(1, int(floor(amount + 0.5)))
 	var out: Dictionary = {}
-	var number := int(chosen.trim_prefix("PAR"))
+	var par_number := int(chosen.trim_prefix("PAR"))
 	# A zonal armour roll applies as one property to every covered zone.
-	if number >= 100 and number <= 104:
+	if par_number >= 100 and par_number <= 104:
 		for zone in t.get("armour", {}):
 			out[zone] = value
-	elif number >= 105 and number <= 124:
-		var physical_type := (number - 105) % 4
+	elif par_number >= 105 and par_number <= 124:
+		var physical_type := (par_number - 105) % 4
 		for zone in t.get("armour", {}):
 			var zone_index := ZONES.find(String(zone))
 			if zone_index >= 0:
