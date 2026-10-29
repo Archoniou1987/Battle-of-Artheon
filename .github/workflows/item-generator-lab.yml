@@ -6,10 +6,12 @@ on:
       - feature/character-inventory-ui-v1
     paths:
       - "core/items/item_generator_lab.gd"
+      - "core/items/item_balance_workbench.gd"
       - "data/items/project25_generator_lab.json"
       - "scenes/debug/item_generator_lab.*"
       - "scenes/main/main.gd"
       - "tests/items/item_generator_lab_runner.gd"
+      - "tests/items/item_balance_workbench_runner.gd"
       - "tests/ui/item_generator_lab_smoke.gd"
       - ".github/workflows/item-generator-lab.yml"
   workflow_dispatch:
@@ -37,5 +39,7 @@ jobs:
         run: timeout 120s godot --headless --editor --path . --quit
       - name: Test 100 item generation and rarity comparison
         run: timeout 120s godot --headless --path . --script res://tests/items/item_generator_lab_runner.gd
-      - name: "UI: render 100 cards in both modes"
+      - name: Verify direct-PAR archetype and item template workbench
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_balance_workbench_runner.gd
+      - name: "UI: render four editor tabs and compact item results"
         run: timeout 120s godot --headless --path . --script res://tests/ui/item_generator_lab_smoke.gd
