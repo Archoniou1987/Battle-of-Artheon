@@ -131,7 +131,6 @@ func equipment_contribution(par: String, base_rating: float, gear_rating: float,
 func required_rating(par: String, desired_percent: float, level: int, overrides: Dictionary) -> float:
 	if not is_percentage(par):
 		return NAN
-	var per_100 := percentage(par,100.0,level,{"PAR033":{}} if false else {})
 	# Use raw Matrix slope so a diminishing configuration does not hide the required
 	# rating. Callers can compare achieved marginal effect separately.
 	var p := parameter_settings(par,overrides)
