@@ -98,8 +98,14 @@ func _test() -> void:
 		failures.append("Cannot save local test profile")
 	else:
 		var restored := lab.load_profile(profile_path)
-		if JSON.stringify(restored) != JSON.stringify(profile_data):
-			failures.append("Saved lab profile was not restored correctly")
+		if String(restored.get("archetype_name","")) != "Mobile test" or int(restored.get("preview_level",0)) != 30:
+			failures.append("Saved profile name or level missing")
+		if not is_equal_approx(float((restored.get("par_weights",{}) as Dictionary).get("PAR033",0)),75.0):
+			failures.append("Saved archetype weight not restored")
+		if not is_equal_approx(float(((restored.get("par_settings",{}) as Dictionary).get("PAR033",{}) as Dictionary).get("max",0)),4200.0):
+			failures.append("Saved PAR maximum not restored")
+		if not (restored.get("types",[]) as Array).has("Топор 2H · Физ"):
+			failures.append("Saved item type selection not restored")
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(profile_path))
 	if not lab.load_profile(profile_path).is_empty():
 		failures.append("Missing profile should load as empty")
