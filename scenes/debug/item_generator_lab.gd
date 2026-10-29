@@ -13,6 +13,8 @@ var engine := ItemBalanceWorkbench.new()
 var numeric_keypad: ItemLabNumericKeypad
 var tab: TabContainer
 var archetype_name: LineEdit
+var archetype_number: SpinBox
+var archetype_code_label: Label
 var par_picker: OptionButton
 var requirement_first: OptionButton
 var requirement_second: OptionButton
@@ -121,6 +123,9 @@ func _apply_profile(saved: Dictionary) -> void:
 			if engine.registry.has(key) and overrides[raw] is Dictionary:
 				par_settings[key] = (overrides[raw] as Dictionary).duplicate(true)
 	archetype_name.text = String(saved.get("archetype_name",archetype_name.text)).substr(0,100)
+	var stored_number := int(saved.get("archetype_number", 1))
+	archetype_number.value = clampi(stored_number,1,999999)
+	_update_archetype_code()
 	_restore_requirement_choices(saved)
 	_refresh_archetype()
 	preview_level_spin.value = clampf(float(saved.get("preview_level",25)),1.0,100.0)
@@ -204,6 +209,17 @@ func _build_archetype_tab() -> void:
 	archetype_name.text = "Мобильный"
 	archetype_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(archetype_name)
+	var id_row := _row(body)
+	archetype_number = _spin(id_row, "Номер архетипа", 1.0, 1.0, 999999.0)
+	archetype_code_label = _text("", 14, Color("#d8c88f"))
+	id_row.add_child(archetype_code_label)
+	archetype_number.value_changed.connect(func(_v: float) -> void: _update_archetype_code())
+	var use_id := Button.new()
+	use_id.text = "Использовать ID как название"
+	use_id.pressed.connect(func() -> void: archetype_name.text = _archetype_code())
+	id_row.add_child(use_id)
+	body.add_child(_text("Если поле названия не открывает клавиатуру телефона, задай номер через экранную цифровую клавиатуру. Например 17 → ARC-0017.", 12, Color("#aab9c9")))
+	_update_archetype_code()
 	body.add_child(_text("Требования ко ВСЕМ предметам архетипа (только PAR, без чисел)", 14))
 	var req_row := _row(body)
 	requirement_first = _requirement_choice(req_row, "Требование 1")
@@ -260,6 +276,14 @@ func _build_archetype_tab() -> void:
 			_refresh_archetype())
 		simple.add_child(b)
 	_refresh_archetype()
+
+func _archetype_code() -> String:
+	return "ARC-%04d" % int(archetype_number.value)
+
+func _update_archetype_code() -> void:
+	if archetype_code_label != null and archetype_number != null:
+		archetype_code_label.text = "ID: " + _archetype_code()
+
 
 func _requirement_choice(parent: Control, caption: String) -> OptionButton:
 	var box := VBoxContainer.new()
@@ -595,6 +619,8 @@ func _settings() -> Dictionary:
 		rarities[quality] = 1.0 if quality_checks[quality].button_pressed else 0.0
 	var c := {
 		"types":types, "par_weights":par_weights.duplicate(true),
+		"archetype_number":int(archetype_number.value),
+		"archetype_id":_archetype_code(),
 		"requirement_pars":_selected_requirement_pars(),
 		"par_settings":par_settings.duplicate(true),
 		"unique_templates":mode_picker.selected == 0,
@@ -624,7 +650,7 @@ func _run_test() -> void:
 	for record in result_rows:
 		lines += (record.get("variants", []) as Array).size()
 	summary.text = "%s · %d шаблонов/экземпляров · %d цветных строк · %d уникальных основ+уровней доступно · запрошено %d" % [
-		String(c["archetype_name"]), result_rows.size(), lines,
+		("%s / %s" % [String(c.get("archetype_id", "ARC-0001")),String(c["archetype_name"])]), result_rows.size(), lines,
 		int(result.get("available_unique", 0)), int(result.get("requested", 0))]
 	_render_results()
 	tab.current_tab = 3
