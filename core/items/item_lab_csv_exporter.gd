@@ -58,8 +58,8 @@ static func build(config: Dictionary, result: Dictionary, lab: ItemBalanceWorkbe
 		for raw_variant in row.get("variants", []):
 			var variant: Dictionary = raw_variant
 			var damage: Array = variant.get("damage", [])
-			var damage_min := damage[0] if damage.size() > 0 else ""
-			var damage_max := damage[1] if damage.size() > 1 else ""
+			var damage_min: Variant = damage[0] if damage.size() > 0 else ""
+			var damage_max: Variant = damage[1] if damage.size() > 1 else ""
 			var details: Array = []
 			var par_data: Dictionary = variant.get("total_par", {})
 			var stats: Array = par_data.keys()
