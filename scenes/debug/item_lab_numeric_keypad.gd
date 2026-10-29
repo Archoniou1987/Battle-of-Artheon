@@ -52,11 +52,11 @@ func _ready() -> void:
 		button.add_theme_font_size_override("font_size", 21)
 		button.pressed.connect(_key.bind(symbol))
 		grid.add_child(button)
-	var cancel := Button.new()
-	cancel.text = "Отмена"
-	cancel.custom_minimum_size.y = 42
-	cancel.pressed.connect(cancel)
-	column.add_child(cancel)
+	var cancel_button := Button.new()
+	cancel_button.text = "Отмена"
+	cancel_button.custom_minimum_size.y = 42
+	cancel_button.pressed.connect(cancel)
+	column.add_child(cancel_button)
 	hide()
 
 func open_for(spin: SpinBox, label: String) -> void:
