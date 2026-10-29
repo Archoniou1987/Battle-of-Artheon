@@ -31,6 +31,16 @@ func _test() -> void:
 			failed.append("Invalid rarity line count")
 	if screen.tab.current_tab != 3:
 		failed.append("Results tab not shown")
+	if screen.csv_button == null or screen.csv_button.disabled:
+		failed.append("CSV export must be enabled after a successful generation")
+	var saved_config: Dictionary = screen.last_generation_config.duplicate(true)
+	screen.par_weights["PAR033"] = 999.0
+	if screen.last_generation_config != saved_config:
+		failed.append("CSV must capture the generation snapshot, not live edits")
+	var csv := ItemLabCsvExporter.build(screen.last_generation_config, screen.last_generation_output, screen.engine)
+	if not csv.contains("PAR_EFFECTIVE") or not csv.contains("ITEM"):
+		failed.append("CSV export data missing settings or generated items")
+
 	screen.mode_picker.select(1)
 	screen._run_test()
 	if screen.result_rows.size() != 100:
