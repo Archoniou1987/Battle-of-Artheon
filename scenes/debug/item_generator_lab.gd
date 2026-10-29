@@ -259,6 +259,7 @@ func _selected_par(index: int) -> void:
 		var dimin := _row(detail)
 		_detail_spin(dimin, "DR с % (0 = выкл.)", "diminish_start_pct", float(current["diminish_start_pct"]), 0.0, 100.0, 1.0)
 		_detail_spin(dimin, "DR ширина %", "diminish_width_pct", float(current["diminish_width_pct"]), 0.1, 100.0, 0.5)
+		_detail_spin(dimin, "Цель от вещей на Lv25, %", "gear_target_pct", float(current["gear_target_pct"]), 0.0, 100.0, 0.5)
 	else:
 		detail.add_child(_text("Этот PAR не является процентным рейтингом; его значение показывается числом.", 12, Color("#aab9c9")))
 	var reset := Button.new()
@@ -290,10 +291,18 @@ func _update_par_preview() -> void:
 	var options: Dictionary = engine.parameter_settings(selected_par, par_settings)
 	var sample_level := 25
 	if engine.is_percentage(selected_par):
-		existing.text = "Lv%d: 100 рейтинга = %.2f%%; MAX %.0f = %.2f%%. Для +15%% от экипировки на Lv25 требуется ≈%.0f рейтинга (до DR). При DR вклад зависит от уже накопленного рейтинга." % [
-			sample_level, engine.percentage(selected_par, 100.0, sample_level, par_settings),
-			float(options["max"]), engine.percentage(selected_par, float(options["max"]), sample_level, par_settings),
-			engine.required_rating(selected_par, 15.0, 25, par_settings)]
+		existing.text = "Lv%d: 100 рейтинга = %.2f%%; MAX %.0f ≈ %.2f%%." % [
+			sample_level, engine.percentage(selected_par,100.0,sample_level,par_settings),
+			float(options["max"]),engine.percentage(selected_par,float(options["max"]),sample_level,par_settings)]
+		var target := float(options["gear_target_pct"])
+		if target > 0.0:
+			var rating25 := engine.required_rating(selected_par,target,25,par_settings)
+			var rating30 := engine.required_rating(selected_par,target,30,par_settings)
+			var one_roll := engine.expected_affix(selected_par,25,par_settings)
+			existing.text += "\nЦель от вещей: %.1f%%. Lv25 ≈ %.0f рейтинга, Lv30 ≈ %.0f; один бонус Lv25 ≈ %.0f, потребуется ≈%.1f таких бонусов." % [
+				target,rating25,rating30,one_roll,rating25/maxf(1.0,one_roll)]
+		if float(options["diminish_start_pct"]) > 0.0:
+			existing.text += "\nВключён DR: реальный прирост от вещей зависит от уже накопленных очков персонажа."
 	else:
 		existing.text = "MAX %.0f · первый Item Lv %d." % [float(options["max"]), int(options["min_level"])]
 
