@@ -238,6 +238,10 @@ func _render() -> void:
 			for key in armour:
 				fields.append("%s +%d" % [String(key),int(armour[key])])
 			details.append("Броня: " + ", ".join(PackedStringArray(fields)))
+		var budget_split: Dictionary = v.get("budget_split",{})
+		if not budget_split.is_empty():
+			details.append("Бюджет: защита %d%% / атака %d%%" % [
+				int(budget_split["defence_pct"]),int(budget_split["attack_pct"])])
 		var stable_rolls: Array = v.get("core_rolls",[])
 		for raw in stable_rolls:
 			var line: Dictionary = raw
@@ -299,15 +303,15 @@ func _export_csv() -> void:
 	if results.is_empty():
 		return
 	var lines: Array[String] = []
-	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
-	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","",""]))
+	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
+	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","","",""]))
 	for item in results:
 		var row: Dictionary = item
 		var v: Dictionary = row["variant"]
 		lines.append(_csv_row(["ITEM",String(row["id"]),String(row["archetype_id"]),
 			String(row["archetype_name"]),String(row["slot"]),String(row["school"]),
 			str(int(row["level"])),String(row["quality"]),JSON.stringify(v["damage"]),
-			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
+			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["budget_split"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
 	var csv := "\n".join(PackedStringArray(lines)) + "\n"
 	var filename := "BOA_Template_v12_%d.csv" % int(Time.get_unix_time_from_system())
 	if OS.has_feature("web"):
