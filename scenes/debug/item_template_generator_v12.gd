@@ -244,6 +244,21 @@ func _render() -> void:
 		for raw in rolls:
 			var line: Dictionary = raw
 			details.append("%s +%d [%s]" % [String(line["name"]),int(line["rating"]),String(line["par"])])
+		var preview: Dictionary = v.get("preview",{})
+		var zone_summary: Array[String] = []
+		var armour_effects: Dictionary = preview.get("armour",{})
+		var names := {"PAR100":"Голова","PAR101":"Грудь","PAR102":"Руки","PAR103":"Пояс","PAR104":"Ноги"}
+		for zone in ["PAR100","PAR101","PAR102","PAR103","PAR104"]:
+			if armour_effects.has(zone):
+				var eff: Dictionary = armour_effects[zone]
+				zone_summary.append("%s %.1f→%.1f%%" % [String(names[zone]),float(eff["raw_pct"]),float(eff["after_dr_pct"])])
+		if not zone_summary.is_empty():
+			details.append("Броня до/после DR: " + ", ".join(PackedStringArray(zone_summary)))
+		var rating_effects: Dictionary = preview.get("ratings",{})
+		for par in ["PAR031","PAR033","PAR032"]:
+			if rating_effects.has(par):
+				var eff: Dictionary = rating_effects[par]
+				details.append("%s %.1f→%.1f%%" % [engine.par_label(par),float(eff["raw_pct"]),float(eff["after_dr_pct"])])
 		var req: Dictionary = v.get("requirements",{})
 		var req_bits: Array[String] = []
 		for key in req:
@@ -282,15 +297,15 @@ func _export_csv() -> void:
 	if results.is_empty():
 		return
 	var lines: Array[String] = []
-	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,core_rolls,rarity_rolls,par_bonuses,requirements")
-	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","",""]))
+	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
+	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","",""]))
 	for item in results:
 		var row: Dictionary = item
 		var v: Dictionary = row["variant"]
 		lines.append(_csv_row(["ITEM",String(row["id"]),String(row["archetype_id"]),
 			String(row["archetype_name"]),String(row["slot"]),String(row["school"]),
 			str(int(row["level"])),String(row["quality"]),JSON.stringify(v["damage"]),
-			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"])]))
+			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
 	var csv := "\n".join(PackedStringArray(lines)) + "\n"
 	var filename := "BOA_Template_v12_%d.csv" % int(Time.get_unix_time_from_system())
 	if OS.has_feature("web"):
