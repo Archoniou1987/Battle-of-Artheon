@@ -52,7 +52,8 @@ func _build() -> void:
 	numeric_keypad = ItemLabNumericKeypad.new()
 	add_child(numeric_keypad)
 	var settings := _page("1 · Параметры")
-	settings.add_child(_label("Утверждённые правила Project 25 · 21 оружейный + 14 броневых архетипов", 13, Color("#c4d5e4")))
+	settings.add_child(_label("Утверждённые правила Project 25 · 21 оружейный + 14 броневых архетипов", 13, Color("#c4d5e4"))
+	settings.add_child(_label("Калибровка: HP/мана — эталоны; СА/СЗ — интерполяция целей сборки; прочие PAR — предварительно.", 12, Color("#dfbd8e"))))
 	kind_select = _option(settings,"Категория",[["Все","all"],["Оружие","weapon"],["Броня","armor"]])
 	kind_select.item_selected.connect(func(_ix: int) -> void: _refresh_archetypes())
 	archetype_select = _option(settings,"Архетип",[["Все архетипы","all"]])
@@ -92,6 +93,7 @@ func _build() -> void:
 	var output := _page("2 · Результаты")
 	result_status = _label("Генерация ещё не запускалась",13)
 	output.add_child(result_status)
+	output.add_child(_label("Численные статусы: подтверждённый эталон / интерполяция / предварительный экстремум. Подробнее — в CSV.",12,Color("#dfbd8e")))
 	csv_button = Button.new()
 	csv_button.text = "Экспорт CSV · все предметы"
 	csv_button.custom_minimum_size.y = 48
