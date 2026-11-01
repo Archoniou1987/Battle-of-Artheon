@@ -118,7 +118,11 @@
       "weights": {
         "anticrit": 50,
         "anti_dodge": 50
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
     },
     {
       "id": "SWORD_DODGE",
@@ -131,7 +135,11 @@
         "anti_dodge": 15,
         "dodge": 40,
         "counter": 15
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR002"
+      ]
     },
     {
       "id": "SWORD_CRIT",
@@ -144,7 +152,11 @@
         "crit": 30,
         "attack": 20,
         "crit_damage": 30
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
     },
     {
       "id": "SWORD_MAGIC",
@@ -156,7 +168,11 @@
         "anticrit": 20,
         "crit": 20,
         "spell": 60
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR004"
+      ]
     },
     {
       "id": "DAGGER_DEF",
@@ -169,7 +185,11 @@
         "counter": 25,
         "anticrit": 25,
         "anti_dodge": 10
-      }
+      },
+      "requirements": [
+        "PAR002",
+        "PAR006"
+      ]
     },
     {
       "id": "DAGGER_ATTACK",
@@ -183,7 +203,11 @@
         "crit": 20,
         "crit_damage": 20,
         "attack": 10
-      }
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003"
+      ]
     },
     {
       "id": "DAGGER_MAGIC",
@@ -196,7 +220,11 @@
         "crit": 25,
         "anticrit": 10,
         "spell": 35
-      }
+      },
+      "requirements": [
+        "PAR002",
+        "PAR004"
+      ]
     },
     {
       "id": "DAGGER_PEN",
@@ -210,7 +238,11 @@
         "armour_pen": 35,
         "attack": 10,
         "anti_dodge": 10
-      }
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003"
+      ]
     },
     {
       "id": "AXE_DEF",
@@ -225,7 +257,11 @@
         "dodge": 30,
         "counter": 10,
         "anticrit": 10
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR002"
+      ]
     },
     {
       "id": "AXE_ATTACK",
@@ -239,7 +275,11 @@
         "shield_pen": 10,
         "attack": 20,
         "anti_dodge": 5
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
     },
     {
       "id": "AXE_SHIELD",
@@ -253,7 +293,11 @@
         "shield_pen": 40,
         "attack": 10,
         "anti_dodge": 10
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
     },
     {
       "id": "HAMMER_DEF",
@@ -265,7 +309,11 @@
         "hp": 50,
         "reduce": 30,
         "anticrit": 20
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
     },
     {
       "id": "HAMMER_ATTACK",
@@ -279,7 +327,11 @@
         "crit": 15,
         "crit_damage": 15,
         "anti_dodge": 5
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
     },
     {
       "id": "HAMMER_MAGIC",
@@ -292,7 +344,11 @@
         "reduce": 10,
         "spell": 40,
         "crit": 15
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR004"
+      ]
     },
     {
       "id": "2H_SWORD",
@@ -306,7 +362,11 @@
         "crit_damage": 20,
         "anti_dodge": 20,
         "anticrit": 5
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
     },
     {
       "id": "2H_SPEAR",
@@ -320,7 +380,11 @@
         "armour_pen": 30,
         "dodge": 20,
         "counter": 15
-      }
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003"
+      ]
     },
     {
       "id": "2H_AXE",
@@ -334,7 +398,11 @@
         "crit_damage": 25,
         "anti_dodge": 5,
         "shield_pen": 25
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
     },
     {
       "id": "2H_HAMMER",
@@ -347,7 +415,11 @@
         "crit": 20,
         "crit_damage": 15,
         "hp": 25
-      }
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
     },
     {
       "id": "STAFF_SUPPORT",
@@ -363,7 +435,11 @@
         "mana_regen": 15,
         "magic_pen": 5
       },
-      "school_required": true
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
     },
     {
       "id": "STAFF_ATTACK",
@@ -377,7 +453,11 @@
         "crit_damage": 20,
         "magic_pen": 10
       },
-      "school_required": true
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR003"
+      ]
     },
     {
       "id": "STAFF_PEN",
@@ -391,7 +471,11 @@
         "crit_damage": 10,
         "magic_pen": 40
       },
-      "school_required": true
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
     }
   ],
   "armor_archetypes": [
