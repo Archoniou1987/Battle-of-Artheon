@@ -188,6 +188,9 @@ func generate(config: Dictionary) -> Dictionary:
 	var chosen_quality := String(config.get("quality", "any"))
 	var chosen_school := String(config.get("school", "any"))
 	var chosen_slot := String(config.get("armor_slot", "any"))
+	var chosen_hand := String(config.get("weapon_hand", "any"))
+	if not ["any","MH","OH","2H"].has(chosen_hand):
+		return {"ok":false,"reason":"Неизвестный слот руки оружия","rows":[]}
 	rng.seed = maxi(1, int(config.get("seed", 20261101)))
 	var candidates: Array = []
 	for spec in archetypes():
@@ -197,11 +200,17 @@ func generate(config: Dictionary) -> Dictionary:
 		var slots: Array = [String(entry.get("slot","MH"))]
 		if String(entry["kind"]) == "armor":
 			slots = rules.get("armor_slots", [])
+		elif String(entry.get("slot","")) == "MH/OH":
+			# One archetype supports two independently budgeted template
+			# variants, not a single item with an ambiguous 15% PAR share.
+			slots = ["MH","OH"]
 		var school_options: Array = [{"id":"","name":"","pen":""}]
 		if bool(entry.get("school_required", false)):
 			school_options = schools()
 		for slot in slots:
 			if chosen_slot != "any" and (String(entry["kind"]) != "armor" or chosen_slot != String(slot)):
+				continue
+			if String(entry["kind"]) == "weapon" and chosen_hand != "any" and String(slot) != chosen_hand:
 				continue
 			if chosen_school != "any" and not bool(entry.get("school_required",false)):
 				continue
@@ -248,8 +257,8 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	var offhand_damage: Array = []
 	if String(spec["kind"]) == "weapon":
 		damage = _weapon_damage(spec, level, slot)
-		if slot == "MH/OH":
-			offhand_damage = _weapon_damage(spec, level, "OH")
+		# MH/OH archetypes now produce distinct MH and OH variants.
+		# "damage" always refers to the selected hand; no second phantom hit.
 	else:
 		armour = _base_armour(spec,slot,level,quality_factor)
 	# Template CORE lines belong to the white foundation, not rarity rolls.
@@ -309,7 +318,10 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
 			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
 			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
-	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"budget_split":armour_budget_split(spec),"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
+	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,
+		"par_slot_budget_pct":float(Dictionary(rules["slot_budgets"]).get(slot,0.0)),
+		"par_slot_budget_status":"PROVISIONAL_2H" if slot == "2H" else "V12_SPECIFIED",
+		"budget_split":armour_budget_split(spec),"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor,
 		"preview":preview_effects(armour,modifiers,level)}
 
