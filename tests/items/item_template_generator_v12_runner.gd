@@ -144,6 +144,30 @@ func _verify() -> void:
 		"weapon_hand":"OH","count":1,"seed":440})
 	if bool(impossible_hand.get("ok",false)):
 		problems.append("MH-only sword should not appear in an OH-only search")
+	# 2H uses the sole 22.5% provisional value on the v1.2 tab.
+	if absf(float(Dictionary(generator.rules.get("slot_budgets",{})).get("2H",0.0))-22.5) > 0.0001:
+		problems.append("2H lab PAR share diverges from the v1.2 proposal")
+	var two_handed := generator.generate({"archetypes":["2H_SWORD"],
+		"min_level":30,"max_level":30,"quality":"blue",
+		"weapon_hand":"2H","count":1,"seed":782})
+	if bool(two_handed.get("ok",false)):
+		var two_handed_variant: Dictionary = two_handed["rows"][0]["variant"]
+		if float(two_handed_variant.get("par_slot_budget_pct",0.0)) != 22.5:
+			problems.append("2H item uses an external PAR budget")
+		if String(two_handed_variant.get("par_slot_budget_status","")) != "PROVISIONAL_2H":
+			problems.append("Provisional 2H budget is not labelled")
+	else:
+		problems.append("2H item failed to generate")
+	var hand_only := generator.generate({"archetypes":[],
+		"min_level":10,"max_level":10,"quality":"white",
+		"weapon_hand":"OH","count":50,"seed":782})
+	if bool(hand_only.get("ok",false)):
+		for hand_item in hand_only["rows"]:
+			if String(Dictionary(hand_item).get("kind","")) != "weapon" or String(Dictionary(hand_item).get("slot","")) != "OH":
+				problems.append("Weapon-hand filter allowed armour or another hand")
+				break
+	else:
+		problems.append("OH-only laboratory generation failed")
 	# Approved zone matrix V2: 80% in each zone without the shield.
 	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
 	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
