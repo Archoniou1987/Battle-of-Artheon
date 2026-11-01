@@ -120,6 +120,42 @@ func _verify() -> void:
 			if String(Dictionary(raw).get("slot","")) != "Шлем":
 				problems.append("Armour-slot filter included weapons")
 				break
+	# Numerically anchored HP/Mana budget: 14 equip slots = 100% of the pool.
+	var weights: Dictionary = generator.rules.get("slot_budgets",{})
+	var slots: Array = ["MH","OH","Шлем","Плечи","Нагрудник","Перчатки",
+		"Наручи","Пояс","Штаны","Ботинки","Плащ"]
+	var sum_percent := 3.0 * 7.5 # 2 rings and necklace; pending dedicated archetypes
+	for slot in slots:
+		sum_percent += float(weights.get(slot,0))
+	if absf(sum_percent-100.0) > 0.0001:
+		problems.append("14 slot PAR weights no longer total 100 percent")
+	for level in [10,30,60,100]:
+		var slot_share := 7.5 / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
+		var hp_expected := 101.19*float(level)/100.0*slot_share
+		var mana_expected := 50.60*float(level)/100.0*slot_share
+		if absf(generator.nominal_affix("hp",level,"Шлем",1.0)-hp_expected) > 0.001:
+			problems.append("HP white nominal mismatch at Lv" + str(level))
+		if absf(generator.nominal_affix("mana",level,"Шлем",1.0)-mana_expected) > 0.001:
+			problems.append("Mana white nominal mismatch at Lv" + str(level))
+		var current_white := generator.nominal_affix("hp",level,"Шлем",1.0)
+		var epic := generator.nominal_affix("hp",level,"Шлем",1.5)
+		if absf(epic-current_white*1.5) > 0.001:
+			problems.append("HP rarity modifier applied incorrectly at Lv" + str(level))
+	if generator.calibration_status("hp") != "PROJECT25_ANCHOR" or generator.calibration_status("crit") != "PROVISIONAL_EXTREMUM":
+		problems.append("Generator must label calibrated and provisional PAR separately")
+	var sample_blue := generator.generate({"archetypes":["HAMMER_DEF"],"min_level":30,"max_level":30,
+		"quality":"blue","count":40,"seed":415})
+	if bool(sample_blue.get("ok",false)):
+		for sample in sample_blue["rows"]:
+			var result: Dictionary = Dictionary(sample).get("variant",{})
+			var all_lines: Array = (result.get("core_rolls",[]) as Array).duplicate()
+			all_lines.append_array(result.get("rolls",[]))
+			for line in all_lines:
+				if not Dictionary(line).has("calibration"):
+					problems.append("Bonus line lacks calibration status")
+					break
+	else:
+		problems.append("Unable to check real v1.2 bonus calibration annotations")
 	var magic := generator.generate({"archetypes":["STAFF_PEN"],"min_level":60,"max_level":60,
 		"quality":"purple","count":20,"seed":117,"school":"fire"})
 	if not bool(magic.get("ok",false)) or int(magic.get("generated",0)) != 20:
