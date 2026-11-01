@@ -92,6 +92,12 @@ func _verify() -> void:
 		var expected := 0 if armor_id == "HEAVY_DEF" else 1
 		if (variant.get("compensation_rolls",[]) as Array).size() != expected:
 			problems.append("Wrong compensation lines in " + armor_id)
+	var early := generator.generate({"archetypes":["MEDIUM_DEF"],
+		"min_level":9,"max_level":9,"quality":"white","count":1,"seed":17})
+	if bool(early.get("ok",false)):
+		var early_variant: Dictionary = early["rows"][0]["variant"]
+		if not (early_variant.get("compensation_rolls",[]) as Array).is_empty():
+			problems.append("Medium armour must not compensate before Lv10")
 	var full := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
