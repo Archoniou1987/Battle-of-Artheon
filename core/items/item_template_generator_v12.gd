@@ -283,7 +283,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
 			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
 			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
-	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
+	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"budget_split":armour_budget_split(spec),"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor,
 		"preview":preview_effects(armour,modifiers,level)}
 
@@ -301,17 +301,35 @@ func _weapon_damage(spec: Dictionary, level: int, slot: String) -> Array:
 	var spread := float(DAMAGE_SPREAD.get(family,0.15))
 	return [maxi(1,roundi(avg*(1.0-spread))),maxi(1,roundi(avg*(1.0+spread)))]
 
+## v1.2 armour profile is a DEFENCE / ATTACK budget split, NOT a
+## source of extra PAR rolls. K3:N12 in "Генератор v1.2" gives reference
+## helm Lv1: 80/20->48, 65/35->39, 50/50->30, 20/80->12.
+static func armour_budget_split(spec: Dictionary) -> Dictionary:
+	if String(spec.get("kind","")) != "armor":
+		return {}
+	var pieces := String(spec.get("profile","")).split("/")
+	if pieces.size() != 2:
+		return {}
+	if not String(pieces[0]).is_valid_int() or not String(pieces[1]).is_valid_int():
+		return {}
+	var defence := int(pieces[0])
+	var attack := int(pieces[1])
+	if defence < 0 or attack < 0 or defence + attack != 100:
+		return {}
+	return {"defence_pct":defence,"attack_pct":attack}
+
 func _base_armour(spec: Dictionary,slot: String,level: int,quality_factor: float) -> Dictionary:
-	var material := String(spec.get("material","cloth"))
-	var standard := float({"metal":80.0,"leather":50.0,"cloth":20.0}.get(material,20.0))
-	var ratio := String(spec.get("profile","50/50")).split("/")
-	var target_def := float(ratio[0])
-	var ref_def := float({"metal":80.0,"leather":50.0,"cloth":20.0}.get(material,20.0))
+	var allocation := armour_budget_split(spec)
+	if allocation.is_empty():
+		return {}
+	var defence_budget := float(allocation["defence_pct"])
 	var age := 1.0 + 3.0*float(level-1)/99.0
 	var outcome := {}
 	var zones: Dictionary = ARMOUR_ZONES.get(slot,{})
 	for par in zones:
-		outcome[par] = maxi(1,roundi(standard*target_def/ref_def*float(zones[par])*age*quality_factor))
+		# This is algebraically identical to the previous formula:
+		# material_base * defence_budget/material_base * zone * age.
+		outcome[par] = maxi(1,roundi(defence_budget*float(zones[par])*age*quality_factor))
 	return outcome
 
 ## Project 25 requirement entry curve. Empty requirements on Lv1-10 are valid.
