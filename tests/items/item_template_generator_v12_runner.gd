@@ -98,6 +98,14 @@ func _verify() -> void:
 		var early_variant: Dictionary = early["rows"][0]["variant"]
 		if not (early_variant.get("compensation_rolls",[]) as Array).is_empty():
 			problems.append("Medium armour must not compensate before Lv10")
+	var mature := generator.generate({"archetypes":["MEDIUM_DEF"],
+		"min_level":60,"max_level":60,"quality":"white","count":1,"seed":17})
+	if bool(mature.get("ok",false)):
+		var v: Dictionary = mature["rows"][0]["variant"]
+		if (v.get("compensation_rolls",[]) as Array).size() != 1:
+			problems.append("Lv60 medium armour lost compensation")
+		if (v.get("core_rolls",[]) as Array).size() != 2:
+			problems.append("Compensation must not consume Lv60 CORE lines")
 	var full := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
