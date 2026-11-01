@@ -41,6 +41,30 @@ const DR_RULES := {
 	"attack":{"threshold":75.0,"cap":250.0,"smooth":1.0}
 }
 const ARMOUR_IDS := ["PAR100","PAR101","PAR102","PAR103","PAR104"]
+## v1.2 K15:N15: only these budget directions are explicitly specified.
+## This is diagnostic metadata, NOT a hidden item-value multiplier.
+## Unknown categories stay "unclassified" until confirmed in the v1.2 tab.
+const PAR_BUDGET_DIRECTIONS := {
+	"hp":{"defence":1.0,"attack":0.0},
+	"reduce":{"defence":1.0,"attack":0.0},
+	"phys_res":{"defence":1.0,"attack":0.0},
+	"magic_res":{"defence":1.0,"attack":0.0},
+	"dodge":{"defence":0.75,"attack":0.25},
+	"crit":{"defence":0.0,"attack":1.0},
+	"crit_damage":{"defence":0.0,"attack":1.0},
+	"attack":{"defence":0.0,"attack":1.0},
+	"spell":{"defence":0.0,"attack":1.0},
+	"armour_pen":{"defence":0.0,"attack":1.0},
+	"shield_pen":{"defence":0.0,"attack":1.0},
+	"magic_pen":{"defence":0.0,"attack":1.0}
+}
+
+static func par_budget_direction(logical: String) -> Dictionary:
+	if not PAR_BUDGET_DIRECTIONS.has(logical):
+		return {"status":"UNCLASSIFIED"}
+	var fractions: Dictionary = PAR_BUDGET_DIRECTIONS[logical]
+	return {"status":"V12_APPROVED","defence":fractions["defence"],"attack":fractions["attack"]}
+
 
 ## Exact Project 25 A13/B13 spreadsheet curve. Never apply to
 ## primary attributes, HP, Mana, regeneration or Spell Power.
@@ -250,7 +274,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
 		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
-		core_rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"calibration":calibration_status(logical),"source":"CORE"})
+		core_rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"budget_direction":par_budget_direction(logical),"calibration":calibration_status(logical),"source":"CORE"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Each quality bonus is an independent weighted roll. Duplicates are allowed.
 	for i in range(bonus_lines):
@@ -261,7 +285,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
 		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
-		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"calibration":calibration_status(logical),"source":"RARITY"})
+		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"budget_direction":par_budget_direction(logical),"calibration":calibration_status(logical),"source":"RARITY"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Priority main-stat roll occupies a NORMAL affix slot, not an extra one.
 	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс"].has(slot) and level >= 10:
