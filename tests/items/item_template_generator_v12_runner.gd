@@ -85,7 +85,7 @@ func _verify() -> void:
 			if par_bonuses.has("PAR164") or par_bonuses.has("PAR166") or par_bonuses.has("PAR167"):
 				problems.append("Fire staff has universal or another school's penetration")
 				break
-			var all_rolls: Array = Dictionary(row["variant"]).get("core_rolls",[])
+			var all_rolls: Array = (Dictionary(row["variant"]).get("core_rolls",[]) as Array).duplicate()
 			all_rolls.append_array(Dictionary(row["variant"]).get("rolls",[]))
 			for raw_line in all_rolls:
 				var line: Dictionary = raw_line
