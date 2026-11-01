@@ -120,6 +120,52 @@ func _verify() -> void:
 			if String(Dictionary(raw).get("slot","")) != "Шлем":
 				problems.append("Armour-slot filter included weapons")
 				break
+	# Approved Project 25 equip-stat gates B(L) * K/N * F(L), rounded once.
+	var sword_spec: Dictionary = {}
+	var heavy_three_spec: Dictionary = {}
+	var support_spec: Dictionary = {}
+	for raw_spec in generator.archetypes():
+		var spec: Dictionary = raw_spec
+		match String(spec.get("id","")):
+			"SWORD_CRIT": sword_spec = spec
+			"HEAVY_ASSAULT": heavy_three_spec = spec
+			"STAFF_SUPPORT": support_spec = spec
+	if sword_spec.is_empty() or heavy_three_spec.is_empty() or support_spec.is_empty():
+		problems.append("Approved v1.2 requirement archetypes unavailable")
+	else:
+		for checkpoint in [
+			{"lvl":1,"n":0},{"lvl":10,"n":0},{"lvl":11,"n":3},
+			{"lvl":12,"n":4},{"lvl":15,"n":8},{"lvl":19,"n":17},
+			{"lvl":20,"n":20},{"lvl":30,"n":27},{"lvl":100,"n":76}
+		]:
+			var lvl := int(checkpoint["lvl"])
+			var stat_requirements := generator._requirements(sword_spec,lvl)
+			if int(checkpoint["n"]) == 0:
+				if not stat_requirements.is_empty():
+					problems.append("Item Lv" + str(lvl) + " must have no equipment requirements")
+			elif stat_requirements.size() != 2 or int(stat_requirements.get("PAR001",0)) != int(checkpoint["n"]) or int(stat_requirements.get("PAR003",0)) != int(checkpoint["n"]):
+				problems.append("Equip requirement ramp mismatch for sword Lv" + str(lvl))
+		var hybrid := generator._requirements(heavy_three_spec,30)
+		if hybrid.size() != 3 or int(hybrid.get("PAR003",0)) != 18:
+			problems.append("Third requirement attribute must share, not increase, total cost")
+		var support := generator._requirements(support_spec,30)
+		if support.size() != 2 or int(support.get("PAR004",0)) != 15:
+			problems.append("Support staff must use moderate K=0.4 requirement")
+	var level10 := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
+		"max_level":10,"quality":"green","count":100,"seed":105,"armor_slot":"Наручи"})
+	if not bool(level10.get("ok",false)) or int(level10.get("generated",0)) != 100:
+		problems.append("Lv10 green bracer generation failed")
+	else:
+		for raw_row in level10["rows"]:
+			var variant: Dictionary = Dictionary(raw_row).get("variant",{})
+			if not Dictionary(variant.get("requirements",{})).is_empty():
+				problems.append("Lv10 generated item requires stats before Lv11")
+				break
+			for raw_line in variant.get("rolls",[]):
+				var line: Dictionary = raw_line
+				if String(line.get("category","")) == "primary" and not ["PAR002","PAR006"].has(String(line.get("par",""))):
+					problems.append("Lv10 main stat roll selected outside archetype priorities")
+					break
 	# Numerically anchored HP/Mana budget: 14 equip slots = 100% of the pool.
 	var weights: Dictionary = generator.rules.get("slot_budgets",{})
 	var slots: Array = ["MH","OH","Шлем","Плечи","Нагрудник","Перчатки",
