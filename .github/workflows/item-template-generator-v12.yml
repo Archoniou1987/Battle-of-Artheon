@@ -34,5 +34,9 @@ jobs:
           include-templates: false
       - name: Import scripts and scenes
         run: timeout 120s godot --headless --editor --path . --quit
+      - name: Check v1.2 engine script syntax
+        run: timeout 120s godot --headless --path . --check-only --script res://core/items/item_template_generator_v12.gd
+      - name: Check v1.2 screen script syntax
+        run: timeout 120s godot --headless --path . --check-only --script res://scenes/debug/item_template_generator_v12.gd
       - name: Verify v1.2 rules and UI
         run: timeout 120s godot --headless --path . --script res://tests/items/item_template_generator_v12_runner.gd
