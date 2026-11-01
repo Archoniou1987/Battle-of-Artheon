@@ -198,10 +198,14 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			var primary := String(req_pars[rng.randi_range(0,req_pars.size()-1)])
 			var replaced: Dictionary = rolls[rolls.size()-1]
 			var old_par := String(replaced["par"])
-			modifiers.erase(old_par)
+			var remainder := float(modifiers.get(old_par,0.0)) - float(replaced["rating"])
+			if remainder > 0.001:
+				modifiers[old_par] = remainder
+			else:
+				modifiers.erase(old_par)
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
 			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
-			modifiers[primary] = added
+			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
 	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor}
 
