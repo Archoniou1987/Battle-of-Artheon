@@ -15,15 +15,16 @@ const PAR_LABELS := {
 	"PAR164":"Общее пробитие магии", "V12_ATTACK_POWER":"Сила атаки (v1.2)"
 }
 const ARMOUR_ZONES := {
+	# Approved Project 25 matrix V2: each zone sums to 80% without a shield.
 	"Шлем":{"PAR100":0.60},
-	"Плечи":{"PAR100":0.20,"PAR101":0.15,"PAR102":0.15},
-	"Нагрудник":{"PAR101":0.70,"PAR103":0.35},
-	"Перчатки":{"PAR102":0.15},
-	"Наручи":{"PAR102":0.15},
-	"Пояс":{"PAR103":0.15},
-	"Штаны":{"PAR103":0.35,"PAR104":0.70},
-	"Ботинки":{"PAR104":0.30},
-	"Плащ":{"PAR101":0.10}
+	"Плечи":{"PAR100":0.20,"PAR101":0.30,"PAR102":0.10},
+	"Нагрудник":{"PAR101":0.50,"PAR103":0.20},
+	"Перчатки":{"PAR102":0.40},
+	"Наручи":{"PAR102":0.30},
+	"Пояс":{"PAR103":0.25},
+	"Штаны":{"PAR103":0.35,"PAR104":0.30},
+	"Ботинки":{"PAR104":0.50},
+	"Плащ":{}
 }
 const WEAPON_FACTOR := {"sword":0.90,"dagger":0.65,"axe":1.0,"hammer":0.85,"spear":1.0} # Spear coefficient is provisional, until separately balanced.
 const DAMAGE_SPREAD := {"sword":0.15,"dagger":0.05,"axe":0.30,"hammer":0.25,"spear":0.15}
@@ -152,27 +153,42 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			offhand_damage = _weapon_damage(spec, level, "OH")
 	else:
 		armour = _base_armour(spec,slot,level,quality_factor)
+	# Template CORE lines belong to the white foundation, not rarity rolls.
+	# Lv20 blue+ enables the first CORE; Lv30 all qualities; Lv60 a second CORE.
 	var bonus_lines := int(quality_def["bonus"])
-	if level >= 30:
-		bonus_lines += 1
+	var core_lines := 0
+	if level >= 30 or (level >= 20 and ["blue","purple"].has(quality)):
+		core_lines = 1
 	if level >= 60:
-		bonus_lines += 1
-	bonus_lines = mini(4,bonus_lines)
+		core_lines = 2
+	var total_lines := maxi(1,bonus_lines + core_lines)
 	var modifiers := {}
 	var rolls: Array = []
-	var used := {}
+	var core_rolls: Array = []
 	var weights: Dictionary = spec["weights"]
 	var requirements := _requirements(spec,level)
-	for i in range(bonus_lines):
-		var logical := _roll_weight(weights,used)
+	var core_used := {}
+	for i in range(core_lines):
+		var logical := _roll_weight(weights,core_used)
 		if logical.is_empty():
 			break
-		used[logical] = true
+		core_used[logical] = true
 		var par := _resolve_par(logical,choice)
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
-		var rating := _affix_amount(logical, level,slot,quality_factor,bonus_lines)
-		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical})
+		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
+		core_rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"source":"CORE"})
+		modifiers[par] = float(modifiers.get(par,0.0)) + rating
+	# Each quality bonus is an independent weighted roll. Duplicates are allowed.
+	for i in range(bonus_lines):
+		var logical := _roll_weight(weights,{})
+		if logical.is_empty():
+			break
+		var par := _resolve_par(logical,choice)
+		if logical == "phys_res":
+			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
+		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
+		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"source":"RARITY"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Priority main-stat roll occupies a NORMAL affix slot, not an extra one.
 	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс"].has(slot) and level >= 10:
@@ -186,7 +202,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
 			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
 			modifiers[primary] = added
-	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"rolls":rolls,"total_par":modifiers,
+	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor}
 
 func _weapon_damage(spec: Dictionary, level: int, slot: String) -> Array:
