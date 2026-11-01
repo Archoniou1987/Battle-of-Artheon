@@ -317,6 +317,9 @@ func _armour_compensation(spec: Dictionary,choice: Dictionary,quality_factor: fl
 	var level := int(choice["level"])
 	if level < COMPENSATION_MIN_LEVEL:
 		return []
+	var slot := String(choice["slot"])
+	if Dictionary(ARMOUR_ZONES.get(slot,{})).is_empty():
+		return [] # Cloak / accessory is not a zonal armour base portion.
 	var material := String(spec.get("material",""))
 	var fraction := float(ARMOUR_COMPENSATION.get(material,0.0))
 	if fraction <= 0.0:
@@ -337,7 +340,6 @@ func _armour_compensation(spec: Dictionary,choice: Dictionary,quality_factor: fl
 		par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
 	if par.is_empty():
 		return []
-	var slot := String(choice["slot"])
 	var rating := float(maxi(1,roundi(nominal_affix(logical,level,slot,quality_factor)
 		* fraction*rng.randf_range(0.95,1.05))))
 	return [{"par":par,"name":par_label(par),"rating":rating,
