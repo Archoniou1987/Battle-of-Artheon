@@ -43,6 +43,49 @@ func _verify() -> void:
 			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
 				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
+	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
+	# 80/20 and similar labels describe a defence/attack budget split,
+	# not an extra PAR roll and not a probability of selecting a bonus.
+	var profile_cases := [
+		{"id":"HEAVY_DEF","defence":80,"attack":20,"head":48,"shoulder":16},
+		{"id":"HEAVY_ASSAULT","defence":65,"attack":35,"head":39,"shoulder":13},
+		{"id":"MEDIUM_UNIVERSAL","defence":50,"attack":50,"head":30,"shoulder":10},
+		{"id":"LIGHT_BATTLE","defence":20,"attack":80,"head":12,"shoulder":4}
+	]
+	for case_data in profile_cases:
+		var profile_spec: Dictionary = {}
+		for raw_spec in generator.archetypes():
+			var candidate_spec: Dictionary = raw_spec
+			if String(candidate_spec["id"]) == String(case_data["id"]):
+				profile_spec = candidate_spec
+				break
+		if profile_spec.is_empty():
+			problems.append("Missing approved armour profile " + String(case_data["id"]))
+			continue
+		var allocation := ItemTemplateGeneratorV12.armour_budget_split(profile_spec)
+		if int(allocation.get("defence_pct",-1)) != int(case_data["defence"]) or int(allocation.get("attack_pct",-1)) != int(case_data["attack"]):
+			problems.append("Incorrect defence/attack ratio for " + String(case_data["id"]))
+		for level in [1,100]:
+			var scale := 1 if level == 1 else 4
+			var helm_values := generator._base_armour(profile_spec,"Шлем",level,1.0)
+			var shoulder_values := generator._base_armour(profile_spec,"Плечи",level,1.0)
+			if int(helm_values.get("PAR100",-1)) != int(case_data["head"])*scale:
+				problems.append("Helmet armor differs from v1.2 control at Lv" + str(level))
+			if int(shoulder_values.get("PAR100",-1)) != int(case_data["shoulder"])*scale:
+				problems.append("Shoulder armor differs from v1.2 control at Lv" + str(level))
+		var purple_helm := generator._base_armour(profile_spec,"Шлем",1,1.5)
+		if int(purple_helm.get("PAR100",-1)) != roundi(float(case_data["head"])*1.5):
+			problems.append("Quality multiplier changed armor budget unexpectedly")
+	var pure_weapon := {"kind":"weapon","profile":"80/20"}
+	if not ItemTemplateGeneratorV12.armour_budget_split(pure_weapon).is_empty():
+		problems.append("Weapon must not have an armour defence/attack split")
+	var profile_output := generator.generate({"archetypes":["HEAVY_DEF"],
+		"min_level":30,"max_level":30,"quality":"white",
+		"armor_slot":"Шлем","count":1,"seed":101})
+	if bool(profile_output.get("ok",false)):
+		var metadata: Dictionary = profile_output["rows"][0]["variant"]
+		if int(Dictionary(metadata.get("budget_split",{})).get("defence_pct",-1)) != 80:
+			problems.append("Generated armour lost its v1.2 defence/attack budget")
 	# Approved zone matrix V2: 80% in each zone without the shield.
 	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
 	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
