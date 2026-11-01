@@ -232,7 +232,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
 		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
-		core_rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"source":"CORE"})
+		core_rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"calibration":calibration_status(logical),"source":"CORE"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Each quality bonus is an independent weighted roll. Duplicates are allowed.
 	for i in range(bonus_lines):
@@ -243,7 +243,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
 		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
-		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"source":"RARITY"})
+		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"calibration":calibration_status(logical),"source":"RARITY"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Priority main-stat roll occupies a NORMAL affix slot, not an extra one.
 	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс"].has(slot) and level >= 10:
@@ -328,20 +328,56 @@ func _resolve_par(logical: String,choice: Dictionary) -> String:
 		return String(Dictionary(choice["school"]).get("pen","PAR164"))
 	return String(Dictionary(rules.get("stat_par",{})).get(logical,""))
 
-func _affix_amount(logical: String,level: int,slot: String,quality: float,lines: int) -> float:
-	var budget := float(Dictionary(rules.get("slot_budgets",{})).get(slot,7.5))/7.5
-	var l := float(level)/100.0
-	var amount := 100.0*l*budget*quality/float(maxi(1,lines))
-	if logical == "hp":
-		amount *= 1.0119
-	elif logical == "mana":
-		amount *= 0.506
-	elif logical == "spell":
-		amount *= 5.0
-	elif logical == "attack":
-		amount *= 0.20
-	elif logical == "mana_regen":
-		amount *= 0.02
+## 14 slots sum to 100% in Project 25. One reference affix slot is 100/14.
+## Ratings are calculated per budget share: unlocking another slot NEVER reduces
+## any previously unlocked CORE line. Quality is applied exactly once.
+const REFERENCE_SLOT_BUDGET := 100.0 / 14.0
+const FULL_BUILD_REFERENCE_LINES := 14.0 * 2.0 * 1.5
+
+func nominal_affix(logical: String, level: int, slot: String, quality: float) -> float:
+	var slot_weight := float(Dictionary(rules.get("slot_budgets",{})).get(slot,7.5))
+	var share := slot_weight / REFERENCE_SLOT_BUDGET
+	var l := float(clampi(level,1,100))
+	var baseline := 0.0
+	match logical:
+		"hp":
+			# Project 25: 101.19 HP per reference PAR at Lv100 / white.
+			baseline = 101.19*l/100.0
+		"mana":
+			# Project 25: 50.60 mana per reference PAR at Lv100 / white.
+			baseline = 50.60*l/100.0
+		"attack":
+			# Project 25 build targets: +50% at Lv10, +150% at Lv100.
+			# Intermediate interpolation is a LAB calibration, not a combat rule.
+			var build_target := lerpf(50.0,150.0,clampf((l-10.0)/90.0,0.0,1.0))
+			if l < 10.0:
+				build_target *= l/10.0
+			baseline = build_target / FULL_BUILD_REFERENCE_LINES
+		"spell":
+			# Project 25 specialised build targets: ~200 SP Lv20, ~2000 SP Lv100.
+			# Between those anchors, interpolation remains a lab-only assumption.
+			var build_target := lerpf(200.0,2000.0,clampf((l-20.0)/80.0,0.0,1.0))
+			if l < 20.0:
+				build_target *= l/20.0
+			baseline = build_target / FULL_BUILD_REFERENCE_LINES
+		_:
+			# No approved per-PAR numerical extremum yet.
+			# Keep the old WORKING calibration, but reserve all 6 fixed
+			# budget portions even when some are not unlocked.
+			baseline = 100.0*l/100.0*REFERENCE_SLOT_BUDGET/7.5/6.0
+			if logical == "mana_regen":
+				baseline *= 0.02
+	return maxf(0.0,baseline*share*quality)
+
+func calibration_status(logical: String) -> String:
+	if ["hp","mana"].has(logical):
+		return "PROJECT25_ANCHOR"
+	if ["attack","spell"].has(logical):
+		return "PROJECT25_TARGET_INTERPOLATED"
+	return "PROVISIONAL_EXTREMUM"
+
+func _affix_amount(logical: String,level: int,slot: String,quality: float,_lines: int) -> float:
+	var amount := nominal_affix(logical,level,slot,quality)
 	return float(maxi(1,roundi(amount*rng.randf_range(0.95,1.05))))
 
 func par_label(par: String) -> String:
