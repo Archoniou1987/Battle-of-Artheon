@@ -89,8 +89,8 @@ func _verify() -> void:
 			problems.append("Armor compensation fixture failed")
 			continue
 		var variant: Dictionary = fixture["rows"][0]["variant"]
-		var expected := 0 if armor_id == "HEAVY_DEF" else 1
-		if (variant.get("compensation_rolls",[]) as Array).size() != expected:
+		var expected_compensation_count := 0 if armor_id == "HEAVY_DEF" else 1
+		if (variant.get("compensation_rolls",[]) as Array).size() != expected_compensation_count:
 			problems.append("Wrong compensation lines in " + armor_id)
 	var early := generator.generate({"archetypes":["MEDIUM_DEF"],
 		"min_level":9,"max_level":9,"quality":"white","count":1,"seed":17})
