@@ -74,11 +74,12 @@
     "magic_pen": "PAR164",
     "phys_res": "PAR127"
   },
+  "slot_budget_notes": {"2H":"PROPOSED_IN_GENERATOR_V12_ONLY; 22.5%=15% MH + 7.5% OH"},
   "slot_budgets": {
     "MH": 15,
     "MH/OH": 15,
     "OH": 7.5,
-    "2H": 24.75,
+    "2H": 22.5,
     "Шлем": 7.5,
     "Плечи": 6,
     "Нагрудник": 11.3,
