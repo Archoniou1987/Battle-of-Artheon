@@ -4,6 +4,7 @@ extends RefCounted
 ## Isolated Core-Balance v1.2 laboratory: NEVER writes ItemRepository or game saves.
 ## All archetype probabilities are loaded from the approved Project 25 snapshot.
 const RULE_PATH := "res://data/items/item_generator_v12_rules.json"
+const PAR_REGISTRY_PATH := "res://data/parameters/par_registry.json"
 const PROFILE_PATH := "user://boa_template_generator_v12_profile.json"
 const PAR_LABELS := {
 	"PAR010":"Максимальное HP", "PAR011":"Максимальная мана",
@@ -87,7 +88,7 @@ var par_registry: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 
 func _init() -> void:
-	par_registry = ParCalculationService.registry()
+	par_registry = _load_registry()
 	if not FileAccess.file_exists(RULE_PATH):
 		push_error("v1.2 rule file is missing")
 		return
@@ -95,8 +96,25 @@ func _init() -> void:
 	if parsed is Dictionary:
 		rules = parsed
 
+## Read the locked PAR catalogue as plain data; the item generator does not
+## depend on ParCalculationService, RatingMatrix or Combat Engine.
+func _load_registry() -> Dictionary:
+	if not FileAccess.file_exists(PAR_REGISTRY_PATH):
+		return {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(PAR_REGISTRY_PATH))
+	if not parsed is Dictionary or not bool(parsed.get("locked",false)):
+		return {}
+	var result := {}
+	for raw in parsed.get("parameters",[]):
+		if raw is Dictionary:
+			var entry: Dictionary = raw
+			var id := String(entry.get("id",""))
+			if id.begins_with("PAR"):
+				result[id] = entry.duplicate(true)
+	return result
+
 func ready_for_generation() -> bool:
-	if rules.is_empty():
+	if rules.is_empty() or par_registry.is_empty():
 		return false
 	for entry in archetypes():
 		var weights: Dictionary = entry.get("weights", {})
