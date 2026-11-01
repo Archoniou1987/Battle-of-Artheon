@@ -479,6 +479,7 @@ func _open_panel(section: String) -> void:
 		_add_debug_button("Отладочная карта", "res://scenes/debug/debug_map_viewer.tscn")
 		_add_debug_button("Отладочный бой", "res://scenes/debug/debug_combat_viewer.tscn")
 		_add_debug_button("Лаборатория предметов", "res://scenes/debug/item_generator_lab.tscn")
+		_add_debug_button("Генератор шаблонов v1.2", "res://scenes/debug/item_template_generator_v12.tscn")
 	popup.visible = true
 	popup.reset_size()
 	popup.position = (size - popup.size) * 0.5
