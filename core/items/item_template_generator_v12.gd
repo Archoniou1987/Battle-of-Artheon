@@ -41,6 +41,11 @@ const DR_RULES := {
 	"attack":{"threshold":75.0,"cap":250.0,"smooth":1.0}
 }
 const ARMOUR_IDS := ["PAR100","PAR101","PAR102","PAR103","PAR104"]
+## Approved base budget class shares in Project 25, compensation from Lv10.
+## The 80/20, 55/45, 30/70 archetype profiles are attack/defence
+## orientations and must not be confused with class budget shares.
+const ARMOUR_COMPENSATION := {"metal":0.0,"leather":0.50,"cloth":0.80}
+const COMPENSATION_MIN_LEVEL := 10
 
 ## Exact Project 25 A13/B13 spreadsheet curve. Never apply to
 ## primary attributes, HP, Mana, regeneration or Spell Power.
@@ -240,6 +245,15 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	var core_rolls: Array = []
 	var weights: Dictionary = spec["weights"]
 	var requirements := _requirements(spec,level)
+	# In class armour, unused FIRST base portion is converted to one
+	# persistent compensation PAR. It does not consume CORE or rarity slots.
+	var compensation_rolls: Array = []
+	if String(spec["kind"]) == "armor":
+		compensation_rolls = _armour_compensation(spec,choice,quality_factor)
+		for compensation_line in compensation_rolls:
+			var compensation: Dictionary = compensation_line
+			var p := String(compensation["par"])
+			modifiers[p] = float(modifiers.get(p,0.0)) + float(compensation["rating"])
 	var core_used := {}
 	for i in range(core_lines):
 		var logical := _roll_weight(weights,core_used)
@@ -283,9 +297,52 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
 			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
 			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
-	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
+	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"compensation_rolls":compensation_rolls,"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor,
 		"preview":preview_effects(armour,modifiers,level)}
+
+## Only the *selection* and availability of armour compensation are approved.
+## Actual non-HP per-PAR extrema are still provisional. A category selection
+## is weighted by the existing armour archetype, not by global popularity.
+func _compensation_is_available(logical: String, level: int) -> bool:
+	if logical == "mana_regen":
+		return false # Outside-battle regen belongs to jewellery/cloak CORE.
+	if level < 15:
+		return logical == "hp"
+	if level < 30:
+		return ["hp","crit","crit_damage","dodge","anti_dodge","anticrit"].has(logical)
+	return true
+
+func _armour_compensation(spec: Dictionary,choice: Dictionary,quality_factor: float) -> Array:
+	var level := int(choice["level"])
+	if level < COMPENSATION_MIN_LEVEL:
+		return []
+	var material := String(spec.get("material",""))
+	var fraction := float(ARMOUR_COMPENSATION.get(material,0.0))
+	if fraction <= 0.0:
+		return []
+	var eligible: Dictionary = {}
+	var weights: Dictionary = spec.get("weights",{})
+	for logical in weights:
+		if float(weights[logical]) > 0.0 and _compensation_is_available(String(logical),level):
+			eligible[logical] = weights[logical]
+	if eligible.is_empty():
+		# No fabricated replacement category; do not redistribute budget.
+		return []
+	var logical := _roll_weight(eligible,{})
+	if logical.is_empty():
+		return []
+	var par := _resolve_par(logical,choice)
+	if logical == "phys_res":
+		par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
+	if par.is_empty():
+		return []
+	var slot := String(choice["slot"])
+	var rating := float(maxi(1,roundi(nominal_affix(logical,level,slot,quality_factor)
+		* fraction*rng.randf_range(0.95,1.05))))
+	return [{"par":par,"name":par_label(par),"rating":rating,
+		"category":logical,"calibration":calibration_status(logical),
+		"source":"COMPENSATION","class_fraction":fraction}]
 
 func _weapon_damage(spec: Dictionary, level: int, slot: String) -> Array:
 	var family := String(spec.get("family","staff"))
