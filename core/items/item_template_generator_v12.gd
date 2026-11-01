@@ -28,9 +28,11 @@ const ARMOUR_ZONES := {
 const WEAPON_FACTOR := {"sword":0.90,"dagger":0.65,"axe":1.0,"hammer":0.85,"spear":1.0} # Spear coefficient is provisional, until separately balanced.
 const DAMAGE_SPREAD := {"sword":0.15,"dagger":0.05,"axe":0.30,"hammer":0.25,"spear":0.15}
 var rules: Dictionary = {}
+var par_registry: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 
 func _init() -> void:
+	par_registry = ParCalculationService.registry()
 	if not FileAccess.file_exists(RULE_PATH):
 		push_error("v1.2 rule file is missing")
 		return
@@ -269,5 +271,4 @@ func _affix_amount(logical: String,level: int,slot: String,quality: float,lines:
 func par_label(par: String) -> String:
 	if PAR_LABELS.has(par):
 		return String(PAR_LABELS[par])
-	var registry := ParCalculationService.registry()
-	return String(Dictionary(registry.get(par,{})).get("name",par))
+	return String(Dictionary(par_registry.get(par,{})).get("name",par))
