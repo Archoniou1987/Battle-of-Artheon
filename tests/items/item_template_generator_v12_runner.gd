@@ -72,6 +72,54 @@ func _verify() -> void:
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
 		problems.append("500 armor templates were not generated")
+	# Source: Project 25 'Генератор v1.2', A13:B22 and E4:I11.
+	if absf(ItemTemplateGeneratorV12.diminishing(30.0,"armour") - 30.0) > 0.0001:
+		problems.append("Armour DR incorrectly changes values before threshold")
+	if absf(ItemTemplateGeneratorV12.diminishing(40.0,"armour") - 39.515635) > 0.01:
+		problems.append("Armour DR at 40% differs from Project 25")
+	if absf(ItemTemplateGeneratorV12.diminishing(100.0,"armour") - 68.707771) > 0.01:
+		problems.append("Armour DR at 100% differs from Project 25")
+	if absf(ItemTemplateGeneratorV12.rating_to_pct(100.0,1) - 20.0) > 0.0001:
+		problems.append("Lv1 100-rating critical/dodge scale is incorrect")
+	if absf(ItemTemplateGeneratorV12.rating_to_pct(100.0,100) - 4.0) > 0.0001:
+		problems.append("Lv100 100-rating critical/dodge scale is incorrect")
+	if absf(ItemTemplateGeneratorV12.armour_raw_pct(48.0,1) - 24.0) > 0.0001:
+		problems.append("Lv1 heavy helmet should be 24% raw armour")
+	if absf(ItemTemplateGeneratorV12.armour_raw_pct(192.0,100) - 24.0) > 0.0001:
+		problems.append("Age factor K must preserve same armor percent for 4x rating")
+	var diagnostic := generator.preview_effects({"PAR100":48},{"PAR033":100,"PAR031":100},1)
+	if not is_equal_approx(float(diagnostic["armour"]["PAR100"]["after_dr_pct"]),24.0):
+		problems.append("Armour DR diagnostic must combine base and direct PAR bonuses")
+	if not is_equal_approx(float(diagnostic["ratings"]["PAR033"]["after_dr_pct"]),20.0):
+		problems.append("Crit DR diagnostic must retain 20% below threshold")
+	# Rare-only filters must exclude unavailable levels BEFORE selecting candidates.
+	var rare := generator.generate({"archetypes":["SWORD_CRIT"],"min_level":30,"max_level":40,
+		"quality":"purple","count":100,"seed":1989})
+	if not bool(rare.get("ok",false)) or int(rare.get("generated",0)) != 100:
+		problems.append("Rare-only v1.2 filter returned fewer than 100 available templates")
+	else:
+		for raw in rare["rows"]:
+			if int(Dictionary(raw).get("level",0)) != 40:
+				problems.append("Purple was generated before Lv40")
+				break
+	var school_only := generator.generate({"min_level":40,"max_level":40,
+		"school":"fire","count":15,"seed":9})
+	if not bool(school_only.get("ok",false)):
+		problems.append("School-only generator filter failed")
+	else:
+		for raw in school_only["rows"]:
+			if String(Dictionary(raw).get("school","")) != "Fire":
+				problems.append("School-only filter included nonstaff items")
+				break
+	var slot_only := generator.generate({"min_level":40,"max_level":40,
+		"armor_slot":"Шлем","count":15,"seed":9})
+	if not bool(slot_only.get("ok",false)):
+		problems.append("Armour-slot generator filter failed")
+	else:
+		for raw in slot_only["rows"]:
+			if String(Dictionary(raw).get("slot","")) != "Шлем":
+				problems.append("Armour-slot filter included weapons")
+				break
 	var magic := generator.generate({"archetypes":["STAFF_PEN"],"min_level":60,"max_level":60,
 		"quality":"purple","count":20,"seed":117,"school":"fire"})
 	if not bool(magic.get("ok",false)) or int(magic.get("generated",0)) != 20:
