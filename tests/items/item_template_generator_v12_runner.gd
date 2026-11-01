@@ -46,9 +46,9 @@ func _verify() -> void:
 	# Approved zone matrix V2: 80% in each zone without the shield.
 	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
 	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
-	for slot in generator.ARMOUR_ZONES:
-		for zone in generator.ARMOUR_ZONES[slot]:
-			sum_by_zone[zone] += float(generator.ARMOUR_ZONES[slot][zone])
+	for slot in ItemTemplateGeneratorV12.ARMOUR_ZONES:
+		for zone in ItemTemplateGeneratorV12.ARMOUR_ZONES[slot]:
+			sum_by_zone[zone] += float(ItemTemplateGeneratorV12.ARMOUR_ZONES[slot][zone])
 	for zone in expected:
 		if not is_equal_approx(float(sum_by_zone[zone]),float(expected[zone])):
 			problems.append("Armor matrix missing 80% without shield at " + String(zone))
@@ -85,7 +85,9 @@ func _verify() -> void:
 			if par_bonuses.has("PAR164") or par_bonuses.has("PAR166") or par_bonuses.has("PAR167"):
 				problems.append("Fire staff has universal or another school's penetration")
 				break
-			for raw_line in Dictionary(row["variant"]).get("core_rolls",[]) + Dictionary(row["variant"]).get("rolls",[]):
+			var all_rolls: Array = Dictionary(row["variant"]).get("core_rolls",[])
+			all_rolls.append_array(Dictionary(row["variant"]).get("rolls",[]))
+			for raw_line in all_rolls:
 				var line: Dictionary = raw_line
 				if String(line.get("category","")) == "magic_pen" and String(line.get("par","")) != "PAR165":
 					problems.append("Fire staff rolled an incorrect penetration PAR")
