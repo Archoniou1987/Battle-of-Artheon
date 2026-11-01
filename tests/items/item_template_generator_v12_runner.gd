@@ -39,9 +39,35 @@ func _verify() -> void:
 				problems.append("Level or rarity filter ignored")
 			if String(entry["archetype_id"]) != "SWORD_CRIT":
 				problems.append("Archetype filter ignored")
-			if (Dictionary(entry["variant"]).get("rolls",[]) as Array).size() != 3:
-				problems.append("Lv30 blue must have two random + one template PAR lines")
+			var variant: Dictionary = entry["variant"]
+			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
+				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
+	# Approved zone matrix V2: 80% in each zone without the shield.
+	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
+	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
+	for slot in generator.ARMOUR_ZONES:
+		for zone in generator.ARMOUR_ZONES[slot]:
+			sum_by_zone[zone] += float(generator.ARMOUR_ZONES[slot][zone])
+	for zone in expected:
+		if not is_equal_approx(float(sum_by_zone[zone]),float(expected[zone])):
+			problems.append("Armor matrix missing 80% without shield at " + String(zone))
+	# Milestones: Lv20 blue unlocks CORE; Lv30 white gets CORE;
+	# Lv60 purple has two CORE plus three distinct rarity slots.
+	var checks := [
+		{"level":20,"quality":"blue","core":1,"bonus":2},
+		{"level":30,"quality":"white","core":1,"bonus":0},
+		{"level":60,"quality":"purple","core":2,"bonus":3}
+	]
+	for checkpoint in checks:
+		var output := generator.generate({"archetypes":["SWORD_CRIT"],"min_level":checkpoint["level"],
+			"max_level":checkpoint["level"],"quality":checkpoint["quality"],"count":1,"seed":113})
+		if not bool(output.get("ok",false)):
+			problems.append("Missing v1.2 CORE milestone " + str(checkpoint["level"]))
+			continue
+		var v: Dictionary = Dictionary(output["rows"][0]).get("variant",{})
+		if (v.get("core_rolls",[]) as Array).size() != int(checkpoint["core"]) or (v.get("rolls",[]) as Array).size() != int(checkpoint["bonus"]):
+			problems.append("Incorrect CORE/rarity line separation at Lv" + str(checkpoint["level"]))
 	var full := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
@@ -56,9 +82,14 @@ func _verify() -> void:
 			if String(row["school"]) != "Fire":
 				problems.append("Staff school filter ignored")
 			var par_bonuses: Dictionary = Dictionary(row["variant"]).get("total_par",{})
-			if not par_bonuses.has("PAR165") or par_bonuses.has("PAR164"):
-				problems.append("Fire staff penetration is not PAR165")
+			if par_bonuses.has("PAR164") or par_bonuses.has("PAR166") or par_bonuses.has("PAR167"):
+				problems.append("Fire staff has universal or another school's penetration")
 				break
+			for raw_line in Dictionary(row["variant"]).get("core_rolls",[]) + Dictionary(row["variant"]).get("rolls",[]):
+				var line: Dictionary = raw_line
+				if String(line.get("category","")) == "magic_pen" and String(line.get("par","")) != "PAR165":
+					problems.append("Fire staff rolled an incorrect penetration PAR")
+					break
 	var source := load("res://scenes/debug/item_template_generator_v12.tscn") as PackedScene
 	if source == null:
 		problems.append("v1.2 menu scene missing")
