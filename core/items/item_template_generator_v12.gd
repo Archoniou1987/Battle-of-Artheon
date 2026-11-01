@@ -25,7 +25,7 @@ const ARMOUR_ZONES := {
 	"Ботинки":{"PAR104":0.30},
 	"Плащ":{"PAR101":0.10}
 }
-const WEAPON_FACTOR := {"sword":0.90,"dagger":0.65,"axe":1.0,"hammer":0.85,"spear":1.0}
+const WEAPON_FACTOR := {"sword":0.90,"dagger":0.65,"axe":1.0,"hammer":0.85,"spear":1.0} # Spear coefficient is provisional, until separately balanced.
 const DAMAGE_SPREAD := {"sword":0.15,"dagger":0.05,"axe":0.30,"hammer":0.25,"spear":0.15}
 var rules: Dictionary = {}
 var rng := RandomNumberGenerator.new()
@@ -143,8 +143,11 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	var quality_factor := float(quality_def["factor"])
 	var armour := {}
 	var damage: Array = []
+	var offhand_damage: Array = []
 	if String(spec["kind"]) == "weapon":
 		damage = _weapon_damage(spec, level, slot)
+		if slot == "MH/OH":
+			offhand_damage = _weapon_damage(spec, level, "OH")
 	else:
 		armour = _base_armour(spec,slot,level,quality_factor)
 	var bonus_lines := int(quality_def["bonus"])
@@ -181,7 +184,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
 			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
 			modifiers[primary] = added
-	return {"damage":damage,"armour":armour,"rolls":rolls,"total_par":modifiers,
+	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor}
 
 func _weapon_damage(spec: Dictionary, level: int, slot: String) -> Array:
