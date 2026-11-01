@@ -227,6 +227,9 @@ func _render() -> void:
 		var damage: Array = v.get("damage",[])
 		if damage.size() == 2:
 			details.append("Урон %d–%d" % [int(damage[0]),int(damage[1])])
+		var offhand_damage: Array = v.get("offhand_damage",[])
+		if offhand_damage.size() == 2:
+			details.append("OH %d–%d" % [int(offhand_damage[0]),int(offhand_damage[1])])
 		var armour: Dictionary = v.get("armour",{})
 		if not armour.is_empty():
 			var fields: Array[String] = []
@@ -242,7 +245,7 @@ func _render() -> void:
 		for key in req:
 			req_bits.append("%s %d" % [String(key),int(req[key])])
 		details.append("Требования: " + ", ".join(PackedStringArray(req_bits)))
-		result_list.add_child(_label(" · ".join(PackedStringArray(details)),12,Color(COLOURS[String(entry["quality"])])))
+		result_list.add_child(_label(" · ".join(PackedStringArray(details)),12,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
 		result_list.add_child(HSeparator.new())
 
 func _save_profile() -> void:
@@ -275,15 +278,15 @@ func _export_csv() -> void:
 	if results.is_empty():
 		return
 	var lines: Array[String] = []
-	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,armour,par_bonuses,requirements")
-	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","",""]))
+	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,par_bonuses,requirements")
+	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","",""]))
 	for item in results:
 		var row: Dictionary = item
 		var v: Dictionary = row["variant"]
 		lines.append(_csv_row(["ITEM",String(row["id"]),String(row["archetype_id"]),
 			String(row["archetype_name"]),String(row["slot"]),String(row["school"]),
 			str(int(row["level"])),String(row["quality"]),JSON.stringify(v["damage"]),
-			JSON.stringify(v["armour"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"])]))
+			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"])]))
 	var csv := "\n".join(PackedStringArray(lines)) + "\n"
 	var filename := "BOA_Template_v12_%d.csv" % int(Time.get_unix_time_from_system())
 	if OS.has_feature("web"):
