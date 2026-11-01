@@ -103,6 +103,47 @@ func _verify() -> void:
 			problems.append("PAR budget direction differs from v1.2")
 	if String(ItemTemplateGeneratorV12.par_budget_direction("counter").get("status","")) != "UNCLASSIFIED":
 		problems.append("Unapproved PAR direction must not be invented")
+	# v1.2 K30:N32 and K51:N51: MH 15%, OH 7.5%, OH base damage 80%.
+	var mh_dagger := generator.generate({"archetypes":["DAGGER_ATTACK"],
+		"min_level":100,"max_level":100,"quality":"purple",
+		"weapon_hand":"MH","count":3,"seed":440})
+	var oh_dagger := generator.generate({"archetypes":["DAGGER_ATTACK"],
+		"min_level":100,"max_level":100,"quality":"purple",
+		"weapon_hand":"OH","count":3,"seed":440})
+	if not bool(mh_dagger.get("ok",false)) or not bool(oh_dagger.get("ok",false)):
+		problems.append("Independent MH and OH dagger variants missing")
+	else:
+		var mh: Dictionary = mh_dagger["rows"][0]
+		var oh: Dictionary = oh_dagger["rows"][0]
+		var mh_variant: Dictionary = mh["variant"]
+		var oh_variant: Dictionary = oh["variant"]
+		if String(mh["slot"]) != "MH" or String(oh["slot"]) != "OH":
+			problems.append("Dagger hand filter ignored")
+		if float(mh_variant.get("par_slot_budget_pct",0.0)) != 15.0 or float(oh_variant.get("par_slot_budget_pct",0.0)) != 7.5:
+			problems.append("Dagger PAR budgets do not follow selected hand")
+		var mh_dmg: Array = mh_variant.get("damage",[])
+		var oh_dmg: Array = oh_variant.get("damage",[])
+		if mh_dmg.size() != 2 or oh_dmg.size() != 2:
+			problems.append("Dagger physical damage was not generated")
+		else:
+			var mh_mid := 0.5 * float(int(mh_dmg[0])+int(mh_dmg[1]))
+			var oh_mid := 0.5 * float(int(oh_dmg[0])+int(oh_dmg[1]))
+			if absf(oh_mid/mh_mid-0.8) > 0.03:
+				problems.append("OH base damage is not 80 percent of MH")
+		var mh_affix := generator.nominal_affix("hp",100,"MH",1.0)
+		var oh_affix := generator.nominal_affix("hp",100,"OH",1.0)
+		if absf(oh_affix/mh_affix-0.5) > 0.0001:
+			problems.append("OH PAR value does not use half of MH slot share")
+	var both_hands := generator.generate({"archetypes":["DAGGER_ATTACK"],
+		"min_level":30,"max_level":30,"quality":"white",
+		"weapon_hand":"any","count":2,"seed":440})
+	if not bool(both_hands.get("ok",false)) or int(both_hands.get("candidate_count",0)) != 2:
+		problems.append("MH/OH archetype must expose exactly two hand candidates")
+	var impossible_hand := generator.generate({"archetypes":["SWORD_CRIT"],
+		"min_level":30,"max_level":30,"quality":"white",
+		"weapon_hand":"OH","count":1,"seed":440})
+	if bool(impossible_hand.get("ok",false)):
+		problems.append("MH-only sword should not appear in an OH-only search")
 	# Approved zone matrix V2: 80% in each zone without the shield.
 	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
 	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
