@@ -267,7 +267,11 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс"].has(slot) and level >= 10:
 		var chance := lerpf(0.40,0.10,float(level-10)/90.0)
 		if rng.randf() < chance:
+			# Lv10 has no equip requirements; use the archetype's stat priorities
+			# rather than attempting to choose from an empty requirements map.
 			var req_pars: Array = requirements.keys()
+			if req_pars.is_empty():
+				req_pars = _requirement_attributes(spec)
 			var primary := String(req_pars[rng.randi_range(0,req_pars.size()-1)])
 			var replaced: Dictionary = rolls[rolls.size()-1]
 			var old_par := String(replaced["par"])
@@ -310,18 +314,49 @@ func _base_armour(spec: Dictionary,slot: String,level: int,quality_factor: float
 		outcome[par] = maxi(1,roundi(standard*target_def/ref_def*float(zones[par])*age*quality_factor))
 	return outcome
 
-func _requirements(spec: Dictionary,level: int) -> Dictionary:
+## Project 25 requirement entry curve. Empty requirements on Lv1-10 are valid.
+## No own item affix counts towards equipping; Combat Engine is not consulted.
+static func requirement_factor(level: int) -> float:
+	if level <= 10:
+		return 0.0
+	if level >= 20:
+		return 1.0
+	match level:
+		11: return 0.25
+		12: return 0.3125
+		13: return 0.375
+		14: return 0.4375
+		15: return 0.5
+		16: return 0.6
+		17: return 0.7
+		18: return 0.8
+		19: return 0.9
+	return 0.0
+
+func _requirement_attributes(spec: Dictionary) -> Array:
 	var ids: Array = spec.get("requirements",[])
+	if not ids.is_empty():
+		return ids
+	match String(spec.get("family","")):
+		"dagger": return ["PAR002","PAR006"]
+		"staff": return ["PAR004","PAR005"]
+		"spear": return ["PAR002","PAR003"]
+		_: return ["PAR001","PAR003"]
+
+func _requirements(spec: Dictionary,level: int) -> Dictionary:
+	var factor := requirement_factor(level)
+	if factor <= 0.0:
+		return {}
+	var ids := _requirement_attributes(spec)
 	if ids.is_empty():
-		match String(spec.get("family","")):
-			"dagger": ids = ["PAR002","PAR006"]
-			"staff": ids = ["PAR004","PAR005"]
-			"spear": ids = ["PAR002","PAR003"]
-			_: ids = ["PAR001","PAR003"]
-	var requirement_pool := (18.0 + 2.0*float(level-1))*0.60
+		return {}
+	# Full cost from base pool B(L) = 18 + 2*(L-1), divided by N.
+	# Profile K = 0.70 (high) or 0.40 (moderate).
+	var k := 0.4 if String(spec.get("id","")) == "STAFF_SUPPORT" else float(spec.get("requirement_k",0.7))
+	var cost := (18.0+2.0*float(level-1))*k/float(ids.size())*factor
 	var result := {}
 	for p in ids:
-		result[String(p)] = maxi(1,roundi(requirement_pool / float(ids.size())))
+		result[String(p)] = maxi(1,roundi(cost))
 	return result
 
 func _roll_weight(weights: Dictionary,used: Dictionary) -> String:
