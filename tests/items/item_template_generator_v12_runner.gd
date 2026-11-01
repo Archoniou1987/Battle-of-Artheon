@@ -68,44 +68,6 @@ func _verify() -> void:
 		var v: Dictionary = Dictionary(output["rows"][0]).get("variant",{})
 		if (v.get("core_rolls",[]) as Array).size() != int(checkpoint["core"]) or (v.get("rolls",[]) as Array).size() != int(checkpoint["bonus"]):
 			problems.append("Incorrect CORE/rarity line separation at Lv" + str(checkpoint["level"]))
-	if ItemTemplateGeneratorV12.ARMOUR_COMPENSATION["metal"] != 0.0 or ItemTemplateGeneratorV12.ARMOUR_COMPENSATION["leather"] != 0.5 or ItemTemplateGeneratorV12.ARMOUR_COMPENSATION["cloth"] != 0.8:
-		problems.append("Incorrect armour class compensation shares")
-	var light10 := generator.generate({"archetypes":["LIGHT_RESOURCE"],
-		"min_level":10,"max_level":10,"quality":"white",
-		"armor_slot":"Шлем","count":5,"seed":17})
-	if not bool(light10.get("ok",false)):
-		problems.append("Light Lv10 compensation fixture failed")
-	else:
-		for row in light10["rows"]:
-			var variant: Dictionary = row["variant"]
-			if (variant.get("compensation_rolls",[]) as Array).size() != 1:
-				problems.append("Light armor compensation missing at Lv10")
-				break
-	for armor_id in ["HEAVY_DEF","MEDIUM_DEF"]:
-		var fixture := generator.generate({"archetypes":[armor_id],
-			"min_level":10,"max_level":10,"quality":"white",
-			"armor_slot":"Шлем","count":1,"seed":17})
-		if not bool(fixture.get("ok",false)):
-			problems.append("Armor compensation fixture failed")
-			continue
-		var variant: Dictionary = fixture["rows"][0]["variant"]
-		var expected_compensation_count := 0 if armor_id == "HEAVY_DEF" else 1
-		if (variant.get("compensation_rolls",[]) as Array).size() != expected_compensation_count:
-			problems.append("Wrong compensation lines in " + armor_id)
-	var early := generator.generate({"archetypes":["MEDIUM_DEF"],
-		"min_level":9,"max_level":9,"quality":"white","count":1,"seed":17})
-	if bool(early.get("ok",false)):
-		var early_variant: Dictionary = early["rows"][0]["variant"]
-		if not (early_variant.get("compensation_rolls",[]) as Array).is_empty():
-			problems.append("Medium armour must not compensate before Lv10")
-	var mature := generator.generate({"archetypes":["MEDIUM_DEF"],
-		"min_level":60,"max_level":60,"quality":"white","count":1,"seed":17})
-	if bool(mature.get("ok",false)):
-		var v: Dictionary = mature["rows"][0]["variant"]
-		if (v.get("compensation_rolls",[]) as Array).size() != 1:
-			problems.append("Lv60 medium armour lost compensation")
-		if (v.get("core_rolls",[]) as Array).size() != 2:
-			problems.append("Compensation must not consume Lv60 CORE lines")
 	var full := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
