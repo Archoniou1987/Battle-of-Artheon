@@ -68,6 +68,8 @@ func _verify() -> void:
 		var v: Dictionary = Dictionary(output["rows"][0]).get("variant",{})
 		if (v.get("core_rolls",[]) as Array).size() != int(checkpoint["core"]) or (v.get("rolls",[]) as Array).size() != int(checkpoint["bonus"]):
 			problems.append("Incorrect CORE/rarity line separation at Lv" + str(checkpoint["level"]))
+	if generator.ARMOUR_COMPENSATION["metal"] != 0.0 or generator.ARMOUR_COMPENSATION["leather"] != 0.5 or generator.ARMOUR_COMPENSATION["cloth"] != 0.8:
+		problems.append("Incorrect armour class compensation shares")
 	var full := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
