@@ -141,6 +141,8 @@ func ready_for_generation() -> bool:
 	if rules.is_empty() or par_registry.is_empty():
 		return false
 	for entry in archetypes():
+		if String(entry.get("kind","")) == "armor" and armour_budget_split(entry).is_empty():
+			return false
 		var weights: Dictionary = entry.get("weights", {})
 		var total := 0.0
 		for key in weights:
