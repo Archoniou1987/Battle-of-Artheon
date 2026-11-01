@@ -141,6 +141,24 @@ func _verify() -> void:
 		var epic := generator.nominal_affix("hp",level,"Шлем",1.5)
 		if absf(epic-current_white*1.5) > 0.001:
 			problems.append("HP rarity modifier applied incorrectly at Lv" + str(level))
+	# Target build anchors are normalized to 14 slots, two PAR lines, epic 1.5.
+	var ref_share := 7.5 / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
+	for entry in [
+		{"stat":"attack","level":10,"target":50.0},
+		{"stat":"attack","level":100,"target":150.0},
+		{"stat":"spell","level":20,"target":200.0},
+		{"stat":"spell","level":100,"target":2000.0}
+	]:
+		var per_line := generator.nominal_affix(String(entry["stat"]),int(entry["level"]),"Шлем",1.0)
+		var projected := per_line / ref_share * ItemTemplateGeneratorV12.FULL_BUILD_REFERENCE_LINES
+		if absf(projected-float(entry["target"])) > 0.001:
+			problems.append("v1.2 target mismatch for " + String(entry["stat"]) + " Lv" + str(entry["level"]))
+	# A baseline white CORE value is independent of the number of unlocked
+	# rarity lines: quality multiplies the line, never divides it.
+	var white_hp := generator.nominal_affix("hp",60,"Шлем",1.0)
+	var purple_hp := generator.nominal_affix("hp",60,"Шлем",1.5)
+	if absf(purple_hp / white_hp - 1.5) > 0.00001:
+		problems.append("New rarity lines incorrectly dilute the full CORE allocation")
 	if generator.calibration_status("hp") != "PROJECT25_ANCHOR" or generator.calibration_status("crit") != "PROVISIONAL_EXTREMUM":
 		problems.append("Generator must label calibrated and provisional PAR separately")
 	var sample_blue := generator.generate({"archetypes":["HAMMER_DEF"],"min_level":30,"max_level":30,
