@@ -86,6 +86,23 @@ func _verify() -> void:
 		var metadata: Dictionary = profile_output["rows"][0]["variant"]
 		if int(Dictionary(metadata.get("budget_split",{})).get("defence_pct",-1)) != 80:
 			problems.append("Generated armour lost its v1.2 defence/attack budget")
+	# The ONLY explicitly approved per-PAR direction splits in v1.2.
+	for expectation in [
+		{"logical":"hp","defence":1.0,"attack":0.0},
+		{"logical":"reduce","defence":1.0,"attack":0.0},
+		{"logical":"dodge","defence":0.75,"attack":0.25},
+		{"logical":"crit","defence":0.0,"attack":1.0},
+		{"logical":"attack","defence":0.0,"attack":1.0},
+		{"logical":"spell","defence":0.0,"attack":1.0},
+		{"logical":"armour_pen","defence":0.0,"attack":1.0}
+	]:
+		var split := ItemTemplateGeneratorV12.par_budget_direction(String(expectation["logical"]))
+		if String(split.get("status","")) != "V12_APPROVED":
+			problems.append("Missing approved PAR budget direction")
+		elif absf(float(split["defence"])-float(expectation["defence"])) > 0.0001 or absf(float(split["attack"])-float(expectation["attack"])) > 0.0001:
+			problems.append("PAR budget direction differs from v1.2")
+	if String(ItemTemplateGeneratorV12.par_budget_direction("counter").get("status","")) != "UNCLASSIFIED":
+		problems.append("Unapproved PAR direction must not be invented")
 	# Approved zone matrix V2: 80% in each zone without the shield.
 	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
 	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
