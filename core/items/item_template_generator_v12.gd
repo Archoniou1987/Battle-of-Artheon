@@ -197,6 +197,8 @@ func generate(config: Dictionary) -> Dictionary:
 		var entry: Dictionary = spec
 		if not chosen_ids.is_empty() and not chosen_ids.has(String(entry["id"])):
 			continue
+		if chosen_hand != "any" and String(entry["kind"]) != "weapon":
+			continue
 		var slots: Array = [String(entry.get("slot","MH"))]
 		if String(entry["kind"]) == "armor":
 			slots = rules.get("armor_slots", [])
