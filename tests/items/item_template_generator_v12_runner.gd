@@ -81,6 +81,17 @@ func _verify() -> void:
 			if (variant.get("compensation_rolls",[]) as Array).size() != 1:
 				problems.append("Light armor compensation missing at Lv10")
 				break
+	for armor_id in ["HEAVY_DEF","MEDIUM_DEF"]:
+		var fixture := generator.generate({"archetypes":[armor_id],
+			"min_level":10,"max_level":10,"quality":"white",
+			"armor_slot":"Шлем","count":1,"seed":17})
+		if not bool(fixture.get("ok",false)):
+			problems.append("Armor compensation fixture failed")
+			continue
+		var variant: Dictionary = fixture["rows"][0]["variant"]
+		var expected := 0 if armor_id == "HEAVY_DEF" else 1
+		if (variant.get("compensation_rolls",[]) as Array).size() != expected:
+			problems.append("Wrong compensation lines in " + armor_id)
 	var full := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":10,
 		"max_level":30,"quality":"any","count":500,"seed":48,"armor_slot":"Наручи"})
 	if not bool(full.get("ok",false)) or int(full.get("generated",0)) != 500:
