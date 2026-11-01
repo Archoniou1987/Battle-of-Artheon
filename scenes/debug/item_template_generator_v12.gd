@@ -10,6 +10,7 @@ var kind_select: OptionButton
 var archetype_select: OptionButton
 var school_select: OptionButton
 var slot_select: OptionButton
+var hand_select: OptionButton
 var quality_select: OptionButton
 var level_min: SpinBox
 var level_max: SpinBox
@@ -63,6 +64,7 @@ func _build() -> void:
 		var data: Dictionary = school
 		school_select.add_item(String(data["name"]))
 		school_select.set_item_metadata(school_select.item_count - 1,String(data["id"]))
+	hand_select = _option(settings,"Рука оружия",[["Любая","any"],["Основная (MH)","MH"],["Вторая (OH)","OH"],["Двуручное (2H)","2H"]])
 	slot_select = _option(settings,"Слот брони",[["Любой","any"]])
 	for slot in engine.rules.get("armor_slots",[]):
 		slot_select.add_item(String(slot))
@@ -192,7 +194,7 @@ func _config() -> Dictionary:
 			var spec: Dictionary = raw
 			if kind == "all" or String(spec["kind"]) == kind:
 				ids.append(String(spec["id"]))
-	return {"archetypes":ids,"school":_pick(school_select),"armor_slot":_pick(slot_select),
+	return {"archetypes":ids,"school":_pick(school_select),"armor_slot":_pick(slot_select),"weapon_hand":_pick(hand_select),
 		"quality":_pick(quality_select),"min_level":int(level_min.value),
 		"max_level":int(level_max.value),"count":int(count_spin.value),"seed":int(seed_spin.value)}
 
@@ -238,6 +240,10 @@ func _render() -> void:
 			for key in armour:
 				fields.append("%s +%d" % [String(key),int(armour[key])])
 			details.append("Броня: " + ", ".join(PackedStringArray(fields)))
+		var slot_budget := float(v.get("par_slot_budget_pct",0.0))
+		if slot_budget > 0.0:
+			var provisional := " · 2H предварительно" if String(v.get("par_slot_budget_status","")) == "PROVISIONAL_2H" else ""
+			details.append("Бюджет PAR слота %.2f%%%s" % [slot_budget,provisional])
 		var budget_split: Dictionary = v.get("budget_split",{})
 		if not budget_split.is_empty():
 			details.append("Бюджет: защита %d%% / атака %d%%" % [
@@ -292,6 +298,7 @@ func _load_profile() -> void:
 		_refresh_archetypes()
 	_select_value(school_select,String(config.get("school","any")))
 	_select_value(slot_select,String(config.get("armor_slot","any")))
+	_select_value(hand_select,String(config.get("weapon_hand","any")))
 	_select_value(quality_select,String(config.get("quality","any")))
 	level_min.value = float(config.get("min_level",10))
 	level_max.value = float(config.get("max_level",30))
@@ -303,15 +310,15 @@ func _export_csv() -> void:
 	if results.is_empty():
 		return
 	var lines: Array[String] = []
-	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
-	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","","",""]))
+	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,par_slot_budget_pct,par_slot_budget_status,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
+	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","","","","",""]))
 	for item in results:
 		var row: Dictionary = item
 		var v: Dictionary = row["variant"]
 		lines.append(_csv_row(["ITEM",String(row["id"]),String(row["archetype_id"]),
 			String(row["archetype_name"]),String(row["slot"]),String(row["school"]),
 			str(int(row["level"])),String(row["quality"]),JSON.stringify(v["damage"]),
-			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["budget_split"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
+			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["budget_split"]),str(float(v["par_slot_budget_pct"])),String(v["par_slot_budget_status"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
 	var csv := "\n".join(PackedStringArray(lines)) + "\n"
 	var filename := "BOA_Template_v12_%d.csv" % int(Time.get_unix_time_from_system())
 	if OS.has_feature("web"):
