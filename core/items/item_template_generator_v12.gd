@@ -12,7 +12,8 @@ const PAR_LABELS := {
 	"PAR034":"Антикрит", "PAR035":"Сила крита", "PAR075":"Контрудар",
 	"PAR072":"Пробитие щита", "PAR126":"Пробитие брони",
 	"PAR135":"Снижение урона", "PAR150":"Сила заклинаний",
-	"PAR190":"Магическое сопротивление", "PAR013":"Регенерация маны",
+	"PAR190":"Магическое сопротивление", "PAR013":"Регенерация маны вне боя (ед./10 сек)",
+	"PAR015":"Регенерация маны в бою (за раунд)",
 	"PAR164":"Общее пробитие магии", "V12_ATTACK_POWER":"Сила атаки (v1.2)"
 }
 const ARMOUR_ZONES := {
@@ -49,7 +50,8 @@ const PAR_BUDGET_DIRECTIONS := {
 	"reduce":{"defence":1.0,"attack":0.0},
 	"phys_res":{"defence":1.0,"attack":0.0},
 	"magic_res":{"defence":1.0,"attack":0.0},
-	"dodge":{"defence":0.75,"attack":0.25},
+	"dodge":{"defence":1.0,"attack":0.0},
+	"counter":{"defence":0.0,"attack":1.0},
 	"crit":{"defence":0.0,"attack":1.0},
 	"crit_damage":{"defence":0.0,"attack":1.0},
 	"attack":{"defence":0.0,"attack":1.0},

@@ -91,8 +91,8 @@ func _verify() -> void:
 	for value in [
 		{"name":"hp","expected":0.8},
 		{"name":"crit","expected":0.2},
-		{"name":"dodge","expected":0.65},
-		{"name":"counter","expected":1.0}
+		{"name":"dodge","expected":0.8},
+		{"name":"counter","expected":0.2}
 	]:
 		if absf(ItemTemplateGeneratorV12.armour_par_multiplier(String(value["name"]),profile_80)-float(value["expected"])) > 0.0001:
 			problems.append("Wrong armour PAR multiplier: "+String(value["name"]))
@@ -103,7 +103,8 @@ func _verify() -> void:
 	for expectation in [
 		{"logical":"hp","defence":1.0,"attack":0.0},
 		{"logical":"reduce","defence":1.0,"attack":0.0},
-		{"logical":"dodge","defence":0.75,"attack":0.25},
+		{"logical":"dodge","defence":1.0,"attack":0.0},
+		{"logical":"counter","defence":0.0,"attack":1.0},
 		{"logical":"crit","defence":0.0,"attack":1.0},
 		{"logical":"attack","defence":0.0,"attack":1.0},
 		{"logical":"spell","defence":0.0,"attack":1.0},
@@ -114,8 +115,10 @@ func _verify() -> void:
 			problems.append("Missing approved PAR budget direction")
 		elif absf(float(split["defence"])-float(expectation["defence"])) > 0.0001 or absf(float(split["attack"])-float(expectation["attack"])) > 0.0001:
 			problems.append("PAR budget direction differs from v1.2")
-	if String(ItemTemplateGeneratorV12.par_budget_direction("counter").get("status","")) != "UNCLASSIFIED":
-		problems.append("Unapproved PAR direction must not be invented")
+	if String(ItemTemplateGeneratorV12.par_budget_direction("mana_regen").get("status","")) != "UNCLASSIFIED":
+		problems.append("Unclassified regen must not receive invented budget direction")
+	if String(Dictionary(generator.rules.get("stat_par",{})).get("mana_regen","")) != "PAR015":
+		problems.append("Support staff must use combat mana regeneration, not out-of-combat PAR013")
 	# v1.2 K30:N32 and K51:N51: MH 15%, OH 7.5%, OH base damage 80%.
 	var mh_dagger := generator.generate({"archetypes":["DAGGER_ATTACK"],
 		"min_level":100,"max_level":100,"quality":"purple",
