@@ -34,7 +34,7 @@ async function listAll() {
     for (const d of data.deployments) {
       if (!d.id || !Number.isSafeInteger(d.created) || !d.meta?.githubCommitRef ||
           d.name !== 'battle-of-artheon' || d.target !== 'production') {
-        throw new Error('Unexpected deployment metadata; abort safely');
+        throw new Error('Unexpected deployment metadata; abort safely: ' + JSON.stringify({ id: d.id, name: d.name, created: d.created, target: d.target, branch: d.meta?.githubCommitRef, fields: Object.keys(d) }));
       }
       if (!seen.has(d.id)) { seen.add(d.id); result.push(d); }
     }
