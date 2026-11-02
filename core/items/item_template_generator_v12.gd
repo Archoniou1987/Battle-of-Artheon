@@ -163,7 +163,7 @@ func ready_for_generation() -> bool:
 			total += float(weights[key])
 		if absf(total - 100.0) > 0.001:
 			return false
-	return archetypes().size() == 36
+	return archetypes().size() == 37
 
 func archetypes() -> Array:
 	var result: Array = []

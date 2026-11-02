@@ -9,8 +9,8 @@ func _verify() -> void:
 	var generator := ItemTemplateGeneratorV12.new()
 	if not generator.ready_for_generation():
 		problems.append("v1.2 catalog is incomplete or probabilities do not sum to 100")
-	if generator.archetypes().size() != 36:
-		problems.append("Expected 35 original + 1 provisional pendant archetype")
+	if generator.archetypes().size() != 37:
+		problems.append("Expected 35 original + pendant + ring archetypes")
 	if generator.schools().size() != 6:
 		problems.append("Expected exactly six staff schools")
 	for raw in generator.archetypes():
@@ -100,6 +100,23 @@ func _verify() -> void:
 		for line in pendant_variant["rolls"]:
 			if String(Dictionary(line).get("par","")) == "PAR012":
 				problems.append("Pendant must not provide HP regeneration")
+	# Rings use pendant PAR selection without forced base-stat lines.
+	if absf(float(generator.rules["slot_budgets"]["Кольцо"])-7.5) > 0.001:
+		problems.append("Each ring must have a 7.5% share")
+	for seed in range(5):
+		var ring_result := generator.generate({"archetypes":["RING_UNIVERSAL"],"min_level":60,"max_level":60,"quality":"purple","count":1,"seed":700+seed})
+		if not bool(ring_result.get("ok",false)):
+			problems.append("Ring generation failed")
+			continue
+		var ring_row: Dictionary = ring_result["rows"][0]
+		if String(ring_row.get("slot","")) != "Кольцо":
+			problems.append("Ring slot incorrectly assigned")
+		var rv: Dictionary = ring_row["variant"]
+		if (rv["rolls"] as Array).size() != 3 or (rv["core_rolls"] as Array).size() != 2:
+			problems.append("Ring changed maximum PAR slot counts")
+		for line in (rv["rolls"] as Array) + (rv["core_rolls"] as Array):
+			if String(Dictionary(line).get("category","")) == "primary" or String(Dictionary(line).get("par","")) == "PAR012":
+				problems.append("Ring has forbidden primary attribute or HP regeneration")
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.
