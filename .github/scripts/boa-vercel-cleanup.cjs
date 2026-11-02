@@ -32,11 +32,12 @@ async function listAll() {
     if (!Array.isArray(data.deployments)) throw new Error('Unexpected deployment response');
     if (data.deployments.length === 0) return result;
     for (const d of data.deployments) {
-      if (!d.id || !Number.isSafeInteger(d.created) || !d.meta?.githubCommitRef ||
+      if (!(d.id || d.uid) || !Number.isSafeInteger(d.created) || !d.meta?.githubCommitRef ||
           d.name !== 'battle-of-artheon' || d.target !== 'production') {
         throw new Error('Unexpected deployment metadata; abort safely: ' + JSON.stringify({ id: d.id, name: d.name, created: d.created, target: d.target, branch: d.meta?.githubCommitRef, fields: Object.keys(d) }));
       }
-      if (!seen.has(d.id)) { seen.add(d.id); result.push(d); }
+      const id = d.id || d.uid;
+      if (!seen.has(id)) { seen.add(id); result.push({ ...d, id }); }
     }
     const next = data.pagination?.next;
     if (!next) return result;
@@ -59,7 +60,8 @@ async function plan() {
   const [all, aliases, prod] = await Promise.all([
     listAll(), listAliases(), api('/v13/deployments/' + DOMAIN),
   ]);
-  if (!prod.id || (prod.projectId || prod.project?.id) !== PROJECT || (prod.readyState || prod.state) !== 'READY') throw new Error('Production identity/status mismatch');
+  if (!(prod.id || prod.uid) || (prod.projectId || prod.project?.id) !== PROJECT || (prod.readyState || prod.state) !== 'READY') throw new Error('Production identity/status mismatch');
+  prod.id = prod.id || prod.uid;
   const ordered = all.slice().sort((a,b)=>b.created-a.created);
   const secondary = ordered.find(d => d.meta.githubCommitRef === SECOND_BRANCH && d.state === 'READY');
   if (!secondary || ordered.length < 11) throw new Error('Not enough deployments or missing backup branch');
@@ -102,7 +104,7 @@ async function main() {
   }
   console.log('Delete requests completed: ' + second.candidates.length);
   const live = await api('/v13/deployments/' + DOMAIN);
-  if (live.id !== second.productionId || (live.readyState || live.state) !== 'READY') throw new Error('ALERT: production changed after cleanup');
+  if ((live.id || live.uid) !== second.productionId || (live.readyState || live.state) !== 'READY') throw new Error('ALERT: production changed after cleanup');
   console.log('Production verified READY and unchanged: ' + live.id);
 }
 main().catch(e=>{ console.error(e.message); process.exitCode=1; });
