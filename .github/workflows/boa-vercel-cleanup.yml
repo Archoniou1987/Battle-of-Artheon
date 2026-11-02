@@ -1,0 +1,61 @@
+name: One-time BoA Vercel Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Plan = inspection only; delete = destructive (requires plan digest and exact phrase)"
+        type: choice
+        required: true
+        default: plan
+        options:
+          - plan
+          - delete
+      approved_plan_sha256:
+        description: "For DELETE: paste the PLAN_SHA256 from a recent PLAN run"
+        type: string
+        required: false
+        default: ""
+      confirm_delete:
+        description: "For DELETE: type DELETE_OLD_BOA_DEPLOYMENTS exactly"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boa-vercel-storage-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Plan or delete old BoA deployments
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout main branch (reviewed cleanup script)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Validate branch and delete intent
+        env:
+          MODE: ${{ inputs.mode }}
+          APPROVED_DIGEST: ${{ inputs.approved_plan_sha256 }}
+          CONFIRM_DELETE: ${{ inputs.confirm_delete }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          if [[ "$MODE" = "delete" ]]; then
+            test "$CONFIRM_DELETE" = "DELETE_OLD_BOA_DEPLOYMENTS"
+            [[ "$APPROVED_DIGEST" =~ ^[a-f0-9]{64}$ ]]
+          fi
+      - name: Analyze or execute exactly approved cleanup plan
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          CLEANUP_MODE: ${{ inputs.mode }}
+          APPROVED_PLAN_SHA256: ${{ inputs.approved_plan_sha256 }}
+          CONFIRM_DELETE: ${{ inputs.confirm_delete }}
+        run: node .github/scripts/boa-vercel-cleanup.cjs
