@@ -1,7 +1,12 @@
 {
   "version": "core-balance-v1.2",
   "note": "Isolated generator workbench; no live inventory writes. Attack power is virtual V12_ATTACK_POWER until a canonical PAR is approved.",
-  "damage_quality_factors": {"white": 1.0, "green": 1.05, "blue": 1.125, "purple": 1.25},
+  "damage_quality_factors": {
+    "white": 1,
+    "green": 1.05,
+    "blue": 1.125,
+    "purple": 1.25
+  },
   "rarities": {
     "white": {
       "start": 1,
@@ -75,7 +80,9 @@
     "magic_pen": "PAR164",
     "phys_res": "PAR127"
   },
-  "slot_budget_notes": {"2H":"PROPOSED_IN_GENERATOR_V12_ONLY; 22.5%=15% MH + 7.5% OH"},
+  "slot_budget_notes": {
+    "2H": "PROPOSED_IN_GENERATOR_V12_ONLY; 22.5%=15% MH + 7.5% OH"
+  },
   "slot_budgets": {
     "MH": 15,
     "MH/OH": 15,
@@ -90,7 +97,8 @@
     "Штаны": 7.5,
     "Ботинки": 7.5,
     "Плащ": 3.8,
-    "Щит": 7.5
+    "Щит": 7.5,
+    "Кулон": 7.5
   },
   "armor_slots": [
     "Шлем",
@@ -754,6 +762,26 @@
       "requirements": [
         "PAR005",
         "PAR004"
+      ]
+    }
+  ],
+  "jewelry_archetypes": [
+    {
+      "id": "PENDANT_UNIVERSAL",
+      "name": "Кулон · универсальный (предварительный)",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "weights": {
+        "mana_regen": 25,
+        "mana": 20,
+        "hp": 15,
+        "crit": 15,
+        "dodge": 10,
+        "spell": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
       ]
     }
   ]

@@ -163,12 +163,13 @@ func ready_for_generation() -> bool:
 			total += float(weights[key])
 		if absf(total - 100.0) > 0.001:
 			return false
-	return archetypes().size() == 35
+	return archetypes().size() == 36
 
 func archetypes() -> Array:
 	var result: Array = []
 	result.append_array(rules.get("weapon_archetypes", []))
 	result.append_array(rules.get("armor_archetypes", []))
+	result.append_array(rules.get("jewelry_archetypes", []))
 	return result
 
 func schools() -> Array:
@@ -226,7 +227,7 @@ func generate(config: Dictionary) -> Dictionary:
 		if bool(entry.get("school_required", false)):
 			school_options = schools()
 		for slot in slots:
-			if chosen_slot != "any" and (String(entry["kind"]) != "armor" or chosen_slot != String(slot)):
+			if chosen_slot != "any" and (not ["armor","jewelry"].has(String(entry["kind"])) or chosen_slot != String(slot)):
 				continue
 			if String(entry["kind"]) == "weapon" and chosen_hand != "any" and String(slot) != chosen_hand:
 				continue
@@ -336,7 +337,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	# Each eligible item reserves ONE rarity cell for a base attribute.
 	# Current test includes gloves/bracers/belt/cloak. Future jewellery
 	# joins the same 25%-of-base-stat full-gear budget, not another budget.
-	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ"].has(slot) and level >= 10:
+	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ","Кулон"].has(slot) and level >= 10:
 		# Lv10 has no equip requirements; use the archetype's stat priorities
 			# rather than attempting to choose from an empty requirements map.
 		var req_pars: Array = requirements.keys()
@@ -355,7 +356,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		modifiers[primary] = float(modifiers.get(primary,0.0)) + added
 	# Independently, 30% of eligible items replace one unlocked CORE
 	# with a profile base stat. No additional slot is created.
-	if core_rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ"].has(slot) and rng.randf() < 0.30:
+	if core_rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ","Кулон"].has(slot) and rng.randf() < 0.30:
 		var core_attributes: Array = requirements.keys()
 		if core_attributes.is_empty():
 			core_attributes = _requirement_attributes(spec)

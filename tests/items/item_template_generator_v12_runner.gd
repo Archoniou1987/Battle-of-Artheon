@@ -9,8 +9,8 @@ func _verify() -> void:
 	var generator := ItemTemplateGeneratorV12.new()
 	if not generator.ready_for_generation():
 		problems.append("v1.2 catalog is incomplete or probabilities do not sum to 100")
-	if generator.archetypes().size() != 35:
-		problems.append("Expected 35 approved archetypes")
+	if generator.archetypes().size() != 36:
+		problems.append("Expected 35 original + 1 provisional pendant archetype")
 	if generator.schools().size() != 6:
 		problems.append("Expected exactly six staff schools")
 	for raw in generator.archetypes():
@@ -85,6 +85,21 @@ func _verify() -> void:
 	var epic_damage := generator._weapon_damage({"family":"sword"},60,"MH",1.25)
 	if int(epic_damage[0]) <= int(base_damage[0]) or int(epic_damage[1]) <= int(base_damage[1]):
 		problems.append("Epic weapon must increase base damage")
+	# Pendant is additive; it does not redistribute existing slot weights.
+	if absf(float(generator.rules["slot_budgets"]["Кулон"])-7.5) > 0.001:
+		problems.append("Pendant must have its own 7.5% share")
+	var pendant_test := generator.generate({"archetypes":["PENDANT_UNIVERSAL"],"min_level":60,"max_level":60,"quality":"purple","count":1,"seed":162})
+	if not bool(pendant_test.get("ok",false)) or String(Dictionary(pendant_test["rows"][0]).get("slot","")) != "Кулон":
+		problems.append("Pendant generation failed")
+	else:
+		var pendant_variant: Dictionary = Dictionary(pendant_test["rows"][0])["variant"]
+		if not Dictionary(pendant_variant["armour"]).is_empty():
+			problems.append("Pendant must not grant base armour")
+		if (pendant_variant["rolls"] as Array).size() != 3 or (pendant_variant["core_rolls"] as Array).size() != 2:
+			problems.append("Pendant changed 2 CORE + 3 rarity-slot limit")
+		for line in pendant_variant["rolls"]:
+			if String(Dictionary(line).get("par","")) == "PAR012":
+				problems.append("Pendant must not provide HP regeneration")
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.
