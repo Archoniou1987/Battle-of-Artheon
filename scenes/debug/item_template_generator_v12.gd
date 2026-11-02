@@ -295,11 +295,7 @@ func _render() -> void:
 			var fragments: Array[String] = []
 			for par in totals:
 				var rating := float(totals[par])
-				var fragment := "%s +%d" % [engine.par_label(String(par)),int(rating)]
-				if ["PAR031","PAR032","PAR033","PAR034","PAR126","V12_ATTACK_POWER"].has(String(par)):
-					var pct := ItemTemplateGeneratorV12.rating_to_pct(rating,int(entry["level"]))
-					var category := "dodge" if String(par) == "PAR031" else "crit" if String(par) == "PAR033" else "attack" if String(par) == "V12_ATTACK_POWER" else ""
-					fragment += " (%.2f%% / %.2f%%)" % [pct,ItemTemplateGeneratorV12.diminishing(pct,category)]
+				var fragment := _format_total_bonus(String(par),rating,int(entry["level"]))
 				fragments.append(fragment)
 			var summary := RichTextLabel.new()
 			summary.bbcode_enabled = true
@@ -312,18 +308,31 @@ func _render() -> void:
 
 ## UI-only conversion of a PAR line into its readable equivalent.
 ## Never label flat HP/Mana or uncalibrated LAB values as percentages.
-func _format_par_bonus(line: Dictionary, level: int) -> String:
-	var par := String(line.get("par",""))
-	var rating := float(line.get("rating",0.0))
-	var label := "%s +%d" % [engine.par_label(par),int(rating)]
-	if par == "V12_ATTACK_POWER":
-		var raw_percent := engine.attack_rating_to_pct(rating,level)
-		return "%s +%d (%.2f%% / %.2f%% DR)" % [engine.par_label(par),int(rating),raw_percent,ItemTemplateGeneratorV12.diminishing(raw_percent,"attack")]
-	# Only the shared 20%->4% per 100-rating family is converted here.
-	# Other PARs need their own validated unit/cap/DR conversion.
-	if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR126"].has(par):
-		label += " (%.2f%% до DR)" % ItemTemplateGeneratorV12.rating_to_pct(rating,level)
+func _format_total_bonus(par: String, rating: float, level: int) -> String:
+	var amount := "+%.2f" % rating if par == "PAR015" else "+%d" % int(rating)
+	var label := "%s %s" % [engine.par_label(par),amount]
+	if par == "PAR015":
+		return label + " маны/раунд"
+	var category := ""
+	if par == "PAR031":
+		category = "dodge"
+	elif par == "PAR033":
+		category = "crit"
+	elif par == "V12_ATTACK_POWER":
+		category = "attack"
+	elif par == "PAR190":
+		category = "magic_res"
+	elif par == "PAR135":
+		category = "reduce"
+	if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR075","PAR126","PAR135","PAR164","PAR190","V12_ATTACK_POWER"].has(par):
+		var pct := ItemTemplateGeneratorV12.rating_to_pct(rating,level)
+		if category.is_empty():
+			return label + " (%.2f%%)" % pct
+		return label + " (%.2f%% / %.2f%% DR)" % [pct,ItemTemplateGeneratorV12.diminishing(pct,category)]
 	return label
+
+func _format_par_bonus(line: Dictionary, level: int) -> String:
+	return _format_total_bonus(String(line.get("par","")),float(line.get("rating",0.0)),level)
 
 func _save_profile() -> void:
 	status.text = "Настройки v1.2 сохранены" if engine.save_profile(_config()) else "Ошибка сохранения настроек"

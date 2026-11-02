@@ -117,6 +117,15 @@ func _verify() -> void:
 		for line in (rv["rolls"] as Array) + (rv["core_rolls"] as Array):
 			if String(Dictionary(line).get("category","")) == "primary" or String(Dictionary(line).get("par","")) == "PAR012":
 				problems.append("Ring has forbidden primary attribute or HP regeneration")
+	# Fixed combat mana regeneration is fractional, never rounded up to +1.
+	for level in [30,60,90,100]:
+		var expected_regen := {30:4.0,60:9.0,90:13.5,100:15.0}[level]
+		var actual_regen := generator.nominal_affix("mana_regen",level,"OH",1.0)
+		if absf(actual_regen-expected_regen) > 0.02:
+			problems.append("Mana regen anchor differs at level "+str(level))
+	var tiny_regen := generator._affix_amount("mana_regen",30,"Плащ",1.0,1,{"defence_pct":65,"attack_pct":35})
+	if tiny_regen < 0.0 or tiny_regen == 1.0:
+		problems.append("Mana regen should preserve fractional units without forced +1")
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.

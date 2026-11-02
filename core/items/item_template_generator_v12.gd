@@ -119,6 +119,18 @@ func preview_effects(armour: Dictionary, bonus: Dictionary, level: int) -> Dicti
 			result["ratings"][par] = {"raw_pct":before,"after_dr_pct":diminishing(before,String(item["type"]))}
 	if float(bonus.get("PAR032",0.0)) > 0.0:
 		result["ratings"]["PAR032"] = {"raw_pct":rating_to_pct(float(bonus["PAR032"]),level),"after_dr_pct":rating_to_pct(float(bonus["PAR032"]),level)}
+	for item in [
+		{"par":"PAR075","category":""},
+		{"par":"PAR135","category":"reduce"},
+		{"par":"PAR190","category":"magic_res"},
+		{"par":"PAR164","category":""},
+		{"par":"PAR126","category":""}
+	]:
+		var id := String(item["par"])
+		var total_rating := float(bonus.get(id,0.0))
+		if total_rating > 0.0:
+			var raw := rating_to_pct(total_rating,level)
+			result["ratings"][id] = {"raw_pct":raw,"after_dr_pct":diminishing(raw,String(item["category"]))}
 	return result
 
 var rules: Dictionary = {}
@@ -527,6 +539,19 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			# Convert planned build percentage into an additive rating.
 			# Raw rating is displayed; percentage is computed after aggregation.
 			baseline = (build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
+		"mana_regen":
+			# Provisional fixed units of mana per combat round, for a
+			# white 7.5%-weight reference line, before quality scaling.
+			# Anchors: Lv30 +4, Lv60 +9, Lv90 +13.5, Lv100 +15.
+			if l <= 30.0:
+				baseline = 4.0*l/30.0
+			elif l <= 60.0:
+				baseline = lerpf(4.0,9.0,(l-30.0)/30.0)
+			elif l <= 90.0:
+				baseline = lerpf(9.0,13.5,(l-60.0)/30.0)
+			else:
+				baseline = lerpf(13.5,15.0,(l-90.0)/10.0)
+			baseline *= REFERENCE_SLOT_BUDGET/7.5
 		"spell":
 			# Project 25 specialised build targets: ~200 SP Lv20, ~2000 SP Lv100.
 			# Between those anchors, interpolation remains a lab-only assumption.
@@ -540,11 +565,11 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			# not six: repeated same-PAR rolls beyond two are rare.
 			# Other independent PAR slots do not dilute this line.
 			baseline = 100.0*l/100.0*REFERENCE_SLOT_BUDGET/7.5/2.0
-			if logical == "mana_regen":
-				baseline *= 0.02
 	return maxf(0.0,baseline*share*quality)
 
 func calibration_status(logical: String) -> String:
+	if logical == "mana_regen":
+		return "PROVISIONAL_MANA_PER_ROUND_ANCHORS"
 	if ["hp","mana"].has(logical):
 		return "PROJECT25_ANCHOR"
 	if ["attack","spell"].has(logical):
@@ -555,6 +580,8 @@ func _affix_amount(logical: String,level: int,slot: String,quality: float,_lines
 	var amount := nominal_affix(logical,level,slot,quality)
 	amount *= armour_par_multiplier(logical,profile)
 	var rolled := amount*rng.randf_range(0.95,1.05)
+	if logical == "mana_regen":
+		return snappedf(maxf(0.0,rolled),0.01)
 	if logical == "attack":
 		return float(maxi(1,roundi(rolled)))
 	return float(maxi(1,roundi(rolled)))
