@@ -248,7 +248,14 @@ func _render() -> void:
 			result_list.add_child(_label("%s · %s · Lv%d · %s" % [group_id,String(entry["archetype_name"]),int(entry["level"]),String(entry["slot"])],14,Color("#f0d9af")))
 		var quality_names := {"white":"Белый","green":"Зелёный","blue":"Синий","purple":"Фиолетовый"}
 		var v: Dictionary = entry["variant"]
-		result_list.add_child(_label(String(quality_names.get(String(entry["quality"]),entry["quality"])),13,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
+		var req: Dictionary = v.get("requirements",{})
+		var req_bits: Array[String] = []
+		for key in req:
+			req_bits.append("%s %d" % [engine.par_label(String(key)),int(req[key])])
+		var quality_heading := String(quality_names.get(String(entry["quality"]),entry["quality"]))
+		if not req_bits.is_empty():
+			quality_heading += " — Требования: " + ", ".join(PackedStringArray(req_bits))
+		result_list.add_child(_label(quality_heading,13,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
 		var details: Array[String] = []
 		var damage: Array = v.get("damage",[])
 		if damage.size() == 2:
@@ -256,20 +263,24 @@ func _render() -> void:
 		var offhand_damage: Array = v.get("offhand_damage",[])
 		if offhand_damage.size() == 2:
 			details.append("OH %d–%d" % [int(offhand_damage[0]),int(offhand_damage[1])])
+		var preview: Dictionary = v.get("preview",{})
+		var armour_effects: Dictionary = preview.get("armour",{})
 		var armour: Dictionary = v.get("armour",{})
-		if not armour.is_empty():
-			var fields: Array[String] = []
-			for key in armour:
-				fields.append("%s +%d" % [engine.par_label(String(key)),int(armour[key])])
-			details.append("Броня: " + ", ".join(PackedStringArray(fields)))
+		for zone in ["PAR100","PAR101","PAR102","PAR103","PAR104"]:
+			if not armour.has(zone):
+				continue
+			var amount := int(armour[zone])
+			var text_value := "%s +%d" % [engine.par_label(zone),amount]
+			if armour_effects.has(zone):
+				var eff: Dictionary = armour_effects[zone]
+				text_value += " (%.1f%% / %.1f%%)" % [float(eff["raw_pct"]),float(eff["after_dr_pct"])]
+			details.append(text_value)
 		var slot_budget := float(v.get("par_slot_budget_pct",0.0))
 		if slot_budget > 0.0:
-			var provisional := " · 2H предварительно" if String(v.get("par_slot_budget_status","")) == "PROVISIONAL_2H" else ""
-			details.append("Бюджет PAR слота %.2f%%%s" % [slot_budget,provisional])
+			details.append("Вес слота %.2f%%" % slot_budget)
 		var budget_split: Dictionary = v.get("budget_split",{})
 		if not budget_split.is_empty():
-			details.append("Бюджет: защита %d%% / атака %d%%" % [
-				int(budget_split["defence_pct"]),int(budget_split["attack_pct"])])
+			details.append("Тип %d/%d" % [int(budget_split["defence_pct"]),int(budget_split["attack_pct"])])
 		var stable_rolls: Array = v.get("core_rolls",[])
 		for raw in stable_rolls:
 			var line: Dictionary = raw
@@ -278,26 +289,11 @@ func _render() -> void:
 		for raw in rolls:
 			var line: Dictionary = raw
 			details.append("%s +%d" % [engine.par_label(String(line["par"])),int(line["rating"])])
-		var preview: Dictionary = v.get("preview",{})
-		var zone_summary: Array[String] = []
-		var armour_effects: Dictionary = preview.get("armour",{})
-		var names := {"PAR100":"Голова","PAR101":"Грудь","PAR102":"Руки","PAR103":"Пояс","PAR104":"Ноги"}
-		for zone in ["PAR100","PAR101","PAR102","PAR103","PAR104"]:
-			if armour_effects.has(zone):
-				var eff: Dictionary = armour_effects[zone]
-				zone_summary.append("%s %.1f→%.1f%%" % [String(names[zone]),float(eff["raw_pct"]),float(eff["after_dr_pct"])])
-		if not zone_summary.is_empty():
-			details.append("Броня до/после DR: " + ", ".join(PackedStringArray(zone_summary)))
 		var rating_effects: Dictionary = preview.get("ratings",{})
 		for par in ["PAR031","PAR033","PAR032"]:
 			if rating_effects.has(par):
 				var eff: Dictionary = rating_effects[par]
 				details.append("%s %.1f→%.1f%%" % [engine.par_label(par),float(eff["raw_pct"]),float(eff["after_dr_pct"])])
-		var req: Dictionary = v.get("requirements",{})
-		var req_bits: Array[String] = []
-		for key in req:
-			req_bits.append("%s %d" % [engine.par_label(String(key)),int(req[key])])
-		details.append("Требования: " + ", ".join(PackedStringArray(req_bits)))
 		result_list.add_child(_label(" · ".join(PackedStringArray(details)),12,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
 		result_list.add_child(HSeparator.new())
 
