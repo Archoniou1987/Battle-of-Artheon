@@ -504,9 +504,10 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			baseline = build_target / FULL_BUILD_REFERENCE_LINES
 		_:
 			# No approved per-PAR numerical extremum yet.
-			# Keep the old WORKING calibration, but reserve all 6 fixed
-			# budget portions even when some are not unlocked.
-			baseline = 100.0*l/100.0*REFERENCE_SLOT_BUDGET/7.5/6.0
+			# Provisional per-PAR calibration targets TWO matching lines,
+			# not six: repeated same-PAR rolls beyond two are rare.
+			# Other independent PAR slots do not dilute this line.
+			baseline = 100.0*l/100.0*REFERENCE_SLOT_BUDGET/7.5/2.0
 			if logical == "mana_regen":
 				baseline *= 0.02
 	return maxf(0.0,baseline*share*quality)
