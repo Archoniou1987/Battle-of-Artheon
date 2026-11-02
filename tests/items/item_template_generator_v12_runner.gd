@@ -43,31 +43,6 @@ func _verify() -> void:
 			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
 				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
-			var line_share: Dictionary = variant.get("par_line_budget",{})
-			if String(line_share.get("status","")) != "V12_K16" or absf(float(line_share.get("share_pct",0.0))-100.0/3.0) > 0.001:
-				problems.append("Lv30 blue three-line budget metadata missing")
-				break
-			for roll in (variant.get("core_rolls",[]) as Array) + (variant.get("rolls",[]) as Array):
-				if Dictionary(roll).get("line_budget",{}) != line_share:
-					problems.append("One generated PAR line lost its budget audit")
-					break
-	# v1.2 K16 specifies equal PAR budget portions for 2, 3, 4 lines,
-	# but does NOT define a five-line allocation (2 CORE + 3 purple).
-	for case_data in [
-		{"n":0,"status":"NO_LINES"},
-		{"n":1,"status":"SINGLE_LINE","share":100.0},
-		{"n":2,"status":"V12_K16","share":50.0},
-		{"n":3,"status":"V12_K16","share":100.0/3.0},
-		{"n":4,"status":"V12_K16","share":25.0},
-		{"n":5,"status":"UNRESOLVED_V12_FIVE_LINES"}
-	]:
-		var allocation := ItemTemplateGeneratorV12.line_budget_allocation(int(case_data["n"]))
-		if String(allocation.get("status","")) != String(case_data["status"]) or int(allocation.get("line_count",-1)) != int(case_data["n"]):
-			problems.append("Invalid v1.2 K16 budget allocation at " + str(case_data["n"]) + " lines")
-		if case_data.has("share") and absf(float(allocation.get("share_pct",-1))-float(case_data["share"])) > 0.001:
-			problems.append("Invalid v1.2 K16 per-line share")
-		if int(case_data["n"]) == 5 and allocation.has("share_pct"):
-			problems.append("Unapproved five-line budget must not be invented")
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.
@@ -193,15 +168,6 @@ func _verify() -> void:
 				break
 	else:
 		problems.append("OH-only laboratory generation failed")
-	var five_line_item := generator.generate({"archetypes":["HAMMER_DEF"],"min_level":60,
-		"max_level":60,"quality":"purple","count":1,"seed":26})
-	if bool(five_line_item.get("ok",false)):
-		var v: Dictionary = five_line_item["rows"][0]["variant"]
-		var five_budget: Dictionary = v.get("par_line_budget",{})
-		if String(five_budget.get("status","")) != "UNRESOLVED_V12_FIVE_LINES" or five_budget.has("share_pct"):
-			problems.append("Lv60 purple must flag undefined five-line budget")
-	else:
-		problems.append("Unable to generate five-line budget fixture")
 	# Approved zone matrix V2: 80% in each zone without the shield.
 	var expected := {"PAR100":0.8,"PAR101":0.8,"PAR102":0.8,"PAR103":0.8,"PAR104":0.8}
 	var sum_by_zone := {"PAR100":0.0,"PAR101":0.0,"PAR102":0.0,"PAR103":0.0,"PAR104":0.0}
@@ -322,13 +288,9 @@ func _verify() -> void:
 				break
 			for raw_line in variant.get("rolls",[]):
 				var line: Dictionary = raw_line
-				if String(line.get("category","")) == "primary":
-					if not ["PAR002","PAR006"].has(String(line.get("par",""))):
-						problems.append("Lv10 main stat roll selected outside archetype priorities")
-						break
-					if String(line.get("source","")) != "RARITY" or String(line.get("calibration","")) != "EXTERNAL_PENDING_V12" or not line.has("budget_direction") or not line.has("line_budget"):
-						problems.append("Primary stat replacement lost rarity provenance or budget annotation")
-						break
+				if String(line.get("category","")) == "primary" and not ["PAR002","PAR006"].has(String(line.get("par",""))):
+					problems.append("Lv10 main stat roll selected outside archetype priorities")
+					break
 	# Numerically anchored HP/Mana budget: 14 equip slots = 100% of the pool.
 	var weights: Dictionary = generator.rules.get("slot_budgets",{})
 	var slots: Array = ["MH","OH","Шлем","Плечи","Нагрудник","Перчатки",

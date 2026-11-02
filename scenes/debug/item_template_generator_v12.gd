@@ -248,12 +248,6 @@ func _render() -> void:
 		if not budget_split.is_empty():
 			details.append("Бюджет: защита %d%% / атака %d%%" % [
 				int(budget_split["defence_pct"]),int(budget_split["attack_pct"])])
-		var line_budget: Dictionary = v.get("par_line_budget",{})
-		if String(line_budget.get("status","")) == "V12_K16":
-			details.append("PAR-линии: %d × %.2f%% бюджета (диагностика)" % [
-				int(line_budget["line_count"]),float(line_budget["share_pct"])])
-		elif String(line_budget.get("status","")) == "UNRESOLVED_V12_FIVE_LINES":
-			details.append("PAR-линии: 5 · распределение бюджета НЕ УТВЕРЖДЕНО")
 		var stable_rolls: Array = v.get("core_rolls",[])
 		for raw in stable_rolls:
 			var line: Dictionary = raw
@@ -316,19 +310,15 @@ func _export_csv() -> void:
 	if results.is_empty():
 		return
 	var lines: Array[String] = []
-	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,par_slot_budget_pct,par_slot_budget_status,par_line_budget,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
-	var config_row: Array = ["CONFIG"]
-	while config_row.size() < 20:
-		config_row.append("")
-	config_row[8] = JSON.stringify(last_config)
-	lines.append(_csv_row(config_row))
+	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,par_slot_budget_pct,par_slot_budget_status,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
+	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","","","","",""]))
 	for item in results:
 		var row: Dictionary = item
 		var v: Dictionary = row["variant"]
 		lines.append(_csv_row(["ITEM",String(row["id"]),String(row["archetype_id"]),
 			String(row["archetype_name"]),String(row["slot"]),String(row["school"]),
 			str(int(row["level"])),String(row["quality"]),JSON.stringify(v["damage"]),
-			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["budget_split"]),str(float(v["par_slot_budget_pct"])),String(v["par_slot_budget_status"]),JSON.stringify(v["par_line_budget"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
+			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["budget_split"]),str(float(v["par_slot_budget_pct"])),String(v["par_slot_budget_status"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))
 	var csv := "\n".join(PackedStringArray(lines)) + "\n"
 	var filename := "BOA_Template_v12_%d.csv" % int(Time.get_unix_time_from_system())
 	if OS.has_feature("web"):

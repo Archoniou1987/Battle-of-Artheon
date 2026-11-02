@@ -66,19 +66,6 @@ static func par_budget_direction(logical: String) -> Dictionary:
 	return {"status":"V12_APPROVED","defence":fractions["defence"],"attack":fractions["attack"]}
 
 
-## Project 25 "Генератор v1.2", K16: 2/3/4 bonus lines share a
-## PAR budget equally. For 5 lines the tab has no explicit allocation.
-## Diagnostic only: this MUST NOT alter nominal PAR rating or CORE unlocks.
-static func line_budget_allocation(lines: int) -> Dictionary:
-	if lines <= 0:
-		return {"status":"NO_LINES","line_count":0}
-	if lines == 1:
-		return {"status":"SINGLE_LINE","line_count":1,"share_pct":100.0}
-	if lines <= 4:
-		return {"status":"V12_K16","line_count":lines,"share_pct":100.0/float(lines)}
-	return {"status":"UNRESOLVED_V12_FIVE_LINES","line_count":lines}
-
-
 ## Exact Project 25 A13/B13 spreadsheet curve. Never apply to
 ## primary attributes, HP, Mana, regeneration or Spell Power.
 static func diminishing(raw_pct: float, category: String) -> float:
@@ -331,26 +318,12 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			else:
 				modifiers.erase(old_par)
 			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
-			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),
-				"rating":added,"category":"primary","source":"RARITY",
-				"budget_direction":par_budget_direction("primary"),
-				"calibration":"EXTERNAL_PENDING_V12"}
+			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
 			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
-	# v1.2 K16 is a budget audit, not a multiplier on nominal HP/Mana/PAR.
-	# Level 60+ purple has 5 lines: keep this case unresolved until specified.
-	var line_budget := line_budget_allocation(core_rolls.size() + rolls.size())
-	for index in range(core_rolls.size()):
-		var core: Dictionary = core_rolls[index]
-		core["line_budget"] = line_budget
-		core_rolls[index] = core
-	for index in range(rolls.size()):
-		var roll: Dictionary = rolls[index]
-		roll["line_budget"] = line_budget
-		rolls[index] = roll
 	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,
 		"par_slot_budget_pct":float(Dictionary(rules["slot_budgets"]).get(slot,0.0)),
 		"par_slot_budget_status":"PROVISIONAL_2H" if slot == "2H" else "V12_SPECIFIED",
-		"budget_split":armour_budget_split(spec),"par_line_budget":line_budget,"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
+		"budget_split":armour_budget_split(spec),"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor,
 		"preview":preview_effects(armour,modifiers,level)}
 
