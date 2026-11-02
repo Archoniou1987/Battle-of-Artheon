@@ -408,6 +408,8 @@ func _verify() -> void:
 	]:
 		var per_line := generator.nominal_affix(String(entry["stat"]),int(entry["level"]),"Шлем",1.0)
 		var projected := per_line / ref_share * ItemTemplateGeneratorV12.FULL_BUILD_REFERENCE_LINES
+		if String(entry["stat"]) == "attack":
+			projected = generator.attack_rating_to_pct(projected,int(entry["level"]))
 		if absf(projected-float(entry["target"])) > 0.001:
 			problems.append("v1.2 target mismatch for " + String(entry["stat"]) + " Lv" + str(entry["level"]))
 	# A baseline white CORE value is independent of the number of unlocked
