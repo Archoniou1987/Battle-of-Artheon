@@ -92,7 +92,9 @@ func _verify() -> void:
 		{"name":"hp","expected":0.8},
 		{"name":"crit","expected":0.2},
 		{"name":"dodge","expected":0.8},
-		{"name":"counter","expected":0.2}
+		{"name":"counter","expected":0.2},
+		{"name":"anti_dodge","expected":0.2},
+		{"name":"anticrit","expected":0.8}
 	]:
 		if absf(ItemTemplateGeneratorV12.armour_par_multiplier(String(value["name"]),profile_80)-float(value["expected"])) > 0.0001:
 			problems.append("Wrong armour PAR multiplier: "+String(value["name"]))

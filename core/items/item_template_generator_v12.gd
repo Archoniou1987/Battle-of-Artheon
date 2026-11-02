@@ -51,6 +51,8 @@ const PAR_BUDGET_DIRECTIONS := {
 	"phys_res":{"defence":1.0,"attack":0.0},
 	"magic_res":{"defence":1.0,"attack":0.0},
 	"dodge":{"defence":1.0,"attack":0.0},
+	"anticrit":{"defence":1.0,"attack":0.0},
+	"anti_dodge":{"defence":0.0,"attack":1.0},
 	"counter":{"defence":0.0,"attack":1.0},
 	"crit":{"defence":0.0,"attack":1.0},
 	"crit_damage":{"defence":0.0,"attack":1.0},
