@@ -233,6 +233,26 @@ func _verify() -> void:
 		problems.append("Armour DR diagnostic must combine base and direct PAR bonuses")
 	if not is_equal_approx(float(diagnostic["ratings"]["PAR033"]["after_dr_pct"]),20.0):
 		problems.append("Crit DR diagnostic must retain 20% below threshold")
+	# Web Preview bulk preset: 500 rows, all supported armour + MH/2H,
+	# without jewellery or off-hand weapons. Full data remains in CSV.
+	var bulk := generator.generate({"archetypes":[],"min_level":1,"max_level":100,
+		"quality":"any","count":500,"seed":22026,"weapon_hand":"any","exclude_oh":true})
+	if not bool(bulk.get("ok",false)) or int(bulk.get("generated",0)) != 500:
+		problems.append("500-item Web Preview bulk generation failed")
+	else:
+		var seen_weapon := false
+		var seen_armour := false
+		for record in bulk["rows"]:
+			var item: Dictionary = record
+			if String(item.get("slot","")) == "OH":
+				problems.append("Bulk preset included an OH weapon")
+				break
+			if String(item.get("kind","")) == "weapon":
+				seen_weapon = true
+			elif String(item.get("kind","")) == "armor":
+				seen_armour = true
+		if not seen_weapon or not seen_armour:
+			problems.append("Bulk preset must include both weapons and armour")
 	# Rare-only filters must exclude unavailable levels BEFORE selecting candidates.
 	var rare := generator.generate({"archetypes":["SWORD_CRIT"],"min_level":30,"max_level":40,
 		"quality":"purple","count":100,"seed":1989})

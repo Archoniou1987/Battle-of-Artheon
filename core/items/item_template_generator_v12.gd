@@ -201,6 +201,7 @@ func generate(config: Dictionary) -> Dictionary:
 	var chosen_school := String(config.get("school", "any"))
 	var chosen_slot := String(config.get("armor_slot", "any"))
 	var chosen_hand := String(config.get("weapon_hand", "any"))
+	var exclude_oh := bool(config.get("exclude_oh", false))
 	if not ["any","MH","OH","2H"].has(chosen_hand):
 		return {"ok":false,"reason":"Неизвестный слот руки оружия","rows":[]}
 	rng.seed = maxi(1, int(config.get("seed", 20261101)))
@@ -225,6 +226,8 @@ func generate(config: Dictionary) -> Dictionary:
 			if chosen_slot != "any" and (String(entry["kind"]) != "armor" or chosen_slot != String(slot)):
 				continue
 			if String(entry["kind"]) == "weapon" and chosen_hand != "any" and String(slot) != chosen_hand:
+				continue
+			if exclude_oh and String(slot) == "OH":
 				continue
 			if chosen_school != "any" and not bool(entry.get("school_required",false)):
 				continue

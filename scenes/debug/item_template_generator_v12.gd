@@ -81,6 +81,12 @@ func _build() -> void:
 	start.custom_minimum_size.y = 52
 	start.pressed.connect(_generate)
 	settings.add_child(start)
+	var bulk := Button.new()
+	bulk.text = "Массовый тест: 500 предметов (броня + MH/2H)"
+	bulk.custom_minimum_size.y = 52
+	bulk.pressed.connect(_generate_bulk)
+	settings.add_child(bulk)
+	settings.add_child(_label("Массовый тест: уровни 1–100, все доступные редкости; OH и ювелирка исключены. CSV сохраняет все 500 предметов и настройки.",12,Color("#c4d5e4")))
 	var tools := HFlowContainer.new()
 	settings.add_child(tools)
 	var save := Button.new()
@@ -198,11 +204,20 @@ func _config() -> Dictionary:
 		"quality":_pick(quality_select),"min_level":int(level_min.value),
 		"max_level":int(level_max.value),"count":int(count_spin.value),"seed":int(seed_spin.value)}
 
+func _generate_bulk() -> void:
+	var config := {"archetypes":[],"school":"any","armor_slot":"any","weapon_hand":"any",
+		"exclude_oh":true,"quality":"any","min_level":1,"max_level":100,
+		"count":500,"seed":int(seed_spin.value),"mode":"bulk_v12_no_oh_jewellery"}
+	_run_generation(config)
+
 func _generate() -> void:
 	if int(level_min.value) > int(level_max.value):
 		status.text = "Ошибка: минимальный уровень больше максимального"
 		return
 	var config := _config()
+	_run_generation(config)
+
+func _run_generation(config: Dictionary) -> void:
 	var result := engine.generate(config)
 	if not bool(result.get("ok",false)):
 		status.text = "Ошибка: " + String(result.get("reason","Неизвестная ошибка"))
