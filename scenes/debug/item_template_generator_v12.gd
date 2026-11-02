@@ -284,11 +284,11 @@ func _render() -> void:
 		var stable_rolls: Array = v.get("core_rolls",[])
 		for raw in stable_rolls:
 			var line: Dictionary = raw
-			details.append("CORE %s +%d" % [engine.par_label(String(line["par"])),int(line["rating"])])
+			details.append("CORE " + _format_par_bonus(line,int(entry["level"])))
 		var rolls: Array = v.get("rolls",[])
 		for raw in rolls:
 			var line: Dictionary = raw
-			details.append("%s +%d" % [engine.par_label(String(line["par"])),int(line["rating"])])
+			details.append(_format_par_bonus(line,int(entry["level"])))
 		var rating_effects: Dictionary = preview.get("ratings",{})
 		for par in ["PAR031","PAR033","PAR032"]:
 			if rating_effects.has(par):
@@ -296,6 +296,21 @@ func _render() -> void:
 				details.append("%s %.1f→%.1f%%" % [engine.par_label(par),float(eff["raw_pct"]),float(eff["after_dr_pct"])])
 		result_list.add_child(_label(" · ".join(PackedStringArray(details)),12,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
 		result_list.add_child(HSeparator.new())
+
+## UI-only conversion of a PAR line into its readable equivalent.
+## Never label flat HP/Mana or uncalibrated LAB values as percentages.
+func _format_par_bonus(line: Dictionary, level: int) -> String:
+	var par := String(line.get("par",""))
+	var rating := float(line.get("rating",0.0))
+	var label := "%s +%d" % [engine.par_label(par),int(rating)]
+	var rating_pars := ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR035","PAR071","PAR072","PAR075","PAR126","PAR127","PAR128","PAR129","PAR130","PAR131","PAR132","PAR133","PAR134","PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170","PAR190","PAR191","PAR192","PAR193","PAR194","PAR195","PAR196"]
+	if rating_pars.has(par):
+		var pct := ItemTemplateGeneratorV12.rating_to_pct(rating,level)
+		# Critical damage and magical damage/resistance families have their own
+		# rating conversion. Show only IDs confirmed to use the shared scale.
+		if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR071","PAR072","PAR075","PAR126","PAR127","PAR128","PAR129","PAR130","PAR131","PAR132","PAR133","PAR134","PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170","PAR190","PAR191","PAR192","PAR193","PAR194","PAR195","PAR196"].has(par):
+			label += " (%.2f%%)" % pct
+	return label
 
 func _save_profile() -> void:
 	status.text = "Настройки v1.2 сохранены" if engine.save_profile(_config()) else "Ошибка сохранения настроек"
