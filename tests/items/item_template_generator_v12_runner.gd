@@ -10,7 +10,7 @@ func _verify() -> void:
 	if not generator.ready_for_generation():
 		problems.append("v1.2 catalog is incomplete or probabilities do not sum to 100")
 	if generator.archetypes().size() != 45:
-		problems.append("Expected 35 original + pendant + ring archetypes")
+		problems.append("Expected 35 original + 10 approved jewelry archetypes")
 	if generator.schools().size() != 6:
 		problems.append("Expected exactly six staff schools")
 	for raw in generator.archetypes():
@@ -429,7 +429,7 @@ func _verify() -> void:
 	if absf(sum_percent-100.0) > 0.0001:
 		problems.append("14 slot PAR weights no longer total 100 percent")
 	for level in [10,30,60,100]:
-		var slot_share := 7.5 / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
+		var slot_share := float(weights["Шлем"]) / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
 		var hp_expected := 101.19*float(level)/100.0*slot_share
 		var mana_expected := 50.60*float(level)/100.0*slot_share
 		if absf(generator.nominal_affix("hp",level,"Шлем",1.0)-hp_expected) > 0.001:
@@ -441,7 +441,7 @@ func _verify() -> void:
 		if absf(epic-current_white*1.5) > 0.001:
 			problems.append("HP rarity modifier applied incorrectly at Lv" + str(level))
 	# Target build anchors are normalized to 14 slots, two PAR lines, epic 1.5.
-	var ref_share := 7.5 / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
+	var ref_share := float(weights["Шлем"]) / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
 	for entry in [
 		{"stat":"attack","level":10,"target":100.0},
 		{"stat":"attack","level":100,"target":300.0},
