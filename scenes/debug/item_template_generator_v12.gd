@@ -253,6 +253,9 @@ func _render() -> void:
 		for key in req:
 			req_bits.append("%s %d" % [engine.par_label(String(key)),int(req[key])])
 		var quality_heading := String(quality_names.get(String(entry["quality"]),entry["quality"]))
+		var budget_split: Dictionary = v.get("budget_split",{})
+		if not budget_split.is_empty():
+			quality_heading += " %d/%d" % [int(budget_split["defence_pct"]),int(budget_split["attack_pct"])]
 		if not req_bits.is_empty():
 			quality_heading += " — Требования: " + ", ".join(PackedStringArray(req_bits))
 		result_list.add_child(_label(quality_heading,13,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
@@ -278,9 +281,6 @@ func _render() -> void:
 		var slot_budget := float(v.get("par_slot_budget_pct",0.0))
 		if slot_budget > 0.0:
 			details.append("Вес слота %.2f%%" % slot_budget)
-		var budget_split: Dictionary = v.get("budget_split",{})
-		if not budget_split.is_empty():
-			details.append("Тип %d/%d" % [int(budget_split["defence_pct"]),int(budget_split["attack_pct"])])
 		var stable_rolls: Array = v.get("core_rolls",[])
 		for raw in stable_rolls:
 			var line: Dictionary = raw
