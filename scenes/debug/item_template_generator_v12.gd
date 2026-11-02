@@ -303,13 +303,10 @@ func _format_par_bonus(line: Dictionary, level: int) -> String:
 	var par := String(line.get("par",""))
 	var rating := float(line.get("rating",0.0))
 	var label := "%s +%d" % [engine.par_label(par),int(rating)]
-	var rating_pars := ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR035","PAR071","PAR072","PAR075","PAR126","PAR127","PAR128","PAR129","PAR130","PAR131","PAR132","PAR133","PAR134","PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170","PAR190","PAR191","PAR192","PAR193","PAR194","PAR195","PAR196"]
-	if rating_pars.has(par):
-		var pct := ItemTemplateGeneratorV12.rating_to_pct(rating,level)
-		# Critical damage and magical damage/resistance families have their own
-		# rating conversion. Show only IDs confirmed to use the shared scale.
-		if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR071","PAR072","PAR075","PAR126","PAR127","PAR128","PAR129","PAR130","PAR131","PAR132","PAR133","PAR134","PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170","PAR190","PAR191","PAR192","PAR193","PAR194","PAR195","PAR196"].has(par):
-			label += " (%.2f%%)" % pct
+	# Only the shared 20%->4% per 100-rating family is converted here.
+	# Other PARs need their own validated unit/cap/DR conversion.
+	if ["PAR030","PAR031","PAR032","PAR033","PAR034"].has(par):
+		label += " (%.2f%% до DR)" % ItemTemplateGeneratorV12.rating_to_pct(rating,level)
 	return label
 
 func _save_profile() -> void:
