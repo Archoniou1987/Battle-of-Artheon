@@ -202,12 +202,12 @@ func _config() -> Dictionary:
 				ids.append(String(spec["id"]))
 	return {"archetypes":ids,"school":_pick(school_select),"armor_slot":_pick(slot_select),"weapon_hand":_pick(hand_select),
 		"quality":_pick(quality_select),"min_level":int(level_min.value),
-		"max_level":int(level_max.value),"count":int(count_spin.value),"seed":int(seed_spin.value)}
+		"max_level":int(level_max.value),"count":int(count_spin.value),"seed":int(seed_spin.value),"group_qualities":true}
 
 func _generate_bulk() -> void:
 	var config := {"archetypes":[],"school":"any","armor_slot":"any","weapon_hand":"any",
 		"exclude_oh":true,"quality":"any","min_level":1,"max_level":100,
-		"count":500,"seed":int(seed_spin.value),"mode":"bulk_v12_no_oh_jewellery"}
+		"count":500,"seed":int(seed_spin.value),"group_qualities":true,"mode":"bulk_v12_no_oh_jewellery"}
 	_run_generation(config)
 
 func _generate() -> void:
@@ -225,9 +225,9 @@ func _run_generation(config: Dictionary) -> void:
 	results = result.get("rows",[])
 	last_config = config.duplicate(true)
 	csv_button.disabled = results.is_empty()
-	result_status.text = "v1.2 · %d предметов · %d комбинаций доступно · seed %d" % [
-		results.size(),int(result.get("candidate_count",0)),int(config["seed"])]
-	status.text = "Готово · %d вариантов (в CSV все; на экране первые 50)" % results.size()
+	result_status.text = "v1.2 · %d шаблонов · %d строк качества · seed %d" % [
+		int(result.get("group_count",results.size())),results.size(),int(config["seed"])]
+	status.text = "Готово · %d строк качества (в CSV все; на экране первые 50 шаблонов)" % results.size()
 	_render()
 	tabs.current_tab = 1
 
@@ -235,13 +235,20 @@ func _render() -> void:
 	for node in result_list.get_children():
 		result_list.remove_child(node)
 		node.queue_free()
-	for i in range(mini(results.size(),50)):
+	var shown_groups := 0
+	var last_group := ""
+	for i in range(results.size()):
 		var entry: Dictionary = results[i]
+		var group_id := String(entry.get("group_id",entry["id"]))
+		if group_id != last_group:
+			shown_groups += 1
+			if shown_groups > 50:
+				break
+			last_group = group_id
+			result_list.add_child(_label("%s · %s · Lv%d · %s" % [group_id,String(entry["archetype_name"]),int(entry["level"]),String(entry["slot"])],14,Color("#f0d9af")))
+		var quality_names := {"white":"Белый","green":"Зелёный","blue":"Синий","purple":"Фиолетовый"}
 		var v: Dictionary = entry["variant"]
-		var txt := "%s · Lv%d · %s · %s" % [
-			String(entry["archetype_name"]),int(entry["level"]),
-			String(entry["slot"]),String(entry["school"])]
-		result_list.add_child(_label(txt,13,Color("#f0d9af")))
+		result_list.add_child(_label(String(quality_names.get(String(entry["quality"]),entry["quality"])),13,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
 		var details: Array[String] = []
 		var damage: Array = v.get("damage",[])
 		if damage.size() == 2:
@@ -253,7 +260,7 @@ func _render() -> void:
 		if not armour.is_empty():
 			var fields: Array[String] = []
 			for key in armour:
-				fields.append("%s +%d" % [String(key),int(armour[key])])
+				fields.append("%s +%d" % [engine.par_label(String(key)),int(armour[key])])
 			details.append("Броня: " + ", ".join(PackedStringArray(fields)))
 		var slot_budget := float(v.get("par_slot_budget_pct",0.0))
 		if slot_budget > 0.0:
@@ -266,11 +273,11 @@ func _render() -> void:
 		var stable_rolls: Array = v.get("core_rolls",[])
 		for raw in stable_rolls:
 			var line: Dictionary = raw
-			details.append("CORE %s +%d [%s]" % [String(line["name"]),int(line["rating"]),String(line["par"])])
+			details.append("CORE %s +%d" % [engine.par_label(String(line["par"])),int(line["rating"])])
 		var rolls: Array = v.get("rolls",[])
 		for raw in rolls:
 			var line: Dictionary = raw
-			details.append("%s +%d [%s]" % [String(line["name"]),int(line["rating"]),String(line["par"])])
+			details.append("%s +%d" % [engine.par_label(String(line["par"])),int(line["rating"])])
 		var preview: Dictionary = v.get("preview",{})
 		var zone_summary: Array[String] = []
 		var armour_effects: Dictionary = preview.get("armour",{})
@@ -289,7 +296,7 @@ func _render() -> void:
 		var req: Dictionary = v.get("requirements",{})
 		var req_bits: Array[String] = []
 		for key in req:
-			req_bits.append("%s %d" % [String(key),int(req[key])])
+			req_bits.append("%s %d" % [engine.par_label(String(key)),int(req[key])])
 		details.append("Требования: " + ", ".join(PackedStringArray(req_bits)))
 		result_list.add_child(_label(" · ".join(PackedStringArray(details)),12,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
 		result_list.add_child(HSeparator.new())
@@ -325,12 +332,16 @@ func _export_csv() -> void:
 	if results.is_empty():
 		return
 	var lines: Array[String] = []
-	lines.append("record_type,id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,par_slot_budget_pct,par_slot_budget_status,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
-	lines.append(_csv_row(["CONFIG","","","","","","","",JSON.stringify(last_config),"","","","","","","","","",""]))
+	lines.append("record_type,id,group_id,archetype_id,archetype,slot,school,level,quality,damage,offhand_damage,armour,budget_split,par_slot_budget_pct,par_slot_budget_status,core_rolls,rarity_rolls,par_bonuses,requirements,preview_dr")
+	var cfg_row: Array = ["CONFIG"]
+	while cfg_row.size() < 20:
+		cfg_row.append("")
+	cfg_row[9] = JSON.stringify(last_config)
+	lines.append(_csv_row(cfg_row))
 	for item in results:
 		var row: Dictionary = item
 		var v: Dictionary = row["variant"]
-		lines.append(_csv_row(["ITEM",String(row["id"]),String(row["archetype_id"]),
+		lines.append(_csv_row(["ITEM",String(row["id"]),String(row.get("group_id",row["id"])),String(row["archetype_id"]),
 			String(row["archetype_name"]),String(row["slot"]),String(row["school"]),
 			str(int(row["level"])),String(row["quality"]),JSON.stringify(v["damage"]),
 			JSON.stringify(v["offhand_damage"]),JSON.stringify(v["armour"]),JSON.stringify(v["budget_split"]),str(float(v["par_slot_budget_pct"])),String(v["par_slot_budget_status"]),JSON.stringify(v["core_rolls"]),JSON.stringify(v["rolls"]),JSON.stringify(v["total_par"]),JSON.stringify(v["requirements"]),JSON.stringify(v["preview"])]))

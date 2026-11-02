@@ -196,6 +196,7 @@ func generate(config: Dictionary) -> Dictionary:
 	var minimum := clampi(int(config.get("min_level", 10)), 1, 100)
 	var maximum := clampi(int(config.get("max_level", 30)), minimum, 100)
 	var wanted := clampi(int(config.get("count", 100)), 1, 500)
+	var grouped := bool(config.get("group_qualities", false))
 	var chosen_ids: Array = config.get("archetypes", [])
 	var chosen_quality := String(config.get("quality", "any"))
 	var chosen_school := String(config.get("school", "any"))
@@ -248,20 +249,35 @@ func generate(config: Dictionary) -> Dictionary:
 		var choice: Dictionary = candidates[rng.randi_range(0,candidates.size()-1)]
 		var level := int(choice["level"])
 		var allowed: Array = choice["qualities"]
-		var quality := String(allowed[rng.randi_range(0, allowed.size()-1)])
-		var variant := _variant(choice, quality)
-		var entry: Dictionary = choice["spec"]
-		rows.append({
-			"id":"V12-%05d" % (rows.size()+1),
-			"archetype_id":String(entry["id"]),
-			"archetype_name":String(entry["name"]),
-			"kind":String(entry["kind"]), "slot":String(choice["slot"]),
-			"school":String(Dictionary(choice["school"]).get("name","")),
-			"level":level, "quality":quality, "variant":variant
-		})
+		var quality_order: Array = ["white","green","blue","purple"] if grouped else [String(allowed[rng.randi_range(0, allowed.size()-1)])]
+		# Same roll sequence for each quality of one template. CORE and
+		# baseline damage stay comparable; rarity adds its own PAR slots.
+		var template_state := rng.state
+		var next_state := template_state
+		var group_id := "V12-%05d" % (i+1)
+		for quality in quality_order:
+			if not allowed.has(quality):
+				continue
+			if grouped:
+				rng.state = template_state
+			var variant := _variant(choice, String(quality))
+			if grouped:
+				next_state = rng.state
+			var entry: Dictionary = choice["spec"]
+			rows.append({
+				"id":group_id + ("-" + String(quality) if grouped else ""),
+				"group_id":group_id,
+				"archetype_id":String(entry["id"]),
+				"archetype_name":String(entry["name"]),
+				"kind":String(entry["kind"]), "slot":String(choice["slot"]),
+				"school":String(Dictionary(choice["school"]).get("name","")),
+				"level":level, "quality":String(quality), "variant":variant
+			})
+		if grouped:
+			rng.state = next_state
 	if rows.is_empty():
 		return {"ok":false,"reason":"Выбранная редкость недоступна на этих уровнях","rows":[]}
-	return {"ok":true,"rows":rows,"requested":wanted,"generated":rows.size(),"candidate_count":candidates.size()}
+	return {"ok":true,"rows":rows,"requested":wanted,"generated":rows.size(),"group_count":wanted if grouped else rows.size(),"candidate_count":candidates.size()}
 
 func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	var spec: Dictionary = choice["spec"]

@@ -233,7 +233,23 @@ func _verify() -> void:
 		problems.append("Armour DR diagnostic must combine base and direct PAR bonuses")
 	if not is_equal_approx(float(diagnostic["ratings"]["PAR033"]["after_dr_pct"]),20.0):
 		problems.append("Crit DR diagnostic must retain 20% below threshold")
-	# Web Preview bulk preset: 500 rows, all supported armour + MH/2H,
+	# Quality-comparison mode: one template -> 1-4 available colours.
+	var groups := generator.generate({"archetypes":["SWORD_CRIT"],"min_level":40,
+		"max_level":40,"quality":"any","count":2,"group_qualities":true,"seed":77})
+	if not bool(groups.get("ok",false)) or int(groups.get("group_count",0)) != 2 or int(groups.get("generated",0)) != 8:
+		problems.append("Four quality rows per template were not generated")
+	else:
+		var colours: Array = []
+		for item in groups["rows"]:
+			if String(Dictionary(item).get("group_id","")) == "V12-00001":
+				colours.append(String(Dictionary(item).get("quality","")))
+		if colours != ["white","green","blue","purple"]:
+			problems.append("Quality rows are not in v1 order")
+	var early := generator.generate({"archetypes":["SWORD_CRIT"],"min_level":10,
+		"max_level":10,"quality":"any","count":1,"group_qualities":true,"seed":77})
+	if not bool(early.get("ok",false)) or int(early.get("generated",0)) != 2:
+		problems.append("Unavailable qualities must be omitted from comparison")
+	# Web Preview bulk preset: 500 templates, all supported armour + MH/2H,
 	# without jewellery or off-hand weapons. Full data remains in CSV.
 	var bulk := generator.generate({"archetypes":[],"min_level":1,"max_level":100,
 		"quality":"any","count":500,"seed":22026,"weapon_hand":"any","exclude_oh":true})
