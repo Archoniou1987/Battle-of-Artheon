@@ -9,7 +9,7 @@ func _verify() -> void:
 	var generator := ItemTemplateGeneratorV12.new()
 	if not generator.ready_for_generation():
 		problems.append("v1.2 catalog is incomplete or probabilities do not sum to 100")
-	if generator.archetypes().size() != 37:
+	if generator.archetypes().size() != 45:
 		problems.append("Expected 35 original + pendant + ring archetypes")
 	if generator.schools().size() != 6:
 		problems.append("Expected exactly six staff schools")
@@ -88,7 +88,7 @@ func _verify() -> void:
 	# Pendant is additive; it does not redistribute existing slot weights.
 	if absf(float(generator.rules["slot_budgets"]["Кулон"])-7.5) > 0.001:
 		problems.append("Pendant must have its own 7.5% share")
-	var pendant_test := generator.generate({"archetypes":["PENDANT_UNIVERSAL"],"min_level":60,"max_level":60,"quality":"purple","count":1,"seed":162})
+	var pendant_test := generator.generate({"archetypes":["CHARM_UNIVERSAL"],"min_level":60,"max_level":60,"quality":"purple","count":1,"seed":162})
 	if not bool(pendant_test.get("ok",false)) or String(Dictionary(pendant_test["rows"][0]).get("slot","")) != "Кулон":
 		problems.append("Pendant generation failed")
 	else:
@@ -443,8 +443,8 @@ func _verify() -> void:
 	# Target build anchors are normalized to 14 slots, two PAR lines, epic 1.5.
 	var ref_share := 7.5 / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
 	for entry in [
-		{"stat":"attack","level":10,"target":50.0},
-		{"stat":"attack","level":100,"target":150.0},
+		{"stat":"attack","level":10,"target":100.0},
+		{"stat":"attack","level":100,"target":300.0},
 		{"stat":"spell","level":20,"target":200.0},
 		{"stat":"spell","level":100,"target":2000.0}
 	]:

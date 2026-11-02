@@ -14,7 +14,7 @@ const PAR_LABELS := {
 	"PAR135":"Снижение урона", "PAR150":"Сила заклинаний",
 	"PAR190":"Магическое сопротивление", "PAR013":"Регенерация маны вне боя (ед./10 сек)",
 	"PAR015":"Регенерация маны в бою (за раунд)",
-	"PAR164":"Общее пробитие магии", "V12_ATTACK_POWER":"Сила атаки (v1.2)"
+	"PAR164":"Общее пробитие магии", "V12_ATTACK_POWER":"Сила атаки"
 }
 const ARMOUR_ZONES := {
 	# Approved Project 25 matrix V2: each zone sums to 80% without a shield.
@@ -155,7 +155,7 @@ func ready_for_generation() -> bool:
 	if rules.is_empty() or par_registry.is_empty():
 		return false
 	for entry in archetypes():
-		if String(entry.get("kind","")) == "armor" and armour_budget_split(entry).is_empty():
+		if ["armor","jewelry"].has(String(entry.get("kind",""))) and armour_budget_split(entry).is_empty():
 			return false
 		var weights: Dictionary = entry.get("weights", {})
 		var total := 0.0
@@ -163,7 +163,7 @@ func ready_for_generation() -> bool:
 			total += float(weights[key])
 		if absf(total - 100.0) > 0.001:
 			return false
-	return archetypes().size() == 37
+	return archetypes().size() == 45
 
 func archetypes() -> Array:
 	var result: Array = []
@@ -216,7 +216,7 @@ func generate(config: Dictionary) -> Dictionary:
 			continue
 		if chosen_hand != "any" and String(entry["kind"]) != "weapon":
 			continue
-		var slots: Array = [String(entry.get("slot","MH"))]
+		var slots: Array = entry.get("slots",[String(entry.get("slot","MH"))])
 		if String(entry["kind"]) == "armor":
 			slots = rules.get("armor_slots", [])
 		elif String(entry.get("slot","")) == "MH/OH":
@@ -295,7 +295,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		damage = _weapon_damage(spec, level, slot, float(Dictionary(rules["damage_quality_factors"]).get(quality,1.0)))
 		# MH/OH archetypes now produce distinct MH and OH variants.
 		# "damage" always refers to the selected hand; no second phantom hit.
-	else:
+	elif String(spec["kind"]) == "armor":
 		armour = _base_armour(spec,slot,level,quality_factor)
 	# Template CORE lines belong to the white foundation, not rarity rolls.
 	# Lv20 blue+ enables the first CORE; Lv30 all qualities; Lv60 a second CORE.
@@ -406,7 +406,7 @@ func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_f
 ## source of extra PAR rolls. K3:N12 in "Генератор v1.2" gives reference
 ## helm Lv1: 80/20->48, 65/35->39, 50/50->30, 20/80->12.
 static func armour_budget_split(spec: Dictionary) -> Dictionary:
-	if String(spec.get("kind","")) != "armor":
+	if not ["armor","jewelry"].has(String(spec.get("kind",""))):
 		return {}
 	var pieces := String(spec.get("profile","")).split("/")
 	if pieces.size() != 2:
@@ -526,7 +526,7 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 				build_target *= l/10.0
 			# Convert planned build percentage into an additive rating.
 			# Raw rating is displayed; percentage is computed after aggregation.
-			baseline = (build_target / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
+			baseline = (build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
 		"spell":
 			# Project 25 specialised build targets: ~200 SP Lv20, ~2000 SP Lv100.
 			# Between those anchors, interpolation remains a lab-only assumption.

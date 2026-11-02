@@ -55,7 +55,7 @@ func _build() -> void:
 	var settings := _page("1 · Параметры")
 	settings.add_child(_label("Утверждённые правила Project 25 · 21 оружейный + 14 броневых архетипов", 13, Color("#c4d5e4")))
 	settings.add_child(_label("Калибровка: HP/мана — эталоны; СА/СЗ — интерполяция целей сборки; прочие PAR — предварительно.", 12, Color("#dfbd8e")))
-	kind_select = _option(settings,"Категория",[["Все","all"],["Оружие","weapon"],["Броня","armor"]])
+	kind_select = _option(settings,"Категория",[["Все","all"],["Оружие","weapon"],["Броня","armor"],["Украшения и плащ","jewelry"]])
 	kind_select.item_selected.connect(func(_ix: int) -> void: _refresh_archetypes())
 	archetype_select = _option(settings,"Архетип",[["Все архетипы","all"]])
 	_refresh_archetypes()
@@ -66,7 +66,7 @@ func _build() -> void:
 		school_select.set_item_metadata(school_select.item_count - 1,String(data["id"]))
 	hand_select = _option(settings,"Рука оружия",[["Любая","any"],["Основная (MH)","MH"],["Вторая (OH)","OH"],["Двуручное (2H)","2H"]])
 	slot_select = _option(settings,"Слот брони",[["Любой","any"]])
-	for slot in engine.rules.get("armor_slots",[]):
+	for slot in (engine.rules.get("armor_slots",[]) as Array) + ["Кулон","Кольцо","Плащ"]:
 		slot_select.add_item(String(slot))
 		slot_select.set_item_metadata(slot_select.item_count - 1,String(slot))
 	quality_select = _option(settings,"Редкость",[["Любая","any"],["Белая","white"],["Зелёная","green"],["Синяя","blue"],["Фиолетовая","purple"]])
@@ -289,12 +289,25 @@ func _render() -> void:
 		for raw in rolls:
 			var line: Dictionary = raw
 			details.append(_format_par_bonus(line,int(entry["level"])))
-		var rating_effects: Dictionary = preview.get("ratings",{})
-		for par in ["PAR031","PAR033","PAR032"]:
-			if rating_effects.has(par):
-				var eff: Dictionary = rating_effects[par]
-				details.append("%s %.1f→%.1f%%" % [engine.par_label(par),float(eff["raw_pct"]),float(eff["after_dr_pct"])])
 		result_list.add_child(_label(" · ".join(PackedStringArray(details)),12,Color(String(COLOURS.get(String(entry["quality"]),"#d8d8d8")))))
+		var totals: Dictionary = v.get("total_par",{})
+		if not totals.is_empty():
+			var fragments: Array[String] = []
+			for par in totals:
+				var rating := float(totals[par])
+				var fragment := "%s +%d" % [engine.par_label(String(par)),int(rating)]
+				if ["PAR031","PAR032","PAR033","PAR034","PAR126","V12_ATTACK_POWER"].has(String(par)):
+					var pct := ItemTemplateGeneratorV12.rating_to_pct(rating,int(entry["level"]))
+					var category := "dodge" if String(par) == "PAR031" else "crit" if String(par) == "PAR033" else "attack" if String(par) == "V12_ATTACK_POWER" else ""
+					fragment += " (%.2f%% / %.2f%%)" % [pct,ItemTemplateGeneratorV12.diminishing(pct,category)]
+				fragments.append(fragment)
+			var summary := RichTextLabel.new()
+			summary.bbcode_enabled = true
+			summary.fit_content = true
+			summary.scroll_active = false
+			summary.add_theme_font_size_override("normal_font_size",13)
+			summary.append_text("[b][u]ИТОГО: " + " · ".join(PackedStringArray(fragments)) + "[/u][/b]")
+			result_list.add_child(summary)
 		result_list.add_child(HSeparator.new())
 
 ## UI-only conversion of a PAR line into its readable equivalent.
@@ -308,7 +321,7 @@ func _format_par_bonus(line: Dictionary, level: int) -> String:
 		return "%s +%d (%.2f%% / %.2f%% DR)" % [engine.par_label(par),int(rating),raw_percent,ItemTemplateGeneratorV12.diminishing(raw_percent,"attack")]
 	# Only the shared 20%->4% per 100-rating family is converted here.
 	# Other PARs need their own validated unit/cap/DR conversion.
-	if ["PAR030","PAR031","PAR032","PAR033","PAR034"].has(par):
+	if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR126"].has(par):
 		label += " (%.2f%% до DR)" % ItemTemplateGeneratorV12.rating_to_pct(rating,level)
 	return label
 

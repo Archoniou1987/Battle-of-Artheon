@@ -88,15 +88,15 @@
     "MH/OH": 15,
     "OH": 7.5,
     "2H": 22.5,
-    "Шлем": 7.5,
+    "Шлем": 7.1,
     "Плечи": 6,
-    "Нагрудник": 11.3,
+    "Нагрудник": 10.9,
     "Перчатки": 3.8,
     "Наручи": 3.8,
     "Пояс": 3.8,
-    "Штаны": 7.5,
+    "Штаны": 7.1,
     "Ботинки": 7.5,
-    "Плащ": 3.8,
+    "Плащ": 5,
     "Щит": 7.5,
     "Кулон": 7.5,
     "Кольцо": 7.5
@@ -109,8 +109,7 @@
     "Наручи",
     "Пояс",
     "Штаны",
-    "Ботинки",
-    "Плащ"
+    "Ботинки"
   ],
   "stat_priority_slots": [
     "Перчатки",
@@ -768,17 +767,114 @@
   ],
   "jewelry_archetypes": [
     {
-      "id": "PENDANT_UNIVERSAL",
-      "name": "Кулон · универсальный (предварительный)",
+      "id": "CHARM_PHYS_ATTACK",
+      "name": "Кулон / плащ · PHYS_ATTACK",
       "kind": "jewelry",
       "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "35/65",
       "weights": {
-        "mana_regen": 25,
-        "mana": 20,
-        "hp": 15,
-        "crit": 15,
-        "dodge": 10,
-        "spell": 15
+        "hp": 5,
+        "attack": 30,
+        "crit": 25,
+        "crit_damage": 20,
+        "armour_pen": 10,
+        "anti_dodge": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_PHYS_ATTACK",
+      "name": "Кольцо · PHYS_ATTACK",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "35/65",
+      "weights": {
+        "hp": 5,
+        "attack": 30,
+        "crit": 25,
+        "crit_damage": 20,
+        "armour_pen": 10,
+        "anti_dodge": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_PHYS_DEF",
+      "name": "Кулон / плащ · PHYS_DEF",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 30,
+        "attack": 10,
+        "crit": 5,
+        "anti_dodge": 5,
+        "dodge": 15,
+        "anticrit": 20,
+        "phys_res": 15
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_PHYS_DEF",
+      "name": "Кольцо · PHYS_DEF",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 30,
+        "attack": 10,
+        "crit": 5,
+        "anti_dodge": 5,
+        "dodge": 15,
+        "anticrit": 20,
+        "phys_res": 15
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_MAG_ATTACK",
+      "name": "Кулон / плащ · MAG_ATTACK",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "35/65",
+      "weights": {
+        "mana": 10,
+        "mana_regen": 10,
+        "spell": 30,
+        "crit": 20,
+        "magic_pen": 20,
+        "dodge": 10
       },
       "requirements": [
         "PAR004",
@@ -786,20 +882,120 @@
       ]
     },
     {
-      "id": "RING_UNIVERSAL",
-      "name": "Кольцо · универсальное (предварительный)",
+      "id": "RING_MAG_ATTACK",
+      "name": "Кольцо · MAG_ATTACK",
       "kind": "jewelry",
       "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "35/65",
       "weights": {
-        "mana_regen": 25,
-        "mana": 20,
-        "hp": 15,
-        "crit": 15,
-        "dodge": 10,
-        "spell": 15
+        "mana": 10,
+        "mana_regen": 10,
+        "spell": 30,
+        "crit": 20,
+        "magic_pen": 20,
+        "dodge": 10
       },
       "requirements": [
         "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_MAG_DEF",
+      "name": "Кулон / плащ · MAG_DEF",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 20,
+        "mana": 15,
+        "mana_regen": 10,
+        "spell": 15,
+        "magic_res": 25,
+        "anticrit": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_MAG_DEF",
+      "name": "Кольцо · MAG_DEF",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 20,
+        "mana": 15,
+        "mana_regen": 10,
+        "spell": 15,
+        "magic_res": 25,
+        "anticrit": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_UNIVERSAL",
+      "name": "Кулон / плащ · UNIVERSAL",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "50/50",
+      "weights": {
+        "hp": 20,
+        "mana": 10,
+        "attack": 10,
+        "spell": 10,
+        "crit": 10,
+        "dodge": 10,
+        "anticrit": 10,
+        "phys_res": 10,
+        "magic_res": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_UNIVERSAL",
+      "name": "Кольцо · UNIVERSAL",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "50/50",
+      "weights": {
+        "hp": 20,
+        "mana": 10,
+        "attack": 10,
+        "spell": 10,
+        "crit": 10,
+        "dodge": 10,
+        "anticrit": 10,
+        "phys_res": 10,
+        "magic_res": 10
+      },
+      "requirements": [
+        "PAR001",
         "PAR006"
       ]
     }
