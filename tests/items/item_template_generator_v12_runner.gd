@@ -50,7 +50,7 @@ func _verify() -> void:
 	# Primary stats use one normal bonus slot, never a sixth PAR cell.
 	var stat_pieces := ["Перчатки","Наручи","Пояс","Плащ"]
 	for piece in stat_pieces:
-		var stat_config := {"archetypes":["MEDIUM_DEF"],"min_level":60,"max_level":60,
+		var stat_config := {"archetypes":[("CHARM_UNIVERSAL" if piece == "Плащ" else "MEDIUM_DEF")],"min_level":60,"max_level":60,
 			"quality":"purple","armor_slot":piece,"count":1,"seed":1234}
 		var stat_result := generator.generate(stat_config)
 		if not bool(stat_result.get("ok",false)):
