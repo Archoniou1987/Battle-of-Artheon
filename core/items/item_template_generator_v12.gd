@@ -59,6 +59,16 @@ const PAR_BUDGET_DIRECTIONS := {
 	"magic_pen":{"defence":0.0,"attack":1.0}
 }
 
+## Apply the armour defence/attack profile as the final multiplier of
+## each independent affix. No redistribution among unlocked PAR cells.
+static func armour_par_multiplier(logical: String, profile: Dictionary) -> float:
+	if profile.is_empty():
+		return 1.0
+	var direction := par_budget_direction(logical)
+	if String(direction.get("status","")) != "V12_APPROVED":
+		return 1.0
+	return float(profile["defence_pct"])/100.0*float(direction["defence"]) + float(profile["attack_pct"])/100.0*float(direction["attack"])
+
 static func par_budget_direction(logical: String) -> Dictionary:
 	if not PAR_BUDGET_DIRECTIONS.has(logical):
 		return {"status":"UNCLASSIFIED"}
@@ -286,7 +296,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		var par := _resolve_par(logical,choice)
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
-		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
+		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines,armour_budget_split(spec))
 		core_rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"budget_direction":par_budget_direction(logical),"calibration":calibration_status(logical),"source":"CORE"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Each quality bonus is an independent weighted roll. Duplicates are allowed.
@@ -297,7 +307,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		var par := _resolve_par(logical,choice)
 		if logical == "phys_res":
 			par = ["PAR127","PAR128","PAR129","PAR130"][rng.randi_range(0,3)]
-		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines)
+		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines,armour_budget_split(spec))
 		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"budget_direction":par_budget_direction(logical),"calibration":calibration_status(logical),"source":"RARITY"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
 	# Priority main-stat roll occupies a NORMAL affix slot, not an extra one.
@@ -322,7 +332,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
 	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,
 		"par_slot_budget_pct":float(Dictionary(rules["slot_budgets"]).get(slot,0.0)),
-		"par_slot_budget_status":"PROVISIONAL_2H" if slot == "2H" else "V12_SPECIFIED",
+		"par_slot_budget_status":"V12_APPROVED",
 		"budget_split":armour_budget_split(spec),"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor,
 		"preview":preview_effects(armour,modifiers,level)}
@@ -487,8 +497,9 @@ func calibration_status(logical: String) -> String:
 		return "PROJECT25_TARGET_INTERPOLATED"
 	return "PROVISIONAL_EXTREMUM"
 
-func _affix_amount(logical: String,level: int,slot: String,quality: float,_lines: int) -> float:
+func _affix_amount(logical: String,level: int,slot: String,quality: float,_lines: int,profile: Dictionary = {}) -> float:
 	var amount := nominal_affix(logical,level,slot,quality)
+	amount *= armour_par_multiplier(logical,profile)
 	return float(maxi(1,roundi(amount*rng.randf_range(0.95,1.05))))
 
 func par_label(par: String) -> String:

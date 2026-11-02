@@ -86,6 +86,19 @@ func _verify() -> void:
 		var metadata: Dictionary = profile_output["rows"][0]["variant"]
 		if int(Dictionary(metadata.get("budget_split",{})).get("defence_pct",-1)) != 80:
 			problems.append("Generated armour lost its v1.2 defence/attack budget")
+	# Independent final multiplier: direction fractions never depend on line count.
+	var profile_80 := {"defence_pct":80,"attack_pct":20}
+	for value in [
+		{"name":"hp","expected":0.8},
+		{"name":"crit","expected":0.2},
+		{"name":"dodge","expected":0.65},
+		{"name":"counter","expected":1.0}
+	]:
+		if absf(ItemTemplateGeneratorV12.armour_par_multiplier(String(value["name"]),profile_80)-float(value["expected"])) > 0.0001:
+			problems.append("Wrong armour PAR multiplier: "+String(value["name"]))
+	var profile_20 := {"defence_pct":20,"attack_pct":80}
+	if absf(ItemTemplateGeneratorV12.armour_par_multiplier("hp",profile_20)-0.2) > 0.0001 or absf(ItemTemplateGeneratorV12.armour_par_multiplier("spell",profile_20)-0.8) > 0.0001:
+		problems.append("Light profile does not apply its final budget multipliers")
 	# The ONLY explicitly approved per-PAR direction splits in v1.2.
 	for expectation in [
 		{"logical":"hp","defence":1.0,"attack":0.0},
@@ -154,8 +167,8 @@ func _verify() -> void:
 		var two_handed_variant: Dictionary = two_handed["rows"][0]["variant"]
 		if float(two_handed_variant.get("par_slot_budget_pct",0.0)) != 22.5:
 			problems.append("2H item uses an external PAR budget")
-		if String(two_handed_variant.get("par_slot_budget_status","")) != "PROVISIONAL_2H":
-			problems.append("Provisional 2H budget is not labelled")
+		if String(two_handed_variant.get("par_slot_budget_status","")) != "V12_APPROVED":
+			problems.append("Approved 2H budget is not labelled")
 	else:
 		problems.append("2H item failed to generate")
 	var hand_only := generator.generate({"archetypes":[],
