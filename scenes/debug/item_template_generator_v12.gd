@@ -303,6 +303,8 @@ func _format_par_bonus(line: Dictionary, level: int) -> String:
 	var par := String(line.get("par",""))
 	var rating := float(line.get("rating",0.0))
 	var label := "%s +%d" % [engine.par_label(par),int(rating)]
+	if par == "V12_ATTACK_POWER":
+		return "%s +%.2f%%" % [engine.par_label(par),rating]
 	# Only the shared 20%->4% per 100-rating family is converted here.
 	# Other PARs need their own validated unit/cap/DR conversion.
 	if ["PAR030","PAR031","PAR032","PAR033","PAR034"].has(par):

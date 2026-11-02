@@ -43,6 +43,26 @@ func _verify() -> void:
 			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
 				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
+	# Attack power is an additive percentage; do not round away sub-1% bonuses.
+	var low_attack := generator._affix_amount("attack",30,"Нагрудник",1.25,1,{"defence_pct":80,"attack_pct":20})
+	if low_attack <= 0.0 or absf(low_attack-roundf(low_attack)) < 0.00001:
+		problems.append("Attack power lost its fractional percent precision")
+	# Primary stats use one normal bonus slot, never a sixth PAR cell.
+	var stat_pieces := ["Перчатки","Наручи","Пояс","Плащ"]
+	for piece in stat_pieces:
+		var stat_config := {"archetypes":["MEDIUM_DEF"],"min_level":60,"max_level":60,
+			"quality":"purple","armor_slot":piece,"count":1,"seed":1234}
+		var stat_result := generator.generate(stat_config)
+		if not bool(stat_result.get("ok",false)):
+			problems.append("Base-stat slot unavailable: "+piece)
+			continue
+		var variant: Dictionary = Dictionary(stat_result["rows"][0])["variant"]
+		var found := false
+		for line in variant.get("rolls",[]):
+			if String(Dictionary(line).get("category","")) == "primary":
+				found = true
+		if not found or (variant.get("rolls",[]) as Array).size() != 3:
+			problems.append("Primary attribute must consume a rarity slot on "+piece)
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.

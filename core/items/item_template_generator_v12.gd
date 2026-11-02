@@ -333,10 +333,11 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 		var rating := _affix_amount(logical,level,slot,quality_factor,total_lines,armour_budget_split(spec))
 		rolls.append({"par":par,"name":par_label(par),"rating":rating,"category":logical,"budget_direction":par_budget_direction(logical),"calibration":calibration_status(logical),"source":"RARITY"})
 		modifiers[par] = float(modifiers.get(par,0.0)) + rating
-	# Priority main-stat roll occupies a NORMAL affix slot, not an extra one.
-	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс"].has(slot) and level >= 10:
-		var chance := lerpf(0.40,0.10,float(level-10)/90.0)
-		if rng.randf() < chance:
+	# Each eligible item reserves ONE rarity cell for a base attribute.
+	# Current test includes gloves/bracers/belt/cloak. Future jewellery
+	# joins the same 25%-of-base-stat full-gear budget, not another budget.
+	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ"].has(slot) and level >= 10:
+		if true:
 			# Lv10 has no equip requirements; use the archetype's stat priorities
 			# rather than attempting to choose from an empty requirements map.
 			var req_pars: Array = requirements.keys()
@@ -350,8 +351,13 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 				modifiers[old_par] = remainder
 			else:
 				modifiers.erase(old_par)
-			var added := maxi(1,roundi((18.0 + 2.0*float(level-1))*0.05*quality_factor))
-			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary"}
+			# 25% of level-based attribute pool across all planned eligible
+			# slots: gloves/bracers/belt/cloak + 2 rings and necklace.
+			# Shares: 4*3.8 + 3*7.5 = 37.7% total slot weight.
+			var full_stat_pool := 18.0 + 2.0*float(level-1)
+			var eligible_slot_weight := float(Dictionary(rules["slot_budgets"]).get(slot,3.8))
+			var added := maxi(1,roundi(full_stat_pool*0.25*eligible_slot_weight/37.7*quality_factor))
+			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary","source":"RARITY","calibration":"V12_25PCT_BASE_STAT_BUDGET"}
 			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
 	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,
 		"par_slot_budget_pct":float(Dictionary(rules["slot_budgets"]).get(slot,0.0)),
@@ -524,7 +530,10 @@ func calibration_status(logical: String) -> String:
 func _affix_amount(logical: String,level: int,slot: String,quality: float,_lines: int,profile: Dictionary = {}) -> float:
 	var amount := nominal_affix(logical,level,slot,quality)
 	amount *= armour_par_multiplier(logical,profile)
-	return float(maxi(1,roundi(amount*rng.randf_range(0.95,1.05))))
+	var rolled := amount*rng.randf_range(0.95,1.05)
+	if logical == "attack":
+		return maxf(0.01,snappedf(rolled,0.01))
+	return float(maxi(1,roundi(rolled)))
 
 func par_label(par: String) -> String:
 	if PAR_LABELS.has(par):
