@@ -59,7 +59,7 @@ async function plan() {
   const [all, aliases, prod] = await Promise.all([
     listAll(), listAliases(), api('/v13/deployments/' + DOMAIN),
   ]);
-  if (!prod.id || prod.project?.id !== PROJECT || prod.readyState !== 'READY') throw new Error('Production identity/status mismatch');
+  if (!prod.id || (prod.projectId || prod.project?.id) !== PROJECT || (prod.readyState || prod.state) !== 'READY') throw new Error('Production identity/status mismatch');
   const ordered = all.slice().sort((a,b)=>b.created-a.created);
   const secondary = ordered.find(d => d.meta.githubCommitRef === SECOND_BRANCH && d.state === 'READY');
   if (!secondary || ordered.length < 11) throw new Error('Not enough deployments or missing backup branch');
@@ -102,7 +102,7 @@ async function main() {
   }
   console.log('Delete requests completed: ' + second.candidates.length);
   const live = await api('/v13/deployments/' + DOMAIN);
-  if (live.id !== second.productionId || live.readyState !== 'READY') throw new Error('ALERT: production changed after cleanup');
+  if (live.id !== second.productionId || (live.readyState || live.state) !== 'READY') throw new Error('ALERT: production changed after cleanup');
   console.log('Production verified READY and unchanged: ' + live.id);
 }
 main().catch(e=>{ console.error(e.message); process.exitCode=1; });
