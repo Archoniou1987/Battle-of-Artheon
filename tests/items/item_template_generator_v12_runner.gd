@@ -75,6 +75,16 @@ func _verify() -> void:
 				core_stat_count += 1
 	if core_stat_count < 2 or core_stat_count > 25:
 		problems.append("CORE base-stat probability appears incorrect")
+	# Weapon base damage increases by HALF the PAR quality uplift.
+	for quality in ["white","green","blue","purple"]:
+		var factor := float(Dictionary(generator.rules["damage_quality_factors"])[quality])
+		var expected := {"white":1.0,"green":1.05,"blue":1.125,"purple":1.25}[quality]
+		if absf(factor-expected) > 0.00001:
+			problems.append("Incorrect weapon damage quality factor: "+quality)
+	var base_damage := generator._weapon_damage({"family":"sword"},60,"MH",1.0)
+	var epic_damage := generator._weapon_damage({"family":"sword"},60,"MH",1.25)
+	if int(epic_damage[0]) <= int(base_damage[0]) or int(epic_damage[1]) <= int(base_damage[1]):
+		problems.append("Epic weapon must increase base damage")
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.

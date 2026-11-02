@@ -291,7 +291,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	var damage: Array = []
 	var offhand_damage: Array = []
 	if String(spec["kind"]) == "weapon":
-		damage = _weapon_damage(spec, level, slot)
+		damage = _weapon_damage(spec, level, slot, float(Dictionary(rules["damage_quality_factors"]).get(quality,1.0)))
 		# MH/OH archetypes now produce distinct MH and OH variants.
 		# "damage" always refers to the selected hand; no second phantom hit.
 	else:
@@ -387,13 +387,13 @@ func primary_stat_amount(level: int, slot: String, quality_factor: float) -> flo
 func attack_rating_to_pct(rating: float, level: int) -> float:
 	return rating_to_pct(rating,level)
 
-func _weapon_damage(spec: Dictionary, level: int, slot: String) -> Array:
+func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_factor: float = 1.0) -> Array:
 	var family := String(spec.get("family","staff"))
 	if family == "staff":
 		# Staff physical base damage has not been approved yet.
 		return []
 	var base := lerpf(2.8,30.0,float(level-1)/29.0) if level <= 30 else lerpf(30.0,104.2,float(level-30)/70.0)
-	var avg := base*float(WEAPON_FACTOR.get(family,1.0))
+	var avg := base*float(WEAPON_FACTOR.get(family,1.0))*damage_quality_factor
 	if slot == "2H":
 		avg *= 1.65
 	elif slot == "OH":

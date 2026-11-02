@@ -1,6 +1,7 @@
 {
   "version": "core-balance-v1.2",
   "note": "Isolated generator workbench; no live inventory writes. Attack power is virtual V12_ATTACK_POWER until a canonical PAR is approved.",
+  "damage_quality_factors": {"white": 1.0, "green": 1.05, "blue": 1.125, "purple": 1.25},
   "rarities": {
     "white": {
       "start": 1,
