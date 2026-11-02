@@ -337,34 +337,55 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	# Current test includes gloves/bracers/belt/cloak. Future jewellery
 	# joins the same 25%-of-base-stat full-gear budget, not another budget.
 	if rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ"].has(slot) and level >= 10:
-		if true:
-			# Lv10 has no equip requirements; use the archetype's stat priorities
+		# Lv10 has no equip requirements; use the archetype's stat priorities
 			# rather than attempting to choose from an empty requirements map.
-			var req_pars: Array = requirements.keys()
-			if req_pars.is_empty():
-				req_pars = _requirement_attributes(spec)
-			var primary := String(req_pars[rng.randi_range(0,req_pars.size()-1)])
-			var replaced: Dictionary = rolls[rolls.size()-1]
-			var old_par := String(replaced["par"])
-			var remainder := float(modifiers.get(old_par,0.0)) - float(replaced["rating"])
-			if remainder > 0.001:
-				modifiers[old_par] = remainder
-			else:
-				modifiers.erase(old_par)
-			# 25% of level-based attribute pool across all planned eligible
-			# slots: gloves/bracers/belt/cloak + 2 rings and necklace.
-			# Shares: 4*3.8 + 3*7.5 = 37.7% total slot weight.
-			var full_stat_pool := 18.0 + 2.0*float(level-1)
-			var eligible_slot_weight := float(Dictionary(rules["slot_budgets"]).get(slot,3.8))
-			var added := maxi(1,roundi(full_stat_pool*0.25*eligible_slot_weight/37.7*quality_factor))
-			rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary","source":"RARITY","calibration":"V12_25PCT_BASE_STAT_BUDGET"}
-			modifiers[primary] = float(modifiers.get(primary,0.0)) + added
+		var req_pars: Array = requirements.keys()
+		if req_pars.is_empty():
+			req_pars = _requirement_attributes(spec)
+		var primary := String(req_pars[rng.randi_range(0,req_pars.size()-1)])
+		var replaced: Dictionary = rolls[rolls.size()-1]
+		var old_par := String(replaced["par"])
+		var remainder := float(modifiers.get(old_par,0.0)) - float(replaced["rating"])
+		if remainder > 0.001:
+			modifiers[old_par] = remainder
+		else:
+			modifiers.erase(old_par)
+		var added := primary_stat_amount(level,slot,quality_factor)
+		rolls[rolls.size()-1] = {"par":primary,"name":par_label(primary),"rating":added,"category":"primary","source":"RARITY","calibration":"V12_25PCT_BASE_STAT_BUDGET"}
+		modifiers[primary] = float(modifiers.get(primary,0.0)) + added
+	# Independently, 30% of eligible items replace one unlocked CORE
+	# with a profile base stat. No additional slot is created.
+	if core_rolls.size() > 0 and ["Перчатки","Наручи","Пояс","Плащ"].has(slot) and rng.randf() < 0.30:
+		var core_attributes: Array = requirements.keys()
+		if core_attributes.is_empty():
+			core_attributes = _requirement_attributes(spec)
+		var core_primary := String(core_attributes[rng.randi_range(0,core_attributes.size()-1)])
+		var old_core: Dictionary = core_rolls[core_rolls.size()-1]
+		var previous_par := String(old_core["par"])
+		var previous_remainder := float(modifiers.get(previous_par,0.0)) - float(old_core["rating"])
+		if previous_remainder > 0.001:
+			modifiers[previous_par] = previous_remainder
+		else:
+			modifiers.erase(previous_par)
+		var core_added := primary_stat_amount(level,slot,quality_factor)
+		core_rolls[core_rolls.size()-1] = {"par":core_primary,"name":par_label(core_primary),"rating":core_added,"category":"primary","source":"CORE","calibration":"V12_25PCT_BASE_STAT_BUDGET"}
+		modifiers[core_primary] = float(modifiers.get(core_primary,0.0)) + core_added
 	return {"damage":damage,"offhand_damage":offhand_damage,"armour":armour,
 		"par_slot_budget_pct":float(Dictionary(rules["slot_budgets"]).get(slot,0.0)),
 		"par_slot_budget_status":"V12_APPROVED",
 		"budget_split":armour_budget_split(spec),"core_rolls":core_rolls,"rolls":rolls,"total_par":modifiers,
 		"requirements":requirements,"quality_factor":quality_factor,
 		"preview":preview_effects(armour,modifiers,level)}
+
+func primary_stat_amount(level: int, slot: String, quality_factor: float) -> float:
+	# Existing v1.2 reference: 25% of level-based attribute pool across
+	# all planned eligible slots. A second CORE roll is an optional extra.
+	var full_stat_pool := 18.0 + 2.0*float(level-1)
+	var slot_weight := float(Dictionary(rules["slot_budgets"]).get(slot,3.8))
+	return float(maxi(1,roundi(full_stat_pool*0.25*slot_weight/37.7*quality_factor)))
+
+func attack_rating_to_pct(rating: float, level: int) -> float:
+	return rating_to_pct(rating,level)
 
 func _weapon_damage(spec: Dictionary, level: int, slot: String) -> Array:
 	var family := String(spec.get("family","staff"))
@@ -502,7 +523,9 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			var build_target := lerpf(50.0,150.0,clampf((l-10.0)/90.0,0.0,1.0))
 			if l < 10.0:
 				build_target *= l/10.0
-			baseline = build_target / FULL_BUILD_REFERENCE_LINES
+			# Convert planned build percentage into an additive rating.
+			# Raw rating is displayed; percentage is computed after aggregation.
+			baseline = (build_target / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
 		"spell":
 			# Project 25 specialised build targets: ~200 SP Lv20, ~2000 SP Lv100.
 			# Between those anchors, interpolation remains a lab-only assumption.
@@ -532,7 +555,7 @@ func _affix_amount(logical: String,level: int,slot: String,quality: float,_lines
 	amount *= armour_par_multiplier(logical,profile)
 	var rolled := amount*rng.randf_range(0.95,1.05)
 	if logical == "attack":
-		return maxf(0.01,snappedf(rolled,0.01))
+		return float(maxi(1,roundi(rolled)))
 	return float(maxi(1,roundi(rolled)))
 
 func par_label(par: String) -> String:

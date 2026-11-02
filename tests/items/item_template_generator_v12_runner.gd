@@ -43,10 +43,10 @@ func _verify() -> void:
 			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
 				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
-	# Attack power is an additive percentage; do not round away sub-1% bonuses.
+	# Attack power is an integer rating; convert to percent by item level.
 	var low_attack := generator._affix_amount("attack",30,"Нагрудник",1.25,1,{"defence_pct":80,"attack_pct":20})
-	if low_attack <= 0.0 or absf(low_attack-roundf(low_attack)) < 0.00001:
-		problems.append("Attack power lost its fractional percent precision")
+	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or generator.attack_rating_to_pct(low_attack,30) <= 0.0:
+		problems.append("Attack power must store additive rating, not a raw percentage")
 	# Primary stats use one normal bonus slot, never a sixth PAR cell.
 	var stat_pieces := ["Перчатки","Наручи","Пояс","Плащ"]
 	for piece in stat_pieces:
@@ -63,6 +63,18 @@ func _verify() -> void:
 				found = true
 		if not found or (variant.get("rolls",[]) as Array).size() != 3:
 			problems.append("Primary attribute must consume a rarity slot on "+piece)
+	# A CORE stat consumes an unlocked CORE cell; it never adds a sixth slot.
+	var core_stat_count := 0
+	for seed in range(30):
+		var sample := generator.generate({"archetypes":["MEDIUM_DEF"],"min_level":60,"max_level":60,"quality":"purple","armor_slot":"Пояс","count":1,"seed":1000+seed})
+		var sample_rolls: Dictionary = Dictionary(sample["rows"][0])["variant"]
+		if (sample_rolls["core_rolls"] as Array).size() + (sample_rolls["rolls"] as Array).size() != 5:
+			problems.append("CORE stat selection changed total PAR slot count")
+		for line in sample_rolls["core_rolls"]:
+			if String(Dictionary(line).get("category","")) == "primary":
+				core_stat_count += 1
+	if core_stat_count < 2 or core_stat_count > 25:
+		problems.append("CORE base-stat probability appears incorrect")
 	# Golden values come ONLY from Project 25 "Генератор v1.2" K3:N12.
 	# 80/20 and similar labels describe a defence/attack budget split,
 	# not an extra PAR roll and not a probability of selecting a bonus.

@@ -304,7 +304,8 @@ func _format_par_bonus(line: Dictionary, level: int) -> String:
 	var rating := float(line.get("rating",0.0))
 	var label := "%s +%d" % [engine.par_label(par),int(rating)]
 	if par == "V12_ATTACK_POWER":
-		return "%s +%.2f%%" % [engine.par_label(par),rating]
+		var raw_percent := engine.attack_rating_to_pct(rating,level)
+		return "%s +%d (%.2f%% / %.2f%% DR)" % [engine.par_label(par),int(rating),raw_percent,ItemTemplateGeneratorV12.diminishing(raw_percent,"attack")]
 	# Only the shared 20%->4% per 100-rating family is converted here.
 	# Other PARs need their own validated unit/cap/DR conversion.
 	if ["PAR030","PAR031","PAR032","PAR033","PAR034"].has(par):
