@@ -30,6 +30,20 @@ func lock_action(event: CombatEvent) -> void:
 func resolve(engine: CombatEngine) -> void:
 	if resolved:
 		return
+	# ABI301 enhances the round's existing first MH hit, never inserts a
+	# second weapon attack. Attach before the sealed action batch resolves.
+	for abi_action in locked_actions:
+		if abi_action.kind != CombatEvent.Kind.ACTION or String(abi_action.payload.get("ability_id","")) != "ABI301":
+			continue
+		for mh in locked_actions:
+			if mh.kind != CombatEvent.Kind.ATTACK or mh.source_id != abi_action.source_id:
+				continue
+			if not bool(mh.payload.get("is_weapon_attack",false)) or int(mh.payload.get("weapon_index",-1)) != 0 or int(mh.payload.get("hit_index",0)) != 0:
+				continue
+			mh.payload["sword_abi_id"] = "ABI301"
+			mh.payload["sword_eff_level"] = int(abi_action.payload.get("sword_eff_level",1))
+			mh.payload["sword_mh_bonus_flat"] = float(abi_action.payload.get("mh_flat_bonus",0.0))
+			break
 	# Counter ABI inherits the FIRST ordinary MH strike zone in the sealed round.
 	# The OH zone is never a fallback. No implicit chest target is permitted.
 	var mh_zone_by_source:Dictionary={}
