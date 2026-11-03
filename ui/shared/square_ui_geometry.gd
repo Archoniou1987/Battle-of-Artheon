@@ -12,7 +12,7 @@ const EQUIPMENT_LABELS := {
 	"ring1":"Кольцо 1", "ring2":"Кольцо 2"
 }
 const ABI_SOURCE_LABELS := [
-	"Оружие MH — ABI 1", "Оружие MH — ABI 2", "Оружие MH — ABI 3",
+	"Оружие MH — ABI 1", "Оружие MH — ABI 2", "Оружие MH — ABI 3", "Оружие MH — ABI 4",
 	"Нагрудная броня — ABI", "Шлем — ABI"
 ]
 
