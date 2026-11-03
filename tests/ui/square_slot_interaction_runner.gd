@@ -160,7 +160,7 @@ func _run() -> void:
 	var row := arena.ability_strip as HBoxContainer
 	check(row != null and row.get_theme_constant("separation")==0, "abi_strip_no_gaps")
 	# One, two and six usable slots must be centred and empty slots hidden.
-	for count in [1, 2, 6, 10]:
+	for count in [1, 2, 6, 10, 14]:
 		var display: Array = []
 		for index in range(count):
 			display.append({"id":"ABI_TEST_%d" % index})
@@ -173,6 +173,12 @@ func _run() -> void:
 		check(visible_count == count, "abi_dynamic_visible_%d" % count)
 		check(arena.ability_strip.custom_minimum_size.x >= float(count * 34), "abi_dynamic_capacity_%d" % count)
 		check(arena.ability_scroll.size.x == 440.0 and arena.ability_scroll.position.y == 423.0, "abi_scroll_bounded_%d" % count)
+		if count <= 10:
+			var first := arena.ability_buttons[0].get_parent() as Control
+			var last := arena.ability_buttons[count - 1].get_parent() as Control
+			check(absf((first.position.x + last.position.x + 34.0) / 2.0 - 220.0) <= 2.0, "abi_centered_%d" % count)
+		else:
+			check(arena.ability_strip.custom_minimum_size.x > arena.ability_scroll.size.x, "abi_scroll_overflow")
 	arena._layout_ability_strip([])
 	SquareSlotFeedback.set_selected(arena.ability_buttons[0],true)
 	var selected := arena.ability_buttons[0].get_node_or_null(SquareSlotFeedback.SELECTION_OVERLAY) as Control
