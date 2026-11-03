@@ -122,7 +122,7 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 
 static func build_action_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
 	var normalized := normalized_definition(ability_id, definition)
-	return state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
+	var event := state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
 		"ability_id": ability_id,
 		"source_kind": "ability",
 		"application_timing": normalized["application_timing"],
@@ -148,6 +148,12 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"components": normalized["components"],
 		"target_ids": [target_id]
 	})
+	if not String(definition.get("sword_ability_mode","")).is_empty():
+		for field in ["sword_ability_mode","sword_mh_multiplier","sword_eff_id","sword_eff_level",
+			"mh_flat_bonus","armor_per_ap","max_targets","crit_pct_per_ap","crit_damage_pct_per_ap","bleed_ticks"]:
+			if definition.has(field):
+				event.payload[field] = definition[field]
+	return event
 
 
 static func build_damage_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
