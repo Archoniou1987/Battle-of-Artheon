@@ -20,11 +20,15 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 		var root_id: int = _ability_root_id(event, by_id)
 		if root_id >= 0 and event.event_id != root_id:
 			var summary: Dictionary = summaries.get(root_id, {
-				"damage": 0, "healing": 0, "effects": [], "removed": [],
+				"damage": 0, "burst_damage": 0, "burst_ticks": 0, "healing": 0, "effects": [], "removed": [],
 				"missed_effects": [], "failed_hits": []
 			})
 			if event.kind == CombatEvent.Kind.DAMAGE:
-				summary["damage"] = int(summary["damage"]) + int(event.result.get("hp_removed", 0))
+				var resolved_damage: int = int(event.result.get("hp_removed", 0))
+				summary["damage"] = int(summary["damage"]) + resolved_damage
+				if bool(event.payload.get("sword_burst_tick", false)):
+					summary["burst_damage"] = int(summary["burst_damage"]) + resolved_damage
+					summary["burst_ticks"] = int(summary["burst_ticks"]) + 1
 			elif event.kind == CombatEvent.Kind.ATTACK:
 				var status: String = String(event.result.get("outcome", ""))
 				if status != "connected" and not status.is_empty():
@@ -60,7 +64,11 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 			var prefix: String = "%s — ABI «%s»" % [_actor(event.source_id, player_id), ability_name]
 			var values: Dictionary = summaries.get(event.event_id, {})
 			var parts: PackedStringArray = []
-			if int(values.get("damage", 0)) > 0:
+			if int(values.get("burst_ticks", 0)) > 0:
+				var total_damage: int = int(values.get("damage", 0))
+				var bleed_damage: int = int(values.get("burst_damage", 0))
+				parts.append("%d урона (удар %d + %d ускоренных тика кровотечения: %d)" % [total_damage, total_damage - bleed_damage, int(values["burst_ticks"]), bleed_damage])
+			elif int(values.get("damage", 0)) > 0:
 				parts.append("%d урона" % int(values.get("damage", 0)))
 			if int(values.get("healing", 0)) > 0:
 				parts.append("+%d HP" % int(values.get("healing", 0)))
