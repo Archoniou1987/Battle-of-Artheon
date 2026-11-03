@@ -41,5 +41,214 @@
     "cooldown_rounds": 1,
     "mana_cost": 10,
     "application_timing": "standard"
+  },
+  "ABI301": {
+    "name": "Кровавый порез",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "sword_ability_mode": "single_mh",
+    "sword_mh_multiplier": 0,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "mh_flat_bonus": 0,
+    "eff": "EFF301",
+    "effect_level": 1
+  },
+  "ABI302": {
+    "name": "Круговой удар",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 2,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "sword_ability_mode": "aoe_3",
+    "sword_mh_multiplier": 0.5,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1
+  },
+  "ABI303": {
+    "name": "Калека",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "single",
+    "sword_mh_multiplier": 0.5,
+    "sword_eff_id": "EFF302",
+    "sword_eff_level": 1,
+    "eff": "EFF302",
+    "effect_level": 1
+  },
+  "ABI304": {
+    "name": "Медлительность",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "single",
+    "sword_mh_multiplier": 0.6,
+    "sword_eff_id": "EFF303",
+    "sword_eff_level": 1,
+    "eff": "EFF303",
+    "effect_level": 1
+  },
+  "ABI305": {
+    "name": "Потерянность",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "single",
+    "sword_mh_multiplier": 0.75,
+    "sword_eff_id": "EFF304",
+    "sword_eff_level": 1,
+    "eff": "EFF304",
+    "effect_level": 1
+  },
+  "ABI306": {
+    "name": "Броневой натиск",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "def_ultimate",
+    "sword_mh_multiplier": 0.5,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1,
+    "consume_all_ap": true,
+    "min_ap_cost": 1,
+    "armor_per_ap": 0.02
+  },
+  "ABI307": {
+    "name": "Танец клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "ALL_MELEE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "dodge_ultimate",
+    "sword_mh_multiplier": 0.25,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1,
+    "consume_all_ap": true,
+    "min_ap_cost": 1,
+    "max_targets": 5
+  },
+  "ABI308": {
+    "name": "Кровавый приговор",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "crit_ultimate",
+    "sword_mh_multiplier": 1,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1,
+    "consume_all_ap": true,
+    "min_ap_cost": 1,
+    "crit_pct_per_ap": 10,
+    "crit_damage_pct_per_ap": 25,
+    "bleed_ticks": 3
   }
 }
