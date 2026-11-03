@@ -39,6 +39,8 @@ static func ability_attack_payload(parent:CombatEvent, component:Dictionary, amo
 		"max_zone_distance": int(parent.payload.get("max_zone_distance", 2)),
 		"two_zone_hit_modifier": float(parent.payload.get("two_zone_hit_modifier", -50.0)),
 		"generates_ap": false,
+		# Conditional ABI counterattack: normal Hit roll, no active Dodge/Block.
+		"is_counterattack_abi": bool(component.get("is_counterattack_abi", parent.payload.get("is_counterattack_abi", false))),
 		"aoe_scale": scale
 	}
 	payload.merge(defence_flags(damage_type), true)
