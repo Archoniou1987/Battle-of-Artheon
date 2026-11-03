@@ -61,7 +61,7 @@ static func round_trace(combat_state: CombatState, round_number: int) -> Diction
 		if seen_ids.has(event.event_id):
 			duplicate_ids.append(event.event_id)
 		seen_ids[event.event_id] = true
-		if event.kind == CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)) and not bool(event.payload.get("is_counterattack",false)):
+		if event.kind == CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)):
 			weapon_attacks += 1
 			attack_by_source[event.source_id] = int(attack_by_source.get(event.source_id,0)) + 1
 		if event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("source_kind","")) == "ability":
