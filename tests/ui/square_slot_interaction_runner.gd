@@ -168,7 +168,7 @@ func _run() -> void:
 		await process_frame
 		var visible_count := 0
 		for button in arena.ability_buttons:
-			if button.get_parent().visible:
+			if (button.get_parent() as Control).visible:
 				visible_count += 1
 		check(visible_count == count, "abi_dynamic_visible_%d" % count)
 		check(arena.ability_strip.custom_minimum_size.x >= float(count * 34), "abi_dynamic_capacity_%d" % count)
