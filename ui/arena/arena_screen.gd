@@ -76,6 +76,7 @@ var attack_zones: Array[String] = []
 var attack_count := 2
 var round_allowed := false
 var round_stunned := false
+var external_terminal_confirmation := false
 var defense_buttons: Array[Button] = []
 var attack_buttons: Array[Button] = []
 var hp_bars: Dictionary = {}
@@ -1005,6 +1006,8 @@ func _refresh_ability_buttons() -> void:
 		selected_ability=""
 
 func _required_actions_complete() -> bool:
+	if external_combat_mode and external_terminal_confirmation:
+		return true
 	if round_stunned:
 		return true
 	return attack_zones.size() == attack_count and defense_zones.size() == defense_capacity
@@ -1487,6 +1490,7 @@ func present_external(view: Dictionary) -> void:
 		var fighter: Dictionary = player if side else opponent
 		set_fighter_hp(side, int(fighter.get("hp", 0)), int(fighter.get("max_hp", 1)))
 		set_fighter_resources(side, int(fighter.get("mana", 0)), int(fighter.get("max_mana", 0)), int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0)))
+	external_terminal_confirmation = bool(view.get("finished",false))
 	round_stunned = bool(controls.get("stunned", false))
 	set_attack_count(maxi(0, int(controls.get("attack_count", 1))))
 	set_defense_capacity(maxi(0, int(controls.get("block_capacity", 1))))
