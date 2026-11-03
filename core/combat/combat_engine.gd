@@ -5,22 +5,15 @@ var state: CombatState
 var combat_rng := RandomNumberGenerator.new()
 
 func attack_rolls() -> Dictionary:
-	return {"hit": combat_rng.randi_range(1,100), "magic_hit": combat_rng.randi_range(1,100), "reaction": combat_rng.randi_range(1,100), "dodge": combat_rng.randi_range(1,100), "auto_block": combat_rng.randi_range(1,100), "block_crush": combat_rng.randi_range(1,100), "crit": combat_rng.randi_range(1,100), "counterattack": combat_rng.randi_range(1,100), "on_hit_effect": combat_rng.randi_range(1,100), "manual_block_effect": combat_rng.randi_range(1,100), "damage": combat_rng.randf()}
+	return {"hit": combat_rng.randi_range(1,100), "magic_hit": combat_rng.randi_range(1,100), "reaction": combat_rng.randi_range(1,100), "dodge": combat_rng.randi_range(1,100), "auto_block": combat_rng.randi_range(1,100), "block_crush": combat_rng.randi_range(1,100), "crit": combat_rng.randi_range(1,100), "on_hit_effect": combat_rng.randi_range(1,100), "manual_block_effect": combat_rng.randi_range(1,100), "damage": combat_rng.randf()}
 
 func complete_attack_rolls(provided: Dictionary) -> Dictionary:
 	var result := provided.duplicate(true)
-	for key in ["hit", "magic_hit", "reaction", "dodge", "auto_block", "block_crush", "crit", "counterattack", "on_hit_effect", "manual_block_effect"]:
+	for key in ["hit", "magic_hit", "reaction", "dodge", "auto_block", "block_crush", "crit", "on_hit_effect", "manual_block_effect"]:
 		if not result.has(key):
 			result[key] = combat_rng.randi_range(1, 100)
 	if not result.has("damage"):
 		result["damage"] = combat_rng.randf()
-	var counter: Dictionary = Dictionary(result.get("counterattack_rolls", {})).duplicate(true)
-	for key in ["hit", "magic_hit", "reaction", "dodge", "auto_block", "block_crush", "crit", "counterattack", "on_hit_effect", "manual_block_effect"]:
-		if not counter.has(key):
-			counter[key] = combat_rng.randi_range(1, 100)
-	if not counter.has("damage"):
-		counter["damage"] = combat_rng.randf()
-	result["counterattack_rolls"] = counter
 	return result
 
 var physical_balance: Dictionary
@@ -291,15 +284,15 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("hit_chance",clampf(hit_chance,0.0,100.0))
 	event.set_result("hit_roll",hit_roll)
 	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
-		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
+		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); return
 	var active_defence_available := not uses_magic_hit and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
-	if active_defence_available:
+	if active_defence_available and not bool(event.payload.get("is_counterattack_abi", false)):
 		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
 		event.set_result("dodge_chance",dodge)
 		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
-			event.set_result("outcome", "dodge"); _queue_counterattack(event, defender, attacker, rolls); _gain_basic_attack_ap(attacker, event); return
+			event.set_result("outcome", "dodge"); return
 		event.set_result("uses_physical_block",_event_uses_physical_block(event))
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
 			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
@@ -309,7 +302,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 			if not manual_block_crushed:
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
-				_gain_basic_attack_ap(attacker, event); return
+				return
 		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
 		event.set_result("auto_block_chance",auto_block)
 		event.set_result("auto_block_roll",int(rolls.get("auto_block", 100)))
@@ -319,7 +312,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 			var auto_block_crushed:=_block_crushed(attacker, rolls)
 			event.set_result("auto_block_crushed",auto_block_crushed)
 			if not auto_block_crushed:
-				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
+				event.set_result("outcome", "auto_block"); return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus, CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
@@ -347,7 +340,6 @@ func _resolve_attack(event: CombatEvent) -> void:
 		# Non-physical weapon attacks still complete the weapon pipeline.
 		if is_weapon_attack:
 			_trigger_weapon_on_hit(event, attacker, defender, rolls)
-		_gain_basic_attack_ap(attacker, event)
 		return
 
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
@@ -367,7 +359,6 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
-	_gain_basic_attack_ap(attacker, event)
 
 func _resolve_damage(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
@@ -612,61 +603,6 @@ func _effect_definition(effect_id: String) -> Dictionary:
 	if override is Dictionary:
 		return override
 	return EffectCatalog.definition(canonical_effects, effect_id)
-
-func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacker: CombatantState, rolls: Dictionary) -> void:
-	if bool(parent.payload.get("is_counterattack", false)): return
-	var chance := CombatModifierService.effective_percent(defender, "counterattack_rating", state.round_number)
-	if not CombatMath.roll_success(chance, int(rolls.get("counterattack", 100))): return
-	var weapon:=_counterattack_weapon_profile(defender)
-	if weapon.is_empty(): return
-	var counter_rolls:Dictionary=Dictionary(rolls.get("counterattack_rolls", parent.payload.get("counterattack_rolls",{}))).duplicate(true)
-	var damage_roll:=float(counter_rolls["damage"]) if counter_rolls.has("damage") else combat_rng.randf()
-	counter_rolls["damage"]=damage_roll
-	var payload:=WeaponAttackProfile.attack_payload(weapon,counter_rolls,String(parent.payload.get("counterattack_zone","chest")),{
-		"damage_multiplier":float(physical_balance.get("counterattack_damage_coefficient",0.8)),
-		"is_counterattack":true,
-		"generates_ap":false,
-	})
-	var child := state.create_event(CombatEvent.Kind.ATTACK, defender.combatant_id, attacker.combatant_id, payload, parent.event_id)
-	state.queue_event(child); parent.set_result("counterattack_event_id", child.event_id)
-
-func _counterattack_weapon_profile(combatant:CombatantState)->Dictionary:
-	var by_weapon:Dictionary={}
-	for profile in WeaponAttackProfile.all(combatant):
-		if int(profile.get("min_zone_distance",0))>0 or int(profile.get("max_zone_distance",0))<0:
-			continue
-		var weapon_index:=int(profile.get("weapon_index",-1))
-		if not by_weapon.has(weapon_index):
-			by_weapon[weapon_index]=[]
-		by_weapon[weapon_index].append(profile)
-	var weapon_indices:Array=by_weapon.keys()
-	weapon_indices.sort()
-	for raw_weapon_index in weapon_indices:
-		var profiles:Array=by_weapon[raw_weapon_index]
-		if profiles.size()==1:
-			return Dictionary(profiles[0]).duplicate(true)
-		var selected:Dictionary={}
-		for raw_profile in profiles:
-			var candidate:Dictionary=raw_profile
-			if bool(candidate.get("is_default",false)):
-				if not selected.is_empty():
-					selected={}
-					break
-				selected=candidate
-		if not selected.is_empty():
-			return selected.duplicate(true)
-	return {}
-func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void:
-	if not bool(event.payload.get("generates_ap",true)) or bool(event.payload.get("is_counterattack",false)) or bool(event.payload.get("is_extra_attack",false)):
-		return
-	# A Base Attack earns AP only when one of its constituent attacks connects.
-	if String(event.result.get("outcome",""))!="connected":
-		return
-	var ap_group_id:=int(event.payload.get("ap_group_id",event.event_id))
-	for logged_event in state.event_log:
-		if int(logged_event.payload.get("ap_group_id",logged_event.event_id))==ap_group_id and int(logged_event.result.get("ap_gained",0))>0:
-			return
-	event.set_result("ap_gained",attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain",1))))
 
 func _weapon_skill_hit_penalty(attacker: CombatantState, weapon_index: int) -> float:
 	var profile:Dictionary={}
