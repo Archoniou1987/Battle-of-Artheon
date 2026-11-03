@@ -539,6 +539,15 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			# Convert planned build percentage into an additive rating.
 			# Raw rating is displayed; percentage is computed after aggregation.
 			baseline = (build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
+		"counter":
+			# LAB target: ten matching counterstrike lines at Lv100,
+			# purple quality (x1.5), standard 7.5 slot weight => ~50%.
+			# This is an uncapped rating calibration, NOT a combat rule.
+			# Fewer lines, slot weights and armour attack profiles vary.
+			var pct_per_100 := lerpf(20.0,4.0,(l-1.0)/99.0)
+			var percent_per_line := 5.0*l/100.0
+			baseline = percent_per_line*100.0/pct_per_100/1.5
+			baseline *= REFERENCE_SLOT_BUDGET/7.5
 		"mana_regen":
 			# Provisional fixed units of mana per combat round, for a
 			# white 7.5%-weight reference line, before quality scaling.
@@ -570,6 +579,8 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 func calibration_status(logical: String) -> String:
 	if logical == "mana_regen":
 		return "PROVISIONAL_MANA_PER_ROUND_ANCHORS"
+	if logical == "counter":
+		return "PROVISIONAL_COUNTER_50_PCT_LV100"
 	if ["hp","mana"].has(logical):
 		return "PROJECT25_ANCHOR"
 	if ["attack","spell"].has(logical):
