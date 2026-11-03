@@ -64,7 +64,7 @@
     "sword_mh_multiplier": 0,
     "sword_eff_id": "EFF301",
     "sword_eff_level": 1,
-    "mh_flat_bonus": 0,
+    "mh_flat_bonus": 15,
     "eff": "EFF301",
     "effect_level": 1
   },
