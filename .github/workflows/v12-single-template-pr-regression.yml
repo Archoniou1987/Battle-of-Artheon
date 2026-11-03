@@ -1,0 +1,22 @@
+name: v1.2 Single Template PR Regression
+on:
+  push:
+    branches: [feature/v12-single-template-generator-20261103]
+  workflow_dispatch:
+jobs:
+  single-template:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import Godot
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Check generator UI syntax
+        run: timeout 120s godot --headless --path . --check-only --script res://scenes/debug/item_template_generator_v12.gd
+      - name: Run generator tests and three Lv40 epics
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_template_generator_v12_runner.gd
