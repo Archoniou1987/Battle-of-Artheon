@@ -1277,8 +1277,6 @@ func _effect_description(effect:Dictionary) -> String:
 	var result:="%s (%s) — %d раунд(ов)" % [label,String(effect.get("id","")),remaining]
 	if stacks>1:
 		result+=" ×%d" % stacks
-	if bool(effect.get("pending",false)):
-		result+=" — вступит в следующем раунде"
 	return result
 
 func _refresh_effect_display() -> void:
