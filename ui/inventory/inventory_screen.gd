@@ -41,6 +41,7 @@ var v12_quality: OptionButton
 var v12_level: SpinBox
 var v12_seed: SpinBox
 var v12_keypad: ItemLabNumericKeypad
+var v12_status_label: Label
 var discard_button: Button
 var discard_cancel: Button
 var discard_confirm: ConfirmationDialog
@@ -800,6 +801,8 @@ func _build_item_generator() -> void:
 	var v12_note := _v12_title("Создаёт уникальный ITEMID, урон и PAR по v1.2. Неподключённая сила атаки сохраняется отдельно; ABI мечей подключим после реализации.")
 	v12_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(v12_note)
+	v12_status_label = _v12_title("")
+	content.add_child(v12_status_label)
 	content.add_child(HSeparator.new())
 	var heading := Label.new()
 	heading.text = "Старый тестовый шаблон / ручной PAR"
@@ -895,8 +898,10 @@ func _v12_numeric(parent: Control, heading: String, initial: int, min_value: int
 	return input
 
 func _generator_v12_create() -> void:
+	v12_status_label.text = ""
 	if character == null or repository == null or v12_archetype.selected < 0 or v12_quality.selected < 0:
 		generator_status.text = "Ошибка: игровой инвентарь не подключён."
+		v12_status_label.text = generator_status.text
 		return
 	var archetype_id := String(v12_archetype.get_selected_metadata())
 	var quality := String(v12_quality.get_selected_metadata())
@@ -905,12 +910,14 @@ func _generator_v12_create() -> void:
 	var item := ItemV12InstanceFactory.grant_sword(character,repository,archetype_id,level,quality,seed_value)
 	if item.is_empty():
 		generator_status.text = "Не удалось создать игровой предмет: проверьте уровень, редкость и свободное место в сумке."
+		v12_status_label.text = generator_status.text
 		return
 	refresh() # Emits inventory_changed -> canonical game save in Main.
 	var pending := Dictionary(item.get("v12_pending_bonuses",{}))
 	generator_status.text = "Создан в сумке: %s · %s" % [String(item.get("name","")),String(item["instance_id"])]
 	if not pending.is_empty():
 		generator_status.text += "\nВнимание: рейтинг Сила атаки пока ожидает канонический PAR и не влияет на бой."
+	v12_status_label.text = generator_status.text
 
 func _open_item_generator() -> void:
 	generator_template.clear()
