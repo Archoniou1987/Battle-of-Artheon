@@ -539,7 +539,7 @@ func _layout_ability_strip(raw_options: Array) -> void:
 	for index in range(ability_buttons.size()):
 		var option: Dictionary = raw_options[index] if index < raw_options.size() and raw_options[index] is Dictionary else {}
 		var enabled_slot := not String(option.get("id", "")).is_empty()
-		ability_buttons[index].get_parent().visible = enabled_slot
+		(ability_buttons[index].get_parent() as Control).visible = enabled_slot
 		if enabled_slot:
 			occupied += 1
 	# The HBox centres 1..N equipped abilities; its overflow scrolls without
