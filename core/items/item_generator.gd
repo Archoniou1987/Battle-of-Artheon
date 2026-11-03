@@ -1,6 +1,9 @@
 class_name ItemGenerator
 extends RefCounted
 
+## LEGACY COMPATIBILITY ONLY: do not use this generator for new item templates.
+## Generator v1.2 (ItemTemplateGeneratorV12 / Project 25) is the sole active ruleset.
+
 const STAT_POOL := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
 const QUALITY_RULES := {
 	"poor":{"min_mult":0.70,"max_mult":0.80,"mods":0,"mod_min":0,"mod_max":0},
