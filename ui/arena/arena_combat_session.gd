@@ -144,7 +144,7 @@ func player_attack_count() -> int:
 			if int(profile.get("weapon_index", -1)) == int(attack.get("weapon_index", -2)) and String(profile.get("id", "")) == String(attack.get("attack_profile_id", "")):
 				count += int(profile.get("hit_count", 1))
 				break
-	return maxi(1, count)
+	return maxi(0, count)
 
 func player_ability_options() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -159,6 +159,8 @@ func player_ability_options() -> Array[Dictionary]:
 		available = available and ability_scheduler.can_cast_this_round(player_id,ready_round)
 		available = available and AbilityRuntime.can_use(ability_id,cooldowns,ready_round)
 		available = available and player.mana >= int(definition.get("mana_cost",0))
+		available = available and AbilityRuntime.can_pay_action_points(definition,player)
+		available = available and AbilityRuntime.previous_round_trigger_met(state,player_id,String(definition.get("trigger_previous_round","")))
 		available = available and AbilityRuntime.validate_definition(ability_id,definition).is_empty()
 		var target_id:=_ability_target(player_id,definition)
 		available = available and commands.action_policy.valid_ability_targets(player_id,definition).has(target_id)
@@ -239,6 +241,17 @@ func _prepare_attacks(id: String, targets: Array[String]) -> Dictionary:
 	var sequence: Dictionary = commands.default_weapon_attack_sequence(id)
 	if not bool(sequence.get("ok", false)):
 		return sequence
+	var expected_count := 0
+	for raw_attack in Array(sequence.get("attacks", [])):
+		for profile in WeaponAttackProfile.all(state.get_combatant(id)):
+			if int(profile.get("weapon_index", -1)) == int(Dictionary(raw_attack).get("weapon_index", -2)) and String(profile.get("id", "")) == String(Dictionary(raw_attack).get("attack_profile_id", "")):
+				expected_count += int(profile.get("hit_count",1))
+				break
+	if targets.size() != expected_count:
+		return {"ok":false,"reason":"incomplete_attack_selection","required":expected_count,"selected":targets.size()}
+	for zone in targets:
+		if not CombatCommandApi.BODY_ZONES.has(zone):
+			return {"ok":false,"reason":"invalid_attack_zone"}
 	var attacks: Array[Dictionary] = []
 	var offset := 0
 	for raw_attack in Array(sequence.get("attacks", [])):
@@ -250,7 +263,7 @@ func _prepare_attacks(id: String, targets: Array[String]) -> Dictionary:
 				break
 		var hits: Array[Dictionary] = []
 		for i in range(count):
-			var zone := targets[mini(offset + i, targets.size() - 1)] if not targets.is_empty() else "chest"
+			var zone := String(targets[offset + i])
 			hits.append({"zone": zone})
 		offset += count
 		attack["rolls"] = {"zone": String(hits[0].get("zone", "chest")), "hits": hits}
@@ -283,6 +296,10 @@ func _validate_ability(source_id:String,ability_id:String,ready_round:int) -> Di
 		return {"ok":false,"reason":"ability_cooldown"}
 	if actor.mana < int(definition.get("mana_cost",0)):
 		return {"ok":false,"reason":"insufficient_mana"}
+	if not AbilityRuntime.can_pay_action_points(definition,actor):
+		return {"ok":false,"reason":"insufficient_ap"}
+	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
+		return {"ok":false,"reason":"abi_trigger_unavailable"}
 	var target_id:=_ability_target(source_id,definition)
 	if not commands.action_policy.valid_ability_targets(source_id,definition).has(target_id):
 		return {"ok":false,"reason":"ability_target_unavailable"}
