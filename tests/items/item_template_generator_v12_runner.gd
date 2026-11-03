@@ -119,7 +119,7 @@ func _verify() -> void:
 				problems.append("Ring has forbidden primary attribute or HP regeneration")
 	# Fixed combat mana regeneration is fractional, never rounded up to +1.
 	for level in [30,60,90,100]:
-		var expected_regen := {30:4.0,60:9.0,90:13.5,100:15.0}[level]
+		var expected_regen: float = float({30:4.0,60:9.0,90:13.5,100:15.0}[level])
 		var actual_regen := generator.nominal_affix("mana_regen",level,"OH",1.0)
 		if absf(actual_regen-expected_regen) > 0.02:
 			problems.append("Mana regen anchor differs at level "+str(level))
