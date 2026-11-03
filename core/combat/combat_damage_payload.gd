@@ -21,6 +21,8 @@ static func defence_flags(damage_type:String, overrides:Dictionary={}) -> Dictio
 
 static func ability_attack_payload(parent:CombatEvent, component:Dictionary, amount:float, scale:float) -> Dictionary:
 	var damage_type := String(component.get("damage_type", "physical"))
+	var is_counter:=bool(parent.payload.get("is_counterattack_abi", false)) and is_physical_damage_type(damage_type)
+	var hit_zone:=String(parent.payload.get("zone","")) if is_counter else String(component.get("zone", parent.payload.get("zone", "chest")))
 	var payload := {
 		"raw_damage": amount,
 		"uses_magic_hit": bool(parent.payload.get("uses_magic_hit", false)),
@@ -29,7 +31,7 @@ static func ability_attack_payload(parent:CombatEvent, component:Dictionary, amo
 		"hit_already_resolved": bool(parent.payload.get("uses_magic_hit", false)),
 		"magic_rating_applied": is_magic_damage_type(damage_type),
 		"damage_type": damage_type,
-		"zone": String(component.get("zone", parent.payload.get("zone", "chest"))),
+		"zone": hit_zone,
 		"rolls": parent.payload.get("rolls", {}),
 		"source": "ability",
 		"source_kind": "ability",
@@ -40,7 +42,7 @@ static func ability_attack_payload(parent:CombatEvent, component:Dictionary, amo
 		"two_zone_hit_modifier": float(parent.payload.get("two_zone_hit_modifier", -50.0)),
 		"generates_ap": false,
 		# Conditional ABI counterattack: normal Hit roll, no active Dodge/Block.
-		"is_counterattack_abi": bool(parent.payload.get("is_counterattack_abi", false)) and is_physical_damage_type(damage_type),
+		"is_counterattack_abi": is_counter,
 		"aoe_scale": scale
 	}
 	payload.merge(defence_flags(damage_type), true)
