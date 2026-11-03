@@ -525,6 +525,17 @@ func _verify() -> void:
 			problems.append("v1.2 editor tabs not available")
 		if screen.results.is_empty() or screen.csv_button.disabled:
 			problems.append("v1.2 startup generation or CSV missing")
+		# Weapon affixes must show rating AND derived percentage.
+		for id in ["PAR035","PAR072","PAR126","PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170"]:
+			var displayed := screen._format_total_bonus(id,100.0,100)
+			if not displayed.contains("4.00%"):
+				problems.append(id + " weapon percent display missing")
+		var crit_damage_display := screen._format_total_bonus("PAR035",1000.0,100)
+		if not crit_damage_display.contains("DR"):
+			problems.append("Critical damage percentage missing diminishing returns")
+		var mana_display := screen._format_total_bonus("PAR015",3.25,30)
+		if mana_display.contains("%") or not mana_display.contains("3.25"):
+			problems.append("Mana regeneration should display fixed fractional units")
 		screen.queue_free()
 	if problems.is_empty():
 		print("ITEM_TEMPLATE_V12=PASS · 35 archetypes, 6 schools, filters, 500 items and UI")
