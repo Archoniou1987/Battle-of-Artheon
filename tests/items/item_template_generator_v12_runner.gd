@@ -542,8 +542,22 @@ func _verify() -> void:
 		root.add_child(screen)
 		await process_frame
 		await process_frame
-		if screen.engine == null or screen.tabs.get_tab_count() != 2:
+		if screen.engine == null or screen.tabs.get_tab_count() != 3:
 			problems.append("v1.2 editor tabs not available")
+		if screen.single_template_select == null or screen.single_quality_select == null or screen.single_level == null or screen.single_seed == null:
+			problems.append("Single template controls missing")
+		else:
+			screen._select_value(screen.single_template_select,"SWORD_DODGE")
+			screen._select_value(screen.single_quality_select,"purple")
+			screen.single_level.value = 40
+			screen.single_seed.value = 202611042
+			screen._generate_single_template()
+			if screen.results.size() != 1:
+				problems.append("Single template UI did not generate exactly 1 item")
+			else:
+				var generated_item: Dictionary = screen.results[0]
+				if String(generated_item["archetype_id"]) != "SWORD_DODGE" or String(generated_item["quality"]) != "purple" or int(generated_item["level"]) != 40:
+					problems.append("Single template UI selections ignored")
 		if screen.results.is_empty() or screen.csv_button.disabled:
 			problems.append("v1.2 startup generation or CSV missing")
 		# Weapon affixes must show rating AND derived percentage.
