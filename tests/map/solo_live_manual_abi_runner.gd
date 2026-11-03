@@ -105,7 +105,7 @@ func _run() -> void:
 	check(slots.size()==6,"all_six_abi_slots_available")
 	if slots.size()==6:
 		check(String(slots[0].get("id",""))=="ABI003" and String(slots[4].get("id",""))=="ABI004","correct_equipment_abi_positions")
-		check(String(slots[1].get("id","")).is_empty() and String(slots[2].get("id","")).is_empty() and String(slots[4].get("id","")).is_empty(),"empty_slots_not_executable")
+		check(String(slots[1].get("id","")).is_empty() and String(slots[2].get("id","")).is_empty() and String(slots[3].get("id","")).is_empty() and String(slots[5].get("id","")).is_empty(),"empty_slots_not_executable")
 	var controls: Dictionary = view.get("controls",{})
 	check(bool(_option(controls,"ABI003").get("available",false)),"fireball_ready")
 	check(bool(_option(controls,"ABI004").get("available",false)),"healing_ready")
