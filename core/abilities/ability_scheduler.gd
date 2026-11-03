@@ -39,7 +39,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent): continue
 		var event:=AbilityRuntime.build_action_event(state, source_id, effective_target_id, ability_id, definition)
 		event.payload["ap_spent"]=ap_spent
-		event.payload["ap_gained"]=source.gain_action_points(maxi(0,int(definition.get("ap_gain",0))))
+		event.payload["ap_gained"]=(0 if bool(definition.get("ap_gain_on_hit",false)) else source.gain_action_points(maxi(0,int(definition.get("ap_gain",0)))))
 		events.append(event)
 		AbilityRuntime.start_cooldown(ability_id, cooldowns, state.round_number, int(definition.get("cooldown_rounds", 0)))
 		_record_cast(source_id, state.round_number)
@@ -69,7 +69,7 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 	cast_definition["target_zone_id"]=zone_id
 	var event:=AbilityRuntime.build_action_event(state,source_id,"",ability_id,cast_definition)
 	event.payload["ap_spent"]=ap_spent
-	event.payload["ap_gained"]=source.gain_action_points(maxi(0,int(definition.get("ap_gain",0))))
+	event.payload["ap_gained"]=(0 if bool(definition.get("ap_gain_on_hit",false)) else source.gain_action_points(maxi(0,int(definition.get("ap_gain",0)))))
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
 	_record_cast(source_id,state.round_number)
@@ -102,7 +102,7 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 		return null
 	var event:=AbilityRuntime.build_action_event(state,source_id,target_id,ability_id,definition)
 	event.payload["ap_spent"]=ap_spent
-	event.payload["ap_gained"]=source.gain_action_points(maxi(0,int(definition.get("ap_gain",0))))
+	event.payload["ap_gained"]=(0 if bool(definition.get("ap_gain_on_hit",false)) else source.gain_action_points(maxi(0,int(definition.get("ap_gain",0)))))
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
 	_record_cast(source_id,state.round_number)
