@@ -37,6 +37,7 @@ func _verify() -> void:
 		_check(catalog.has(ability_id),"missing_ability_"+ability_id)
 		if catalog.has(ability_id):
 			_check(AbilityRuntime.validate_definition(ability_id,catalog[ability_id]).is_empty(),"invalid_ability_"+ability_id)
+	_check(float(Dictionary(catalog.get("ABI301",{})).get("mh_flat_bonus",-1.0)) == 15.0,"abi01_flat_15_catalog")
 	for effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
 		_check(effects.has(effect_id),"missing_effect_"+effect_id)
 	for entry in [
@@ -89,6 +90,11 @@ func _verify() -> void:
 		if not bool(first.get("ok",false)):
 			continue
 		_check(_events(session,CombatEvent.Kind.ATTACK).filter(func(ev):return ev.source_id == player.combatant_id).size() == 1,archetype+"_abi01_no_extra_mh")
+		var applied_flat := false
+		for attack in _events(session,CombatEvent.Kind.ATTACK,"ABI301"):
+			if float(attack.payload.get("sword_mh_bonus_flat",-1)) == 15.0 and float(attack.result.get("raw_damage",0)) >= float(attack.payload.get("raw_damage",0)) + 15.0:
+				applied_flat = true
+		_check(applied_flat,archetype+"_abi01_flat_15_applied")
 		_check(int(_eff(target,"EFF301").get("stacks",0)) == 1,archetype+"_first_bleed")
 		_check(player.action_points >= 5,archetype+"_abi01_gain_on_hit_capped")
 		# Round 2: separately delivered ABI03 uses existing bleed stack
