@@ -42,8 +42,8 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: independent block zone selection")
 		quit(1)
 		return
-	if arena.ability_buttons.size() != 5:
-		push_error("ARENA_OPEN_SMOKE=FAIL: expected exactly five ABI controls")
+	if arena.ability_buttons.size() != 6:
+		push_error("ARENA_OPEN_SMOKE=FAIL: expected exactly six ABI controls")
 		quit(1)
 		return
 	# Use a canonical definition for UI selection; no fake combat damage.

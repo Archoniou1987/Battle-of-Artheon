@@ -102,10 +102,10 @@ func _run() -> void:
 	if not bool(view.get("ok",false)):
 		return
 	var slots: Array = view.get("ability_slots",[])
-	check(slots.size()==5,"all_five_abi_slots_visible")
-	if slots.size()==5:
-		check(String(slots[0].get("id",""))=="ABI003" and String(slots[3].get("id",""))=="ABI004","correct_equipment_abi_positions")
-		check(String(slots[1].get("id","")).is_empty() and String(slots[2].get("id","")).is_empty() and String(slots[4].get("id","")).is_empty(),"empty_slots_not_executable")
+	check(slots.size()==6,"all_six_abi_slots_available")
+	if slots.size()==6:
+		check(String(slots[0].get("id",""))=="ABI003" and String(slots[4].get("id",""))=="ABI004","correct_equipment_abi_positions")
+		check(String(slots[1].get("id","")).is_empty() and String(slots[2].get("id","")).is_empty() and String(slots[3].get("id","")).is_empty() and String(slots[5].get("id","")).is_empty(),"empty_slots_not_executable")
 	var controls: Dictionary = view.get("controls",{})
 	check(bool(_option(controls,"ABI003").get("available",false)),"fireball_ready")
 	check(bool(_option(controls,"ABI004").get("available",false)),"healing_ready")
@@ -165,7 +165,7 @@ func _run() -> void:
 			restored_healing_eff = true
 	check(restored_healing_eff,"eff004_survives_same_checkpoint")
 	var resumed_view := recovered.combat_view()
-	check(bool(resumed_view.get("ok",false)) and Array(resumed_view.get("ability_slots",[])).size()==5,"abi_slots_survive_restart")
+	check(bool(resumed_view.get("ok",false)) and Array(resumed_view.get("ability_slots",[])).size()==6,"abi_slots_survive_restart")
 	var round2_controls: Dictionary = resumed_view.get("controls",{})
 	check(not bool(_option(round2_controls,"ABI004").get("available",true)),"healing_cooldown_blocks_next_round")
 	var restored_round: int = sim2.state.round_number

@@ -88,8 +88,8 @@ func _run() -> void:
 	check(arena.square_content.scale.is_equal_approx(Vector2.ONE), "shared Arena never scales its 480px content internally")
 	check(screen.square_content.get_child_count() == 1 and screen.square_content.get_child(0) == arena, "host holds only the original Arena, no trial layers")
 	check(arena.player_slots.size() == 14 and arena.enemy_slots.size() == 14, "actual Arena equipment slots reused")
-	check(arena.ability_buttons.size() == 5 and arena.player_elixir_slots.size() == 4, "real Arena ABI and elixirs reused")
-	# The original Arena background and five ABI slots remain one stable
+	check(arena.ability_buttons.size() == 6 and arena.player_elixir_slots.size() == 4, "real Arena ABI and elixirs reused")
+	# The original Arena background and dynamic ABI strip remain one stable
 	# 480x480 composition; long ability labels cannot widen individual cells.
 	check(arena.arena_background.position.is_equal_approx(Vector2.ZERO), "Arena background anchored to top-left")
 	check(arena.arena_background.size.is_equal_approx(arena.square_content.size), "Arena background covers native square exactly: background=%s square=%s" % [str(arena.arena_background.size), str(arena.square_content.size)])
