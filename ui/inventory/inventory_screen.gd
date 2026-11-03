@@ -36,6 +36,11 @@ var generator_amount: LineEdit
 var generator_added: Label
 var generator_status: Label
 var generator_bonuses: Dictionary = {}
+var v12_archetype: OptionButton
+var v12_quality: OptionButton
+var v12_level: SpinBox
+var v12_seed: SpinBox
+var v12_keypad: ItemLabNumericKeypad
 var discard_button: Button
 var discard_cancel: Button
 var discard_confirm: ConfirmationDialog
@@ -293,6 +298,8 @@ func _ready() -> void:
 	generate_button.pressed.connect(_open_item_generator)
 	bag_heading.add_child(generate_button)
 	_build_item_generator()
+	v12_keypad = ItemLabNumericKeypad.new()
+	add_child(v12_keypad)
 	discard_button = Button.new()
 	discard_button.text = "Выкинуть"
 	discard_button.pressed.connect(_discard_button_pressed)
@@ -759,8 +766,43 @@ func _build_item_generator() -> void:
 	var content := VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
+	# Real inventory production: this uses only Core v1.2 and the real
+	# CharacterState/ItemRepository, not the old preview template generator.
+	content.add_child(_v12_title("Игровой генератор v1.2 · в сумку"))
+	v12_archetype = OptionButton.new()
+	for spec in [
+		["Защитный меч","SWORD_DEF"],
+		["Меч уклонения","SWORD_DODGE"],
+		["Критический меч","SWORD_CRIT"]
+	]:
+		v12_archetype.add_item(String(spec[0]))
+		v12_archetype.set_item_metadata(v12_archetype.item_count - 1,String(spec[1]))
+	content.add_child(v12_archetype)
+	v12_quality = OptionButton.new()
+	for spec in [
+		["Белое","white"],["Зелёное","green"],["Синее","blue"],["Эпическое","purple"]
+	]:
+		v12_quality.add_item(String(spec[0]))
+		v12_quality.set_item_metadata(v12_quality.item_count - 1,String(spec[1]))
+	v12_quality.select(3)
+	content.add_child(v12_quality)
+	var v12_inputs := HFlowContainer.new()
+	content.add_child(v12_inputs)
+	v12_level = _v12_numeric(v12_inputs,"Уровень",40,1,100)
+	v12_seed = _v12_numeric(v12_inputs,"Seed",202611041,1,999999999)
+	v12_archetype.item_selected.connect(func(index: int) -> void:
+		v12_seed.value = float(202611041 + index))
+	var v12_create := Button.new()
+	v12_create.text = "Сгенерировать в сумку · v1.2"
+	v12_create.custom_minimum_size.y = 50
+	v12_create.pressed.connect(_generator_v12_create)
+	content.add_child(v12_create)
+	var v12_note := _v12_title("Создаёт уникальный ITEMID, урон и PAR по v1.2. Неподключённая сила атаки сохраняется отдельно; ABI мечей подключим после реализации.")
+	v12_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(v12_note)
+	content.add_child(HSeparator.new())
 	var heading := Label.new()
-	heading.text = "Шаблон предмета"
+	heading.text = "Старый тестовый шаблон / ручной PAR"
 	content.add_child(heading)
 	generator_template = OptionButton.new()
 	content.add_child(generator_template)
@@ -825,6 +867,50 @@ func _build_item_generator() -> void:
 	generator_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(generator_status)
 
+
+func _v12_title(value: String) -> Label:
+	var result := Label.new()
+	result.text = value
+	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return result
+
+func _v12_numeric(parent: Control, heading: String, initial: int, min_value: int, max_value: int) -> SpinBox:
+	var group := VBoxContainer.new()
+	parent.add_child(group)
+	group.custom_minimum_size.x = 140
+	group.add_child(_v12_title(heading))
+	var input := SpinBox.new()
+	input.min_value = min_value
+	input.max_value = max_value
+	input.step = 1
+	input.value = initial
+	input.hide()
+	group.add_child(input)
+	var button := Button.new()
+	button.custom_minimum_size.y = 44
+	button.text = str(initial) + "  ⌨"
+	button.pressed.connect(func() -> void: v12_keypad.open_for(input,heading))
+	input.value_changed.connect(func(value: float) -> void: button.text = str(int(value)) + "  ⌨")
+	group.add_child(button)
+	return input
+
+func _generator_v12_create() -> void:
+	if character == null or repository == null or v12_archetype.selected < 0 or v12_quality.selected < 0:
+		generator_status.text = "Ошибка: игровой инвентарь не подключён."
+		return
+	var archetype_id := String(v12_archetype.get_selected_metadata())
+	var quality := String(v12_quality.get_selected_metadata())
+	var level := int(v12_level.value)
+	var seed_value := int(v12_seed.value)
+	var item := ItemV12InstanceFactory.grant_sword(character,repository,archetype_id,level,quality,seed_value)
+	if item.is_empty():
+		generator_status.text = "Не удалось создать игровой предмет: проверьте уровень, редкость и свободное место в сумке."
+		return
+	refresh() # Emits inventory_changed -> canonical game save in Main.
+	var pending := Dictionary(item.get("v12_pending_bonuses",{}))
+	generator_status.text = "Создан в сумке: %s · %s" % [String(item.get("name","")),String(item["instance_id"])]
+	if not pending.is_empty():
+		generator_status.text += "\nВнимание: рейтинг Сила атаки пока ожидает канонический PAR и не влияет на бой."
 
 func _open_item_generator() -> void:
 	generator_template.clear()
