@@ -902,6 +902,8 @@ func _show_fighter_details(is_player: bool) -> void:
 	fighter_popup.popup_centered()
 
 func _select_zone(is_player: bool, zone: String) -> void:
+	if round_stunned or not round_allowed:
+		return
 	var index := ZONES.find(zone)
 	if is_player:
 		if defense_capacity == 0:
@@ -1341,6 +1343,16 @@ func _sync_combat_session() -> void:
 		return
 	var player := combat_session.fighter(true)
 	var enemy := combat_session.fighter(false)
+	var ready_round := combat_session.state.round_number if combat_session.active_round != null else combat_session.state.round_number + 1
+	round_stunned = CombatTempoService.is_stunned(player,ready_round)
+	if round_stunned:
+		attack_zones.clear()
+		defense_zones.clear()
+	for button in attack_buttons:
+		button.disabled = round_stunned
+	for button in defense_buttons:
+		button.disabled = round_stunned
+	_update_zone_buttons()
 	set_fighter_hp(true, player.visible_hp(), player.max_hp)
 	set_fighter_hp(false, enemy.visible_hp(), enemy.max_hp)
 	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
