@@ -139,6 +139,11 @@ func _verify() -> void:
 				if bool(event.payload.get("sword_burst_tick",false)):
 					bursts += 1
 			_check(bursts == 3,"crit_ult_three_bleed_ticks")
+			var burst_line_found := false
+			for line in Array(last.get("lines", [])):
+				if String(line).contains("ABI «Кровавый приговор»") and String(line).contains("3 ускоренных тика кровотечения:"):
+					burst_line_found = true
+			_check(burst_line_found,"crit_ult_three_bleed_ticks_visible_in_journal")
 			_check(not _eff(target,"EFF301").is_empty(),"crit_ult_does_not_consume_bleed")
 		else:
 			var ult_attack := false
