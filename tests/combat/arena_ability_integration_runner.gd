@@ -66,7 +66,7 @@ func _init() -> void:
 	for event in session.state.event_log:
 		if event.source_id!=session.player_id or int(event.payload.get("round",-1))!=1:
 			continue
-		if event.kind==CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)) and not bool(event.payload.get("is_counterattack",false)):
+		if event.kind==CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)):
 			physical+=1
 			weapons.append(int(event.payload.get("weapon_index",-1)))
 		elif event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI003":
