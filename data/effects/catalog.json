@@ -41,5 +41,59 @@
     "crit_chance_direct_pct": 20,
     "duration_rounds": 2,
     "stacking": "unique"
+  },
+  "EFF301": {
+    "id": "EFF301",
+    "name": "Кровотечение",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "physical",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "tags": [
+      "BLEEDING",
+      "DOT"
+    ],
+    "polarity": "DEBUFF"
+  },
+  "EFF302": {
+    "id": "EFF302",
+    "name": "Калека",
+    "kind": "debuff",
+    "physical_damage_outgoing_direct_pct": -5,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "CRIPPLE"
+    ],
+    "snapshot_from": "EFF301"
+  },
+  "EFF303": {
+    "id": "EFF303",
+    "name": "Медлительность",
+    "kind": "debuff",
+    "anti_dodge_direct_pct": -1,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SLOWNESS"
+    ],
+    "snapshot_from": "EFF301"
+  },
+  "EFF304": {
+    "id": "EFF304",
+    "name": "Потерянность",
+    "kind": "debuff",
+    "anti_crit_direct_pct": -1,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "LOST"
+    ],
+    "snapshot_from": "EFF301"
   }
 }
