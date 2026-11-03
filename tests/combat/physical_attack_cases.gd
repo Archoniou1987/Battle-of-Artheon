@@ -109,9 +109,9 @@ static func _case_counter_abi_defence(balance:Dictionary)->bool:
 	})
 	state.queue_event(event)
 	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_pending_events()
-	var connected:=event.result.get("outcome")=="connected"
-	var bypassed:=not event.result.has("dodge_chance") and not event.result.has("auto_block_roll") and not event.result.has("block_crush_roll")
-	var mitigated:=float(event.result.get("after_armour_damage",-1.0))<20.0
+	var connected:bool = String(event.result.get("outcome", "")) == "connected"
+	var bypassed:bool = not event.result.has("dodge_chance") and not event.result.has("auto_block_roll") and not event.result.has("block_crush_roll")
+	var mitigated:bool = float(event.result.get("after_armour_damage",-1.0)) < 20.0
 	return connected and bypassed and mitigated and defender.hp>80
 
 static func _case_weapon_skill_penalty_uses_canonical_profile(balance:Dictionary)->bool:
