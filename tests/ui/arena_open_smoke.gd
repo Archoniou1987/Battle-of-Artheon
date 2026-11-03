@@ -24,14 +24,20 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: equipment slots missing")
 		quit(1)
 		return
-	# Manual protection supports up to four arbitrarily selected body zones.
+	# Capacity never preselects manual blocks: all four zones are chosen by player.
 	arena.set_defense_capacity(4)
+	if not arena.selected_block_zones().is_empty():
+		push_error("ARENA_OPEN_SMOKE=FAIL: manual blocks unexpectedly preselected")
+		quit(1)
+		return
+	for zone in ["chest", "arms", "waist", "legs"]:
+		arena._select_zone(true, zone)
 	if arena.selected_block_zones().size() != 4:
 		push_error("ARENA_OPEN_SMOKE=FAIL: four-zone protection unavailable")
 		quit(1)
 		return
-	arena._select_zone(true, "arms") # drop a currently protected zone
-	arena._select_zone(true, "head") # replace it with a non-adjacent choice
+	arena._select_zone(true, "arms") # drop one explicitly selected zone
+	arena._select_zone(true, "head") # choose a non-adjacent replacement
 	if arena.selected_block_zones().size() != 4 or not arena.selected_block_zones().has("head") or arena.selected_block_zones().has("arms"):
 		push_error("ARENA_OPEN_SMOKE=FAIL: independent block zone selection")
 		quit(1)
