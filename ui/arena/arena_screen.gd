@@ -70,10 +70,12 @@ var visual_lab_eff_index := 0
 var log_view: RichTextLabel
 var round_button: Button
 var round_button_art: TextureRect
-var defense_zones: Array[String] = ["chest"]
+var defense_zones: Array[String] = []
 var defense_capacity := 1
 var attack_zones: Array[String] = []
 var attack_count := 2
+var round_allowed := false
+var round_stunned := false
 var defense_buttons: Array[Button] = []
 var attack_buttons: Array[Button] = []
 var hp_bars: Dictionary = {}
@@ -115,8 +117,8 @@ var enemy_elixirs: Array[Dictionary] = []
 var player_belt_capacity := 0
 var enemy_belt_capacity := 0
 var elixir_global_cooldown := 0
-const RATING_KEYS := ["crit_chance_rating", "anti_crit_rating", "dodge_rating", "anti_dodge_rating", "hit_chance_rating", "manual_block_rating", "shield_auto_block_rating", "block_crush", "armour_penetration_percent", "counterattack_rating"]
-const RATING_NAMES := {"crit_chance_rating":"Крит", "anti_crit_rating":"Антикрит", "dodge_rating":"Уворот", "anti_dodge_rating":"Антиуворот", "hit_chance_rating":"Точность", "manual_block_rating":"Ручной блок", "shield_auto_block_rating":"Автоблок", "block_crush":"Пробивание блока, %", "armour_penetration_percent":"Пробивание брони, %", "counterattack_rating":"Контрудар"}
+const RATING_KEYS := ["crit_chance_rating", "anti_crit_rating", "dodge_rating", "anti_dodge_rating", "hit_chance_rating", "manual_block_rating", "shield_auto_block_rating", "block_crush", "armour_penetration_percent"]
+const RATING_NAMES := {"crit_chance_rating":"Крит", "anti_crit_rating":"Антикрит", "dodge_rating":"Уворот", "anti_dodge_rating":"Антиуворот", "hit_chance_rating":"Точность", "manual_block_rating":"Ручной блок", "shield_auto_block_rating":"Автоблок", "block_crush":"Пробивание блока, %", "armour_penetration_percent":"Пробивание брони, %"}
 const PRIMARY_NAMES := {"PAR001":"Сила", "PAR002":"Ловкость", "PAR003":"Интуиция", "PAR005":"Мудрость", "PAR004":"Интеллект", "PAR006":"Выносливость"}
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
@@ -906,8 +908,7 @@ func _select_zone(is_player: bool, zone: String) -> void:
 			return
 		# Each protected zone is individually chosen; non-adjacent combinations work.
 		if defense_zones.has(zone):
-			if defense_zones.size() > 1:
-				defense_zones.erase(zone)
+			defense_zones.erase(zone)
 		elif defense_zones.size() < defense_capacity:
 			defense_zones.append(zone)
 		else:
@@ -915,12 +916,13 @@ func _select_zone(is_player: bool, zone: String) -> void:
 	else:
 		if attack_count <= 0:
 			return
-		if attack_zones.has(zone):
-			attack_zones.erase(zone)
-		elif attack_zones.size() < attack_count:
+		# A zone may be selected repeatedly for different MH/OH strikes.
+		# Each tap fills one hit; a tap on a full selected zone removes its last hit.
+		if attack_zones.size() < attack_count:
 			attack_zones.append(zone)
+		elif attack_zones.has(zone):
+			attack_zones.remove_at(attack_zones.rfind(zone))
 		else:
-			# Replacing the second target is quicker than clearing both selections.
 			attack_zones[attack_zones.size() - 1] = zone
 	_update_zone_buttons()
 	if external_combat_mode:
@@ -930,12 +932,7 @@ func set_defense_capacity(capacity: int) -> void:
 	defense_capacity = clampi(capacity, 0, 5)
 	while defense_zones.size() > defense_capacity:
 		defense_zones.pop_back()
-	# Preserve the familiar ready-to-fight default while allowing any zone combination.
-	for zone in ["chest", "arms", "waist", "legs", "head"]:
-		if defense_zones.size() >= defense_capacity:
-			break
-		if not defense_zones.has(zone):
-			defense_zones.append(zone)
+	# Blocks are explicit selections, never silently filled.
 	_update_zone_buttons()
 
 func set_attack_count(count: int) -> void:
@@ -1005,26 +1002,33 @@ func _refresh_ability_buttons() -> void:
 	if not selected_still_valid:
 		selected_ability=""
 
+func _required_actions_complete() -> bool:
+	if round_stunned:
+		return true
+	return attack_zones.size() == attack_count and defense_zones.size() == defense_capacity
+
+func _refresh_round_ready() -> void:
+	if round_button == null:
+		return
+	round_button.disabled = not round_allowed or not _required_actions_complete()
+	if not round_allowed:
+		round_button.tooltip_text = "Боевой раунд недоступен"
+	elif not _required_actions_complete():
+		round_button.tooltip_text = "Выберите все атаки и зоны защиты"
+	else:
+		round_button.tooltip_text = "Завершить раунд · ABI и эликсиры необязательны"
+
 func set_combat_ready(ready: bool) -> void:
-	if round_button != null:
-		round_button.disabled = not ready
+	round_allowed = ready
+	_refresh_round_ready()
 
 func _request_end_turn() -> void:
-	if round_button == null or round_button.disabled:
+	if round_button == null or round_button.disabled or not _required_actions_complete():
 		return
 	end_turn_requested.emit(selected_attack_targets(), selected_block_zones())
 
 func selected_attack_targets() -> Array[String]:
-	var result: Array[String] = []
-	if attack_zones.is_empty():
-		return result
-	if attack_zones.size() == 1:
-		for i in range(attack_count):
-			result.append(attack_zones[0])
-	else:
-		for i in range(attack_count):
-			result.append(attack_zones[mini(i, attack_zones.size() - 1)])
-	return result
+	return attack_zones.duplicate()
 
 func selected_block_zones() -> Array[String]:
 	var result: Array[String] = []
@@ -1047,6 +1051,7 @@ func _update_zone_buttons() -> void:
 		var outline := attack_buttons[i].get_node_or_null("SelectionOutline")
 		if outline != null:
 			outline.visible = chosen
+	_refresh_round_ready()
 
 func _update_hp(bar: ProgressBar, overlay: Label, current: int, maximum: int) -> void:
 	bar.max_value = maxi(1, maximum)
@@ -1158,6 +1163,9 @@ func _start_combat_session() -> void:
 	combat_session.fighter(false).level = test_enemy_level
 	set_fighter_header(true, combat_session.fighter(true).display_name, test_player_level)
 	disclosed_enemy_equipment = combat_session.enemy_equipment_display.duplicate(true)
+	round_stunned = false
+	attack_zones.clear()
+	defense_zones.clear()
 	set_attack_count(combat_session.player_attack_count())
 	set_defense_capacity(CombatModifierService.manual_block_zone_capacity(combat_session.fighter(true)))
 	set_fighter_header(false, combat_session.fighter(false).display_name, combat_session.fighter(false).level)
@@ -1190,6 +1198,10 @@ func _play_combat_round(targets: Array[String], blocks: Array[String]) -> void:
 		else:
 			push_error("Arena resource write-back rejected: player snapshot mismatch")
 	selected_ability=""
+	attack_zones.clear()
+	defense_zones.clear()
+	set_attack_count(combat_session.player_attack_count())
+	set_defense_capacity(CombatModifierService.manual_block_zone_capacity(combat_session.fighter(true)))
 	_sync_combat_session()
 	var round_lines: Array[String] = ["Раунд %d" % int(result.get("round", 0))]
 	for line in Array(result.get("lines", [])):
@@ -1463,12 +1475,11 @@ func present_external(view: Dictionary) -> void:
 		var fighter: Dictionary = player if side else opponent
 		set_fighter_hp(side, int(fighter.get("hp", 0)), int(fighter.get("max_hp", 1)))
 		set_fighter_resources(side, int(fighter.get("mana", 0)), int(fighter.get("max_mana", 0)), int(fighter.get("ap", 0)), int(fighter.get("max_ap", 0)))
+	round_stunned = bool(controls.get("stunned", false))
 	set_attack_count(maxi(0, int(controls.get("attack_count", 1))))
 	set_defense_capacity(maxi(0, int(controls.get("block_capacity", 1))))
-	attack_zones.clear()
-	if not bool(controls.get("stunned", false)) and attack_count > 0:
-		attack_zones.append("chest")
-	if bool(controls.get("stunned", false)):
+	if round_stunned:
+		attack_zones.clear()
 		defense_zones.clear()
 	_update_zone_buttons()
 	# No attack or manual block input is legal while stunned. Keep the
@@ -1491,7 +1502,7 @@ func present_external(view: Dictionary) -> void:
 		var button := ability_buttons[index]
 		button.text = String(option.get("id", ""))
 		button.tooltip_text = String(option.get("name", ""))
-		button.disabled = not bool(option.get("available", false)) or bool(view.get("finished", false))
+		button.disabled = round_stunned or not bool(option.get("available", false)) or finished
 	var loadout: Dictionary = view.get("elixir_loadout", {})
 	var potions: Array = loadout.get("slots", [])
 	var available: Array = view.get("elixir_availability", [])
@@ -1500,5 +1511,5 @@ func present_external(view: Dictionary) -> void:
 		var potion := player_elixir_slots[index]
 		potion.text = "%d/%d" % [int(entry.get("charges", 0)), int(entry.get("max_charges", 0))] if not String(entry.get("instance_id", "")).is_empty() else ""
 		potion.disabled = bool(view.get("finished", false)) or index >= available.size() or not bool(available[index])
-	set_combat_ready(true)
+	set_combat_ready(not finished and int(player.get("hp",0)) > 0)
 	_refresh_effect_display()
