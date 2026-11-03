@@ -58,7 +58,7 @@ func _run() -> bool:
 			continue
 		if event.kind == CombatEvent.Kind.ACTION and not String(event.payload.get("ability_id","")).is_empty():
 			abi_actions += 1
-		if event.kind == CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)) and not bool(event.payload.get("is_counterattack",false)):
+		if event.kind == CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)):
 			if event.source_id == arena.player_id:
 				weapon_attacks += 1
 				if String(event.payload.get("zone","")) != "head":
