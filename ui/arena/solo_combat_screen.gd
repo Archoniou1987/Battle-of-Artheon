@@ -430,7 +430,9 @@ func _update_selection() -> void:
 			var availability: Array = snapshot.get("elixir_availability", [])
 			potion.disabled = finished or stunned or index >= availability.size() or not bool(availability[index])
 			potion.set_pressed_no_signal(chosen_elixir == index)
-		shared_arena.set_combat_ready(not round_button.disabled)
+		# Zone selection remains enabled before the required plan is complete.
+		# ArenaScreen independently disables End Turn until every hit and block is chosen.
+		shared_arena.set_combat_ready(not finished and bool(controls.get("ok", false)) and not stunned)
 
 func _on_shared_selection() -> void:
 	_update_selection()
