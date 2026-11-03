@@ -1,0 +1,33 @@
+name: ABI Strip PR Regression
+on:
+  pull_request:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - 'ui/arena/**'
+      - 'core/abilities/equipment_ability_loadout.gd'
+      - 'ui/shared/square_ui_geometry.gd'
+      - 'tests/ui/**'
+      - 'tests/items/item_abi_chain_runner.gd'
+      - 'tests/map/solo_live_manual_abi_runner.gd'
+      - '.github/workflows/abi-strip-pr-regression.yml'
+jobs:
+  strip-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import project
+        run: bash tools/run_godot_check.sh --import
+      - name: Arena and equipped ABI regression
+        run: |
+          bash tools/run_godot_check.sh tests/ui/arena_open_smoke.gd
+          bash tools/run_godot_check.sh tests/ui/square_slot_interaction_runner.gd
+          bash tools/run_godot_check.sh tests/ui/solo_combat_screen_runner.gd
+          bash tools/run_godot_check.sh tests/items/item_abi_chain_runner.gd
+          bash tools/run_godot_check.sh tests/map/solo_live_manual_abi_runner.gd
