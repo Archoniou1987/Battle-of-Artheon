@@ -23,3 +23,7 @@ Battle of Artheon is a solo-first 2D fantasy strategy/RPG project built with God
 - `docs/` — technical documentation and architecture decisions.
 
 Design and balance source material is maintained separately from executable code; the repository is the source of truth for implementation.
+
+## Canonical item generation (approved 2026-11-03)
+
+Generator v1.2 is the **only active** item-template generation ruleset. The authoritative specification is in [Project 25 → Генератор v1.2](https://docs.google.com/spreadsheets/d/1U_P69iy2EYQ_5qGGdC_AK86bsl-jpWrGJS1_7ebg4js/edit#gid=1152411451), mirrored into `data/items/item_generator_v12_rules.json` for the engine. See `docs/item-template-generator-v12.md`. Legacy generator lab screens and rule tables are archived; do not apply their conflicting parameters.
