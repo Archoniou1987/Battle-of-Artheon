@@ -140,15 +140,21 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 			var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
 			cooldown_ready=AbilityRuntime.can_use(ability_id,cooldowns,state.round_number)
 		var mana_cost:=int(definition.get("mana_cost",0))
-		var resource_ready:=combatant.mana>=mana_cost
+		var ap_ready:=AbilityRuntime.can_pay_action_points(definition,combatant)
+		var trigger_ready:=AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round","")))
+		var resource_ready:=combatant.mana>=mana_cost and ap_ready
 		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number)
 		var equipped := ability_scheduler == null or AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id)
 		abilities[ability_id]={
-			"available":equipped and cooldown_ready and resource_ready and round_budget_ready and not targets.is_empty(),
+			"available":equipped and cooldown_ready and resource_ready and trigger_ready and round_budget_ready and not targets.is_empty(),
 			"equipped":equipped,
 			"targets":targets,
 			"cooldown_ready":cooldown_ready,
 			"resource_ready":resource_ready,
+			"trigger_ready":trigger_ready,
+			"ap_ready":ap_ready,
+			"ap_cost":AbilityRuntime.action_point_cost(definition,combatant),
+			"ap_gain":maxi(0,int(definition.get("ap_gain",0))),
 			"mana_cost":mana_cost
 		}
 	var basic_attacks:=_available_basic_attacks(source_id)
