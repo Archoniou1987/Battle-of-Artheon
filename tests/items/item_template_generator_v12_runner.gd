@@ -25,8 +25,11 @@ func _verify() -> void:
 		var entry: Dictionary = raw
 		if String(entry["id"]) == "MEDIUM_DEF":
 			medium = entry
-	if medium.is_empty() or int(Dictionary(medium.get("weights",{})).get("counter",0)) != 15:
-		problems.append("Medium protective armour counterstrike probability differs from approved rules")
+	if medium.is_empty():
+		problems.append("Medium protective armour archetype missing")
+	for raw_spec in generator.archetypes():
+		if Dictionary(raw_spec.get("weights",{})).has("counter"):
+			problems.append("Retired counter chance still exists in an archetype pool: "+String(raw_spec.get("id","")))
 	var config := {"archetypes":["SWORD_CRIT"],"min_level":30,"max_level":30,
 		"quality":"blue","count":100,"seed":123456,"school":"any","armor_slot":"any"}
 	var generated := generator.generate(config)
@@ -121,11 +124,9 @@ func _verify() -> void:
 	var stat_ids: Dictionary = Dictionary(generator.rules.get("stat_par",{}))
 	if String(stat_ids.get("crit","")) != "PAR033" or String(stat_ids.get("anticrit","")) != "PAR034":
 		problems.append("Shared crit/anticrit IDs must remain PAR033/PAR034")
-	# Lv100 purple standard-slot specialist: ten counterstrike affixes ~= 50%.
-	var reference_counter := generator.nominal_affix("counter",100,"OH",1.5)
-	var counter_pct := ItemTemplateGeneratorV12.rating_to_pct(reference_counter*10.0,100)
-	if absf(counter_pct-50.0) > 0.1:
-		problems.append("Counterstrike specialist 50% Lv100 anchor failed")
+	# PAR075 and PAR076 are reserved legacy IDs, not generatable item affixes.
+	if stat_ids.has("counter") or stat_ids.values().has("PAR075") or stat_ids.values().has("PAR076"):
+		problems.append("Retired counter PAR must not be present in v1.2 affix mapping")
 	# Fixed combat mana regeneration is fractional, never rounded up to +1.
 	for level in [30,60,90,100]:
 		var expected_regen: float = float({30:4.0,60:9.0,90:13.5,100:15.0}[level])
@@ -184,7 +185,6 @@ func _verify() -> void:
 		{"name":"hp","expected":0.8},
 		{"name":"crit","expected":0.2},
 		{"name":"dodge","expected":0.8},
-		{"name":"counter","expected":0.2},
 		{"name":"anti_dodge","expected":0.2},
 		{"name":"anticrit","expected":0.8}
 	]:
@@ -198,7 +198,6 @@ func _verify() -> void:
 		{"logical":"hp","defence":1.0,"attack":0.0},
 		{"logical":"reduce","defence":1.0,"attack":0.0},
 		{"logical":"dodge","defence":1.0,"attack":0.0},
-		{"logical":"counter","defence":0.0,"attack":1.0},
 		{"logical":"crit","defence":0.0,"attack":1.0},
 		{"logical":"attack","defence":0.0,"attack":1.0},
 		{"logical":"spell","defence":0.0,"attack":1.0},

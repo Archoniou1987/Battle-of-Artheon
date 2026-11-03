@@ -52,14 +52,13 @@ func lock_basic_attack(round:CombatRound,attacker:CombatantState,defender:Combat
 		if not weapon_indices.has(weapon_index):
 			weapon_indices.append(weapon_index)
 	weapon_indices.sort()
-	# One normal Base Attack (all MH/OH and multi-hit constituents) shares one AP group.
+	# Ordinary weapon hits do not grant AP; only ABI grants it.
 	# Base attacks are determined by weapons; Tempo grants no additional hits.
-	var ap_group_id:=state.next_event_id
 	var zone_offset := 0
 	for raw_weapon_index in weapon_indices:
 		var weapon_index:=int(raw_weapon_index)
 		if _weapon_attack_available(attacker,weapon_index):
-			var events := _make_basic_attacks(attacker,defender,false,weapon_index,ap_group_id,body_zones,zone_offset)
+			var events := _make_basic_attacks(attacker,defender,false,weapon_index,body_zones,zone_offset)
 			zone_offset += events.size()
 			for event in events:
 				round.lock_action(event)
@@ -72,7 +71,7 @@ func _weapon_attack_available(attacker:CombatantState,weapon_index:int)->bool:
 	var equipped_types:Array=CombatModifierService.equipped_item_types(attacker)
 	return equipped_types.has(requirement)
 
-func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int,ap_group_id:int=-1,body_zones:Array[String]=[],zone_offset:int=0)->Array[CombatEvent]:
+func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:bool,weapon_index:int,body_zones:Array[String]=[],zone_offset:int=0)->Array[CombatEvent]:
 	var profile:=_weapon_profile(attacker,weapon_index)
 	var result:Array[CombatEvent]=[]
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
@@ -83,8 +82,7 @@ func _make_basic_attacks(attacker:CombatantState,defender:CombatantState,extra:b
 		var selected_zone: String = body_zones[zone_offset + hit_index] if zone_offset + hit_index < body_zones.size() else String(HIT_ZONES[rng.randi_range(0,HIT_ZONES.size()-1)])
 		var payload:=WeaponAttackProfile.attack_payload(profile,rolls,selected_zone,{
 			"is_extra_attack":extra,
-			"generates_ap":not extra,
-			"ap_group_id":ap_group_id if ap_group_id>=0 else state.next_event_id,
+			"generates_ap":false,
 			"weapon_index":weapon_index,
 			"hit_index":hit_index
 		})
@@ -112,6 +110,6 @@ func _weapon_damage(profile:Dictionary)->float:
 func _attack_rolls()->Dictionary:
 	if combat_engine!=null:
 		return combat_engine.complete_attack_rolls({})
-	return {"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"counterattack":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll(),"counterattack_rolls":{"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll()}}
+	return {"hit":_roll(),"magic_hit":_roll(),"reaction":_roll(),"dodge":_roll(),"auto_block":_roll(),"block_crush":_roll(),"crit":_roll(),"on_hit_effect":_roll(),"manual_block_effect":_roll()}
 func _roll()->int:return rng.randi_range(1,100)
 func _both_alive(first_id:String,second_id:String)->bool:return not state.get_combatant(first_id).is_death_finalized() and not state.get_combatant(second_id).is_death_finalized()

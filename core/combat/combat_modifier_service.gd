@@ -173,7 +173,7 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	result["weapon_on_hit_effects"] = weapon_on_hit_effects(combatant)
 	result["on_manual_block_effects"] = manual_block_effects(combatant)
 	result["abilities"] = abilities(combatant)
-	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "counterattack_rating", "crit_damage_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
+	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "crit_damage_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
 	result["armour_penetration_flat"] = armour_penetration_flat(combatant, round_number)

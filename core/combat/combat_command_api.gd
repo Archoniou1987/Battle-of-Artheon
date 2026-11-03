@@ -140,15 +140,21 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 			var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
 			cooldown_ready=AbilityRuntime.can_use(ability_id,cooldowns,state.round_number)
 		var mana_cost:=int(definition.get("mana_cost",0))
-		var resource_ready:=combatant.mana>=mana_cost
+		var ap_ready:=AbilityRuntime.can_pay_action_points(definition,combatant)
+		var trigger_ready:=AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round","")))
+		var resource_ready:=combatant.mana>=mana_cost and ap_ready
 		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number)
 		var equipped := ability_scheduler == null or AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id)
 		abilities[ability_id]={
-			"available":equipped and cooldown_ready and resource_ready and round_budget_ready and not targets.is_empty(),
+			"available":equipped and cooldown_ready and resource_ready and trigger_ready and round_budget_ready and not targets.is_empty(),
 			"equipped":equipped,
 			"targets":targets,
 			"cooldown_ready":cooldown_ready,
 			"resource_ready":resource_ready,
+			"trigger_ready":trigger_ready,
+			"ap_ready":ap_ready,
+			"ap_cost":AbilityRuntime.action_point_cost(definition,combatant),
+			"ap_gain":maxi(0,int(definition.get("ap_gain",0))),
 			"mana_cost":mana_cost
 		}
 	var basic_attacks:=_available_basic_attacks(source_id)
@@ -247,18 +253,13 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 			return abi_source
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	var event_ids:Array[int]=[]
-	# Every constituent hit of one Base Attack shares an AP group. AP is awarded
-	# by the engine to the first connected hit in that group, never more than once.
-	var ap_group_id:=int(rolls.get("ap_group_id",state.next_event_id))
+	# Ordinary weapon hits do not generate AP; only activated ABI can do so.
 	for hit_index in range(hit_count):
 		var event_rolls:=orchestrator.engine.complete_attack_rolls(_basic_attack_hit_rolls(rolls,hit_index))
 		var damage_roll:=float(event_rolls["damage"])
 		event_rolls["damage"]=damage_roll
 		var payload:=WeaponAttackProfile.attack_payload(profile,event_rolls,String(event_rolls.get("zone",requested_zone)),{
-			# AP belongs to the whole Base Attack action. Any connected constituent
-			# may earn it; the engine deduplicates by ap_group_id.
-			"generates_ap":not bool(event_rolls.get("suppress_ap",false)),
-			"ap_group_id":ap_group_id,
+			"generates_ap":false,
 			"hit_index":hit_index,
 			"hit_count":hit_count
 		})
@@ -380,7 +381,6 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 				return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(checked.get("reason","")),"queued_event_ids":[]}
 	var sequence_event_ids:Array[int]=[]
 	var attack_results:Array[Dictionary]=[]
-	var ap_group_id:=state.next_event_id
 	for attack_index in range(attacks.size()):
 		var request:Dictionary=attacks[attack_index]
 		var profile_id:=String(request.get("attack_profile_id","basic"))
@@ -388,8 +388,6 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 		var attack_rolls:Dictionary=Dictionary(request.get("rolls",{})).duplicate(true)
 		if request.has("zone"):
 			attack_rolls["zone"]=String(request.get("zone","chest"))
-		# All MH/OH and multi-hit constituents belong to one Base Attack AP group.
-		attack_rolls["ap_group_id"]=ap_group_id
 		var result:=queue_basic_attack(source_id,attack_rolls,profile_id,weapon_index)
 		attack_results.append(result)
 		for event_id in Array(result.get("event_ids",[])):

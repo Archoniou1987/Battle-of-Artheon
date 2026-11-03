@@ -113,14 +113,12 @@ static func _simulator_base_attack_ap_group(balance:Dictionary)->bool:
 	simulator.run_duel("ap_user","ap_target")
 	var normal_attacks:Array[CombatEvent]=[]
 	var ap_events:=0
-	var ap_groups:Array[int]=[]
 	for event in state.event_log:
 		if event.kind!=CombatEvent.Kind.ATTACK or event.source_id!="ap_user" or bool(event.payload.get("is_extra_attack",false)): continue
 		normal_attacks.append(event)
-		var group_id:=int(event.payload.get("ap_group_id",-1))
-		if not ap_groups.has(group_id): ap_groups.append(group_id)
 		if int(event.result.get("ap_gained",0))>0: ap_events+=1
-	return normal_attacks.size()==3 and ap_groups.size()==1 and ap_groups[0]>=0 and ap_events<=1
+	# Weapon constituents no longer award action points, even when all connect.
+	return normal_attacks.size()==3 and ap_events==0 and attacker.action_points==0
 
 
 static func _weapon_skill_penalties(balance: Dictionary) -> bool:

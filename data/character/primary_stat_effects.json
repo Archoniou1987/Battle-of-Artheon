@@ -7,8 +7,7 @@
     },
     "PAR002": {
       "dodge_rating": 5,
-      "anti_dodge_rating": 5,
-      "counterattack_rating": 5
+      "anti_dodge_rating": 5
     },
     "PAR003": {
       "crit_chance_rating": 5,
@@ -50,9 +49,7 @@
       ],
       "Темп и реакции": [
         "tempo",
-        "attack_speed_rating",
-        "counterattack_rating",
-        "counterattack_damage_rating"
+        "attack_speed_rating"
       ]
     },
     "Защита": {
@@ -129,7 +126,6 @@
     "hit_chance_rating",
     "anti_dodge_rating",
     "crit_chance_rating",
-    "counterattack_rating",
     "dodge_rating",
     "anti_crit_rating",
     "manual_block_rating",
@@ -142,7 +138,6 @@
     "blunt_damage_rating",
     "crit_damage_rating",
     "attack_speed_rating",
-    "counterattack_damage_rating",
     "physical_damage_reduction_rating",
     "slash_resistance_rating",
     "pierce_resistance_rating",

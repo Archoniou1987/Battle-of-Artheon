@@ -65,7 +65,6 @@
     "hp": "PAR010",
     "mana": "PAR011",
     "dodge": "PAR031",
-    "counter": "PAR075",
     "crit": "PAR033",
     "crit_damage": "PAR035",
     "anticrit": "PAR034",
@@ -141,10 +140,9 @@
       "family": "sword",
       "slot": "MH",
       "weights": {
-        "anticrit": 30,
-        "anti_dodge": 15,
-        "dodge": 40,
-        "counter": 15
+        "anticrit": 35,
+        "anti_dodge": 18,
+        "dodge": 47
       },
       "requirements": [
         "PAR001",
@@ -191,10 +189,9 @@
       "family": "dagger",
       "slot": "MH/OH",
       "weights": {
-        "dodge": 40,
-        "counter": 25,
-        "anticrit": 25,
-        "anti_dodge": 10
+        "dodge": 54,
+        "anticrit": 33,
+        "anti_dodge": 13
       },
       "requirements": [
         "PAR002",
@@ -208,11 +205,10 @@
       "family": "dagger",
       "slot": "MH/OH",
       "weights": {
-        "dodge": 30,
-        "counter": 20,
-        "crit": 20,
-        "crit_damage": 20,
-        "attack": 10
+        "dodge": 38,
+        "crit": 25,
+        "crit_damage": 25,
+        "attack": 12
       },
       "requirements": [
         "PAR002",
@@ -243,11 +239,10 @@
       "family": "dagger",
       "slot": "MH/OH",
       "weights": {
-        "dodge": 25,
-        "counter": 20,
-        "armour_pen": 35,
-        "attack": 10,
-        "anti_dodge": 10
+        "dodge": 31,
+        "armour_pen": 44,
+        "attack": 13,
+        "anti_dodge": 12
       },
       "requirements": [
         "PAR002",
@@ -261,12 +256,11 @@
       "family": "axe",
       "slot": "MH",
       "weights": {
-        "crit": 25,
-        "crit_damage": 15,
-        "shield_pen": 10,
-        "dodge": 30,
-        "counter": 10,
-        "anticrit": 10
+        "crit": 28,
+        "crit_damage": 17,
+        "shield_pen": 11,
+        "dodge": 33,
+        "anticrit": 11
       },
       "requirements": [
         "PAR001",
@@ -385,11 +379,10 @@
       "family": "spear",
       "slot": "2H",
       "weights": {
-        "attack": 15,
-        "anti_dodge": 20,
-        "armour_pen": 30,
-        "dodge": 20,
-        "counter": 15
+        "attack": 18,
+        "anti_dodge": 24,
+        "armour_pen": 35,
+        "dodge": 23
       },
       "requirements": [
         "PAR002",
@@ -597,13 +590,12 @@
       "material": "leather",
       "profile": "55/45",
       "weights": {
-        "hp": 25,
-        "phys_res": 5,
-        "magic_res": 5,
-        "anticrit": 10,
-        "dodge": 30,
-        "crit": 10,
-        "counter": 15
+        "hp": 29,
+        "phys_res": 6,
+        "magic_res": 6,
+        "anticrit": 12,
+        "dodge": 35,
+        "crit": 12
       },
       "requirements": [
         "PAR002",
@@ -617,12 +609,11 @@
       "material": "leather",
       "profile": "50/50",
       "weights": {
-        "hp": 15,
-        "dodge": 25,
-        "attack": 20,
-        "crit": 15,
-        "anti_dodge": 10,
-        "counter": 15
+        "hp": 18,
+        "dodge": 29,
+        "attack": 23,
+        "crit": 18,
+        "anti_dodge": 12
       },
       "requirements": [
         "PAR002",
@@ -637,12 +628,11 @@
       "material": "leather",
       "profile": "45/55",
       "weights": {
-        "hp": 10,
-        "dodge": 20,
-        "attack": 20,
-        "crit": 20,
-        "anti_dodge": 10,
-        "counter": 20
+        "hp": 13,
+        "dodge": 25,
+        "attack": 25,
+        "crit": 25,
+        "anti_dodge": 12
       },
       "requirements": [
         "PAR003",

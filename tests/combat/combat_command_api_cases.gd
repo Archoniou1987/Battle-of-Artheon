@@ -171,7 +171,7 @@ static func run()->bool:
 	for logged_event in state.event_log:
 		if Array(multi.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			multi_ap_events+=1
-	if multi_ap_events!=1: return false
+	if multi_ap_events!=0: return false
 	# Per-hit body zones are validated before any multi-hit event is queued.
 	var nested_pending_before:=state.pending_events.size()
 	var invalid_nested:=api.queue_basic_attack("hero",{"hits":[{"zone":"head"},{"zone":"hands"}]},"dual_slash",0)
@@ -202,9 +202,8 @@ static func run()->bool:
 	for logged_event in state.event_log:
 		if Array(weapon_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			sequence_ap_events+=1
-	if sequence_ap_events!=1: return false
-	# AP follows the first connected constituent, not merely the first queued hit.
-	# MH may miss while OH connects: the action must still earn exactly one AP.
+	if sequence_ap_events!=0: return false
+	# Neither MH nor OH may earn AP from ordinary hits, even if one connects.
 	var ap_before_fallback:=hero.action_points
 	var fallback_sequence:=api.queue_weapon_attack_sequence("hero",[
 		{"weapon_index":0,"attack_profile_id":"weapon_slash","rolls":{"hit":100,"dodge":100,"crit":100,"damage":0.0}},
@@ -214,12 +213,12 @@ static func run()->bool:
 		print("COMMAND_AP_FALLBACK queue=",fallback_sequence)
 		return false
 	engine.resolve_pending_events()
-	if hero.action_points!=ap_before_fallback+1: return false
+	if hero.action_points!=ap_before_fallback: return false
 	var fallback_ap_events:=0
 	for logged_event in state.event_log:
 		if Array(fallback_sequence.get("event_ids",[])).has(logged_event.event_id) and int(logged_event.result.get("ap_gained",0))>0:
 			fallback_ap_events+=1
-	if fallback_ap_events!=1: return false
+	if fallback_ap_events!=0: return false
 	# Normal Base Attack derives one default attack per equipped weapon automatically.
 	var automatic:=api.queue_default_weapon_attacks("hero",{
 		0:{"zone":"head","hit":1,"dodge":100,"crit":100,"damage":0.0},

@@ -33,9 +33,14 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		var effective_target := state.get_combatant(effective_target_id)
 		if effective_target == null or effective_target.is_death_finalized(): continue
 		var mana_cost := int(definition.get("mana_cost", 0))
-		if source.mana < mana_cost: continue
-		if not source.spend_mana(mana_cost): continue
-		events.append(AbilityRuntime.build_action_event(state, source_id, effective_target_id, ability_id, definition))
+		if source.mana < mana_cost or not AbilityRuntime.can_pay_action_points(definition,source): continue
+		if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))): continue
+		var ap_spent:=AbilityRuntime.action_point_cost(definition,source)
+		if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent): continue
+		var event:=AbilityRuntime.build_action_event(state, source_id, effective_target_id, ability_id, definition)
+		event.payload["ap_spent"]=ap_spent
+		event.payload["ap_gained"]=source.gain_action_points(maxi(0,int(definition.get("ap_gain",0))))
+		events.append(event)
 		AbilityRuntime.start_cooldown(ability_id, cooldowns, state.round_number, int(definition.get("cooldown_rounds", 0)))
 		_record_cast(source_id, state.round_number)
 		break # The automatic policy picks at most one ready ABI.
@@ -53,11 +58,18 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 	if definition.is_empty() or not AbilityRuntime.validate_definition(ability_id,definition).is_empty() or not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
 		return null
 	var mana_cost:=int(definition.get("mana_cost",0))
-	if source.mana<mana_cost or not source.spend_mana(mana_cost):
+	if source.mana<mana_cost or not AbilityRuntime.can_pay_action_points(definition,source):
+		return null
+	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
+		return null
+	var ap_spent:=AbilityRuntime.action_point_cost(definition,source)
+	if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent):
 		return null
 	var cast_definition:=definition.duplicate(true)
 	cast_definition["target_zone_id"]=zone_id
 	var event:=AbilityRuntime.build_action_event(state,source_id,"",ability_id,cast_definition)
+	event.payload["ap_spent"]=ap_spent
+	event.payload["ap_gained"]=source.gain_action_points(maxi(0,int(definition.get("ap_gain",0))))
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
 	_record_cast(source_id,state.round_number)
@@ -81,9 +93,16 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
 		return null
 	var mana_cost:=int(definition.get("mana_cost",0))
-	if source.mana<mana_cost or not source.spend_mana(mana_cost):
+	if source.mana<mana_cost or not AbilityRuntime.can_pay_action_points(definition,source):
+		return null
+	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
+		return null
+	var ap_spent:=AbilityRuntime.action_point_cost(definition,source)
+	if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent):
 		return null
 	var event:=AbilityRuntime.build_action_event(state,source_id,target_id,ability_id,definition)
+	event.payload["ap_spent"]=ap_spent
+	event.payload["ap_gained"]=source.gain_action_points(maxi(0,int(definition.get("ap_gain",0))))
 	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
 	cooldowns_by_combatant[source_id]=cooldowns
 	_record_cast(source_id,state.round_number)

@@ -43,7 +43,7 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	var rolls: Dictionary = {
 		"hit": int(settings.get("hit_roll", 1)),
 		"reaction": 100, "dodge": 1, "auto_block": 1,
-		"block_crush": 1, "crit": 1, "counterattack": 100,
+		"block_crush": 1, "crit": 1,
 		"on_hit_effect": 100, "manual_block_effect": 100,
 		"damage": 0.5
 	}

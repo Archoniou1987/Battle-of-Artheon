@@ -1,7 +1,8 @@
 class_name ParAttackContract
 extends RefCounted
 
-## Mandatory ABI001 boundary shared by commands, simulation and counterattacks.
+## Mandatory basic attack boundary shared by commands and simulation.
+## Conditional counterattacks use physical ABI data, never this basic-attack contract.
 ## Weapon profiles supply identity/reach only; damage comes exclusively from PAR.
 static func validate(combatant: CombatantState) -> Dictionary:
 	var shared := ParCombatContract.validate(combatant)

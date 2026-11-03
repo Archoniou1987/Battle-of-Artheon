@@ -83,7 +83,7 @@ func _init() -> void:
 			ability_count += 1
 		if event.kind != CombatEvent.Kind.ATTACK or not bool(event.payload.get("is_weapon_attack",false)):
 			continue
-		if event.source_id == session.player_id and not bool(event.payload.get("is_counterattack",false)):
+		if event.source_id == session.player_id:
 			physical_count += 1
 		elif event.source_id == ArenaCombatSession.ENEMY_ID:
 			opponent_physical_count += 1

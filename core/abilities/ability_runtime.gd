@@ -13,6 +13,37 @@ static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_numb
 static func application_timing(definition: Dictionary) -> String:
 	return String(definition.get("application_timing", "standard")).to_lower()
 
+## A trigger is a historical eligibility check; it never creates an attack by itself.
+static func previous_round_trigger_met(state: CombatState, source_id: String, trigger: String) -> bool:
+	if trigger.is_empty():
+		return true
+	if state.round_number < 2:
+		return false
+	for event in state.event_log:
+		if int(event.payload.get("round",-1)) != state.round_number - 1:
+			continue
+		if trigger == "block" and event.target_id == source_id and String(event.result.get("outcome","")) in ["manual_block","auto_block"]:
+			return true
+		if trigger == "dodge" and event.target_id == source_id and String(event.result.get("outcome","")) == "dodge":
+			return true
+		if trigger == "crit" and event.source_id == source_id and event.kind == CombatEvent.Kind.ATTACK and bool(event.result.get("critical",false)):
+			return true
+		if trigger == "damage_dealt" and event.source_id == source_id and event.kind == CombatEvent.Kind.DAMAGE and int(event.result.get("final_damage",0)) > 0:
+			return true
+		if trigger == "damage_taken" and event.target_id == source_id and event.kind == CombatEvent.Kind.DAMAGE and int(event.result.get("final_damage",0)) > 0:
+			return true
+	return false
+
+static func action_point_cost(definition: Dictionary, source: CombatantState) -> int:
+	if bool(definition.get("consume_all_ap",false)):
+		return source.action_points
+	return maxi(0,int(definition.get("ap_cost",0)))
+
+static func can_pay_action_points(definition: Dictionary, source: CombatantState) -> bool:
+	if bool(definition.get("consume_all_ap",false)):
+		return source.action_points >= maxi(0,int(definition.get("min_ap_cost",0)))
+	return source.action_points >= maxi(0,int(definition.get("ap_cost",0)))
+
 static func normalized_definition(ability_id: String, definition: Dictionary) -> Dictionary:
 	var normalized := definition.duplicate(true)
 	normalized["ability_id"] = ability_id
@@ -25,6 +56,12 @@ static func normalized_definition(ability_id: String, definition: Dictionary) ->
 	normalized["two_zone_hit_modifier"] = float(definition.get("two_zone_hit_modifier", -50.0))
 	normalized["uses_magic_hit"] = bool(definition.get("uses_magic_hit", false))
 	normalized["magic_hit_modifier"] = float(definition.get("magic_hit_modifier", 0.0))
+	normalized["is_counterattack_abi"] = bool(definition.get("is_counterattack_abi", false))
+	normalized["trigger_previous_round"] = String(definition.get("trigger_previous_round", ""))
+	normalized["ap_gain"] = maxi(0,int(definition.get("ap_gain", 0)))
+	normalized["ap_cost"] = maxi(0,int(definition.get("ap_cost", 0)))
+	normalized["consume_all_ap"] = bool(definition.get("consume_all_ap", false))
+	normalized["min_ap_cost"] = maxi(0,int(definition.get("min_ap_cost", 0)))
 	normalized["engagement"] = definition.get("engagement", {}).duplicate(true) if definition.get("engagement", {}) is Dictionary else {}
 	var components:Array = definition.get("components", []).duplicate(true) if definition.get("components", []) is Array else []
 	if components.is_empty() and (definition.has("damage") or definition.has("damage_type")):
@@ -45,6 +82,22 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 	if not ["SINGLE","ALL_MELEE","ALL_RANGED","ALL_ENEMIES","RANDOM_N","TARGET_ADJACENT"].has(String(normalized.get("target_scope",""))): errors.append("invalid_target_scope")
 	var components:Array=normalized.get("components",[])
 	if components.is_empty(): errors.append("components_required")
+	var trigger := String(normalized.get("trigger_previous_round",""))
+	if not trigger.is_empty() and not ["block","dodge","crit","damage_dealt","damage_taken"].has(trigger):
+		errors.append("invalid_previous_round_trigger")
+	if int(definition.get("ap_gain",0)) < 0 or int(definition.get("ap_cost",0)) < 0 or int(definition.get("min_ap_cost",0)) < 0:
+		errors.append("invalid_ap_amount")
+	if bool(normalized.get("consume_all_ap",false)) and int(normalized.get("ap_cost",0)) > 0:
+		errors.append("ambiguous_ap_cost")
+	if bool(normalized.get("is_counterattack_abi",false)):
+		if not ["block","dodge","crit"].has(trigger):
+			errors.append("counter_abi_trigger_required")
+		if normalized.get("delivery_type","") != "MELEE" or normalized.get("target_scope","") != "SINGLE" or bool(normalized.get("uses_magic_hit",false)):
+			errors.append("counter_abi_requires_single_physical_melee")
+		if int(normalized.get("ap_cost",0)) <= 0 and not bool(normalized.get("consume_all_ap",false)):
+			errors.append("counter_abi_ap_cost_required")
+		if components.size()!=1 or not components[0] is Dictionary or String(components[0].get("kind",""))!="damage" or not CombatDamagePayload.is_physical_damage_type(String(components[0].get("damage_type","physical"))):
+			errors.append("counter_abi_physical_damage_only")
 	for raw_component in components:
 		if not raw_component is Dictionary:
 			errors.append("invalid_component")
@@ -81,6 +134,11 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"two_zone_hit_modifier": normalized["two_zone_hit_modifier"],
 		"uses_magic_hit": normalized["uses_magic_hit"],
 		"magic_hit_modifier": normalized["magic_hit_modifier"],
+		"is_counterattack_abi": normalized["is_counterattack_abi"],
+		"trigger_previous_round": normalized["trigger_previous_round"],
+		"ap_cost": normalized["ap_cost"],
+		"ap_gain": normalized["ap_gain"],
+		"consume_all_ap": normalized["consume_all_ap"],
 		"target_team": String(definition.get("target_team", "")),
 		"engagement": normalized["engagement"],
 		"rolls": definition.get("rolls", {}).duplicate(true) if definition.get("rolls", {}) is Dictionary else {},
