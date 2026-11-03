@@ -40,6 +40,14 @@ func _run() -> bool:
 		blocks.append(String(candidate_zones[index]))
 	var before_round := arena.state.round_number
 	var before_hp := player.hp
+	var missing_attacks:=arena.play_round([],blocks)
+	if bool(missing_attacks.get("ok",false)) or String(missing_attacks.get("reason",""))!="incomplete_attack_selection":
+		return _fail("missing_attack_selection_allowed")
+	var missing_defence:=arena.play_round(["head"],[])
+	if bool(missing_defence.get("ok",false)) or String(missing_defence.get("reason",""))!="invalid_block_zone_count":
+		return _fail("missing_defence_selection_allowed")
+	if arena.state.round_number!=before_round:
+		return _fail("incomplete_round_changed_state")
 	var invalid := arena.play_round(["invalid_zone"],blocks)
 	if bool(invalid.get("ok",false)):
 		return _fail("invalid_zone_accepted")
