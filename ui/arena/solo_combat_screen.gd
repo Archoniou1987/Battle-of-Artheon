@@ -222,16 +222,8 @@ func present(view: Dictionary) -> void:
 	potion_buttons.clear()
 	attack_buttons.clear()
 	block_buttons.clear()
-	# Shared Arena is persistent; never delete its square during snapshots.
-	var controls: Dictionary = snapshot.get("controls", {})
-	if not bool(controls.get("stunned", false)):
-		if int(controls.get("attack_count", 0)) > 0:
-			chosen_attack.append("chest")
-		var capacity := clampi(int(controls.get("block_capacity", 0)), 0, 5)
-		for zone in ["chest", "arms", "waist", "legs", "head"]:
-			if chosen_blocks.size() >= capacity:
-				break
-			chosen_blocks.append(zone)
+	# Shared Arena is persistent; all ordinary attacks and blocks require
+	# explicit player selections in each new round. No hidden defaults.
 	round_label.text = "Раунд %d" % (int(snapshot.get("round", 0)) + 1)
 	_build_face_to_face()
 	_build_roster()
@@ -326,7 +318,7 @@ func _add_bar(parent: Control, current: int, maximum: int, fill: Color, resource
 	holder.add_child(numbers)
 
 func _choose_ability(index: int) -> void:
-	if index < 0 or index >= abi_slots.size():
+	if index < 0 or index >= abi_slots.size() or bool(snapshot.get("finished",false)) or bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)):
 		return
 	var slot: Dictionary = abi_slots[index]
 	if not bool(slot.get("available", false)):
@@ -355,7 +347,7 @@ func set_ability_options(options: Array) -> void:
 	for i in range(abi_slots.size()):
 		var slot: Dictionary = abi_slots[i]
 		var id := String(slot.get("id", ""))
-		slot["available"] = not id.is_empty() and indexed.has(id) and bool(Dictionary(indexed.get(id, {})).get("available", false))
+		slot["available"] = not bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)) and not id.is_empty() and indexed.has(id) and bool(Dictionary(indexed.get(id, {})).get("available", false))
 		abi_slots[i] = slot
 	if not chosen_abi.is_empty():
 		var remains := false
@@ -368,7 +360,7 @@ func set_ability_options(options: Array) -> void:
 	if shared_arena != null:
 		for index in range(shared_arena.ability_buttons.size()):
 			var option: Dictionary = abi_slots[index] if index < abi_slots.size() else {}
-			shared_arena.ability_buttons[index].disabled = not bool(option.get("available", false))
+			shared_arena.ability_buttons[index].disabled = bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)) or not bool(option.get("available", false))
 	_update_selection()
 
 func _style_button(button: Button, selected: bool, accent: Color) -> void:
@@ -398,7 +390,7 @@ func _update_selection() -> void:
 		block_buttons[index].disabled = stunned or finished or int(controls.get("block_capacity", 0)) == 0
 	for index in range(abi_buttons.size()):
 		var slot: Dictionary = abi_slots[index] if index < abi_slots.size() else {}
-		abi_buttons[index].disabled = finished or not bool(slot.get("available", false))
+		abi_buttons[index].disabled = finished or stunned or not bool(slot.get("available", false))
 		_style_button(abi_buttons[index], not chosen_abi.is_empty() and chosen_abi == String(slot.get("id", "")), Color("#ac8edb"))
 	for index in range(potion_buttons.size()):
 		var availability: Array = snapshot.get("elixir_availability", [])
@@ -406,7 +398,7 @@ func _update_selection() -> void:
 		_style_button(potion_buttons[index], chosen_elixir == index, Color("#66ab8b"))
 	var count := int(controls.get("attack_count", 0))
 	var block_count := int(controls.get("block_capacity", 0))
-	var valid := bool(controls.get("ok", false)) and (stunned or (not chosen_attack.is_empty() and count > 0 and chosen_blocks.size() == block_count))
+	var valid := bool(controls.get("ok", false)) and (stunned or (chosen_attack.size() == count and chosen_blocks.size() == block_count))
 	if finished:
 		# Combat checkpoint is complete, but the world settlement is not
 		# published until the owning SoloLiveNpcCombat confirms it.
@@ -431,7 +423,7 @@ func _update_selection() -> void:
 			var id := String(slot.get("id", ""))
 			var active := not chosen_abi.is_empty() and chosen_abi == id
 			var button := shared_arena.ability_buttons[index]
-			button.disabled = finished or not bool(slot.get("available", false))
+			button.disabled = finished or stunned or not bool(slot.get("available", false))
 			button.set_pressed_no_signal(active)
 		for index in range(shared_arena.player_elixir_slots.size()):
 			var potion := shared_arena.player_elixir_slots[index]
@@ -460,10 +452,7 @@ func _submit() -> void:
 		"elixir_slot": chosen_elixir
 	}
 	if not bool(controls.get("stunned", false)):
-		var attacks: Array[String] = []
-		for i in range(int(controls.get("attack_count", 0))):
-			attacks.append(chosen_attack[mini(i, chosen_attack.size() - 1)])
-		orders["attack_zones"] = attacks
+		orders["attack_zones"] = chosen_attack.duplicate()
 		orders["block_zones"] = chosen_blocks.duplicate()
 	round_button.disabled = true
 	shared_arena.set_combat_ready(false)
