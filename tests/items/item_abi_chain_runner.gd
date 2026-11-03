@@ -14,7 +14,7 @@ func _init() -> void:
 	var equipped: bool = hero.equip("main_hand","ABI-SWORD-1",repository) and hero.equip("off_hand","ABI-DAGGER-1",repository) and hero.equip("chest","ABI-CHEST-1",repository) and hero.equip("head","ABI-HELM-1",repository)
 	var slots: Dictionary = EquipmentAbilityLoadout.build(hero, repository)
 	var active: Array[String] = EquipmentAbilityLoadout.active_abilities(hero, repository)
-	var weapon_ok: bool = slots.get("weapon", []) == ["TEST_ABI_FIREBALL","ABI002",null]
+	var weapon_ok: bool = slots.get("weapon", []) == ["TEST_ABI_FIREBALL","ABI002",null,null]
 	var chest_ok: bool = slots.get("chest", []) == ["ABI004"]
 	var head_ok: bool = slots.get("head", []) == ["ABI_HEAD_TEST"]
 	var slot_order_ok: bool = active == ["TEST_ABI_FIREBALL","ABI002","ABI004","ABI_HEAD_TEST"]
