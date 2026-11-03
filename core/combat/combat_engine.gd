@@ -265,6 +265,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 		return
 	if not _require_canonical(event, attacker) or not _require_canonical(event, defender):
 		return
+	if bool(event.payload.get("is_counterattack_abi",false)) and (String(event.payload.get("source_kind",""))!="ability" or not CombatDamagePayload.is_physical_damage_type(String(event.payload.get("damage_type","")))):
+		event.set_result("outcome","invalid_counter_abi")
+		return
 	if CombatTempoService.is_stunned(attacker, state.round_number):
 		event.set_result("outcome", "stunned")
 		return
