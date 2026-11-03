@@ -112,6 +112,8 @@ func _verify() -> void:
 		_check(CombatModifierService.modifier(target,effect_key,3) == -5.0,archetype+"_debuff_runtime_modifier")
 		# Round 3: all-AP ability must operate on the same target and effect.
 		player.action_points = 5
+		if archetype == "SWORD_CRIT":
+			session.ability_scheduler.definitions["ABI308"]["rolls"]["crit"] = 1
 		if archetype == "SWORD_DEF":
 			for zone in CombatEngine.HIT_ZONES:
 				player.armour[zone] = {"slashing":100.0,"piercing":100.0,"chopping":100.0,"blunt":100.0}
@@ -121,6 +123,11 @@ func _verify() -> void:
 		if archetype == "SWORD_DODGE":
 			_check(int(_eff(target,"EFF301").get("stacks",0)) == 5,"dodge_ult_five_stacks")
 		elif archetype == "SWORD_CRIT":
+			var bonus_recorded := false
+			for attack in _events(session,CombatEvent.Kind.ATTACK,"ABI308"):
+				if float(attack.payload.get("sword_crit_chance_pct",0)) == 50.0 and float(attack.payload.get("sword_crit_damage_pct",0)) == 125.0 and bool(attack.result.get("critical",false)):
+					bonus_recorded = true
+			_check(bonus_recorded,"crit_ult_five_ap_bonus_and_critical")
 			var bursts := 0
 			for event in _events(session,CombatEvent.Kind.DAMAGE,"","EFF301"):
 				if bool(event.payload.get("sword_burst_tick",false)):
