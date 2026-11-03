@@ -70,6 +70,8 @@ static func generate_sword(archetype_id: String, level: int, quality: String, se
 		"v12_pending_bonuses": pending_bonuses,
 		"v12_core_rolls": (variant.get("core_rolls", []) as Array).duplicate(true),
 		"v12_rarity_rolls": (variant.get("rolls", []) as Array).duplicate(true),
+		# ABI positions are genuine canonical IDs and survive normal save/restore.
+		"abilities": _physical_sword_abilities(archetype_id),
 		"v12_seed": seed_value
 	}
 	ItemDurabilityService.initialize_item(result, 100)
@@ -95,6 +97,13 @@ static func grant_sword(character: CharacterState, repository: ItemRepository, a
 		repository.remove_item(instance_id)
 		return {}
 	return item
+
+static func _physical_sword_abilities(archetype_id: String) -> Array[String]:
+	match archetype_id:
+		"SWORD_DEF": return ["ABI301","ABI302","ABI303","ABI306"]
+		"SWORD_DODGE": return ["ABI301","ABI302","ABI304","ABI307"]
+		"SWORD_CRIT": return ["ABI301","ABI302","ABI305","ABI308"]
+	return []
 
 static func _sword_name(archetype_id: String) -> String:
 	match archetype_id:
