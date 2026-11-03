@@ -381,7 +381,6 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 				return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(checked.get("reason","")),"queued_event_ids":[]}
 	var sequence_event_ids:Array[int]=[]
 	var attack_results:Array[Dictionary]=[]
-	var ap_group_id:=state.next_event_id
 	for attack_index in range(attacks.size()):
 		var request:Dictionary=attacks[attack_index]
 		var profile_id:=String(request.get("attack_profile_id","basic"))
@@ -389,8 +388,6 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 		var attack_rolls:Dictionary=Dictionary(request.get("rolls",{})).duplicate(true)
 		if request.has("zone"):
 			attack_rolls["zone"]=String(request.get("zone","chest"))
-		# All MH/OH and multi-hit constituents belong to one Base Attack AP group.
-		attack_rolls["ap_group_id"]=ap_group_id
 		var result:=queue_basic_attack(source_id,attack_rolls,profile_id,weapon_index)
 		attack_results.append(result)
 		for event_id in Array(result.get("event_ids",[])):
