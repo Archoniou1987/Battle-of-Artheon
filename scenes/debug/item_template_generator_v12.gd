@@ -22,6 +22,10 @@ var result_list: VBoxContainer
 var csv_button: Button
 var results: Array = []
 var last_config: Dictionary = {}
+var single_template_select: OptionButton
+var single_quality_select: OptionButton
+var single_level: SpinBox
+var single_seed: SpinBox
 
 func _ready() -> void:
 	_build()
@@ -98,7 +102,28 @@ func _build() -> void:
 	load_button.pressed.connect(_load_profile)
 	tools.add_child(load_button)
 	settings.add_child(_label("Сила атаки v1.2 пока лабораторный параметр: канонический PAR ещё не назначен. Сохранения персонажей не изменяются.",12,Color("#dfbd8e")))
-	var output := _page("2 · Результаты")
+	var single := _page("2 · Один шаблон")
+	single.add_child(_label("Точечная генерация одного реального архетипа через Core v1.2. Массовый режим не затрагивается.",13,Color("#c4d5e4")))
+	single_template_select = _option(single,"Шаблон / архетип",[
+		["Меч защитный Lv40","SWORD_DEF"],
+		["Меч уклонения Lv40","SWORD_DODGE"],
+		["Меч критический Lv40","SWORD_CRIT"]])
+	single_quality_select = _option(single,"Качество",[
+		["Белое","white"],["Зелёное","green"],["Синее","blue"],["Эпическое (фиолетовое)","purple"]])
+	_select_value(single_quality_select,"purple")
+	var single_inputs := HFlowContainer.new()
+	single.add_child(single_inputs)
+	single_level = _spin(single_inputs,"Уровень предмета",40,1,100)
+	single_seed = _spin(single_inputs,"Seed варианта",2026110401,1,999999999)
+	single_template_select.item_selected.connect(func(index: int) -> void:
+		single_seed.value = float(2026110401 + index))
+	var single_generate := Button.new()
+	single_generate.text = "Создать 1 предмет по v1.2"
+	single_generate.custom_minimum_size.y = 52
+	single_generate.pressed.connect(_generate_single_template)
+	single.add_child(single_generate)
+	single.add_child(_label("Lv40 допускает эпик. Урон, требования, CORE и PAR рассчитываются ТОЛЬКО действующим генератором v1.2; ABI/EFF физического меча пока проектные записи Project 25, не выдача в инвентарь.",12,Color("#dfbd8e")))
+	var output := _page("3 · Результаты")
 	result_status = _label("Генерация ещё не запускалась",13)
 	output.add_child(result_status)
 	output.add_child(_label("Численные статусы: подтверждённый эталон / интерполяция / предварительный экстремум. Подробнее — в CSV.",12,Color("#dfbd8e")))
@@ -204,6 +229,26 @@ func _config() -> Dictionary:
 		"quality":_pick(quality_select),"min_level":int(level_min.value),
 		"max_level":int(level_max.value),"count":int(count_spin.value),"seed":int(seed_spin.value),"group_qualities":true}
 
+func _generate_single_template() -> void:
+	var selected_id := _pick(single_template_select)
+	var quality := _pick(single_quality_select)
+	var level := int(single_level.value)
+	var config := {
+		"archetypes":[selected_id],
+		"school":"any",
+		"armor_slot":"any",
+		"weapon_hand":"MH",
+		"quality":quality,
+		"min_level":level,
+		"max_level":level,
+		"count":1,
+		"seed":int(single_seed.value),
+		"group_qualities":false,
+		"mode":"single_real_template_v12"
+	}
+	_run_generation(config)
+
+
 func _generate_bulk() -> void:
 	var config := {"archetypes":[],"school":"any","armor_slot":"any","weapon_hand":"any",
 		"exclude_oh":true,"quality":"any","min_level":1,"max_level":100,
@@ -229,7 +274,7 @@ func _run_generation(config: Dictionary) -> void:
 		int(result.get("group_count",results.size())),results.size(),int(config["seed"])]
 	status.text = "Готово · %d строк качества (в CSV все; на экране первые 50 шаблонов)" % results.size()
 	_render()
-	tabs.current_tab = 1
+	tabs.current_tab = 2
 
 func _render() -> void:
 	for node in result_list.get_children():
