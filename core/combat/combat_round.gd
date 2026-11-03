@@ -30,6 +30,19 @@ func lock_action(event: CombatEvent) -> void:
 func resolve(engine: CombatEngine) -> void:
 	if resolved:
 		return
+	# Counter ABI inherits the FIRST ordinary MH strike zone in the sealed round.
+	# The OH zone is never a fallback. No implicit chest target is permitted.
+	var mh_zone_by_source:Dictionary={}
+	for attack in locked_actions:
+		if attack.kind != CombatEvent.Kind.ATTACK or not bool(attack.payload.get("is_weapon_attack",false)):
+			continue
+		if int(attack.payload.get("weapon_index",-1))!=0 or int(attack.payload.get("hit_index",0))!=0:
+			continue
+		if not mh_zone_by_source.has(attack.source_id):
+			mh_zone_by_source[attack.source_id]=String(attack.payload.get("zone",""))
+	for action in locked_actions:
+		if action.kind==CombatEvent.Kind.ACTION and bool(action.payload.get("is_counterattack_abi",false)):
+			action.payload["counter_abi_mh_zone"]=String(mh_zone_by_source.get(action.source_id,""))
 	# Only instant ABI effects modify the conditions of this round's
 	# subsequent shared combat resolution.
 	for event in preparation_actions:
