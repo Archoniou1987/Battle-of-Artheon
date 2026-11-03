@@ -95,6 +95,9 @@ func _verify() -> void:
 		# without consuming it and snapshots its strength for two rounds.
 		player.action_points = 5
 		var third_abi := String(entry["abis"][2])
+		# Effect level is NOT character level. A Lv40 item may carry Lv5 EFF.
+		if archetype != "SWORD_DEF":
+			session.ability_scheduler.definitions[third_abi]["sword_eff_level"] = 5
 		var second := session.play_round(["chest"],["head","arms"],third_abi)
 		_check(bool(second.get("ok",false)),archetype+"_abi03_round")
 		var debuff := _eff(target,String(entry["third"]))
@@ -102,9 +105,11 @@ func _verify() -> void:
 		if not debuff.is_empty():
 			var effect_definition: Dictionary = debuff.get("definition",{})
 			var key := "physical_damage_outgoing_direct_pct" if archetype=="SWORD_DEF" else ("anti_dodge_direct_pct" if archetype=="SWORD_DODGE" else "anti_crit_direct_pct")
-			var expected := -5.0 if archetype=="SWORD_DEF" else -1.0
+			var expected := -5.0
 			_check(float(effect_definition.get(key,0.0)) == expected,archetype+"_debuff_snapshot")
 		_check(int(_eff(target,"EFF301").get("stacks",0)) == 1,archetype+"_bleed_not_consumed")
+		var effect_key := "physical_damage_outgoing_direct_pct" if archetype=="SWORD_DEF" else ("anti_dodge_direct_pct" if archetype=="SWORD_DODGE" else "anti_crit_direct_pct")
+		_check(CombatModifierService.modifier(target,effect_key,3) == -5.0,archetype+"_debuff_runtime_modifier")
 		# Round 3: all-AP ability must operate on the same target and effect.
 		player.action_points = 5
 		if archetype == "SWORD_DEF":
@@ -129,5 +134,96 @@ func _verify() -> void:
 					ult_attack = true
 			_check(ult_attack,"def_ult_uses_all_5_zone_armour")
 		print("SWORD_V12_ARCHETYPE=",archetype," final_bleed=",_eff(target,"EFF301").get("stacks",0)," ap=",player.action_points)
+	_test_aoe_and_hit_gates()
 	print("SWORD_V12_ABI_EFF=",("PASS" if problems.is_empty() else "FAIL")," problems=",problems)
 	quit(0 if problems.is_empty() else 1)
+
+func _test_session(archetype: String, seed_value: int) -> ArenaCombatSession:
+	var hero := CharacterState.new("AOE_"+archetype,"AOE Hero",40)
+	for key in ["PAR001","PAR002","PAR003"]:
+		hero.progression.base_stats[key] = 50
+	var repo := ItemRepository.new()
+	var item := ItemV12InstanceFactory.grant_sword(hero,repo,archetype,40,"purple",seed_value)
+	if item.is_empty() or not hero.equip("main_hand",String(item.get("instance_id","")),repo):
+		_check(false,"aoe_fixture_"+archetype)
+		return null
+	var session := ArenaCombatSession.new(hero,repo)
+	session.fighter(true).hp = 100000
+	session.fighter(true).max_hp = 100000
+	session.fighter(true).combat_stats["hit_chance_rating_percent"] = 100.0
+	session.fighter(false).hp = 100000
+	session.fighter(false).max_hp = 100000
+	session.fighter(false).combat_stats["dodge_rating_percent"] = 0.0
+	session.fighter(false).combat_stats["shield_auto_block_rating_percent"] = 0.0
+	session.fighter(false).combat_loadout["can_auto_block"] = false
+	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = []
+	return session
+
+func _extra_enemy(session: ArenaCombatSession, index: int) -> CombatantState:
+	var id := "SWORD_EXTRA_"+str(index)
+	var character := CharacterState.new(id,id,40)
+	var fighter := CharacterCombatBuilder.build(character,ItemRepository.new(),{"health":100000,"mana":0})
+	session.state.add_combatant(fighter)
+	_check(session.orchestrator.group_state.add_member("enemy",id),"aoe_group_"+id)
+	session.orchestrator.zone_state.set_zone(id,CombatZoneState.ZONE_2)
+	fighter.combat_stats["dodge_rating_percent"] = 0.0
+	fighter.combat_stats["shield_auto_block_rating_percent"] = 0.0
+	fighter.combat_loadout["can_auto_block"] = false
+	return fighter
+
+func _test_aoe_and_hit_gates() -> void:
+	var session := _test_session("SWORD_DEF",202611041)
+	if session == null:
+		return
+	var other1 := _extra_enemy(session,1)
+	var other2 := _extra_enemy(session,2)
+	var target := session.fighter(false)
+	# A 0-HP target remains selectable until end-of-round death finalization.
+	other2.hp = 0
+	var actor := session.fighter(true)
+	actor.action_points = 0
+	var ability: Dictionary = session.ability_scheduler.definitions["ABI302"]
+	ability["rolls"] = {"hit":1,"dodge":100,"auto_block":100,"crit":100,"block_crush":100}
+	var result := session.play_round(["chest"],["head","arms"],"ABI302")
+	_check(bool(result.get("ok",false)),"abi02_3_target_cast")
+	var hits := _events(session,CombatEvent.Kind.ATTACK,"ABI302")
+	_check(hits.size()==3,"abi02_3_independent_attack_events")
+	for enemy in [target,other1,other2]:
+		_check(int(_eff(enemy,"EFF301").get("stacks",0))==1,"abi02_bleed_each_"+enemy.combatant_id)
+	_check(other2.is_death_finalized(),"abi02_zero_hp_death_at_end_of_round")
+	var rewarded := false
+	for event in _events(session,CombatEvent.Kind.ACTION,"ABI302"):
+		if bool(event.result.get("sword_hit_ap_awarded",false)) and int(event.result.get("ap_gained_on_hit",-1)) == 2:
+			rewarded = true
+	_check(rewarded,"abi02_exactly_two_ap_total")
+	# CD 3 means no re-cast in the following round, even with available AP.
+	session.orchestrator.begin_round()
+	_check(session.ability_scheduler.cast_event(session.state,session.player_id,ArenaCombatSession.ENEMY_ID,"ABI302")==null,"abi02_cooldown")
+	var miss := _test_session("SWORD_DEF",202611041)
+	if miss == null:
+		return
+	miss.fighter(true).action_points = 0
+	miss.fighter(true).combat_stats["hit_chance_rating_percent"] = -100.0
+	var ability_miss: Dictionary = miss.ability_scheduler.definitions["ABI302"]
+	ability_miss["rolls"] = {"hit":100,"dodge":100,"auto_block":100,"crit":100}
+	var missed := miss.play_round(["chest"],["head","arms"],"ABI302")
+	_check(bool(missed.get("ok",false)),"abi02_miss_cast_processed")
+	_check(_eff(miss.fighter(false),"EFF301").is_empty(),"abi02_miss_no_eff")
+	_check(miss.fighter(true).action_points == 0,"abi02_miss_no_ap")
+	# Up to five targets for the AP-based dodge finisher; each receives
+	# exactly min(AP, max_stacks) bleeding stacks on successful hit.
+	var dodge := _test_session("SWORD_DODGE",202611042)
+	if dodge == null:
+		return
+	var all_targets: Array[CombatantState] = [dodge.fighter(false)]
+	for i in range(4):
+		all_targets.append(_extra_enemy(dodge,10+i))
+	dodge.fighter(true).action_points = 5
+	var dodge_ability: Dictionary = dodge.ability_scheduler.definitions["ABI307"]
+	dodge_ability["rolls"] = {"hit":1,"dodge":100,"auto_block":100,"crit":100}
+	var aoe := dodge.play_round(["chest"],["head","arms"],"ABI307")
+	_check(bool(aoe.get("ok",false)),"abi04_dodge_5target_cast")
+	_check(_events(dodge,CombatEvent.Kind.ATTACK,"ABI307").size()==5,"abi04_dodge_5_independent_hits")
+	for enemy in all_targets:
+		_check(int(_eff(enemy,"EFF301").get("stacks",0))==5,"abi04_dodge_5stacks_"+enemy.combatant_id)
+	print("SWORD_V12_AOE_TEST=",("PASS" if problems.is_empty() else "FAIL"))
