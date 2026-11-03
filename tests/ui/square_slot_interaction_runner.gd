@@ -68,8 +68,10 @@ func _run() -> void:
 		check(not head._empty_background.visible and not head._slot_background.visible, "baked_empty_art_hides_individual_sprites")
 		check(head.tooltip_text.contains("пусто"), "baked_slot_keeps_semantics")
 		head.set_item({"instance_id":"TEST_ICON","name":"Test Helmet","rarity":"purple"}, "Голова")
+		# Approved rarity artwork is supplied by the 3x2 PNG atlas, not
+		# a legacy StyleBoxFlat colour border. The empty slot has no rarity image.
 		var rarity_box := head.get_theme_stylebox("normal") as StyleBoxFlat
-		check(rarity_box != null and rarity_box.border_width_left > 0 and rarity_box.border_color == Color(ItemIcon.RARITY_COLORS["purple"]), "rarity_border_only_on_item")
+		check(rarity_box != null and rarity_box.border_width_left == 0 and head._rarity_background.visible and head._rarity_background.texture != null, "rarity_border_only_on_item")
 		head.set_item({}, "Голова")
 		head.set_empty_art_in_background(false)
 		if hover != null:
