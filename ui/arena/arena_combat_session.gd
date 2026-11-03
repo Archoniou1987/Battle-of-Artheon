@@ -136,11 +136,14 @@ func effect_view(is_player: bool) -> Dictionary:
 	return {"buffs":beneficial,"debuffs":harmful}
 
 func player_attack_count() -> int:
-	var sequence: Dictionary = commands.default_weapon_attack_sequence(player_id)
+	return _fighter_attack_count(player_id)
+
+func _fighter_attack_count(fighter_id: String) -> int:
+	var sequence: Dictionary = commands.default_weapon_attack_sequence(fighter_id)
 	var count := 0
 	for raw_attack in Array(sequence.get("attacks", [])):
 		var attack: Dictionary = raw_attack
-		for profile in WeaponAttackProfile.all(fighter(true)):
+		for profile in WeaponAttackProfile.all(state.get_combatant(fighter_id)):
 			if int(profile.get("weapon_index", -1)) == int(attack.get("weapon_index", -2)) and String(profile.get("id", "")) == String(attack.get("attack_profile_id", "")):
 				count += int(profile.get("hit_count", 1))
 				break
@@ -337,8 +340,11 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		var player_abi_check:=_validate_ability(player_id,ability_id,next_round)
 		if not bool(player_abi_check.get("ok",false)):
 			return player_abi_check
+	var npc_targets:Array[String]=[]
 	if not enemy_stunned:
-		var enemy_plan:=_prepare_attacks(ENEMY_ID,["chest"])
+		for i in range(_fighter_attack_count(ENEMY_ID)):
+			npc_targets.append("chest")
+		var enemy_plan:=_prepare_attacks(ENEMY_ID,npc_targets)
 		if not bool(enemy_plan.get("ok",false)):
 			return {"ok":false,"reason":String(enemy_plan.get("reason","enemy_attack_rejected"))}
 	# All inputs are snapshotted before any engine event is resolved. No subsequent
@@ -360,7 +366,7 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 			if not bool(ability_result.get("ok",false)):
 				return {"ok":false,"reason":String(ability_result.get("reason","ability_rejected"))}
 	if not enemy_stunned:
-		var enemy_result := _queue_attacks(ENEMY_ID, ["chest"])
+		var enemy_result := _queue_attacks(ENEMY_ID, npc_targets)
 		if not bool(enemy_result.get("ok", false)):
 			return {"ok": false, "reason": String(enemy_result.get("reason", "enemy_attack_rejected"))}
 		# NPC uses the same one-ABI limit and canonical equipped loadout.
