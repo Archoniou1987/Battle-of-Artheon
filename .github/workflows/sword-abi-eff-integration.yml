@@ -1,0 +1,32 @@
+name: Physical Sword ABI EFF Integration
+on:
+  push:
+    branches: [feature/v12-physical-sword-abi-eff-integration]
+  workflow_dispatch:
+jobs:
+  sword-abi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import Godot
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Check sword ABI service script
+        run: timeout 120s godot --headless --path . --check-only --script res://core/abilities/sword_abi_combat_service.gd
+      - name: Check CombatEngine
+        run: timeout 120s godot --headless --path . --check-only --script res://core/combat/combat_engine.gd
+      - name: Check round and scheduler
+        run: |
+          timeout 120s godot --headless --path . --check-only --script res://core/combat/combat_round.gd
+          timeout 120s godot --headless --path . --check-only --script res://core/abilities/ability_scheduler.gd
+      - name: Existing fireball EFF contract
+        run: timeout 120s godot --headless --path . --script res://tests/combat/abi003_fireball_runner.gd
+      - name: Existing live item inventory
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_v12_live_inventory_runner.gd
+      - name: Physical Sword ABI/EFF battle integration
+        run: timeout 120s godot --headless --path . --script res://tests/combat/sword_v12_abi_eff_runner.gd
