@@ -91,6 +91,8 @@ var external_effects: Dictionary = {}
 var effect_detail_labels: Dictionary = {}
 var selected_ability := ""
 var ability_buttons: Array[Button] = []
+var ability_strip: HBoxContainer
+var ability_scroll: ScrollContainer
 var combat_session: ArenaCombatSession
 var test_player_level := 1
 var test_enemy_level := 1
@@ -477,24 +479,50 @@ func _build_square() -> void:
 	arena_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_fighter(Vector2(4, 8), true)
 	_build_fighter(Vector2(242, 8), false)
-	var abilities := HBoxContainer.new()
-	abilities.name = "AbilitySlots"
-	# Permanent 5-square system strip: MH 1-3, Chest 4, Head 5.
-	abilities.position = Vector2((ARENA_LOGICAL_EXTENT - 5.0 * 34.0) / 2.0, 389)
-	abilities.add_theme_constant_override("separation", 0)
-	square_content.add_child(abilities)
-	for index in range(5):
-		# Every ABI lives in a fixed 34x34 cell. Long IDs/names must never
-		# expand the HBoxContainer and misalign the five approved square slots.
+	# Reuse the existing two horizontal bands: End Turn above, ABI below.
+	# ScrollContainer stays within the 480x480 square even for 10+ abilities.
+	ability_scroll = ScrollContainer.new()
+	ability_scroll.name = "AbilityScroll"
+	ability_scroll.position = Vector2(20, 423)
+	ability_scroll.size = Vector2(440, 42)
+	ability_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	ability_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	square_content.add_child(ability_scroll)
+	ability_strip = HBoxContainer.new()
+	ability_strip.name = "AbilitySlots"
+	ability_strip.custom_minimum_size = Vector2(440, 34)
+	ability_strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ability_strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	ability_strip.add_theme_constant_override("separation", 0)
+	ability_scroll.add_child(ability_strip)
+	_ensure_ability_buttons(EquipmentAbilityLoadout.MAX_WEAPON_ABILITIES + 2)
+	_build_resource_display(true)
+	_build_resource_display(false)
+	round_button = Button.new()
+	round_button.text = "ЗАВЕРШИТЬ РАУНД"
+	round_button.position = Vector2(90, 389)
+	round_button.custom_minimum_size = Vector2(300, 34)
+	round_button.disabled = true
+	round_button.tooltip_text = "Ожидание боевого сеанса"
+	round_button.pressed.connect(_request_end_turn)
+	if not external_combat_mode:
+		end_turn_requested.connect(_play_combat_round)
+	square_content.add_child(round_button)
+	# Decorative skin kept in API for compatibility, but not used until
+	# the final game button artwork is approved.
+	round_button_art = null
+
+func _ensure_ability_buttons(count: int) -> void:
+	while ability_buttons.size() < count:
+		var index := ability_buttons.size()
 		var cell := Control.new()
 		cell.name = "ABICell%d" % (index + 1)
 		cell.custom_minimum_size = Vector2(34, 34)
-		abilities.add_child(cell)
+		ability_strip.add_child(cell)
 		var button := Button.new()
 		button.name = "ABI%d" % (index + 1)
 		button.clip_text = true
 		button.add_theme_font_size_override("font_size", 8)
-		button.text = ""
 		SquareSlotFeedback.style_abi_square(button)
 		button.tooltip_text = SquareUiGeometry.abi_source(index) + " — пусто"
 		button.toggle_mode = true
@@ -504,32 +532,19 @@ func _build_square() -> void:
 		button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		SquareSlotFeedback.attach(button, "ability")
 		ability_buttons.append(button)
-	_build_resource_display(true)
-	_build_resource_display(false)
-	round_button = Button.new()
-	round_button.text = "ПРОВЕСТИ РАУНД"
-	round_button.position = Vector2(90, 423)
-	round_button.custom_minimum_size = Vector2(300, 42)
-	round_button.disabled = true # Enabled by the combat session controller.
-	round_button.tooltip_text = "Ожидание боевого сеанса"
-	round_button.pressed.connect(_request_end_turn)
-	if not external_combat_mode:
-		end_turn_requested.connect(_play_combat_round)
-	square_content.add_child(round_button)
-	var invisible_button_style := StyleBoxEmpty.new()
-	for button_state in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
-		round_button.add_theme_stylebox_override(button_state, invisible_button_style)
-	round_button_art = TextureRect.new()
-	round_button_art.position = round_button.position
-	round_button_art.size = Vector2(300, 42)
-	round_button_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	round_button_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	round_button_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	square_content.add_child(round_button_art)
-	# Cosmetic END TURN skins; the first skin is the default.
-	# Until the transparent PNGs are uploaded, keep the original button.
-	_apply_end_turn_skin(1)
-	SquareSlotFeedback.attach_art(round_button, round_button_art)
+
+func _layout_ability_strip(raw_options: Array) -> void:
+	_ensure_ability_buttons(raw_options.size())
+	var occupied := 0
+	for index in range(ability_buttons.size()):
+		var option: Dictionary = raw_options[index] if index < raw_options.size() and raw_options[index] is Dictionary else {}
+		var enabled_slot := not String(option.get("id", "")).is_empty()
+		ability_buttons[index].get_parent().visible = enabled_slot
+		if enabled_slot:
+			occupied += 1
+	# The HBox centres 1..N equipped abilities; its overflow scrolls without
+	# changing square geometry, button indices or underlying item slot IDs.
+	ability_strip.custom_minimum_size.x = maxf(440.0, float(occupied * 34))
 
 
 ## Skin IDs follow atlas reading order: left-to-right, top-to-bottom.
@@ -537,27 +552,9 @@ func _build_square() -> void:
 func set_end_turn_skin(skin_id: int) -> void:
 	_apply_end_turn_skin(skin_id)
 
-func _apply_end_turn_skin(skin_id: int) -> void:
-	if round_button == null:
-		return
-	if end_turn_atlas == null:
-		if not ResourceLoader.exists(END_TURN_ATLAS_PATH):
-			return
-		end_turn_atlas = load(END_TURN_ATLAS_PATH) as Texture2D
-	if end_turn_atlas == null:
-		return
-	var selected_id: int = clampi(skin_id, 1, END_TURN_SKIN_COUNT)
-	var cell_width := float(end_turn_atlas.get_width()) / 2.0
-	var cell_height := float(end_turn_atlas.get_height()) / 5.0
-	var index := selected_id - 1
-	var texture := AtlasTexture.new()
-	texture.atlas = end_turn_atlas
-	texture.region = Rect2((index % 2) * cell_width, floori(float(index) / 2.0) * cell_height, cell_width, cell_height)
-	texture.filter_clip = true
-	if round_button_art != null:
-		round_button_art.texture = texture
-	round_button.text = "" # END TURN is baked into the atlas artwork.
-	round_button.tooltip_text = "END TURN · скин %d" % selected_id
+func _apply_end_turn_skin(_skin_id: int) -> void:
+	# The atlas art is deliberately absent in this compact, text-only layout.
+	pass
 
 func _build_fighter(origin: Vector2, is_player: bool) -> void:
 	var panel := PanelContainer.new()
@@ -987,6 +984,7 @@ func _refresh_ability_buttons() -> void:
 	if combat_session == null:
 		return
 	var options:=combat_session.player_ability_options()
+	_layout_ability_strip(options)
 	var selected_still_valid:=false
 	for index in range(ability_buttons.size()):
 		var button:=ability_buttons[index]
@@ -1516,6 +1514,7 @@ func present_external(view: Dictionary) -> void:
 				var item: Dictionary = raw_gear.get("item", {})
 				(player_slots[slot] as ItemIcon).set_item(item, slot, bool(raw_gear.get("active", false)))
 	var abilities: Array = view.get("ability_slots", [])
+	_layout_ability_strip(abilities)
 	for index in range(ability_buttons.size()):
 		var option: Dictionary = abilities[index] if index < abilities.size() and abilities[index] is Dictionary else {}
 		var button := ability_buttons[index]
