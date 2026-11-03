@@ -16,7 +16,7 @@ func _init() -> void:
 		_finish(false,"fixture_equip_slots")
 		return
 	var session := ArenaCombatSession.new(hero,repository)
-	if session.player_ability_slots.size()!=5 or String(session.player_ability_slots[0])!="ABI003":
+	if session.player_ability_slots.size()!=6 or String(session.player_ability_slots[0])!="ABI003":
 		_finish(false,"mh_abi_slot")
 		return
 	var active: Array = Array(session.ability_scheduler.loadouts.get(session.player_id,[]))
