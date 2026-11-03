@@ -46,6 +46,28 @@ func _verify() -> void:
 			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
 				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
+	# Three approved physical Lv40 sword templates: deterministic single purple roll.
+	for test in [
+		{"id":"SWORD_DEF","seed":202611041},
+		{"id":"SWORD_DODGE","seed":202611042},
+		{"id":"SWORD_CRIT","seed":202611043}
+	]:
+		var single_config := {"archetypes":[String(test["id"])],"weapon_hand":"MH",
+			"min_level":40,"max_level":40,"quality":"purple",
+			"count":1,"seed":int(test["seed"]),"group_qualities":false}
+		var single := generator.generate(single_config)
+		if not bool(single.get("ok",false)) or int(single.get("generated",0)) != 1:
+			problems.append("Single Lv40 epic template failed: "+String(test["id"]))
+			continue
+		var one: Dictionary = single["rows"][0]
+		if String(one["archetype_id"]) != String(test["id"]) or String(one["slot"]) != "MH" or int(one["level"]) != 40 or String(one["quality"]) != "purple":
+			problems.append("Single template selectors ignored: "+String(test["id"]))
+		var one_variant: Dictionary = one["variant"]
+		if (one_variant.get("core_rolls",[]) as Array).size() != 1 or (one_variant.get("rolls",[]) as Array).size() != 3:
+			problems.append("Lv40 epic must have 1 CORE + 3 rarity PAR: "+String(test["id"]))
+		var again := generator.generate(single_config)
+		if JSON.stringify(single.get("rows",[])) != JSON.stringify(again.get("rows",[])):
+			problems.append("Single template seed is not deterministic: "+String(test["id"]))
 	# Attack power is an integer rating; convert to percent by item level.
 	var low_attack := generator._affix_amount("attack",30,"Нагрудник",1.25,1,{"defence_pct":80,"attack_pct":20})
 	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or generator.attack_rating_to_pct(low_attack,30) <= 0.0:
