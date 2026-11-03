@@ -40,7 +40,7 @@ static func ability_attack_payload(parent:CombatEvent, component:Dictionary, amo
 		"two_zone_hit_modifier": float(parent.payload.get("two_zone_hit_modifier", -50.0)),
 		"generates_ap": false,
 		# Conditional ABI counterattack: normal Hit roll, no active Dodge/Block.
-		"is_counterattack_abi": bool(component.get("is_counterattack_abi", parent.payload.get("is_counterattack_abi", false))),
+		"is_counterattack_abi": bool(parent.payload.get("is_counterattack_abi", false)) and is_physical_damage_type(damage_type),
 		"aoe_scale": scale
 	}
 	payload.merge(defence_flags(damage_type), true)
