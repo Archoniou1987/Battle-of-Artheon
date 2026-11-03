@@ -117,6 +117,15 @@ func _verify() -> void:
 		for line in (rv["rolls"] as Array) + (rv["core_rolls"] as Array):
 			if String(Dictionary(line).get("category","")) == "primary" or String(Dictionary(line).get("par","")) == "PAR012":
 				problems.append("Ring has forbidden primary attribute or HP regeneration")
+	# General crit and anti-crit apply to physical and magical builds alike.
+	var stat_ids: Dictionary = Dictionary(generator.rules.get("stat_par",{}))
+	if String(stat_ids.get("crit","")) != "PAR033" or String(stat_ids.get("anticrit","")) != "PAR034":
+		problems.append("Shared crit/anticrit IDs must remain PAR033/PAR034")
+	# Lv100 purple standard-slot specialist: ten counterstrike affixes ~= 50%.
+	var reference_counter := generator.nominal_affix("counter",100,"OH",1.5)
+	var counter_pct := ItemTemplateGeneratorV12.rating_to_pct(reference_counter*10.0,100)
+	if absf(counter_pct-50.0) > 0.1:
+		problems.append("Counterstrike specialist 50% Lv100 anchor failed")
 	# Fixed combat mana regeneration is fractional, never rounded up to +1.
 	for level in [30,60,90,100]:
 		var expected_regen: float = float({30:4.0,60:9.0,90:13.5,100:15.0}[level])
