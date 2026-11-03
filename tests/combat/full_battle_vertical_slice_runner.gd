@@ -40,7 +40,7 @@ func _init() -> void:
 	player.mana = 100
 	player.max_mana = 100
 	_check(session.player_attack_count() == 2, "two_independent_weapon_attacks")
-	_check(session.player_ability_slots.size() == 5, "five_ability_slots")
+	_check(session.player_ability_slots.size() == 6, "six_ability_slots")
 	_check(String(session.player_ability_slots[0]) == "ABI003", "main_hand_abi")
 	_check(not CombatDiagnostics.combatant_trace(player,0).get("combat_stats",{}).is_empty(), "par_diagnostic_readout")
 
