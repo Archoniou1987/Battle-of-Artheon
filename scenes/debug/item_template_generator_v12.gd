@@ -318,13 +318,15 @@ func _format_total_bonus(par: String, rating: float, level: int) -> String:
 		category = "dodge"
 	elif par == "PAR033":
 		category = "crit"
+	elif par == "PAR035":
+		category = "crit_damage"
 	elif par == "V12_ATTACK_POWER":
 		category = "attack"
 	elif par == "PAR190":
 		category = "magic_res"
 	elif par == "PAR135":
 		category = "reduce"
-	if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR075","PAR126","PAR135","PAR164","PAR190","V12_ATTACK_POWER"].has(par):
+	if ["PAR030","PAR031","PAR032","PAR033","PAR034","PAR035","PAR072","PAR075","PAR126","PAR127","PAR128","PAR129","PAR130","PAR131","PAR132","PAR133","PAR134","PAR135","PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170","PAR190","V12_ATTACK_POWER"].has(par):
 		var pct := ItemTemplateGeneratorV12.rating_to_pct(rating,level)
 		if category.is_empty():
 			return label + " (%.2f%%)" % pct
