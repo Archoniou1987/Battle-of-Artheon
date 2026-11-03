@@ -114,9 +114,9 @@ func _build() -> void:
 	var single_inputs := HFlowContainer.new()
 	single.add_child(single_inputs)
 	single_level = _spin(single_inputs,"Уровень предмета",40,1,100)
-	single_seed = _spin(single_inputs,"Seed варианта",2026110401,1,999999999)
+	single_seed = _spin(single_inputs,"Seed варианта",202611041,1,999999999)
 	single_template_select.item_selected.connect(func(index: int) -> void:
-		single_seed.value = float(2026110401 + index))
+		single_seed.value = float(202611041 + index))
 	var single_generate := Button.new()
 	single_generate.text = "Создать 1 предмет по v1.2"
 	single_generate.custom_minimum_size.y = 52
