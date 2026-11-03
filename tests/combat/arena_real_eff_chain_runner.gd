@@ -55,11 +55,11 @@ func _init() -> void:
 	fireball["magic_hit_roll"] = 1
 	session.ability_scheduler.definitions["ABI003"] = fireball
 	var options: Array[Dictionary] = session.player_ability_options()
-	_check(options.size() == 5, "five_real_abi_slots")
+	_check(options.size() == 6, "six_real_abi_slots")
 	_check(String(options[0].get("id","")) == "ABI003", "weapon_abi003")
-	_check(String(options[3].get("id","")) == "ABI004", "chest_abi004")
+	_check(String(options[4].get("id","")) == "ABI004", "chest_abi004")
 	_check(bool(options[0].get("available",false)), "fireball_available")
-	_check(bool(options[3].get("available",false)), "healing_available")
+	_check(bool(options[4].get("available",false)), "healing_available")
 	if not failures.is_empty():
 		_finish()
 		return
