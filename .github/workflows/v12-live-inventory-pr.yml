@@ -1,0 +1,28 @@
+name: v1.2 Live Inventory Integration Test
+on:
+  push:
+    branches: [feature/v12-live-item-inventory-20261103]
+  workflow_dispatch:
+jobs:
+  v12-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import Godot classes and scenes
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Check item factory
+        run: timeout 120s godot --headless --path . --check-only --script res://core/items/item_v12_instance_factory.gd
+      - name: Check inventory screen
+        run: timeout 120s godot --headless --path . --check-only --script res://ui/inventory/inventory_screen.gd
+      - name: Test real v1.2 items in inventory
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_v12_live_inventory_runner.gd
+      - name: Check existing v1.2 laboratory
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_template_generator_v12_runner.gd
+      - name: Check canonical inventory ownership
+        run: timeout 120s godot --headless --path . --script res://tests/items/character_ownership_chain_runner.gd
