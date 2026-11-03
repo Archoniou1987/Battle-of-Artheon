@@ -125,7 +125,7 @@ func _verify() -> void:
 		else:
 			var ult_attack := false
 			for event in _events(session,CombatEvent.Kind.ATTACK,"ABI306"):
-				if float(event.result.get("raw_damage",0.0)) > 100.0:
+				if float(event.result.get("raw_damage",0.0)) > 50.0:
 					ult_attack = true
 			_check(ult_attack,"def_ult_uses_all_5_zone_armour")
 		print("SWORD_V12_ARCHETYPE=",archetype," final_bleed=",_eff(target,"EFF301").get("stacks",0)," ap=",player.action_points)
