@@ -72,6 +72,9 @@ func _resolve_action(event: CombatEvent) -> void:
 	if CombatTempoService.is_stunned(source, state.round_number):
 		event.set_result("outcome", "stunned")
 		return
+	if SwordAbiCombatService.is_sword_ability(String(event.payload.get("ability_id",""))):
+		SwordAbiCombatService.dispatch(self,event)
+		return
 	var target_ids := _valid_action_targets(event)
 	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
@@ -343,20 +346,21 @@ func _resolve_attack(event: CombatEvent) -> void:
 				event.set_result("outcome", "auto_block"); return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
-	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus, CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
+	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
-	var raw_damage := float(event.payload.get("raw_damage", 0.0))
+	var raw_damage := float(event.payload.get("raw_damage", 0.0)) + float(event.payload.get("sword_mh_bonus_flat",0.0))
 	# PAR053–056: physical damage bonus applies only to the matching damage type.
 	# Percent values are stored as percentages (e.g. 30 means +30%).
 	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
 	if physical_type in ["piercing", "slashing", "chopping", "blunt"]:
 		var physical_bonus := CombatModifierService.effective_stat(attacker, "physical_damage_" + physical_type + "_pct", state.round_number)
 		raw_damage *= maxf(0.0, 1.0 + physical_bonus / 100.0)
+		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.modifier(attacker,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
 	if CombatDamagePayload.is_magic_damage_type(String(event.payload.get("damage_type", ""))) and not bool(event.payload.get("magic_rating_applied", false)):
 		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(attacker, "magic_damage_rating", state.round_number) / 100.0)
 	if is_crit:
 		var critical_rating_bonus := CombatModifierService.effective_percent(attacker, "crit_damage_rating", state.round_number)
-		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5)) + critical_rating_bonus / 100.0
+		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5)) + (critical_rating_bonus + float(event.payload.get("sword_crit_damage_pct",0.0))) / 100.0
 	if _event_bypasses_physical_mitigation(event):
 		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, CombatDamagePayload.direct_damage_payload(event, String(event.payload.get("damage_type", "physical")), raw_damage, "ability"), event.event_id)
 		state.queue_event(ability_damage)
@@ -385,6 +389,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
+	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 
@@ -400,6 +405,15 @@ func _resolve_damage(event: CombatEvent) -> void:
 		return
 	var amount := float(event.payload.get("amount", 0.0))
 	var damage_type := String(event.payload.get("damage_type", ""))
+	if String(event.payload.get("effect_id","")) == SwordAbiCombatService.BLEED and String(event.payload.get("source","")) == "effect":
+		# Bleeding ticks (including the ABI308 burst) ignore hit/dodge/crit,
+		# but still pass the victim's physical protection once.
+		var bleed_armour := _armour_for(target,"chest","slashing") + CombatModifierService.global_physical_armour(target,"slashing",state.round_number)
+		var bleed_armor_pct := RatingMatrix.to_percent(maxf(0.0,bleed_armour)*10.0,target.level)
+		amount *= maxf(0.0,1.0-clampf(bleed_armor_pct/100.0,0.0,1.0))
+		var bleed_source := state.get_combatant(event.source_id)
+		if bleed_source != null:
+			amount *= maxf(0.0,1.0+CombatModifierService.modifier(bleed_source,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
 	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number)
 	if CombatDamagePayload.is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
@@ -445,6 +459,21 @@ func _resolve_effect(event: CombatEvent) -> void:
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if definition.is_empty(): event.set_result("resolved", false); return
+	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
+		definition = definition.duplicate(true)
+		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
+		if effect_id == "EFF301":
+			definition["damage"] = float(clampi(eff_level,1,10))
+		else:
+			var blood := SwordAbiCombatService.active_bleeding(target)
+			var stack_snapshot := int(blood.get("stacks",0))
+			if effect_id == "EFF302":
+				definition["physical_damage_outgoing_direct_pct"] = -5.0 * stack_snapshot
+			elif effect_id == "EFF303":
+				definition["anti_dodge_direct_pct"] = -float(clampi(eff_level,1,5)) * stack_snapshot
+			else:
+				definition["anti_crit_direct_pct"] = -float(clampi(eff_level,1,5)) * stack_snapshot
+			event.set_result("sword_bleed_snapshot",stack_snapshot)
 	var effect_kind := String(definition.get("kind", ""))
 	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
 		event.set_result("effect_id", effect_id)
@@ -563,7 +592,7 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 	if stacking == "shared_duration":
 		if matching.is_empty():
 			var shared_record := _make_effect_record(effect_id, definition, event)
-			shared_record["stacks"] = 1
+			shared_record["stacks"] = mini(max_stacks,maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
 			shared_record["active_stacks"] = 0
 			# Shared DoT/HoT must not gain a periodic tick from an instant
 			# ABI's early application. Preserve the normal future tick count.
@@ -573,7 +602,7 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 		else:
 			var shared: Dictionary = matching[0]
 			var previous_stacks: int = maxi(1,int(shared.get("stacks",1)))
-			var next_stacks: int = mini(max_stacks,previous_stacks+1)
+			var next_stacks: int = mini(max_stacks,previous_stacks+maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
 			# An instant cast can add an undisclosed stack to a pre-existing,
 			# visible shared EFF. Keep the single logical record/timer, but
 			# do not reveal the stack count or refreshed timer mid-round.
