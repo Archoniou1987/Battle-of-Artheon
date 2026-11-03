@@ -6,7 +6,7 @@ extends RefCounted
 const RATINGS := {
 	"PAR030":"hit_chance_rating", "PAR031":"dodge_rating", "PAR032":"anti_dodge_rating",
 	"PAR033":"crit_chance_rating", "PAR034":"anti_crit_rating", "PAR035":"crit_damage_rating",
-	"PAR075":"counterattack_rating", "PAR150":"magic_damage_rating"
+	"PAR150":"magic_damage_rating"
 }
 
 static func validate(combatant: CombatantState) -> Dictionary:
