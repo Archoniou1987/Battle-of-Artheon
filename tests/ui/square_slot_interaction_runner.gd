@@ -165,6 +165,41 @@ func _run() -> void:
 	check(selected != null and not selected.visible, "selection_can_clear")
 	check(arena.player_elixir_slots.size()==4 and arena.player_elixir_slots[0].has_node(SquareSlotFeedback.HOVER_OVERLAY), "elixir_feedback")
 	check(arena.round_button_art != null and arena.round_button_art.texture != null, "end_turn_art_preserved")
+	# Every ordinary MH/OH hit and manual defence must be selected.
+	# ABI and elixir choices must not be required to enable End Turn.
+	arena.set_combat_ready(true)
+	arena.round_stunned = false
+	arena.set_attack_count(2)
+	arena.set_defense_capacity(2)
+	arena.attack_zones.clear()
+	arena.defense_zones.clear()
+	arena._update_zone_buttons()
+	check(arena.round_button.disabled, "round_requires_attack_and_defence")
+	arena._select_zone(false,"head")
+	check(arena.round_button.disabled, "round_requires_second_attack")
+	arena._select_zone(false,"head") # Both hits may choose the same zone.
+	check(arena.attack_zones.size()==2 and arena.attack_zones[0]=="head" and arena.attack_zones[1]=="head", "round_allows_duplicate_attack_zone")
+	arena._select_zone(true,"chest")
+	check(arena.round_button.disabled, "round_requires_second_defence")
+	arena._select_zone(true,"arms")
+	check(not arena.round_button.disabled and arena.selected_attack_targets().size()==2 and arena.selected_block_zones().size()==2, "round_ready_without_abi_or_elixir")
+	arena._select_zone(true,"arms")
+	check(arena.round_button.disabled, "round_unready_after_defence_removed")
+	# Stun skips unavailable physical actions and makes every ABI unusable.
+	arena.round_stunned=true
+	arena._refresh_round_ready()
+	check(not arena.round_button.disabled, "stunned_round_can_end_without_attack_selection")
+	var live_player:=arena.combat_session.fighter(true)
+	live_player.tempo_stun_round=arena.combat_session.state.round_number+1
+	arena._sync_combat_session()
+	var all_abi_disabled:=true
+	for ability_button in arena.ability_buttons:
+		if not ability_button.disabled:
+			all_abi_disabled=false
+	check(all_abi_disabled and arena.round_stunned, "stun_disables_all_abi_controls")
+	live_player.tempo_stun_round=-1
+	arena._sync_combat_session()
+
 	arena.queue_free()
 	await process_frame
 	_finish()
