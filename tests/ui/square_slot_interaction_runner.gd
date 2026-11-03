@@ -90,7 +90,7 @@ func _run() -> void:
 	var arena := ArenaScreen.new(hero,repository)
 	root.add_child(arena)
 	await process_frame
-	check(arena.ability_buttons.size()==5,"five_permanent_abi_buttons")
+	check(arena.ability_buttons.size()==6,"six_equipment_abi_sources")
 	check(arena.visual_lab_dialog != null and arena.visual_lab_theme.item_count == 3, "arena_visual_lab_available")
 	check(arena.visual_lab_abi_mode.item_count == 4 and arena.visual_lab_eff_mode.item_count == 4, "arena_visual_lab_abi_eff_controls")
 	var real_abi_disabled := arena.ability_buttons[0].disabled
@@ -154,17 +154,34 @@ func _run() -> void:
 		check(button.get_theme_stylebox("normal") is StyleBoxFlat, "system_square_abi_" + str(index))
 		check(button.get_node_or_null(SquareSlotFeedback.HOVER_OVERLAY) != null, "tactile_abi_" + str(index))
 		check(button.tooltip_text.contains(SquareUiGeometry.abi_source(index)), "abi_source_" + str(index))
-	check(arena.ability_buttons[3].tooltip_text.contains("Нагрудная броня"), "abi4_chest")
-	check(arena.ability_buttons[4].tooltip_text.contains("Шлем"), "abi5_helmet")
-	var row := arena.square_content.get_node_or_null("AbilitySlots") as HBoxContainer
+	check(arena.ability_buttons[3].tooltip_text.contains("Оружие MH"), "abi4_weapon")
+	check(arena.ability_buttons[4].tooltip_text.contains("Нагрудная броня"), "abi5_chest")
+	check(arena.ability_buttons[5].tooltip_text.contains("Шлем"), "abi6_helmet")
+	var row := arena.ability_strip as HBoxContainer
 	check(row != null and row.get_theme_constant("separation")==0, "abi_strip_no_gaps")
+	# One, two and six usable slots must be centred and empty slots hidden.
+	for count in [1, 2, 6, 10]:
+		var display: Array = []
+		for index in range(count):
+			display.append({"id":"ABI_TEST_%d" % index})
+		arena._layout_ability_strip(display)
+		await process_frame
+		var visible_count := 0
+		for button in arena.ability_buttons:
+			if button.get_parent().visible:
+				visible_count += 1
+		check(visible_count == count, "abi_dynamic_visible_%d" % count)
+		check(arena.ability_strip.custom_minimum_size.x >= float(count * 34), "abi_dynamic_capacity_%d" % count)
+		check(arena.ability_scroll.size.x == 440.0 and arena.ability_scroll.position.y == 423.0, "abi_scroll_bounded_%d" % count)
+	arena._layout_ability_strip([])
 	SquareSlotFeedback.set_selected(arena.ability_buttons[0],true)
 	var selected := arena.ability_buttons[0].get_node_or_null(SquareSlotFeedback.SELECTION_OVERLAY) as Control
 	check(selected != null and selected.visible, "selected_overlay")
 	SquareSlotFeedback.set_selected(arena.ability_buttons[0],false)
 	check(selected != null and not selected.visible, "selection_can_clear")
 	check(arena.player_elixir_slots.size()==4 and arena.player_elixir_slots[0].has_node(SquareSlotFeedback.HOVER_OVERLAY), "elixir_feedback")
-	check(arena.round_button_art != null and arena.round_button_art.texture != null, "end_turn_art_preserved")
+	check(arena.round_button_art == null and arena.round_button.text == "ЗАВЕРШИТЬ РАУНД", "compact_text_end_turn")
+	check(arena.round_button.position.y == 389.0 and arena.ability_scroll.position.y == 423.0, "existing_two_bands_swapped")
 	# Every ordinary MH/OH hit and manual defence must be selected.
 	# ABI and elixir choices must not be required to enable End Turn.
 	arena.set_combat_ready(true)
