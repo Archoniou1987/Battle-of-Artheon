@@ -7,6 +7,7 @@ static func run(balance: Dictionary) -> bool:
 		["invalid_magic_counter", _invalid_magic_counter()],
 		["requires_previous_round_trigger", _requires_previous_round_trigger(balance)],
 		["counter_miss_consumes_ap", _counter_miss_consumes_ap(balance)],
+		["mh_zone_head_oh_chest", _mh_zone_head_oh_chest(balance)],
 		["abi_generator_earns_ap", _abi_generator_earns_ap(balance)]
 	]
 	var ok:=true
@@ -62,6 +63,12 @@ static func _requires_previous_round_trigger(balance:Dictionary)->bool:
 	_qualified_round(state)
 	var action:=scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")
 	if action==null or hero.action_points!=1 or int(action.payload.get("ap_spent",-1))!=3: return false
+	# The MH zone is selected before the counter ABI is resolved.
+	var mh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":0.0,"zone":"chest","damage_type":"slashing",
+		"is_weapon_attack":true,"weapon_index":0,"hit_index":0,"rolls":{"hit":100}
+	})
+	state.queue_event(mh)
 	state.queue_event(action)
 	CombatEngine.new(state,balance).resolve_pending_events()
 	var counter:CombatEvent=null
@@ -74,6 +81,33 @@ static func _requires_previous_round_trigger(balance:Dictionary)->bool:
 	state.begin_round()
 	return not AbilityRuntime.previous_round_trigger_met(state,"hero","block")
 
+## MH selects the counter zone; OH must never override it.
+static func _mh_zone_head_oh_chest(balance:Dictionary)->bool:
+	var state:=_state()
+	var hero:=state.get_combatant("hero")
+	hero.action_points=4
+	_qualified_round(state)
+	var definition:=_counter_definition()
+	var scheduler:=AbilityScheduler.new({"ABI_TEST_COUNTER":definition},{"hero":["ABI_TEST_COUNTER"]})
+	var action:=scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")
+	if action==null: return false
+	var oh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":0.0,"zone":"chest","damage_type":"slashing","is_weapon_attack":true,
+		"weapon_index":1,"hit_index":0,"rolls":{"hit":100}
+	})
+	var mh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":0.0,"zone":"head","damage_type":"slashing","is_weapon_attack":true,
+		"weapon_index":0,"hit_index":0,"rolls":{"hit":100}
+	})
+	state.queue_event(oh)
+	state.queue_event(action)
+	state.queue_event(mh)
+	CombatEngine.new(state,balance).resolve_pending_events()
+	for event in state.event_log:
+		if event.kind==CombatEvent.Kind.ATTACK and bool(event.payload.get("is_counterattack_abi",false)):
+			return String(event.payload.get("zone",""))=="head" and String(event.result.get("outcome",""))=="connected"
+	return false
+
 static func _counter_miss_consumes_ap(balance:Dictionary)->bool:
 	var state:=_state()
 	var hero:=state.get_combatant("hero")
@@ -83,6 +117,12 @@ static func _counter_miss_consumes_ap(balance:Dictionary)->bool:
 	var scheduler:=AbilityScheduler.new({"ABI_TEST_COUNTER":definition},{"hero":["ABI_TEST_COUNTER"]})
 	var action:=scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")
 	if action==null: return false
+	# The MH zone is selected before the counter ABI is resolved.
+	var mh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
+		"raw_damage":0.0,"zone":"chest","damage_type":"slashing",
+		"is_weapon_attack":true,"weapon_index":0,"hit_index":0,"rolls":{"hit":100}
+	})
+	state.queue_event(mh)
 	state.queue_event(action)
 	CombatEngine.new(state,balance).resolve_pending_events()
 	for event in state.event_log:
