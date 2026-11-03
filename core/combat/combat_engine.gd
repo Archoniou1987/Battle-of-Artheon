@@ -79,6 +79,17 @@ func _resolve_action(event: CombatEvent) -> void:
 	for target_id in target_ids:
 		if not _require_canonical(event, state.get_combatant(String(target_id))):
 			return
+	# A counter ABI targets the body zone of this round's first MH strike.
+	# Resolve from sealed round metadata or explicit queued/logged MH attack.
+	if bool(event.payload.get("is_counterattack_abi",false)):
+		var mh_zone:=String(event.payload.get("counter_abi_mh_zone",""))
+		if not HIT_ZONES.has(mh_zone):
+			mh_zone=_counter_abi_current_mh_zone(event.source_id)
+		if not HIT_ZONES.has(mh_zone):
+			event.set_result("outcome","missing_current_mh_zone")
+			return
+		event.payload["zone"]=mh_zone
+		event.set_result("counter_abi_body_zone",mh_zone)
 	var child_event_ids:Array[int] = []
 	var unsupported_components:Array[String] = []
 	# Magic AREA/CHAIN is one cast roll, not one independent roll per victim.
@@ -254,6 +265,20 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 			"preparation_effect": String(parent.payload.get("application_timing", "standard")) == "instant"
 		}, parent.event_id)
 	return null
+
+func _counter_abi_current_mh_zone(source_id:String)->String:
+	for attacks in [state.pending_events,state.event_log]:
+		for candidate in attacks:
+			if candidate.kind != CombatEvent.Kind.ATTACK or candidate.source_id != source_id:
+				continue
+			if int(candidate.payload.get("round",-1)) != state.round_number or not bool(candidate.payload.get("is_weapon_attack",false)):
+				continue
+			if int(candidate.payload.get("weapon_index",-1)) != 0 or int(candidate.payload.get("hit_index",0)) != 0:
+				continue
+			var zone:=String(candidate.payload.get("zone",""))
+			if HIT_ZONES.has(zone):
+				return zone
+	return ""
 
 func _resolve_attack(event: CombatEvent) -> void:
 	var attacker := state.get_combatant(event.source_id)
