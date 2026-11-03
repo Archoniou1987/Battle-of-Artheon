@@ -288,9 +288,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("hit_roll",hit_roll)
 	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); return
-	var active_defence_available := not uses_magic_hit and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
+	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
-	if active_defence_available and not bool(event.payload.get("is_counterattack_abi", false)):
+	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
 		event.set_result("dodge_chance",dodge)
 		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
