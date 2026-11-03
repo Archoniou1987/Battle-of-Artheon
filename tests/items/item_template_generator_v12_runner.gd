@@ -46,6 +46,28 @@ func _verify() -> void:
 			if (variant.get("rolls",[]) as Array).size() != 2 or (variant.get("core_rolls",[]) as Array).size() != 1:
 				problems.append("Lv30 blue must have two rarity + one stable CORE PAR lines")
 				break
+	# Three approved physical Lv40 sword templates: deterministic single purple roll.
+	for test in [
+		{"id":"SWORD_DEF","seed":202611041},
+		{"id":"SWORD_DODGE","seed":202611042},
+		{"id":"SWORD_CRIT","seed":202611043}
+	]:
+		var single_config := {"archetypes":[String(test["id"])],"weapon_hand":"MH",
+			"min_level":40,"max_level":40,"quality":"purple",
+			"count":1,"seed":int(test["seed"]),"group_qualities":false}
+		var single := generator.generate(single_config)
+		if not bool(single.get("ok",false)) or int(single.get("generated",0)) != 1:
+			problems.append("Single Lv40 epic template failed: "+String(test["id"]))
+			continue
+		var one: Dictionary = single["rows"][0]
+		if String(one["archetype_id"]) != String(test["id"]) or String(one["slot"]) != "MH" or int(one["level"]) != 40 or String(one["quality"]) != "purple":
+			problems.append("Single template selectors ignored: "+String(test["id"]))
+		var one_variant: Dictionary = one["variant"]
+		if (one_variant.get("core_rolls",[]) as Array).size() != 1 or (one_variant.get("rolls",[]) as Array).size() != 3:
+			problems.append("Lv40 epic must have 1 CORE + 3 rarity PAR: "+String(test["id"]))
+		var again := generator.generate(single_config)
+		if JSON.stringify(single.get("rows",[])) != JSON.stringify(again.get("rows",[])):
+			problems.append("Single template seed is not deterministic: "+String(test["id"]))
 	# Attack power is an integer rating; convert to percent by item level.
 	var low_attack := generator._affix_amount("attack",30,"Нагрудник",1.25,1,{"defence_pct":80,"attack_pct":20})
 	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or generator.attack_rating_to_pct(low_attack,30) <= 0.0:
@@ -520,8 +542,22 @@ func _verify() -> void:
 		root.add_child(screen)
 		await process_frame
 		await process_frame
-		if screen.engine == null or screen.tabs.get_tab_count() != 2:
+		if screen.engine == null or screen.tabs.get_tab_count() != 3:
 			problems.append("v1.2 editor tabs not available")
+		if screen.single_template_select == null or screen.single_quality_select == null or screen.single_level == null or screen.single_seed == null:
+			problems.append("Single template controls missing")
+		else:
+			screen._select_value(screen.single_template_select,"SWORD_DODGE")
+			screen._select_value(screen.single_quality_select,"purple")
+			screen.single_level.value = 40
+			screen.single_seed.value = 202611042
+			screen._generate_single_template()
+			if screen.results.size() != 1:
+				problems.append("Single template UI did not generate exactly 1 item")
+			else:
+				var generated_item: Dictionary = screen.results[0]
+				if String(generated_item["archetype_id"]) != "SWORD_DODGE" or String(generated_item["quality"]) != "purple" or int(generated_item["level"]) != 40:
+					problems.append("Single template UI selections ignored")
 		if screen.results.is_empty() or screen.csv_button.disabled:
 			problems.append("v1.2 startup generation or CSV missing")
 		# Weapon affixes must show rating AND derived percentage.
