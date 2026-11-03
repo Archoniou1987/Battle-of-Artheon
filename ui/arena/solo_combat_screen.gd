@@ -432,7 +432,7 @@ func _update_selection() -> void:
 			potion.set_pressed_no_signal(chosen_elixir == index)
 		# Zone selection remains enabled before the required plan is complete.
 		# ArenaScreen independently disables End Turn until every hit and block is chosen.
-		shared_arena.set_combat_ready(not finished and bool(controls.get("ok", false)) and not stunned)
+		shared_arena.set_combat_ready(not finished and bool(controls.get("ok", false)))
 
 func _on_shared_selection() -> void:
 	_update_selection()
