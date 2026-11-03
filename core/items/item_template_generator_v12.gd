@@ -9,7 +9,7 @@ const PROFILE_PATH := "user://boa_template_generator_v12_profile.json"
 const PAR_LABELS := {
 	"PAR010":"Максимальное HP", "PAR011":"Максимальная мана",
 	"PAR031":"Уклонение", "PAR032":"Антиуклонение", "PAR033":"Крит",
-	"PAR034":"Антикрит", "PAR035":"Сила крита", "PAR075":"Контрудар",
+	"PAR034":"Антикрит", "PAR035":"Сила крита",
 	"PAR072":"Пробитие щита", "PAR126":"Пробитие брони",
 	"PAR135":"Снижение урона", "PAR150":"Сила заклинаний",
 	"PAR190":"Магическое сопротивление", "PAR013":"Регенерация маны вне боя (ед./10 сек)",
@@ -53,7 +53,6 @@ const PAR_BUDGET_DIRECTIONS := {
 	"dodge":{"defence":1.0,"attack":0.0},
 	"anticrit":{"defence":1.0,"attack":0.0},
 	"anti_dodge":{"defence":0.0,"attack":1.0},
-	"counter":{"defence":0.0,"attack":1.0},
 	"crit":{"defence":0.0,"attack":1.0},
 	"crit_damage":{"defence":0.0,"attack":1.0},
 	"attack":{"defence":0.0,"attack":1.0},
@@ -120,7 +119,6 @@ func preview_effects(armour: Dictionary, bonus: Dictionary, level: int) -> Dicti
 	if float(bonus.get("PAR032",0.0)) > 0.0:
 		result["ratings"]["PAR032"] = {"raw_pct":rating_to_pct(float(bonus["PAR032"]),level),"after_dr_pct":rating_to_pct(float(bonus["PAR032"]),level)}
 	for item in [
-		{"par":"PAR075","category":""},
 		{"par":"PAR135","category":"reduce"},
 		{"par":"PAR190","category":"magic_res"},
 		{"par":"PAR164","category":""},
@@ -539,15 +537,6 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			# Convert planned build percentage into an additive rating.
 			# Raw rating is displayed; percentage is computed after aggregation.
 			baseline = (build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
-		"counter":
-			# LAB target: ten matching counterstrike lines at Lv100,
-			# purple quality (x1.5), standard 7.5 slot weight => ~50%.
-			# This is an uncapped rating calibration, NOT a combat rule.
-			# Fewer lines, slot weights and armour attack profiles vary.
-			var pct_per_100 := lerpf(20.0,4.0,(l-1.0)/99.0)
-			var percent_per_line := 5.0*l/100.0
-			baseline = percent_per_line*100.0/pct_per_100/1.5
-			baseline *= REFERENCE_SLOT_BUDGET/7.5
 		"mana_regen":
 			# Provisional fixed units of mana per combat round, for a
 			# white 7.5%-weight reference line, before quality scaling.
@@ -579,8 +568,6 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 func calibration_status(logical: String) -> String:
 	if logical == "mana_regen":
 		return "PROVISIONAL_MANA_PER_ROUND_ANCHORS"
-	if logical == "counter":
-		return "PROVISIONAL_COUNTER_50_PCT_LV100"
 	if ["hp","mana"].has(logical):
 		return "PROJECT25_ANCHOR"
 	if ["attack","spell"].has(logical):
