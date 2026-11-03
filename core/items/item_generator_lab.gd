@@ -1,8 +1,9 @@
 class_name ItemGeneratorLab
 extends RefCounted
 
-## Read-only diagnostic generator. Never writes to ItemRepository, saves or loot.
-## The separate legacy ItemGenerator remains untouched until balance is approved.
+## DEPRECATED / ARCHIVE (2026-11-03). Historical v1 laboratory only.
+## Not an active generation ruleset. Use ItemTemplateGeneratorV12 and Project 25 v1.2.
+## Never writes to ItemRepository, saves or loot.
 const DATA_PATH := "res://data/items/project25_generator_lab.json"
 const QUALITIES := ["white", "green", "blue", "purple"]
 const RARITY_NAMES := {"white": "Белый", "green": "Зелёный", "blue": "Синий", "purple": "Фиолетовый"}
