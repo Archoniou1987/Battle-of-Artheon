@@ -89,12 +89,12 @@ func weapon_cases() -> void:
 func shared_combat_cases() -> void:
 	var hero := CharacterState.new("caster", "Caster")
 	var repo := ItemRepository.new()
-	put(hero, repo, "rating_ring", "ring1", {"combat_stats":{"hit_chance_direct_pct":2},"par_stats":{"PAR030":10,"PAR033":500,"PAR035":100,"PAR075":100,"PAR150":100}})
+	put(hero, repo, "rating_ring", "ring1", {"combat_stats":{"hit_chance_direct_pct":2},"par_stats":{"PAR030":10,"PAR033":500,"PAR035":100,"PAR150":100}})
 	var fighter := CharacterCombatBuilder.build(hero, repo)
 	var view := CharacterStatsService.snapshot(hero, repo)
 	check(view.hit_chance_rating == 15 and is_equal_approx(view.hit_chance_rating_percent, 3.5), "primary and equipment hit sum before matrix")
 	check(view.crit_damage_rating == 105 and is_equal_approx(view.crit_damage_rating_percent, 10.5), "PAR035 is a rating")
-	check(view.counterattack_rating == 105 and is_equal_approx(view.counterattack_rating_percent, 10.5), "PAR075 is a rating, never direct percent")
+	check(not view.has("counterattack_rating") and not view.has("counterattack_rating_percent"), "retired PAR075 must not be exposed as a live stat")
 	check(view.magic_damage_rating == 105 and is_equal_approx(view.magic_damage_rating_percent, 10.5), "PAR150 is a rating")
 	var old_errors := Engine.print_error_messages
 	Engine.print_error_messages = false
