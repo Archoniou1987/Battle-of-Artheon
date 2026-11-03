@@ -19,6 +19,9 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 		if ParCalculationService.PRIMARY_IDS.has(par_id):
 			continue
 		var definition: Dictionary = definitions.get(par_id, {})
+		# Keep retired PAR IDs reserved in the registry, but never expose them as live stats.
+		if String(definition.get("status","")).begins_with("ВЫВОДИТСЯ"):
+			continue
 		var source_key := String(definition.get("source_key", ""))
 		if not source_key.is_empty():
 			result[source_key] = primary[par_id]
