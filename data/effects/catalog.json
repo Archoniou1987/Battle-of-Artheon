@@ -125,7 +125,7 @@
     "name": "Яд кинжалов",
     "kind": "dot",
     "damage": 1,
-    "damage_type": "poison",
+    "damage_type": "physical",
     "duration_rounds": 1,
     "stacking": "shared_duration",
     "max_stacks": 10,
