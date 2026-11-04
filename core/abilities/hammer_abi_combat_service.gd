@@ -170,7 +170,7 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 			})
 	# Ordinary MH autoattack is a source of charges, regardless of which ABI
 	# was activated in the same round. Never count standalone ABI attacks.
-	if bool(attack.payload.get("is_weapon_attack",false)) and String(attack.payload.get("source_kind","")) != "ability" and int(attack.payload.get("weapon_index",-1))==0 and not _weapon(attacker).is_empty():
+	if bool(attack.payload.get("is_weapon_attack",false)) and String(attack.payload.get("source_kind","")) != "ability" and int(attack.payload.get("weapon_index",-1))==0 and String(attacker.combat_loadout.get("weapon_class","")).to_lower()=="hammer" and not _weapon(attacker).is_empty():
 		gain_charges(engine,attacker,5+(5 if bool(attack.result.get("critical",false)) else 0))
 
 static func on_damage(engine: CombatEngine, event: CombatEvent, target: CombatantState) -> void:
@@ -178,7 +178,7 @@ static func on_damage(engine: CombatEngine, event: CombatEvent, target: Combatan
 	if dealt <= 0:
 		return
 	# Passive: 1 charge per nonzero damage EVENT. 5 separate DoTs = 5.
-	if not _weapon(target).is_empty():
+	if String(target.combat_loadout.get("weapon_class","")).to_lower()=="hammer":
 		gain_charges(engine,target,1)
 	var attacker := engine.state.get_combatant(event.source_id)
 	if attacker != null and attacker.combatant_id != target.combatant_id:
