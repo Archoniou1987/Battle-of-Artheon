@@ -573,5 +573,124 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "axe_ability_mode": "shieldbreaker"
+  },
+  "ABI601": {
+    "name": "Тяжёлый удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "standard",
+    "hammer_ability_mode": "mh_tempo"
+  },
+  "ABI602": {
+    "name": "Отражение",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF602",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "instant",
+    "hammer_ability_mode": "reflect"
+  },
+  "ABI603": {
+    "name": "Восстановление",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "heal",
+        "amount": 0
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "hammer_ability_mode": "heal"
+  },
+  "ABI604": {
+    "name": "Разрушающий удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "hammer_ability_mode": "armour_fracture"
+  },
+  "ABI605": {
+    "name": "Боевой прилив",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF604",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "instant",
+    "hammer_ability_mode": "damage_surge"
+  },
+  "ABI606": {
+    "name": "Сокрушение",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "hammer_ability_mode": "tempo_crush"
   }
 }
