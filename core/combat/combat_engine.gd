@@ -397,10 +397,6 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var typed_armour_penetration_percent:=CombatModifierService.typed_armour_penetration_percent(attacker, damage_type, state.round_number)
 	# PAR126 and PAR131–134 reduce the matching armour sequentially.
 	var effective_armour := maxf(0.0, base_armour * (1.0 - armour_penetration_percent) * (1.0 - typed_armour_penetration_percent))
-	# ABI408 is a one-cast multiplier on the remaining armour, not a
-	# permanent PAR change. Each pre-cast breach stack removes 20%.
-	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE:
-		effective_armour *= 1.0 - clampf(float(event.payload.get("dagger_armour_bypass_pct",0.0))/100.0,0.0,1.0)
 	var armour_percent := RatingMatrix.to_percent(effective_armour * 10.0, defender.level)
 	# Hammer charges add 0.25 percentage points to armour/resistance per
 	# stack; an active zone fracture only reduces its named physical zone.
@@ -410,6 +406,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 			var fdef: Dictionary = fracture.get("definition",{})
 			if String(fdef.get("armour_zone","")) == String(event.payload.get("zone","chest")):
 				armour_percent *= 1.0-clampf(float(fdef.get("armour_reduction_pct",0.0))/100.0,0.0,1.0)
+	# Apply ABI408 to the FINAL armour percentage (including temporary
+	# charge buffs) so five breach stacks actually mean zero armour.
+	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE:
+		armour_percent *= 1.0-clampf(float(event.payload.get("dagger_armour_bypass_pct",0.0))/100.0,0.0,1.0)
 	# Dagger EFF401 subtracts percentage points from the already-converted
 	# armour. Never change the base item PAR or the armour rating matrix.
 	var dagger_breach_stacks := 0
