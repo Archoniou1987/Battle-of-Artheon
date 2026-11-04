@@ -520,6 +520,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 			target.tempo = minf(target.max_tempo, target.tempo + tempo_delta)
 		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
+	DaggerAbiCombatService.on_effect_applied(self,event)
 
 ## Cleanse only revealed EFF stacks. A shared-duration record may retain
 ## an undisclosed instant addition while its previously known stacks vanish.
