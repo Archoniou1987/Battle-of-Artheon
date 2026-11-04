@@ -37,6 +37,7 @@ var generator_added: Label
 var generator_status: Label
 var generator_bonuses: Dictionary = {}
 var v12_archetype: OptionButton
+var v12_hand: OptionButton
 var v12_quality: OptionButton
 var v12_level: SpinBox
 var v12_seed: SpinBox
@@ -774,11 +775,28 @@ func _build_item_generator() -> void:
 	for spec in [
 		["Защитный меч","SWORD_DEF"],
 		["Меч уклонения","SWORD_DODGE"],
-		["Критический меч","SWORD_CRIT"]
+		["Критический меч","SWORD_CRIT"],
+		["Защитный кинжал","DAGGER_DEF"],
+		["Атакующий кинжал","DAGGER_ATTACK"],
+		["Пробивающий кинжал","DAGGER_PEN"],
+		["Защитный топор","AXE_DEF"],
+		["Атакующий топор","AXE_ATTACK"],
+		["Топор щитолом","AXE_SHIELD"],
+		["Защитный молот","HAMMER_DEF"],
+		["Атакующий молот","HAMMER_ATTACK"]
 	]:
 		v12_archetype.add_item(String(spec[0]))
 		v12_archetype.set_item_metadata(v12_archetype.item_count - 1,String(spec[1]))
 	content.add_child(v12_archetype)
+	v12_hand = OptionButton.new()
+	v12_hand.add_item("Основная рука (MH)")
+	v12_hand.set_item_metadata(0, "MH")
+	v12_hand.add_item("Вторая рука (OH) · только кинжал")
+	v12_hand.set_item_metadata(1, "OH")
+	content.add_child(v12_hand)
+	v12_archetype.item_selected.connect(func(index: int) -> void:
+		if not String(v12_archetype.get_item_metadata(index)).begins_with("DAGGER_"):
+			v12_hand.select(0))
 	v12_quality = OptionButton.new()
 	for spec in [
 		["Белое","white"],["Зелёное","green"],["Синее","blue"],["Эпическое","purple"]
@@ -798,7 +816,7 @@ func _build_item_generator() -> void:
 	v12_create.custom_minimum_size.y = 50
 	v12_create.pressed.connect(_generator_v12_create)
 	content.add_child(v12_create)
-	var v12_note := _v12_title("Создаёт уникальный ITEMID, урон и PAR по v1.2. Сила атаки без активного PAR сохраняется отдельно; ABI физических мечей подключены к Combat Engine.")
+	var v12_note := _v12_title("Создаёт уникальный ITEMID, урон и PAR по v1.2. Сила атаки без активного PAR сохраняется отдельно; ABI мечей работают в бою; ABI остальных физических видов оружия будут доступны после интеграции Combat Engine.")
 	v12_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(v12_note)
 	v12_status_label = _v12_title("")
@@ -907,7 +925,7 @@ func _generator_v12_create() -> void:
 	var quality := String(v12_quality.get_selected_metadata())
 	var level := int(v12_level.value)
 	var seed_value := int(v12_seed.value)
-	var item := ItemV12InstanceFactory.grant_sword(character,repository,archetype_id,level,quality,seed_value)
+	var item := ItemV12InstanceFactory.grant_weapon(character,repository,archetype_id,level,quality,seed_value,String(v12_hand.get_selected_metadata()))
 	if item.is_empty():
 		generator_status.text = "Не удалось создать игровой предмет: проверьте уровень, редкость и свободное место в сумке."
 		v12_status_label.text = generator_status.text
