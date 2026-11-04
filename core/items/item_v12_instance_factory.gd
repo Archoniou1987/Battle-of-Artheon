@@ -162,7 +162,9 @@ static func _physical_weapon_abilities(archetype_id: String, hand: String) -> Ar
 		"AXE_DEF": return ["ABI501","ABI502","ABI503","ABI504"]
 		"AXE_ATTACK": return ["ABI501","ABI502","ABI505","ABI506"]
 		"AXE_SHIELD": return ["ABI501","ABI502","ABI507","ABI508"]
-	return [] # Hammers remain gated until their combat integration.
+		"HAMMER_DEF": return ["ABI601","ABI602","ABI603","ABI604"]
+		"HAMMER_ATTACK": return ["ABI601","ABI602","ABI605","ABI606"]
+	return [] # Magic archetypes remain gated until separate integration.
 
 static func _physical_sword_abilities(archetype_id: String) -> Array[String]:
 	match archetype_id:
