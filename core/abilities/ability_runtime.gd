@@ -28,6 +28,9 @@ static func previous_round_trigger_met(state: CombatState, source_id: String, tr
 			return true
 		if trigger == "crit" and event.source_id == source_id and event.kind == CombatEvent.Kind.ATTACK and bool(event.result.get("critical",false)):
 			return true
+		if trigger == "crit_or_block_crush" and event.source_id == source_id and event.kind == CombatEvent.Kind.ATTACK:
+			if bool(event.result.get("critical",false)) or bool(event.result.get("manual_block_crushed",false)) or bool(event.result.get("auto_block_crushed",false)):
+				return true
 		if trigger == "damage_dealt" and event.source_id == source_id and event.kind == CombatEvent.Kind.DAMAGE and int(event.result.get("final_damage",0)) > 0:
 			return true
 		if trigger == "damage_taken" and event.target_id == source_id and event.kind == CombatEvent.Kind.DAMAGE and int(event.result.get("final_damage",0)) > 0:
@@ -83,7 +86,7 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 	var components:Array=normalized.get("components",[])
 	if components.is_empty(): errors.append("components_required")
 	var trigger := String(normalized.get("trigger_previous_round",""))
-	if not trigger.is_empty() and not ["block","dodge","crit","damage_dealt","damage_taken"].has(trigger):
+	if not trigger.is_empty() and not ["block","dodge","crit","crit_or_block_crush","damage_dealt","damage_taken"].has(trigger):
 		errors.append("invalid_previous_round_trigger")
 	if int(definition.get("ap_gain",0)) < 0 or int(definition.get("ap_cost",0)) < 0 or int(definition.get("min_ap_cost",0)) < 0:
 		errors.append("invalid_ap_amount")
