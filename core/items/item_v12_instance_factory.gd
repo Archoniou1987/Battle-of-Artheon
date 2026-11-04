@@ -98,7 +98,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"v12_core_rolls": (variant.get("core_rolls", []) as Array).duplicate(true),
 		"v12_rarity_rolls": (variant.get("rolls", []) as Array).duplicate(true),
 		# ABI positions are genuine canonical IDs and survive normal save/restore.
-		"abilities": _physical_sword_abilities(archetype_id) if SWORD_ARCHETYPES.has(archetype_id) else [],
+		"abilities": _physical_weapon_abilities(archetype_id, hand),
 		"v12_seed": seed_value
 	}
 	ItemDurabilityService.initialize_item(result, 100)
@@ -148,6 +148,18 @@ static func grant_generated_row(character: CharacterState, repository: ItemRepos
 		repository.remove_item(instance_id)
 		return {}
 	return item
+
+static func _physical_weapon_abilities(archetype_id: String, hand: String) -> Array[String]:
+	# One global MH weapon ABI loadout: OH items never create duplicate ABI slots.
+	if hand != "MH":
+		return []
+	if SWORD_ARCHETYPES.has(archetype_id):
+		return _physical_sword_abilities(archetype_id)
+	match archetype_id:
+		"DAGGER_DEF": return ["ABI401","ABI402","ABI403","ABI404"]
+		"DAGGER_ATTACK": return ["ABI401","ABI402","ABI405","ABI406"]
+		"DAGGER_PEN": return ["ABI401","ABI402","ABI407","ABI408"]
+	return [] # Axes and hammers remain gated until their own combat integration.
 
 static func _physical_sword_abilities(archetype_id: String) -> Array[String]:
 	match archetype_id:
