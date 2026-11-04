@@ -81,6 +81,8 @@ func _run() -> void:
 	check(arena.effects_rows["player_Баффы"].visible and arena.effects_rows["enemy_Дебаффы"].visible, "live buff/debuff overlay rows are visible")
 	arena._show_effect_detail(true, "Баффы", 0)
 	check(screen.detail_text.text.contains("Guard"), "tap on live effect opens details in owning battle UI")
+	# Close the modal inspected effect before opening another exclusive ABI dialog.
+	screen.detail_popup.hide()
 
 	screen.present(fixture)
 	check(arena._effect_entries(true, "Баффы").is_empty(), "effect projection clears on next empty snapshot")
@@ -112,6 +114,12 @@ func _run() -> void:
 	check(screen.chosen_blocks == ["chest", "legs"], "shared Arena selects defense zones")
 	arena._select_ability(0)
 	check(arena.pending_external_ability_index == 0 and screen.chosen_abi.is_empty(), "solo ABI preview must not select before confirmation")
+	arena.ability_confirm_popup.hide()
+	arena._cancel_ability_preview()
+	check(arena.pending_external_ability_index == -1 and screen.chosen_abi.is_empty(), "cancelled solo ABI preview keeps previous selection empty")
+	arena._select_ability(0)
+	check(arena.pending_external_ability_index == 0, "reopened ABI card has selected index")
+	arena.ability_confirm_popup.hide()
 	arena._confirm_ability()
 	check(screen.chosen_abi == "ABI003", "solo ABI confirmation selects ability")
 	screen._choose_elixir(0)
