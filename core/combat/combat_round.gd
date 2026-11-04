@@ -56,6 +56,19 @@ func resolve(engine: CombatEngine) -> void:
 			mh.payload["axe_abi_id"] = AxeAbiCombatService.RAGE_ABI
 			mh.payload["axe_mh_damage_bonus_pct"] = 20.0
 			break
+	# Hammer ABI601 similarly buffs the FIRST ordinary MH attack rather
+	# than producing a second hit.
+	for abi_action in locked_actions:
+		if abi_action.kind != CombatEvent.Kind.ACTION or String(abi_action.payload.get("ability_id","")) != HammerAbiCombatService.HEAVY:
+			continue
+		for mh in locked_actions:
+			if mh.kind != CombatEvent.Kind.ATTACK or mh.source_id != abi_action.source_id:
+				continue
+			if not bool(mh.payload.get("is_weapon_attack",false)) or int(mh.payload.get("weapon_index",-1)) != 0 or int(mh.payload.get("hit_index",0)) != 0:
+				continue
+			mh.payload["hammer_abi_id"] = HammerAbiCombatService.HEAVY
+			mh.payload["hammer_mh_damage_bonus_pct"] = 20.0
+			break
 	# Counter ABI inherits the FIRST ordinary MH strike zone in the sealed round.
 	# The OH zone is never a fallback. No implicit chest target is permitted.
 	var mh_zone_by_source:Dictionary={}
@@ -69,6 +82,9 @@ func resolve(engine: CombatEngine) -> void:
 	for action in locked_actions:
 		if action.kind==CombatEvent.Kind.ACTION and bool(action.payload.get("is_counterattack_abi",false)):
 			action.payload["counter_abi_mh_zone"]=String(mh_zone_by_source.get(action.source_id,""))
+		if action.kind==CombatEvent.Kind.ACTION and (DaggerAbiCombatService.is_dagger_ability(String(action.payload.get("ability_id",""))) or AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
+			if mh_zone_by_source.has(action.source_id):
+				action.payload["zone"]=String(mh_zone_by_source[action.source_id])
 	# Only instant ABI effects modify the conditions of this round's
 	# subsequent shared combat resolution.
 	for event in preparation_actions:
