@@ -239,7 +239,10 @@ func _ready() -> void:
 	ability_confirm_popup.title = "Подтвердить ABI"
 	ability_confirm_popup.ok_button_text = "Подтвердить"
 	ability_confirm_popup.cancel_button_text = "Отмена"
-	ability_confirm_popup.min_size = Vector2i(320, 210)
+	ability_confirm_popup.min_size = Vector2i(300, 190)
+	ability_confirm_popup.max_size = Vector2i(420, 340)
+	ability_confirm_popup.get_label().autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ability_confirm_popup.get_label().custom_minimum_size = Vector2(270, 110)
 	add_child(ability_confirm_popup)
 	ability_confirm_popup.confirmed.connect(_confirm_ability)
 	ability_confirm_popup.canceled.connect(_cancel_ability_preview)
@@ -903,6 +906,8 @@ func _show_equipment_ability_info(meta: Variant) -> void:
 	var definition: Dictionary = Dictionary(catalog.get(ability_id, {}))
 	item_abi_popup.title = AbilityCardText.title(ability_id, definition)
 	item_abi_popup.dialog_text = AbilityCardText.describe(ability_id, definition)
+	# These are mutually exclusive OS-style dialogs. Close the item first.
+	item_popup.hide()
 	item_abi_popup.popup_centered()
 
 func _show_fighter_details(is_player: bool) -> void:
@@ -997,7 +1002,7 @@ func _select_ability(index: int) -> void:
 		var external_def := AbilityCatalog.definition(AbilityCatalog.load_json("res://data/abilities/catalog.json"), external_id)
 		ability_confirm_popup.title = AbilityCardText.title(external_id, external_def)
 		ability_confirm_popup.dialog_text = AbilityCardText.describe(external_id, external_def, external_player_ap)
-		ability_confirm_popup.popup_centered()
+		_popup_ability_confirmation()
 		return
 	if combat_session == null or index < 0 or index >= ability_buttons.size():
 		return
@@ -1012,6 +1017,12 @@ func _select_ability(index: int) -> void:
 	ability_confirm_popup.title = AbilityCardText.title(ability_id, definition)
 	ability_confirm_popup.dialog_text = AbilityCardText.describe(ability_id, definition, combat_session.fighter(true).action_points)
 	ability_confirm_popup.popup_centered()
+
+## Constrain the popup on portrait phones; wrapped text must never widen it past the viewport.
+func _popup_ability_confirmation() -> void:
+	var viewport_width := int(get_viewport().get_visible_rect().size.x)
+	var width := mini(380, maxi(280, viewport_width - 24))
+	ability_confirm_popup.popup_centered(Vector2i(width, 220))
 
 func _cancel_ability_preview() -> void:
 	pending_ability_id = ""
