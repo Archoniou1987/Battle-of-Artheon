@@ -81,6 +81,9 @@ func _resolve_action(event: CombatEvent) -> void:
 	if AxeAbiCombatService.is_axe_ability(String(event.payload.get("ability_id",""))):
 		AxeAbiCombatService.dispatch(self,event)
 		return
+	if HammerAbiCombatService.is_hammer_ability(String(event.payload.get("ability_id",""))):
+		HammerAbiCombatService.dispatch(self,event)
+		return
 	var target_ids := _valid_action_targets(event)
 	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
@@ -359,6 +362,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var raw_damage := float(event.payload.get("raw_damage", 0.0)) + float(event.payload.get("sword_mh_bonus_flat",0.0))
 	if String(event.payload.get("axe_abi_id","")) == AxeAbiCombatService.RAGE_ABI:
 		raw_damage *= 1.0 + float(event.payload.get("axe_mh_damage_bonus_pct",20.0))/100.0
+	if String(event.payload.get("hammer_abi_id","")) == HammerAbiCombatService.HEAVY:
+		raw_damage *= 1.0 + float(event.payload.get("hammer_mh_damage_bonus_pct",20.0))/100.0
 	# PAR053–056: physical damage bonus applies only to the matching damage type.
 	# Percent values are stored as percentages (e.g. 30 means +30%).
 	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
@@ -397,6 +402,14 @@ func _resolve_attack(event: CombatEvent) -> void:
 	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE:
 		effective_armour *= 1.0 - clampf(float(event.payload.get("dagger_armour_bypass_pct",0.0))/100.0,0.0,1.0)
 	var armour_percent := RatingMatrix.to_percent(effective_armour * 10.0, defender.level)
+	# Hammer charges add 0.25 percentage points to armour/resistance per
+	# stack; an active zone fracture only reduces its named physical zone.
+	armour_percent += 0.25*float(HammerAbiCombatService.charges(defender,state.round_number))
+	for fracture in CombatModifierService.active_effects(defender,state.round_number):
+		if String(fracture.get("effect_id","")) == HammerAbiCombatService.FRACTURE_EFF:
+			var fdef: Dictionary = fracture.get("definition",{})
+			if String(fdef.get("armour_zone","")) == String(event.payload.get("zone","chest")):
+				armour_percent *= 1.0-clampf(float(fdef.get("armour_reduction_pct",0.0))/100.0,0.0,1.0)
 	# Dagger EFF401 subtracts percentage points from the already-converted
 	# armour. Never change the base item PAR or the armour rating matrix.
 	var dagger_breach_stacks := 0
@@ -414,6 +427,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
 	DaggerAbiCombatService.on_connected_attack(self,event,attacker)
 	AxeAbiCombatService.on_connected_attack(self,event)
+	HammerAbiCombatService.on_connected_attack(self,event,attacker)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 
@@ -456,6 +470,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	event.set_result("hp_after", target.hp)
 	event.set_result("visible_hp_after", target.visible_hp())
 	event.set_result("connected", true)
+	HammerAbiCombatService.on_damage(self,event,target)
 
 func _resolve_effect(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
@@ -490,6 +505,16 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if effect_id == AxeAbiCombatService.STANCE_EFF:
 		definition = definition.duplicate(true)
 		definition["dodge_direct_pct"] = clampf(float(event.payload.get("axe_stance_dodge_pct",0.0)),0.0,25.0)
+	if effect_id == HammerAbiCombatService.FRACTURE_EFF:
+		definition = definition.duplicate(true)
+		definition["duration_rounds"] = clampi(int(event.payload.get("hammer_fracture_rounds",0)),1,10)
+		definition["armour_reduction_pct"] = clampf(float(event.payload.get("hammer_fracture_pct",0.0)),0.0,100.0)
+		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
+	if effect_id == HammerAbiCombatService.SURGE_EFF:
+		definition = definition.duplicate(true)
+		var surge := clampf(float(event.payload.get("hammer_surge_pct",0.0)),0.0,25.0)
+		definition["physical_damage_outgoing_direct_pct"] = surge
+		definition["magic_damage_direct_pct"] = surge
 	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
 		definition = definition.duplicate(true)
 		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
