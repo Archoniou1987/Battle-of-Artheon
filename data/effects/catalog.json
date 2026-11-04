@@ -134,5 +134,30 @@
       "POISON",
       "DOT"
     ]
+  },
+  "EFF404": {
+    "id": "EFF404",
+    "name": "Уклонение смертоносной комбинации",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_DEF_COMBO"
+    ],
+    "dodge_direct_pct": 0
+  },
+  "EFF405": {
+    "id": "EFF405",
+    "name": "Открытая защита",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "DAGGER_ATTACK_HEAVY"
+    ],
+    "dodge_direct_pct": -50,
+    "anti_crit_direct_pct": -50
   }
 }
