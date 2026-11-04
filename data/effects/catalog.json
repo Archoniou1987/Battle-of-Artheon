@@ -95,5 +95,44 @@
       "LOST"
     ],
     "snapshot_from": "EFF301"
+  },
+  "EFF401": {
+    "id": "EFF401",
+    "name": "Пробитая броня",
+    "kind": "debuff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "DEBUFF",
+    "tags": [
+      "ARMOR_BREACH"
+    ],
+    "armour_reduction_pct_per_stack": 3
+  },
+  "EFF402": {
+    "id": "EFF402",
+    "name": "Отравленные клинки",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_POISON_COATING"
+    ]
+  },
+  "EFF403": {
+    "id": "EFF403",
+    "name": "Яд кинжалов",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "poison",
+    "duration_rounds": 1,
+    "stacking": "shared_duration",
+    "max_stacks": 10,
+    "polarity": "DEBUFF",
+    "tags": [
+      "POISON",
+      "DOT"
+    ]
   }
 }
