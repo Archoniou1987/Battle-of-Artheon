@@ -91,6 +91,8 @@ var external_effects: Dictionary = {}
 var effect_detail_labels: Dictionary = {}
 var selected_ability := ""
 var ability_buttons: Array[Button] = []
+var ability_confirm_popup: ConfirmationDialog
+var pending_ability_id := ""
 var ability_strip: HBoxContainer
 var ability_scroll: ScrollContainer
 var combat_session: ArenaCombatSession
@@ -228,6 +230,14 @@ func _ready() -> void:
 				details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				column.add_child(details)
 				effect_detail_labels[("player_" if fighter_name=="Игрок" else "enemy_")+title] = details
+	ability_confirm_popup = ConfirmationDialog.new()
+	ability_confirm_popup.title = "Подтвердить ABI"
+	ability_confirm_popup.ok_button_text = "Подтвердить"
+	ability_confirm_popup.cancel_button_text = "Отмена"
+	ability_confirm_popup.min_size = Vector2i(320, 210)
+	add_child(ability_confirm_popup)
+	ability_confirm_popup.confirmed.connect(_confirm_ability)
+	ability_confirm_popup.canceled.connect(func() -> void: pending_ability_id = "")
 	item_popup = AcceptDialog.new()
 	item_popup.title = "Предмет"
 	item_popup.min_size = Vector2i(320, 260)
@@ -951,6 +961,27 @@ func _select_ability(index: int) -> void:
 	if index >= options.size() or not bool(Dictionary(options[index]).get("available",false)):
 		return
 	var ability_id := String(Dictionary(options[index]).get("id",""))
+	if ability_id.is_empty():
+		return
+	pending_ability_id = ability_id
+	var definition := AbilityCatalog.definition(combat_session.ability_scheduler.definitions, ability_id)
+	ability_confirm_popup.title = AbilityCardText.title(ability_id, definition)
+	ability_confirm_popup.dialog_text = AbilityCardText.describe(ability_id, definition, combat_session.fighter(true).action_points)
+	ability_confirm_popup.popup_centered()
+
+func _confirm_ability() -> void:
+	if combat_session == null or pending_ability_id.is_empty():
+		return
+	var ability_id := pending_ability_id
+	pending_ability_id = ""
+	# Revalidate on confirmation, not on opening the information card.
+	var available := false
+	for option in combat_session.player_ability_options():
+		if String(option.get("id", "")) == ability_id and bool(option.get("available", false)):
+			available = true
+			break
+	if not available:
+		return
 	var result := combat_session.activate_ability(ability_id)
 	if not bool(result.get("ok",false)):
 		_prepend_combat_log("ABI отклонена: " + String(result.get("reason","unknown")))
@@ -1160,6 +1191,7 @@ func _start_combat_session() -> void:
 	if character == null or repository == null:
 		return
 	selected_ability = ""
+	pending_ability_id = ""
 	combat_session = ArenaCombatSession.new(character, repository)
 	# Test-only level override on combat snapshots; persistent character data is untouched.
 	combat_session.fighter(true).level = test_player_level
@@ -1305,10 +1337,30 @@ func _refresh_effect_display() -> void:
 					picture.visible = extra == 0
 				if extra>0:
 					button.text="+%d" % extra
+					var old_count := button.get_node_or_null("EFFStackCount") as Label
+					if old_count != null:
+						old_count.visible = false
 					button.tooltip_text="Открыть вкладку %s" % row_type
 				else:
 					var entry:Dictionary=effects[index]
 					button.text = "" if picture != null and picture.texture != null else _effect_symbol(String(entry.get("kind","")))
+					var count_label := button.get_node_or_null("EFFStackCount") as Label
+					if count_label == null:
+						count_label = Label.new()
+						count_label.name = "EFFStackCount"
+						count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+						count_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+						count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+						count_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+						count_label.add_theme_font_size_override("font_size", 10)
+						count_label.add_theme_color_override("font_color", Color("#ffffff"))
+						count_label.add_theme_color_override("font_shadow_color", Color("#000000"))
+						count_label.add_theme_constant_override("shadow_offset_x", 1)
+						count_label.add_theme_constant_override("shadow_offset_y", 1)
+						button.add_child(count_label)
+					var count: int = maxi(1, int(entry.get("stacks", 1)))
+					count_label.text = str(count) if count > 1 else ""
+					count_label.visible = count > 1
 					button.tooltip_text="Открыть вкладку %s" % row_type
 				button.modulate = Color.WHITE
 			var detail:=effect_detail_labels.get(key) as Label
