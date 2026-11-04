@@ -21,7 +21,6 @@ static func generate_weapon(archetype_id: String, level: int, quality: String, s
 		return {}
 	if hand == "OH" and not DAGGER_ARCHETYPES.has(archetype_id):
 		return {}
-		return {}
 	var engine := ItemTemplateGeneratorV12.new()
 	var generated := engine.generate({
 		"archetypes": [archetype_id], "weapon_hand": hand,
