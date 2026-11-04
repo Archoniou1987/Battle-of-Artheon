@@ -84,6 +84,16 @@ func _run() -> void:
 	for id in ["EFF401","EFF402","EFF403","EFF404","EFF405"]:
 		_check(effects.has(id),"effect_catalog_"+id)
 	_check(String(catalog.get("ABI403",{}).get("trigger_previous_round","")) == "dodge","fan_requires_dodge")
+	# Arena validates before begin_round; the planned round must be used
+	# to read the immediately preceding successful dodge.
+	var trigger_state := CombatState.new()
+	trigger_state.begin_round()
+	var dodge_event := trigger_state.create_event(CombatEvent.Kind.ATTACK,"enemy","player",{"round":1})
+	dodge_event.set_result("outcome","dodge")
+	trigger_state.record_event(dodge_event)
+	_check(AbilityRuntime.previous_round_trigger_met(trigger_state,"player","dodge",2),"planned_round_dodge_true")
+	_check(not AbilityRuntime.previous_round_trigger_met(trigger_state,"player","dodge",1),"wrong_round_not_eligible")
+
 	_check(int(catalog.get("ABI408",{}).get("ap_cost",-1)) == 5,"absolute_cost_five")
 
 	var defensive := _make_session("DAGGER_DEF",202611071)
