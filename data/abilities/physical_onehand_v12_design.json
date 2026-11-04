@@ -1,7 +1,7 @@
 {
   "version": "design-2026-11-04",
-  "runtime_status": "design_only_not_registered",
-  "note": "Approved physical weapon ABI/EFF mechanics. Do NOT offer these IDs as castable until real Combat Engine hooks and headless regression pass. Existing sword ABI301-308 unchanged.",
+  "runtime_status": "integrated_not_yet_ci_verified",
+  "note": "Physical dagger/axe/hammer runtime ABI/EFF integrated into shared Combat Engine; manual Combat Integration Gate regression still pending. Sword ABI301-308 unchanged; magic archetypes deferred.",
   "abilities": {
     "DAGGER_01": {
       "name": "Быстрая атака",
@@ -246,5 +246,54 @@
       "reflected_damage_pct": 20
     },
     "NOTES": "Physical dagger, axe and hammer EFF are design-only; runtime IDs are not allocated. All ordinary physical block types count for axe shield penetration."
-  }
+  },
+  "runtime_id_map": {
+    "DAGGER_01": "ABI401",
+    "DAGGER_02": "ABI402",
+    "DAGGER_DEF_03": "ABI403",
+    "DAGGER_DEF_04": "ABI404",
+    "DAGGER_ATTACK_03": "ABI405",
+    "DAGGER_ATTACK_04": "ABI406",
+    "DAGGER_PEN_03": "ABI407",
+    "DAGGER_PEN_04": "ABI408",
+    "AXE_01": "ABI501",
+    "AXE_02": "ABI502",
+    "AXE_DEF_03": "ABI503",
+    "AXE_DEF_04": "ABI504",
+    "AXE_ATTACK_03": "ABI505",
+    "AXE_ATTACK_04": "ABI506",
+    "AXE_SHIELD_03": "ABI507",
+    "AXE_SHIELD_04": "ABI508",
+    "HAMMER_01": "ABI601",
+    "HAMMER_02": "ABI602",
+    "HAMMER_DEF_03": "ABI603",
+    "HAMMER_DEF_04": "ABI604",
+    "HAMMER_ATTACK_03": "ABI605",
+    "HAMMER_ATTACK_04": "ABI606"
+  },
+  "runtime_effect_ids": {
+    "ARMOR_BREACH": "EFF401",
+    "POISON_COATING": "EFF402",
+    "POISON": "EFF403",
+    "DAGGER_DODGE_BUFF": "EFF404",
+    "DAGGER_OPEN_GUARD": "EFF405",
+    "RAGE": "EFF501",
+    "AXE_SWEEP": "EFF502",
+    "AXE_RETALIATION": "EFF503",
+    "AXE_WEAK_GUARD": "EFF504",
+    "CRUSHER": "EFF505",
+    "CHARGE": "EFF601",
+    "PHYSICAL_HAMMER_REFLECT": "EFF602",
+    "HAMMER_ARMOUR_FRACTURE": "EFF603",
+    "HAMMER_SURGE": "EFF604"
+  },
+  "runtime_notes": [
+    "One active ABI per round, up to four ABIs assigned by MH v1.2 item; OH daggers do not add duplicate ABI slots.",
+    "Dagger armour break -3 percentage points per stack after armour rating conversion; dodge/anti-crit debuff is instant before locked attacks.",
+    "Axe universal block penetration applies to both manual and automatic blocks; execute/crusher prerequisites checked before AP/CD.",
+    "Hammer charge has no ticking timer; all damage events and successful ordinary MH criticals add stacks as approved.",
+    "Hammer DEF03 and ATTACK03 fractional charge consumption uses mathematical rounding; DEF04 duration rounds uses mathematical rounding.",
+    "Hammer tempo debuffs are metadata-only until the future stun/control contract is approved.",
+    "All new combat runners included only in manually-dispatched Combat Integration Gate, NOT automatically executed."
+  ]
 }
