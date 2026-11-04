@@ -14,13 +14,16 @@ static func application_timing(definition: Dictionary) -> String:
 	return String(definition.get("application_timing", "standard")).to_lower()
 
 ## A trigger is a historical eligibility check; it never creates an attack by itself.
-static func previous_round_trigger_met(state: CombatState, source_id: String, trigger: String) -> bool:
+static func previous_round_trigger_met(state: CombatState, source_id: String, trigger: String, planned_round: int = -1) -> bool:
 	if trigger.is_empty():
 		return true
-	if state.round_number < 2:
+	# Arena preflight runs before begin_round; Scheduler runs after it. Both
+	# must inspect the same previous finished round without off-by-one drift.
+	var evaluating_round := state.round_number if planned_round < 0 else planned_round
+	if evaluating_round < 2:
 		return false
 	for event in state.event_log:
-		if int(event.payload.get("round",-1)) != state.round_number - 1:
+		if int(event.payload.get("round",-1)) != evaluating_round - 1:
 			continue
 		if trigger == "block" and event.target_id == source_id and String(event.result.get("outcome","")) in ["manual_block","auto_block"]:
 			return true
