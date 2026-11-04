@@ -75,6 +75,9 @@ func _resolve_action(event: CombatEvent) -> void:
 	if SwordAbiCombatService.is_sword_ability(String(event.payload.get("ability_id",""))):
 		SwordAbiCombatService.dispatch(self,event)
 		return
+	if DaggerAbiCombatService.is_dagger_ability(String(event.payload.get("ability_id",""))):
+		DaggerAbiCombatService.dispatch(self,event)
+		return
 	var target_ids := _valid_action_targets(event)
 	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
@@ -390,6 +393,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	state.queue_event(damage_event)
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
+	DaggerAbiCombatService.on_connected_attack(self,event,attacker)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 
