@@ -57,11 +57,16 @@ func _run() -> void:
 		quit(1)
 		return
 	arena._select_ability(0)
+	if arena.selected_ability != "" or arena.combat_session.locked_ability_id != "" or arena.pending_ability_id != "ABI003":
+		push_error("ARENA_OPEN_SMOKE=FAIL: ABI activated before confirmation")
+		quit(1)
+		return
+	arena._confirm_ability()
 	if arena.selected_ability != "ABI003":
 		push_error("ARENA_OPEN_SMOKE=FAIL: ABI selection does not reach Arena")
 		quit(1)
 		return
-	# ABI press is a committed action now: second tap cannot deselect it.
+	# Confirmed action remains committed; second tap cannot deselect it.
 	arena._select_ability(0)
 	if arena.selected_ability != "ABI003" or arena.combat_session.locked_ability_id != "ABI003":
 		push_error("ARENA_OPEN_SMOKE=FAIL: committed ABI could be canceled")
@@ -99,7 +104,7 @@ func _run() -> void:
 		quit(1)
 		return
 	var label:=arena.effect_detail_labels.get("player_Баффы") as Label
-	if label==null or not label.text.contains("×2") or not label.text.contains("следующем раунде"):
+	if label==null or not label.text.contains("×2") or label.text.contains("вступит"):
 		push_error("ARENA_OPEN_SMOKE=FAIL: EFF details, stacks or delayed start")
 		quit(1)
 		return
