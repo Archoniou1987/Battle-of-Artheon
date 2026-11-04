@@ -94,6 +94,26 @@ func _run() -> void:
 	_check(AbilityRuntime.previous_round_trigger_met(trigger_state,"player","dodge",2),"planned_round_dodge_true")
 	_check(not AbilityRuntime.previous_round_trigger_met(trigger_state,"player","dodge",1),"wrong_round_not_eligible")
 
+	# Regression: the Arena button must use the intended NEXT round,
+	# not stale triggers from the round before the last finished round.
+	var fan_preview := _make_session("DAGGER_DEF",202611074)
+	if fan_preview != null:
+		fan_preview.fighter(true).action_points = 8
+		fan_preview.state.begin_round() # Round 1: player dodges.
+		var previous_dodge := fan_preview.state.create_event(CombatEvent.Kind.ATTACK,ArenaCombatSession.ENEMY_ID,fan_preview.player_id)
+		previous_dodge.set_result("outcome","dodge")
+		fan_preview.state.record_event(previous_dodge)
+		var options_after_dodge := fan_preview.player_ability_options()
+		_check(options_after_dodge.size() > 2 and bool(Dictionary(options_after_dodge[2]).get("available",false)),"fan_available_after_last_round_dodge")
+		fan_preview.state.begin_round() # Round 2: enemy connects; no dodge.
+		var previous_hit := fan_preview.state.create_event(CombatEvent.Kind.ATTACK,ArenaCombatSession.ENEMY_ID,fan_preview.player_id)
+		previous_hit.set_result("outcome","connected")
+		fan_preview.state.record_event(previous_hit)
+		var options_after_hit := fan_preview.player_ability_options()
+		_check(options_after_hit.size() > 2 and not bool(Dictionary(options_after_hit[2]).get("available",false)),"fan_unavailable_after_stale_dodge")
+		_check(not AbilityRuntime.previous_round_trigger_met(fan_preview.state,fan_preview.player_id,"dodge",3),"fan_cast_guard_no_stale_dodge")
+
+
 	_check(int(catalog.get("ABI408",{}).get("ap_cost",-1)) == 5,"absolute_cost_five")
 
 	var defensive := _make_session("DAGGER_DEF",202611071)
