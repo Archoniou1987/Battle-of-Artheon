@@ -373,7 +373,9 @@ func _reveal_instant_effects() -> void:
 func _tick_effect_durations() -> void:
 	for combatant in state.combatants.values():
 		for active in combatant.active_effects:
-			if state.round_number>=int(active.get("start_round",999999)):
+			# Persistent hammer charge EFF has no timer. Only explicit ABI
+			# consumption can remove its stacks.
+			if state.round_number>=int(active.get("start_round",999999)) and not bool(Dictionary(active.get("definition",{})).get("permanent",false)):
 				active["remaining_rounds"]=int(active.get("remaining_rounds",0))-1
 			if String(Dictionary(active.get("definition", {})).get("stacking", "")) == "shared_duration":
 				# Promote newly applied stacks only AFTER this round's DoT phase.
