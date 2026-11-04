@@ -94,6 +94,7 @@ var ability_buttons: Array[Button] = []
 var ability_confirm_popup: ConfirmationDialog
 var pending_ability_id := ""
 var pending_external_ability_index := -1
+var selected_external_ability_index := -1
 var external_ability_options: Array = []
 var external_player_ap := 0
 var ability_strip: HBoxContainer
@@ -1018,14 +1019,15 @@ func _cancel_ability_preview() -> void:
 	if not external_combat_mode and combat_session != null:
 		_refresh_ability_buttons()
 	elif external_combat_mode:
-		for button in ability_buttons:
-			button.set_pressed_no_signal(false)
+		for index in range(ability_buttons.size()):
+			ability_buttons[index].set_pressed_no_signal(index == selected_external_ability_index)
 
 func _confirm_ability() -> void:
 	if external_combat_mode:
 		var index := pending_external_ability_index
 		pending_external_ability_index = -1
 		if index >= 0 and index < external_ability_options.size() and bool(Dictionary(external_ability_options[index]).get("available", false)):
+			selected_external_ability_index = -1 if selected_external_ability_index == index else index
 			live_ability_selected.emit(index)
 		return
 	if combat_session == null or pending_ability_id.is_empty():
@@ -1622,6 +1624,8 @@ func present_external(view: Dictionary) -> void:
 				var item: Dictionary = raw_gear.get("item", {})
 				(player_slots[slot] as ItemIcon).set_item(item, slot, bool(raw_gear.get("active", false)))
 	var abilities: Array = view.get("ability_slots", [])
+	selected_external_ability_index = -1
+	pending_external_ability_index = -1
 	external_ability_options = abilities.duplicate(true)
 	external_player_ap = int(player.get("ap", 0))
 	_layout_ability_strip(abilities)
