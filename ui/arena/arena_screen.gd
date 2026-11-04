@@ -93,6 +93,9 @@ var selected_ability := ""
 var ability_buttons: Array[Button] = []
 var ability_confirm_popup: ConfirmationDialog
 var pending_ability_id := ""
+var pending_external_ability_index := -1
+var external_ability_options: Array = []
+var external_player_ap := 0
 var ability_strip: HBoxContainer
 var ability_scroll: ScrollContainer
 var combat_session: ArenaCombatSession
@@ -237,7 +240,8 @@ func _ready() -> void:
 	ability_confirm_popup.min_size = Vector2i(320, 210)
 	add_child(ability_confirm_popup)
 	ability_confirm_popup.confirmed.connect(_confirm_ability)
-	ability_confirm_popup.canceled.connect(func() -> void: pending_ability_id = "")
+	ability_confirm_popup.canceled.connect(_cancel_ability_preview)
+	ability_confirm_popup.close_requested.connect(_cancel_ability_preview)
 	item_popup = AcceptDialog.new()
 	item_popup.title = "Предмет"
 	item_popup.min_size = Vector2i(320, 260)
@@ -953,7 +957,17 @@ func set_attack_count(count: int) -> void:
 
 func _select_ability(index: int) -> void:
 	if external_combat_mode:
-		live_ability_selected.emit(index)
+		if index < 0 or index >= external_ability_options.size():
+			return
+		var external_option: Dictionary = Dictionary(external_ability_options[index])
+		if not bool(external_option.get("available", false)):
+			return
+		pending_external_ability_index = index
+		var external_id := String(external_option.get("id", ""))
+		var external_def := AbilityCatalog.definition(AbilityCatalog.load_json("res://data/abilities/catalog.json"), external_id)
+		ability_confirm_popup.title = AbilityCardText.title(external_id, external_def)
+		ability_confirm_popup.dialog_text = AbilityCardText.describe(external_id, external_def, external_player_ap)
+		ability_confirm_popup.popup_centered()
 		return
 	if combat_session == null or index < 0 or index >= ability_buttons.size():
 		return
@@ -969,7 +983,22 @@ func _select_ability(index: int) -> void:
 	ability_confirm_popup.dialog_text = AbilityCardText.describe(ability_id, definition, combat_session.fighter(true).action_points)
 	ability_confirm_popup.popup_centered()
 
+func _cancel_ability_preview() -> void:
+	pending_ability_id = ""
+	pending_external_ability_index = -1
+	if not external_combat_mode and combat_session != null:
+		_refresh_ability_buttons()
+	elif external_combat_mode:
+		for button in ability_buttons:
+			button.set_pressed_no_signal(false)
+
 func _confirm_ability() -> void:
+	if external_combat_mode:
+		var index := pending_external_ability_index
+		pending_external_ability_index = -1
+		if index >= 0 and index < external_ability_options.size() and bool(Dictionary(external_ability_options[index]).get("available", false)):
+			live_ability_selected.emit(index)
+		return
 	if combat_session == null or pending_ability_id.is_empty():
 		return
 	var ability_id := pending_ability_id
@@ -1564,6 +1593,8 @@ func present_external(view: Dictionary) -> void:
 				var item: Dictionary = raw_gear.get("item", {})
 				(player_slots[slot] as ItemIcon).set_item(item, slot, bool(raw_gear.get("active", false)))
 	var abilities: Array = view.get("ability_slots", [])
+	external_ability_options = abilities.duplicate(true)
+	external_player_ap = int(player.get("ap", 0))
 	_layout_ability_strip(abilities)
 	for index in range(ability_buttons.size()):
 		var option: Dictionary = abilities[index] if index < abilities.size() and abilities[index] is Dictionary else {}
