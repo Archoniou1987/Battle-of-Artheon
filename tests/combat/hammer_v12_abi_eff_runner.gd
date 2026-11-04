@@ -105,6 +105,14 @@ func _run() -> void:
 				if event.kind == CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id","")) == "EFF602" and bool(event.result.get("resolved",false)):
 					reflect_applied = true
 			_check(reflect_applied,"reflect_activation")
+			# This test targets reflection, not PAR135/trait damage reduction.
+			# The high-stat Lv40 fixture may legitimately have 100% mitigation;
+			# neutralize it ONLY inside this controlled fixture so an incoming
+			# DAMAGE event removes HP and can produce a reflected event.
+			var receiver := defence.fighter(true)
+			receiver.combat_stats["damage_reduction_pct"] = 0.0
+			receiver.combat_stats["damage_reduction"] = 0.0
+			_check(CombatModifierService.damage_reduction(receiver,defence.state.round_number) < 1.0,"reflect_fixture_not_immune")
 			# Deterministic damage during the SAME sealed round as the instant
 			# ABI. Tests reflection without relying on NPC accuracy/defence RNG.
 			var controlled_round: CombatRound = defence.orchestrator.begin_round()
