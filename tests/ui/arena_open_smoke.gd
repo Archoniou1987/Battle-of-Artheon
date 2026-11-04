@@ -98,6 +98,12 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: EFF polarity rows")
 		quit(1)
 		return
+	var first_effect := buff_row.get_child(0) as Button
+	var stack_counter := first_effect.get_node_or_null("EFFStackCount") as Label
+	if stack_counter == null or stack_counter.text != "2" or not stack_counter.visible:
+		push_error("ARENA_OPEN_SMOKE=FAIL: EFF stack badge not visible on icon")
+		quit(1)
+		return
 	var fifth:=buff_row.get_child(4) as Button
 	if fifth==null or not fifth.visible or fifth.text!="+2":
 		push_error("ARENA_OPEN_SMOKE=FAIL: EFF +N overflow")
