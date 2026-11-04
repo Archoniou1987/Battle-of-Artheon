@@ -88,6 +88,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"slot_usage": [slot],
 		"icon_id": "ICON_0002", # Placeholder until visual templates/atlas binding stage.
 		"damage": {"min": int(damage[0]), "max": int(damage[1]), "type": _damage_type(family)},
+		"damage_type": _damage_type(family),
 		"damage_min": int(damage[0]),
 		"damage_max": int(damage[1]),
 		"par_stats": {"PAR057": 1},
