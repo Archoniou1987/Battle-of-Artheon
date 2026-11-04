@@ -36,6 +36,7 @@ jobs:
           bash tools/run_godot_check.sh tests/ui/arena_open_smoke.gd
           bash tools/run_godot_check.sh tests/ui/elixir_abi_press_runner.gd
           bash tools/run_godot_check.sh tests/ui/solo_combat_screen_runner.gd
+          bash tools/run_godot_check.sh tests/map/solo_live_manual_abi_runner.gd
 
       - name: Run integration ladder from one attack to full ABI/EFF lifecycle
         shell: bash
