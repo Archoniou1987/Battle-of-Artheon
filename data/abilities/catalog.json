@@ -291,5 +291,126 @@
     "ap_gain": 1,
     "application_timing": "instant",
     "dagger_ability_mode": "poison_coating"
+  },
+  "ABI403": {
+    "name": "Веер клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "def_fan",
+    "trigger_previous_round": "dodge"
+  },
+  "ABI404": {
+    "name": "Смертельная комбинация",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "def_combo"
+  },
+  "ABI405": {
+    "name": "Сокрушительный выпад",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "attack_heavy"
+  },
+  "ABI406": {
+    "name": "Шквал клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "attack_flurry"
+  },
+  "ABI407": {
+    "name": "Глубокий прокол",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "pen_deep"
+  },
+  "ABI408": {
+    "name": "Абсолютное пробитие",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "pen_absolute"
   }
 }
