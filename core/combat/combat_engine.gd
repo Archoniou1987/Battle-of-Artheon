@@ -385,6 +385,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var typed_armour_penetration_percent:=CombatModifierService.typed_armour_penetration_percent(attacker, damage_type, state.round_number)
 	# PAR126 and PAR131–134 reduce the matching armour sequentially.
 	var effective_armour := maxf(0.0, base_armour * (1.0 - armour_penetration_percent) * (1.0 - typed_armour_penetration_percent))
+	# ABI408 is a one-cast multiplier on the remaining armour, not a
+	# permanent PAR change. Each pre-cast breach stack removes 20%.
+	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE:
+		effective_armour *= 1.0 - clampf(float(event.payload.get("dagger_armour_bypass_pct",0.0))/100.0,0.0,1.0)
 	var armour_percent := RatingMatrix.to_percent(effective_armour * 10.0, defender.level)
 	# Dagger EFF401 subtracts percentage points from the already-converted
 	# armour. Never change the base item PAR or the armour rating matrix.
@@ -471,6 +475,9 @@ func _resolve_effect(event: CombatEvent) -> void:
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if definition.is_empty(): event.set_result("resolved", false); return
+	if effect_id == DaggerAbiCombatService.DODGE_BUFF:
+		definition = definition.duplicate(true)
+		definition["dodge_direct_pct"] = clampf(float(event.payload.get("dagger_dodge_pct",0.0)),0.0,25.0)
 	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
 		definition = definition.duplicate(true)
 		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
