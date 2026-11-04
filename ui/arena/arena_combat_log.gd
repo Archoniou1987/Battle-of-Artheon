@@ -59,6 +59,9 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 		var root_id: int = _ability_root_id(event, by_id)
 		if root_id == event.event_id and event.kind == CombatEvent.Kind.ACTION:
 			var name_id: String = String(event.payload.get("ability_id", ""))
+			# ABI301 enhances the ordinary MH strike: render one named attack line instead of a second technical ability line.
+			if name_id == "ABI301" and String(event.result.get("outcome", "")) == "linked_to_existing_mh":
+				continue
 			var definition: Dictionary = AbilityCatalog.definition(ability_definitions, name_id)
 			var ability_name: String = String(definition.get("name", name_id))
 			var prefix: String = "%s — ABI «%s»" % [_actor(event.source_id, player_id), ability_name]
@@ -92,9 +95,16 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 			if outcome == "connected":
 				var amount: int = int(weapon_damage.get(event.event_id, 0))
 				var critical: String = " (крит)" if bool(event.result.get("critical", false)) else ""
-				result.append("%s атакует %s (%s): %d урона%s" % [from_name, target_name, zone_name, amount, critical])
+				if String(event.payload.get("sword_abi_id", "")) == "ABI301":
+					var abi_def: Dictionary = AbilityCatalog.definition(ability_definitions, "ABI301")
+					result.append("%s — ABI «%s» атакует %s (%s): %d урона%s" % [from_name, String(abi_def.get("name", "Кровавый порез")), target_name, zone_name, amount, critical])
+				else:
+					result.append("%s атакует %s (%s): %d урона%s" % [from_name, target_name, zone_name, amount, critical])
 			else:
-				result.append("%s атакует %s (%s): %s" % [from_name, target_name, zone_name, _attack_outcome(outcome)])
+				if String(event.payload.get("sword_abi_id", "")) == "ABI301":
+					result.append("%s — ABI «Кровавый порез» атакует %s (%s): %s" % [from_name, target_name, zone_name, _attack_outcome(outcome)])
+				else:
+					result.append("%s атакует %s (%s): %s" % [from_name, target_name, zone_name, _attack_outcome(outcome)])
 		elif root_id < 0 and event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("source", "")) == "effect":
 			result.append("EFF %s: %d урона %s" % [String(event.payload.get("effect_id", "")), int(event.result.get("hp_removed", 0)), _target(event.target_id, player_id)])
 		elif root_id < 0 and event.kind == CombatEvent.Kind.EFFECT:
