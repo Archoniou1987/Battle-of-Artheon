@@ -70,7 +70,9 @@ static func block_chance(combatant: CombatantState, round_number: int) -> float:
 	return effective_percent(combatant, "shield_auto_block_rating", round_number)
 
 static func block_crush_chance(combatant: CombatantState, round_number: int) -> float:
-	return value(combatant, "block_crush", round_number)
+	# RAGE: each stack adds +2 percentage points vs ALL manual/auto blocks.
+	# CRUSHER adds +20 via its ordinary EFF block_crush overlay.
+	return value(combatant, "block_crush", round_number) + 2.0*float(AxeAbiCombatService.rage_stacks(combatant,round_number))
 
 static func armour_penetration_flat(combatant: CombatantState, round_number: int) -> float:
 	return value(combatant, "armour_penetration_flat", round_number)
