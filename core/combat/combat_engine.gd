@@ -591,6 +591,9 @@ func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
 		if state.round_number < int(active.get("dispel_available_round",active.get("start_round",999999))):
 			continue
 		var definition:Dictionary=Dictionary(active.get("definition",{}))
+		# Permanent hammer charge stacks are expended only through their ABI.
+		if bool(definition.get("undispellable",false)):
+			continue
 		if EffectPolarity.of(definition)!=polarity:
 			continue
 		removed.append(String(active.get("effect_id","")))
