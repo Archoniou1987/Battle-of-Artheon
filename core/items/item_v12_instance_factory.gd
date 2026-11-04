@@ -31,7 +31,20 @@ static func generate_weapon(archetype_id: String, level: int, quality: String, s
 	if not bool(generated.get("ok", false)) or (generated.get("rows", []) as Array).size() != 1:
 		return {}
 	var row: Dictionary = generated["rows"][0]
-	if String(row.get("archetype_id", "")) != archetype_id or String(row.get("slot", "")) != hand or int(row.get("level", -1)) != level or String(row.get("quality", "")) != quality:
+	return instance_from_v12_row(row, seed_value)
+
+## Convert ONE already-rolled mass-generator candidate to a game instance.
+## Never reroll CORE/PAR/quality when the player selects "Добавить в сумку".
+static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dictionary:
+	var archetype_id := String(row.get("archetype_id", ""))
+	var hand := String(row.get("slot", ""))
+	var level := int(row.get("level", 0))
+	var quality := String(row.get("quality", ""))
+	if not PHYSICAL_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
+		return {}
+	if not ["MH", "OH"].has(hand) or (hand == "OH" and not DAGGER_ARCHETYPES.has(archetype_id)):
+		return {}
+	if not row.get("variant", null) is Dictionary:
 		return {}
 	var variant: Dictionary = row["variant"]
 	var damage: Array = variant.get("damage", [])
@@ -102,6 +115,27 @@ static func grant_weapon(character: CharacterState, repository: ItemRepository, 
 	if item.is_empty():
 		return {}
 	# A new instance has a fresh ID even when the same template/seed is rolled.
+	for _attempt in range(4):
+		if not repository.has_item(String(item["instance_id"])):
+			break
+		item["instance_id"] = _new_instance_id()
+	if not repository.add_item(item):
+		return {}
+	var instance_id := String(item["instance_id"])
+	if not character.receive_item(instance_id, repository):
+		repository.remove_item(instance_id)
+		return {}
+	return item
+
+## Grant the EXACT previewed candidate, preserving its v1.2 rolls.
+static func grant_generated_row(character: CharacterState, repository: ItemRepository, row: Dictionary, seed_value: int = 1) -> Dictionary:
+	if character == null or repository == null or character.in_combat:
+		return {}
+	if character.bag_capacity >= 0 and character.bag_item_count() >= character.bag_capacity:
+		return {}
+	var item := instance_from_v12_row(row, seed_value)
+	if item.is_empty():
+		return {}
 	for _attempt in range(4):
 		if not repository.has_item(String(item["instance_id"])):
 			break
