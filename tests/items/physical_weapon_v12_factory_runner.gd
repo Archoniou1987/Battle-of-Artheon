@@ -55,6 +55,23 @@ func _run() -> void:
 			_check(Dictionary(instance.get("damage",{})).get("min",-1) == (row["variant"]["damage"] as Array)[0],"mass_damage_same")
 			_check(instance.get("v12_core_rolls",[]) == row["variant"].get("core_rolls",[]),"mass_core_same")
 			_check(instance.get("v12_rarity_rolls",[]) == row["variant"].get("rolls",[]),"mass_bonus_same")
+	# Check actual game combat profile: item_level must not silently fall
+	# back to 1 for level-40 generated v1.2 weapons.
+	var level_hero := CharacterState.new("V12_LEVEL","Weapon Level Test",40)
+	for par_id in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
+		level_hero.progression.base_stats[par_id] = 90
+	var level_repo := ItemRepository.new()
+	var level_item := ItemV12InstanceFactory.grant_weapon(level_hero,level_repo,"HAMMER_DEF",40,"purple",202611049)
+	_check(not level_item.is_empty(),"level_item_generated")
+	if not level_item.is_empty():
+		_check(level_hero.equip("main_hand",String(level_item.get("instance_id","")),level_repo),"level_item_equipped")
+		var level_fighter := CharacterCombatBuilder.build(level_hero,level_repo)
+		_check(level_fighter != null,"level_combatant_built")
+		if level_fighter != null:
+			var profiles: Array = level_fighter.combat_stats.get("weapon_profiles",[])
+			_check(not profiles.is_empty(),"level_weapon_profile")
+			if not profiles.is_empty():
+				_check(int(Dictionary(profiles[0]).get("item_level",-1))==40,"level_profile_preserved")
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_DEF",40,"purple",1,"OH").is_empty(),"axe_no_oh")
 	_check(ItemV12InstanceFactory.generate_weapon("HAMMER_MAGIC",40,"purple",1).is_empty(),"magic_not_implemented")
 	print("PHYSICAL_WEAPON_V12_FACTORY=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
