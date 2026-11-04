@@ -1,6 +1,6 @@
 extends SceneTree
 
-## UI wiring smoke: elixir and instant ABI fire on press, not End Turn.
+## UI wiring smoke: elixir fires on press; ABI requires an explicit confirm, not End Turn.
 var failures: Array[String] = []
 
 func check(ok: bool, label: String) -> void:
@@ -39,10 +39,13 @@ func _run() -> void:
 	var support := {"name":"Guard","application_timing":"instant","target_team":"ALLY","components":[{"kind":"effect","effect_id":"EFF006"}],"mana_cost":0}
 	arena.combat_session.ability_scheduler.definitions["ABI_PRESS_GUARD"]=support
 	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id]=["ABI_PRESS_GUARD"]
-	arena.combat_session.player_ability_slots=["ABI_PRESS_GUARD","","","",""]
+	arena.combat_session.player_ability_slots=["ABI_PRESS_GUARD","","","","",""]
 	arena._refresh_ability_buttons()
 	check(not arena.ability_buttons[0].disabled,"guard_button_ready")
 	arena.ability_buttons[0].emit_signal("pressed")
+	check(arena.pending_ability_id=="ABI_PRESS_GUARD" and arena.combat_session.locked_ability_id=="","preview_does_not_commit_abi")
+	check(CombatModifierService.damage_reduction(player,1)==0.0,"preview_does_not_apply_effect")
+	arena._confirm_ability()
 	check(arena.combat_session.locked_ability_id=="ABI_PRESS_GUARD","button_committed_abi")
 	check(CombatModifierService.damage_reduction(player,1)>0.0,"guard_active_on_click")
 	check(arena.ability_buttons[0].disabled,"ability_buttons_locked")
