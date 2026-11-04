@@ -296,7 +296,7 @@ func _build_visual_lab() -> void:
 	column.add_child(abi_heading)
 	visual_lab_abi_mode = OptionButton.new()
 	visual_lab_abi_mode.name = "ABIPreview"
-	for name_text in ["Живой бой", "Все 5 ABI", "Выбранная ABI", "Недоступные ABI"]:
+	for name_text in ["Живой бой", "Все 6 ABI", "Выбранная ABI", "Недоступные ABI"]:
 		visual_lab_abi_mode.add_item(name_text)
 	visual_lab_abi_mode.item_selected.connect(func(index: int) -> void:
 		visual_lab_abi_index = index
