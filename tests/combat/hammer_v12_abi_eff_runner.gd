@@ -97,11 +97,42 @@ func _run() -> void:
 			_check(HammerAbiCombatService.charges(defence.fighter(true),defence.state.round_number)>=5,"passive_successful_mh_charges")
 			_check(_attacks(defence,"ABI601").size()==1,"heavy_no_extra_mh")
 		if _cast(defence,"ABI602"):
-			var reflected := false
+			# NPC's ordinary attack is random: if it misses, blocks, or deals
+			# zero final damage, no reflection should be generated. Verify that
+			# activation itself succeeded independently of that random outcome.
+			var reflect_applied := false
 			for event in defence.state.event_log:
-				if event.kind==CombatEvent.Kind.DAMAGE and String(event.payload.get("source",""))=="hammer_reflection":
-					reflected = true
+				if event.kind == CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id","")) == "EFF602" and bool(event.result.get("resolved",false)):
+					reflect_applied = true
+			_check(reflect_applied,"reflect_activation")
+			# Deterministic damage during the SAME sealed round as the instant
+			# ABI. Tests reflection without relying on NPC accuracy/defence RNG.
+			var controlled_round: CombatRound = defence.orchestrator.begin_round()
+			var reflect_action := AbilityRuntime.build_action_event(
+				defence.state,defence.player_id,defence.player_id,"ABI602",catalog["ABI602"]
+			)
+			controlled_round.lock_action(reflect_action)
+			var incoming := defence.state.create_event(
+				CombatEvent.Kind.DAMAGE,ArenaCombatSession.ENEMY_ID,defence.player_id,
+				{"amount":500.0,"damage_type":"physical","source":"reflection_test"}
+			)
+			controlled_round.lock_action(incoming)
+			defence.orchestrator.resolve_locked_actions(controlled_round)
+			defence.orchestrator.end_round()
+			var reflected := false
+			var reflection_count := 0
+			for event in defence.state.event_log:
+				if event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("source","")) == "hammer_reflection" and int(event.payload.get("round",-1)) == defence.state.round_number:
+					reflection_count += 1
+					if event.source_id == defence.player_id and event.target_id == ArenaCombatSession.ENEMY_ID and float(event.payload.get("amount",0.0)) > 0.0:
+						reflected = true
+			_check(int(incoming.result.get("final_damage",0)) > 0,"reflect_test_positive_incoming")
 			_check(reflected,"reflect_current_round")
+			_check(reflection_count == 1,"reflect_no_recursive_chain")
+			if not reflected:
+				print("HAMMER_REFLECT_DIAGNOSTIC= incoming=",incoming.result,
+					" active=",defence.fighter(true).active_effects,
+					" reflect_action=",reflect_action.result)
 		_give_charges(defence,80)
 		defence.fighter(true).hp = 50000
 		if _cast(defence,"ABI603"):
