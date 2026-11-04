@@ -42,6 +42,18 @@ func _run() -> void:
 		_check(not offhand.is_empty(),archetype_id+"_offhand_generated")
 		_check(String(offhand.get("slot",""))=="off_hand",archetype_id+"_offhand_slot")
 		seed_value += 1
+	# Selecting a mass-generator result must not roll its CORE/PAR again.
+	var engine := ItemTemplateGeneratorV12.new()
+	var batch := engine.generate({"archetypes":["DAGGER_ATTACK"],"weapon_hand":"MH","min_level":40,"max_level":40,"quality":"purple","count":1,"seed":202611041,"group_qualities":false})
+	_check(bool(batch.get("ok",false)),"mass_v12_generated")
+	if bool(batch.get("ok",false)):
+		var row: Dictionary = batch["rows"][0]
+		var instance := ItemV12InstanceFactory.instance_from_v12_row(row,202611041)
+		_check(not instance.is_empty(),"mass_row_converted")
+		if not instance.is_empty():
+			_check(Dictionary(instance.get("damage",{})).get("min",-1) == (row["variant"]["damage"] as Array)[0],"mass_damage_same")
+			_check(instance.get("v12_core_rolls",[]) == row["variant"].get("core_rolls",[]),"mass_core_same")
+			_check(instance.get("v12_rarity_rolls",[]) == row["variant"].get("rolls",[]),"mass_bonus_same")
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_DEF",40,"purple",1,"OH").is_empty(),"axe_no_oh")
 	_check(ItemV12InstanceFactory.generate_weapon("HAMMER_MAGIC",40,"purple",1).is_empty(),"magic_not_implemented")
 	print("PHYSICAL_WEAPON_V12_FACTORY=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
