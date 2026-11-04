@@ -83,7 +83,7 @@ static func _effect(engine: CombatEngine, source_id: String, target_id: String, 
 ## attack is earlier in the sealed round than this standard-timing ABI.
 static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 	var ability_id := String(action.payload.get("ability_id",""))
-	if not ability_id in [DEF_COMBO, ATTACK_HEAVY]:
+	if not [DEF_COMBO, ATTACK_HEAVY].has(ability_id):
 		return
 	var source := engine.state.get_combatant(action.source_id)
 	if source == null or _weapon(source,0).is_empty() or not _valid_enemy(engine,action.source_id,action.target_id):
@@ -96,7 +96,7 @@ static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 		_effect(engine,action.source_id,action.source_id,action.event_id,DODGE_BUFF,true,{"dagger_dodge_pct":5.0 * float(breach)})
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
-	if profile.is_empty() or damage <= 0.0:
+	if profile.is_empty() or damage < 0.0:
 		return -1
 	var component := {"damage_type":String(profile.get("damage_type","piercing")),"zone":String(action.payload.get("zone","chest"))}
 	var payload := CombatDamagePayload.ability_attack_payload(action,component,damage,1.0)
