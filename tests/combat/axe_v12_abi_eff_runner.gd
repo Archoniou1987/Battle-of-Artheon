@@ -93,6 +93,14 @@ func _run() -> void:
 	for id in ["EFF501","EFF502","EFF503","EFF504","EFF505"]:
 		_check(effects.has(id),"effect_catalog_"+id)
 	_check(String(catalog.get("ABI502",{}).get("trigger_previous_round",""))=="crit_or_block_crush","cut_previous_crit_or_crush")
+	var preflight := CombatState.new()
+	preflight.begin_round()
+	var previous_hit := preflight.create_event(CombatEvent.Kind.ATTACK,"player","enemy",{"round":1})
+	previous_hit.set_result("critical",true)
+	preflight.record_event(previous_hit)
+	_check(AbilityRuntime.previous_round_trigger_met(preflight,"player","crit_or_block_crush",2),"axe_crit_in_last_round")
+	_check(not AbilityRuntime.previous_round_trigger_met(preflight,"player","crit_or_block_crush",1),"axe_trigger_wrong_round_rejected")
+
 	_check(int(catalog.get("ABI507",{}).get("cooldown_rounds",-1))==5,"crusher_cd5")
 
 	var defence := _make_session("AXE_DEF",202611081)
