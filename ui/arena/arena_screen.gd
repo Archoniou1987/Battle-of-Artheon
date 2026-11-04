@@ -112,6 +112,7 @@ var par_report_dialog: AcceptDialog
 var par_report_text: TextEdit
 var abi_lab_dialog: AbiTestLabDialog
 var fighter_popup: AcceptDialog
+var item_abi_popup: AcceptDialog
 var item_popup: AcceptDialog
 var item_popup_text: RichTextLabel
 var fighter_popup_text: RichTextLabel
@@ -242,12 +243,17 @@ func _ready() -> void:
 	ability_confirm_popup.confirmed.connect(_confirm_ability)
 	ability_confirm_popup.canceled.connect(_cancel_ability_preview)
 	ability_confirm_popup.close_requested.connect(_cancel_ability_preview)
+	item_abi_popup = AcceptDialog.new()
+	item_abi_popup.title = "Описание ABI"
+	item_abi_popup.min_size = Vector2i(320, 220)
+	add_child(item_abi_popup)
 	item_popup = AcceptDialog.new()
 	item_popup.title = "Предмет"
 	item_popup.min_size = Vector2i(320, 260)
 	add_child(item_popup)
 	item_popup_text = RichTextLabel.new()
 	item_popup_text.bbcode_enabled = true
+	item_popup_text.meta_clicked.connect(_show_equipment_ability_info)
 	item_popup_text.custom_minimum_size = Vector2(290, 220)
 	item_popup.add_child(item_popup_text)
 	fighter_popup = AcceptDialog.new()
@@ -873,7 +879,30 @@ func _show_equipment_details(is_player: bool, slot: String) -> void:
 	var description := String(item.get("description", ""))
 	if not description.is_empty():
 		item_popup_text.add_text("\n" + description)
+	var abilities: Array = Array(item.get("abilities", []))
+	if not abilities.is_empty():
+		var abi_catalog := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+		item_popup_text.push_bold()
+		item_popup_text.add_text("\n\nСпособности (нажмите для описания):\n")
+		item_popup_text.pop()
+		for raw_abi in abilities:
+			var abi_id := String(raw_abi)
+			if abi_id.is_empty():
+				continue
+			item_popup_text.push_meta(abi_id)
+			item_popup_text.push_color(Color("#e5bf78"))
+			item_popup_text.add_text("⚔  " + AbilityCardText.title(abi_id, Dictionary(abi_catalog.get(abi_id, {}))) + "\n")
+			item_popup_text.pop()
+			item_popup_text.pop()
 	item_popup.popup_centered()
+
+func _show_equipment_ability_info(meta: Variant) -> void:
+	var ability_id := String(meta)
+	var catalog := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	var definition: Dictionary = Dictionary(catalog.get(ability_id, {}))
+	item_abi_popup.title = AbilityCardText.title(ability_id, definition)
+	item_abi_popup.dialog_text = AbilityCardText.describe(ability_id, definition)
+	item_abi_popup.popup_centered()
 
 func _show_fighter_details(is_player: bool) -> void:
 	var primary: Dictionary = {}
