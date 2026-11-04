@@ -35,6 +35,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		var mana_cost := int(definition.get("mana_cost", 0))
 		if source.mana < mana_cost or not AbilityRuntime.can_pay_action_points(definition,source): continue
 		if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))): continue
+		if AxeAbiCombatService.is_axe_ability(ability_id) and not AxeAbiCombatService.can_cast(state,source_id,effective_target_id,ability_id): continue
 		var ap_spent:=AbilityRuntime.action_point_cost(definition,source)
 		if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent): continue
 		var event:=AbilityRuntime.build_action_event(state, source_id, effective_target_id, ability_id, definition)
@@ -61,6 +62,8 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 	if source.mana<mana_cost or not AbilityRuntime.can_pay_action_points(definition,source):
 		return null
 	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
+		return null
+	if AxeAbiCombatService.is_axe_ability(ability_id) and not AxeAbiCombatService.can_cast(state,source_id,source_id,ability_id):
 		return null
 	var ap_spent:=AbilityRuntime.action_point_cost(definition,source)
 	if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent):
@@ -96,6 +99,8 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	if source.mana<mana_cost or not AbilityRuntime.can_pay_action_points(definition,source):
 		return null
 	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
+		return null
+	if AxeAbiCombatService.is_axe_ability(ability_id) and not AxeAbiCombatService.can_cast(state,source_id,target_id,ability_id):
 		return null
 	var ap_spent:=AbilityRuntime.action_point_cost(definition,source)
 	if not source.spend_mana(mana_cost) or not source.spend_action_points(ap_spent):
