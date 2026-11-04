@@ -36,11 +36,12 @@ func _make_session(archetype: String, seed_value: int) -> ArenaCombatSession:
 	if item.is_empty():
 		return null
 	_check(hero.equip("main_hand",String(item.get("instance_id","")),repo),archetype+"_equipped")
-	var expected: Array = {
+	var ability_sets := {
 		"AXE_DEF":["ABI501","ABI502","ABI503","ABI504"],
 		"AXE_ATTACK":["ABI501","ABI502","ABI505","ABI506"],
 		"AXE_SHIELD":["ABI501","ABI502","ABI507","ABI508"]
-	}.get(archetype,[])
+	}
+	var expected: Array = ability_sets.get(archetype,[])
 	_check(item.get("abilities",[]) == expected,archetype+"_loadout")
 	var session := ArenaCombatSession.new(hero,repo)
 	var actor := session.fighter(true)
