@@ -8,7 +8,7 @@ const SWORD_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT"]
 const DAGGER_ARCHETYPES := ["DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN"]
 const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_SHIELD"]
 const HAMMER_ARCHETYPES := ["HAMMER_DEF", "HAMMER_ATTACK"]
-const PHYSICAL_ARCHETYPES := SWORD_ARCHETYPES + DAGGER_ARCHETYPES + AXE_ARCHETYPES + HAMMER_ARCHETYPES
+const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "HAMMER_DEF", "HAMMER_ATTACK"]
 const ACCEPTED_QUALITIES := ["white", "green", "blue", "purple"]
 
 static func generate_sword(archetype_id: String, level: int, quality: String, seed_value: int) -> Dictionary:
@@ -154,13 +154,6 @@ static func _physical_sword_abilities(archetype_id: String) -> Array[String]:
 		"SWORD_DODGE": return ["ABI301","ABI302","ABI304","ABI307"]
 		"SWORD_CRIT": return ["ABI301","ABI302","ABI305","ABI308"]
 	return []
-
-static func _sword_name(archetype_id: String) -> String:
-	match archetype_id:
-		"SWORD_DEF": return "защитный"
-		"SWORD_DODGE": return "уклонение"
-		"SWORD_CRIT": return "критический"
-	return "неизвестный"
 
 static func _weapon_family(archetype_id: String) -> String:
 	if SWORD_ARCHETYPES.has(archetype_id): return "sword"
