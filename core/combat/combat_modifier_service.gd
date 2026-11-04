@@ -148,7 +148,10 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	# Existing EFF overlay contributes direct percentage points, not PAR rating.
 	# The CombatEngine damage formula remains unchanged.
 	var effect_bonus: float = modifier(combatant, key + "_resist_direct_pct", round_number)
-	return clampf((percent + effect_bonus) / 100.0, 0.0, 1.0)
+	# Passive hammer charges: 0.25 percentage points to elemental resistance
+	# per charge, max +25; do not alter underlying magic PAR ratings.
+	var charge_resist := 0.25*float(HammerAbiCombatService.charges(combatant,round_number))
+	return clampf((percent + effect_bonus + charge_resist) / 100.0, 0.0, 1.0)
 
 ## The shared combat/UI read contract. A caller can request any derived stat
 ## without reimplementing the overlay. Raw ratings remain available separately.
