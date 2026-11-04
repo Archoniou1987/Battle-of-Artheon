@@ -95,6 +95,16 @@ func _verify() -> void:
 			if float(attack.payload.get("sword_mh_bonus_flat",-1)) == 15.0 and float(attack.result.get("raw_damage",0)) >= float(attack.payload.get("raw_damage",0)) + 15.0:
 				applied_flat = true
 		_check(applied_flat,archetype+"_abi01_flat_15_applied")
+		var enhanced_line := false
+		var technical_line := false
+		for line in Array(first.get("lines", [])):
+			var message := String(line)
+			if message.contains("ABI «Кровавый порез» атакует") and message.contains("(грудь)") and message.contains("урона"):
+				enhanced_line = true
+			if message.contains("linked_to_existing_mh"):
+				technical_line = true
+		_check(enhanced_line,archetype+"_abi01_enhanced_attack_named_in_journal")
+		_check(not technical_line,archetype+"_abi01_no_technical_log_line")
 		_check(int(_eff(target,"EFF301").get("stacks",0)) == 1,archetype+"_first_bleed")
 		_check(player.action_points >= 5,archetype+"_abi01_gain_on_hit_capped")
 		# Round 2: separately delivered ABI03 uses existing bleed stack
