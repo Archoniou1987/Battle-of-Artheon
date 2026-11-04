@@ -27,6 +27,7 @@ jobs:
         shell: bash
         run: |
           bash tools/run_godot_check.sh tests/items/item_v12_live_inventory_runner.gd
+          bash tools/run_godot_check.sh tests/items/physical_weapon_v12_factory_runner.gd
           bash tools/run_godot_check.sh tests/combat/sword_v12_abi_eff_runner.gd
 
       - name: Verify Arena and Solo ability confirmation, item ABI cards and EFF stack badges
