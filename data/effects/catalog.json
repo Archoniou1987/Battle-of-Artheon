@@ -237,7 +237,8 @@
     "tags": [
       "HAMMER_CHARGE"
     ],
-    "armour_and_resistance_direct_pct_per_stack": 0.25
+    "armour_and_resistance_direct_pct_per_stack": 0.25,
+    "undispellable": true
   },
   "EFF602": {
     "id": "EFF602",
