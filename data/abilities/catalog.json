@@ -250,5 +250,45 @@
     "crit_pct_per_ap": 10,
     "crit_damage_pct_per_ap": 25,
     "bleed_ticks": 3
+  },
+  "ABI401": {
+    "name": "Быстрая атака",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF401",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "standard",
+    "dagger_ability_mode": "quick"
+  },
+  "ABI402": {
+    "name": "Отравленные клинки",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF402",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "instant",
+    "dagger_ability_mode": "poison_coating"
   }
 }
