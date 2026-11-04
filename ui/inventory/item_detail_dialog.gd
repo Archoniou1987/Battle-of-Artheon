@@ -16,6 +16,7 @@ var content: VBoxContainer
 var scroll: ScrollContainer
 var actions: HBoxContainer
 var status_label: Label
+var abi_info_popup: AcceptDialog
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -52,6 +53,10 @@ func _ready() -> void:
 	body.add_child(actions)
 	resized.connect(_update_dialog_size)
 	call_deferred("_update_dialog_size")
+	abi_info_popup = AcceptDialog.new()
+	abi_info_popup.title = "Описание ABI"
+	abi_info_popup.min_size = Vector2i(320, 220)
+	add_child(abi_info_popup)
 	visible = false
 
 func show_item(instance_id: String, slot: String = "", target: Control = null) -> void:
@@ -101,6 +106,7 @@ func _render() -> void:
 	for zone in ["head", "chest", "arms", "waist", "legs"]:
 		if armour.has(zone):
 			_add_text("+%s брони: %s" % [str(armour[zone]), _stat_label(zone)], Color("#f1f4f8"))
+	_add_ability_rows(item)
 	if not source_slot.is_empty() and not character.is_equipment_active(item_id, repository):
 		_add_text("НЕАКТИВНО — требования не выполнены", Color("#ed5961"), 17)
 	var description := str(item.get("description", ""))
@@ -127,6 +133,33 @@ func _render() -> void:
 	close.pressed.connect(func() -> void: visible = false)
 	close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(close)
+
+func _add_ability_rows(item: Dictionary) -> void:
+	var abilities: Array = Array(item.get("abilities", []))
+	if abilities.is_empty():
+		return
+	_add_separator()
+	_add_text("Способности оружия", Color("#f1ddbb"), 17)
+	var catalog := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	for raw_id in abilities:
+		var abi_id := String(raw_id)
+		if abi_id.is_empty():
+			continue
+		var definition: Dictionary = Dictionary(catalog.get(abi_id, {}))
+		var button := Button.new()
+		button.text = "⚔  " + AbilityCardText.title(abi_id, definition)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.clip_text = true
+		button.tooltip_text = "Открыть карточку способности"
+		button.pressed.connect(_show_ability_info.bind(abi_id))
+		content.add_child(button)
+
+func _show_ability_info(ability_id: String) -> void:
+	var catalog := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	var definition: Dictionary = Dictionary(catalog.get(ability_id, {}))
+	abi_info_popup.title = AbilityCardText.title(ability_id, definition)
+	abi_info_popup.dialog_text = AbilityCardText.describe(ability_id, definition)
+	abi_info_popup.popup_centered()
 
 func _update_dialog_size() -> void:
 	if panel == null or scroll == null:
