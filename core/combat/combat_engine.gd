@@ -78,6 +78,9 @@ func _resolve_action(event: CombatEvent) -> void:
 	if DaggerAbiCombatService.is_dagger_ability(String(event.payload.get("ability_id",""))):
 		DaggerAbiCombatService.dispatch(self,event)
 		return
+	if AxeAbiCombatService.is_axe_ability(String(event.payload.get("ability_id",""))):
+		AxeAbiCombatService.dispatch(self,event)
+		return
 	var target_ids := _valid_action_targets(event)
 	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
@@ -319,14 +322,16 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("hit_roll",hit_roll)
 	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); return
-	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
+	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not bool(event.payload.get("skip_dodge_block",false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
 	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
 		event.set_result("dodge_chance",dodge)
 		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
-			event.set_result("outcome", "dodge"); return
+			event.set_result("outcome", "dodge")
+			AxeAbiCombatService.on_dodge(self,event,defender)
+			return
 		event.set_result("uses_physical_block",_event_uses_physical_block(event))
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
 			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
@@ -352,6 +357,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0)) + float(event.payload.get("sword_mh_bonus_flat",0.0))
+	if String(event.payload.get("axe_abi_id","")) == AxeAbiCombatService.RAGE_ABI:
+		raw_damage *= 1.0 + float(event.payload.get("axe_mh_damage_bonus_pct",20.0))/100.0
 	# PAR053–056: physical damage bonus applies only to the matching damage type.
 	# Percent values are stored as percentages (e.g. 30 means +30%).
 	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
@@ -406,6 +413,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
 	DaggerAbiCombatService.on_connected_attack(self,event,attacker)
+	AxeAbiCombatService.on_connected_attack(self,event)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
 
@@ -434,6 +442,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	if CombatDamagePayload.is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
+	amount *= maxf(0.0,1.0+CombatModifierService.modifier(target,"incoming_damage_direct_pct",state.round_number)/100.0)
 	var total_reduction := CombatModifierService.damage_reduction(target, state.round_number)
 	amount *= 1.0 - total_reduction
 	event.set_result("damage_reduction", total_reduction)
@@ -478,6 +487,9 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if effect_id == DaggerAbiCombatService.DODGE_BUFF:
 		definition = definition.duplicate(true)
 		definition["dodge_direct_pct"] = clampf(float(event.payload.get("dagger_dodge_pct",0.0)),0.0,25.0)
+	if effect_id == AxeAbiCombatService.STANCE_EFF:
+		definition = definition.duplicate(true)
+		definition["dodge_direct_pct"] = clampf(float(event.payload.get("axe_stance_dodge_pct",0.0)),0.0,25.0)
 	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
 		definition = definition.duplicate(true)
 		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
