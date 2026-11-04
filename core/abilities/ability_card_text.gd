@@ -7,7 +7,7 @@ static func describe(ability_id: String, definition: Dictionary, ap_available: i
 	var lines: PackedStringArray = []
 	match ability_id:
 		"ABI301":
-			lines.append("Усиливает обычную атаку MH на +15 урона без дополнительного удара.")
+			lines.append("Усиливает обычную атаку MH на +%d урона без дополнительного удара." % int(definition.get("mh_flat_bonus", 0)))
 			lines.append("При попадании: +1 AP и 1 стак кровотечения.")
 		"ABI302":
 			lines.append("До 3 целей: отдельный удар по 50% урона MH.")
