@@ -101,6 +101,18 @@ func _run() -> void:
 	check(bool(view.get("ok",false)),"real_abi_view")
 	if not bool(view.get("ok",false)):
 		return
+	var worn: Array = view.get("equipment_slots", [])
+	check(worn.size() == 14, "solo_view_has_all_fourteen_equipment_slots")
+	var saw_sword := false
+	var saw_chest := false
+	for raw_gear in worn:
+		var gear: Dictionary = Dictionary(raw_gear)
+		var instance: Dictionary = Dictionary(gear.get("item", {}))
+		if String(gear.get("slot", "")) == "main_hand":
+			saw_sword = String(instance.get("instance_id", "")) == "SOLO_ABI_TEST_SWORD" and Array(instance.get("abilities", [])).has("ABI003")
+		if String(gear.get("slot", "")) == "chest":
+			saw_chest = String(instance.get("instance_id", "")) == "SOLO_ABI_TEST_CHEST" and Array(instance.get("abilities", [])).has("ABI004")
+	check(saw_sword and saw_chest, "solo_equipment_snapshot_includes_real_items_and_abi")
 	var slots: Array = view.get("ability_slots",[])
 	check(slots.size()==6,"all_six_abi_slots_available")
 	if slots.size()==6:
