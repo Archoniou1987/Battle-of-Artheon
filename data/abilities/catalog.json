@@ -269,7 +269,8 @@
     "ap_cost": 0,
     "ap_gain": 1,
     "application_timing": "standard",
-    "dagger_ability_mode": "quick"
+    "dagger_ability_mode": "quick",
+    "ap_gain_on_hit": true
   },
   "ABI402": {
     "name": "Отравленные клинки",
