@@ -62,6 +62,12 @@ func resolve(engine: CombatEngine) -> void:
 	for event in preparation_actions:
 		engine.state.queue_event(event)
 	engine.resolve_pending_events()
+	# ABI404/405 apply their current-round defensive/offensive EFF BEFORE
+	# any regular attacks, independent of the sealed action order.
+	for event in locked_actions:
+		if event.kind == CombatEvent.Kind.ACTION and DaggerAbiCombatService.is_dagger_ability(String(event.payload.get("ability_id",""))):
+			DaggerAbiCombatService.prepare_action(engine,event)
+	engine.resolve_pending_events()
 	for event in locked_actions:
 		engine.state.queue_event(event)
 	engine.resolve_pending_events()
