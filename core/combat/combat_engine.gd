@@ -386,8 +386,16 @@ func _resolve_attack(event: CombatEvent) -> void:
 	# PAR126 and PAR131–134 reduce the matching armour sequentially.
 	var effective_armour := maxf(0.0, base_armour * (1.0 - armour_penetration_percent) * (1.0 - typed_armour_penetration_percent))
 	var armour_percent := RatingMatrix.to_percent(effective_armour * 10.0, defender.level)
+	# Dagger EFF401 subtracts percentage points from the already-converted
+	# armour. Never change the base item PAR or the armour rating matrix.
+	var dagger_breach_stacks := 0
+	for breach in CombatModifierService.active_effects(defender,state.round_number):
+		if String(breach.get("effect_id","")) == DaggerAbiCombatService.BREACH:
+			dagger_breach_stacks += int(breach.get("stacks",1))
+	dagger_breach_stacks = mini(5,dagger_breach_stacks)
 	var penetration_percent := RatingMatrix.to_percent(maxf(0.0, armour_penetration_flat) * 10.0, attacker.level)
-	var reduction := clampf((armour_percent - penetration_percent) / 100.0, 0.0, 1.0)
+	var reduction := clampf((armour_percent - 3.0 * float(dagger_breach_stacks) - penetration_percent) / 100.0, 0.0, 1.0)
+	event.set_result("dagger_breach_stacks",dagger_breach_stacks)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
