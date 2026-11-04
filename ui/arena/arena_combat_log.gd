@@ -8,6 +8,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 	var by_id: Dictionary = {}
 	var weapon_damage: Dictionary = {}
 	var summaries: Dictionary = {}
+	var abi_hit_details: Dictionary = {}
 	var result: Array[String] = []
 	var effects_catalog: Dictionary = EffectCatalog.load_json()
 	for event in events:
@@ -26,11 +27,27 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 			if event.kind == CombatEvent.Kind.DAMAGE:
 				var resolved_damage: int = int(event.result.get("hp_removed", 0))
 				summary["damage"] = int(summary["damage"]) + resolved_damage
+				if abi_hit_details.has(event.parent_event_id):
+					var linked_hit: Dictionary = abi_hit_details[event.parent_event_id]
+					linked_hit["damage"] = int(linked_hit.get("damage", 0)) + resolved_damage
+					abi_hit_details[event.parent_event_id] = linked_hit
 				if bool(event.payload.get("sword_burst_tick", false)):
 					summary["burst_damage"] = int(summary["burst_damage"]) + resolved_damage
 					summary["burst_ticks"] = int(summary["burst_ticks"]) + 1
 			elif event.kind == CombatEvent.Kind.ATTACK:
 				var status: String = String(event.result.get("outcome", ""))
+				var hit: Dictionary = {
+					"event_id": event.event_id,
+					"index": int(event.payload.get("dagger_strike_index", -1)),
+					"zone": String(event.payload.get("zone", "chest")),
+					"critical": bool(event.result.get("critical", false)),
+					"outcome": status,
+					"damage": 0
+				}
+				abi_hit_details[event.event_id] = hit
+				var hit_ids: Array = summary.get("hit_ids", [])
+				hit_ids.append(event.event_id)
+				summary["hit_ids"] = hit_ids
 				if status != "connected" and not status.is_empty():
 					var failures: Array = summary["failed_hits"]
 					failures.append(_attack_outcome(status))
@@ -73,6 +90,14 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				parts.append("%d урона (удар %d + %d ускоренных тика кровотечения: %d)" % [total_damage, total_damage - bleed_damage, int(values["burst_ticks"]), bleed_damage])
 			elif int(values.get("damage", 0)) > 0:
 				parts.append("%d урона" % int(values.get("damage", 0)))
+			var hit_ids: Array = values.get("hit_ids", [])
+			var critical_count := 0
+			for raw_hit_id in hit_ids:
+				var hit: Dictionary = abi_hit_details.get(int(raw_hit_id), {})
+				if bool(hit.get("critical", false)):
+					critical_count += 1
+			if name_id != "ABI406" and critical_count > 0:
+				parts.append("крит: %d/%d" % [critical_count, hit_ids.size()])
 			if int(values.get("healing", 0)) > 0:
 				parts.append("+%d HP" % int(values.get("healing", 0)))
 			for effect_id in Array(values.get("effects", [])):
@@ -81,12 +106,23 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				parts.append("снят %s" % _effect_name(String(effect_id), effects_catalog))
 			for effect_id in Array(values.get("missed_effects", [])):
 				parts.append("%s не наложен" % _effect_name(String(effect_id), effects_catalog))
-			for missed_hit in Array(values.get("failed_hits", [])):
-				parts.append(String(missed_hit))
+			if name_id != "ABI406":
+				for missed_hit in Array(values.get("failed_hits", [])):
+					parts.append(String(missed_hit))
 			if parts.is_empty():
 				var reason: String = String(event.result.get("outcome", ""))
 				parts.append(_ability_outcome(reason))
 			result.append(prefix + ": " + "; ".join(parts))
+			if name_id == "ABI406":
+				# Display real resolved events, without rolling or applying damage again.
+				for raw_hit_id in hit_ids:
+					var hit: Dictionary = abi_hit_details.get(int(raw_hit_id), {})
+					var hit_index: int = int(hit.get("index", -1))
+					var strike_number: int = hit_index + 1 if hit_index >= 0 else hit_ids.find(raw_hit_id) + 1
+					var hand := "MH" if hit_index < 0 or hit_index % 2 == 0 else "OH"
+					var status: String = String(hit.get("outcome", ""))
+					var strike_result := "%d урона%s" % [int(hit.get("damage", 0)), " (крит)" if bool(hit.get("critical", false)) else ""] if status == "connected" else _attack_outcome(status)
+					result.append("  Удар %d (%s, %s): %s" % [strike_number, hand, _zone_name(String(hit.get("zone", "chest"))), strike_result])
 		elif event.kind == CombatEvent.Kind.ATTACK and root_id < 0:
 			var outcome: String = String(event.result.get("outcome", ""))
 			var from_name: String = _actor(event.source_id, player_id)

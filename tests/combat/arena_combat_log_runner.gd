@@ -3,7 +3,7 @@ extends SceneTree
 ## Journal projection must follow ABI parentage, not merely ABI IDs copied into
 ## damage payloads, and must never count a projectile ABI as a physical strike.
 func _init() -> void:
-	var success: bool = _test_event_ancestry() and _test_heal_cleanse_and_miss()
+	var success: bool = _test_event_ancestry() and _test_heal_cleanse_and_miss() and _test_dagger_crit_and_flurry_hits()
 	print("ARENA_COMBAT_LOG_TEST=", "PASS" if success else "FAIL")
 	quit(0 if success else 1)
 
@@ -66,4 +66,42 @@ func _test_heal_cleanse_and_miss() -> bool:
 		good = good and logs[2].contains("Противник") and logs[2].contains("промах")
 	if not good:
 		print("ARENA_LOG_SUPPORT_WRONG=",logs)
+	return good
+
+## Verify physical ability crit annotation and ABI406's individual resolved hits.
+func _test_dagger_crit_and_flurry_hits() -> bool:
+	var state := CombatState.new()
+	state.begin_round()
+	var flurry := state.create_event(CombatEvent.Kind.ACTION,"hero","enemy",{"source_kind":"ability","ability_id":"ABI406"})
+	flurry.set_result("outcome","dispatched")
+	var first := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"dagger_abi_id":"ABI406","dagger_strike_index":0,"zone":"chest"},flurry.event_id)
+	first.set_result("outcome","connected")
+	first.set_result("critical",true)
+	var first_damage := state.create_event(CombatEvent.Kind.DAMAGE,"hero","enemy",{"amount":87.0},first.event_id)
+	first_damage.set_result("hp_removed",87)
+	var second := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"dagger_abi_id":"ABI406","dagger_strike_index":1,"zone":"waist"},flurry.event_id)
+	second.set_result("outcome","dodge")
+	var third := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"dagger_abi_id":"ABI406","dagger_strike_index":2,"zone":"arms"},flurry.event_id)
+	third.set_result("outcome","connected")
+	third.set_result("critical",false)
+	var third_damage := state.create_event(CombatEvent.Kind.DAMAGE,"hero","enemy",{"amount":40.0},third.event_id)
+	third_damage.set_result("hp_removed",40)
+	var single := state.create_event(CombatEvent.Kind.ACTION,"hero","enemy",{"source_kind":"ability","ability_id":"ABI405"})
+	single.set_result("outcome","dispatched")
+	var single_hit := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"dagger_abi_id":"ABI405","zone":"chest"},single.event_id)
+	single_hit.set_result("outcome","connected")
+	single_hit.set_result("critical",true)
+	var single_damage := state.create_event(CombatEvent.Kind.DAMAGE,"hero","enemy",{"amount":90.0},single_hit.event_id)
+	single_damage.set_result("hp_removed",90)
+	for event in [flurry,first,first_damage,second,third,third_damage,single,single_hit,single_damage]:
+		state.record_event(event)
+	var logs := ArenaCombatLog.lines_for_round(state.event_log,1,"hero",AbilityCatalog.load_json("res://data/abilities/catalog.json"))
+	var good := logs.size() == 5
+	if good:
+		good = logs[0].contains("127 урона") and logs[1].contains("Удар 1 (MH") and logs[1].contains("87 урона (крит)")
+		good = good and logs[2].contains("Удар 2 (OH") and logs[2].contains("уклонение")
+		good = good and logs[3].contains("Удар 3 (MH") and logs[3].contains("40 урона") and not logs[3].contains("крит")
+		good = good and logs[4].contains("90 урона") and logs[4].contains("крит: 1/1")
+	if not good:
+		print("ARENA_DAGGER_HIT_LOG_WRONG=",logs)
 	return good
