@@ -29,7 +29,7 @@ func _run() -> void:
 			continue
 		_check(String(item.get("instance_id","")).begins_with("ITEMID"),archetype_id+"_id")
 		_check(String(item.get("slot",""))=="main_hand",archetype_id+"_slot")
-		_check(Array(item.get("abilities",[])).size()==(4 if archetype_id.begins_with("SWORD_") or archetype_id.begins_with("DAGGER_") or archetype_id.begins_with("AXE_") else 0),archetype_id+"_runtime_abi_gate")
+		_check(Array(item.get("abilities",[])).size()==(4 if archetype_id.begins_with("SWORD_") or archetype_id.begins_with("DAGGER_") or archetype_id.begins_with("AXE_") or archetype_id.begins_with("HAMMER_") else 0),archetype_id+"_runtime_abi_gate")
 		for prefix in families:
 			if archetype_id.begins_with(String(prefix)):
 				_check(String(item.get("weapon_class",""))==String(families[prefix]),archetype_id+"_family")
