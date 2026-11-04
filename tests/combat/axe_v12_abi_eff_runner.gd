@@ -111,7 +111,7 @@ func _run() -> void:
 
 	var attack := _make_session("AXE_ATTACK",202611082)
 	if attack != null:
-		_check(not AxeAbiCombatService.can_cast(attack.state,ArenaCombatSession.PLAYER_ID,ArenaCombatSession.ENEMY_ID,"ABI506"),"execute_rejects_full_hp")
+		_check(not AxeAbiCombatService.can_cast(attack.state,attack.player_id,ArenaCombatSession.ENEMY_ID,"ABI506"),"execute_rejects_full_hp")
 		_give_rage(attack.fighter(true),5)
 		if _cast(attack,"ABI505"):
 			var saw_breaker := false
@@ -120,14 +120,14 @@ func _run() -> void:
 					saw_breaker = true
 			_check(saw_breaker,"attack_breaker_early_effect")
 		attack.fighter(false).hp = 19999
-		_check(AxeAbiCombatService.can_cast(attack.state,ArenaCombatSession.PLAYER_ID,ArenaCombatSession.ENEMY_ID,"ABI506"),"execute_eligible")
+		_check(AxeAbiCombatService.can_cast(attack.state,attack.player_id,ArenaCombatSession.ENEMY_ID,"ABI506"),"execute_eligible")
 		if _cast(attack,"ABI506"):
 			_check(_attacks(attack,"ABI506").size()==1,"execute_one_attack")
 			_check(_effect(attack.fighter(true),"EFF501").is_empty(),"execute_consumes_rage_on_hit")
 
 	var shield := _make_session("AXE_SHIELD",202611083)
 	if shield != null:
-		_check(not AxeAbiCombatService.can_cast(shield.state,ArenaCombatSession.PLAYER_ID,ArenaCombatSession.ENEMY_ID,"ABI507"),"crusher_requires_rage")
+		_check(not AxeAbiCombatService.can_cast(shield.state,shield.player_id,ArenaCombatSession.ENEMY_ID,"ABI507"),"crusher_requires_rage")
 		_give_rage(shield.fighter(true),5)
 		_check(_cast(shield,"ABI507"),"shield_crusher")
 		_check(_effect(shield.fighter(true),"EFF501").is_empty(),"crusher_spends_rage")
