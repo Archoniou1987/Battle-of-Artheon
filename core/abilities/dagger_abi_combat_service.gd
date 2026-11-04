@@ -88,8 +88,14 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 	if not active:
 		return
 	_apply_effect(engine,attack,POISON)
-	if engine.combat_rng.randf() < 0.05:
-		attacker.gain_action_points(1)
+
+static func on_effect_applied(engine: CombatEngine, event: CombatEvent) -> void:
+	# The optional AP roll occurs ONLY when poison was actually applied.
+	if String(event.payload.get("effect_id","")) != POISON or not bool(event.result.get("resolved",false)):
+		return
+	var source := engine.state.get_combatant(event.source_id)
+	if source != null and engine.combat_rng.randf() < 0.05:
+		source.gain_action_points(1)
 
 static func _apply_effect(engine: CombatEngine, attack: CombatEvent, effect_id: String) -> void:
 	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,attack.source_id,attack.target_id,{
