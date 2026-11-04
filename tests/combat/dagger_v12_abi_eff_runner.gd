@@ -36,11 +36,12 @@ func _make_session(archetype: String, seed_value: int) -> ArenaCombatSession:
 	if item.is_empty():
 		return null
 	_check(hero.equip("main_hand",String(item.get("instance_id","")),repository),archetype+"_equipped")
-	var expected: Array = {
+	var ability_sets := {
 		"DAGGER_DEF":["ABI401","ABI402","ABI403","ABI404"],
 		"DAGGER_ATTACK":["ABI401","ABI402","ABI405","ABI406"],
 		"DAGGER_PEN":["ABI401","ABI402","ABI407","ABI408"]
-	}.get(archetype,[])
+	}
+	var expected: Array = ability_sets.get(archetype,[])
 	_check(item.get("abilities",[]) == expected,archetype+"_ability_loadout")
 	var restored := ItemRepository.from_dict(repository.to_dict())
 	_check(restored.get_item(String(item.get("instance_id",""))).get("abilities",[]) == expected,archetype+"_persisted")
