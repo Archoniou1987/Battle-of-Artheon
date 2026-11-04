@@ -798,7 +798,7 @@ func _build_item_generator() -> void:
 	v12_create.custom_minimum_size.y = 50
 	v12_create.pressed.connect(_generator_v12_create)
 	content.add_child(v12_create)
-	var v12_note := _v12_title("Создаёт уникальный ITEMID, урон и PAR по v1.2. Неподключённая сила атаки сохраняется отдельно; ABI мечей подключим после реализации.")
+	var v12_note := _v12_title("Создаёт уникальный ITEMID, урон и PAR по v1.2. Сила атаки без активного PAR сохраняется отдельно; ABI физических мечей подключены к Combat Engine.")
 	v12_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(v12_note)
 	v12_status_label = _v12_title("")
