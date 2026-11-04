@@ -270,7 +270,7 @@ func combat_view() -> Dictionary:
 			available_options[String(option.get("id",""))] = option
 	var elixir_loadout := SoloCombatElixirLoadout.inspect(owner.character,owner.repository)
 	var worn: Array[Dictionary] = []
-	for slot_id in ["head","chest","hands","waist","legs","main_hand","off_hand","ring1","ring2","feet"]:
+	for slot_id in ["head","shoulders","chest","main_hand","waist","legs","feet","neck","back","wrists","hands","off_hand","ring1","ring2"]:
 		var raw_equipped: Variant = owner.character.equipment.get_equipped_instance_id(slot_id)
 		var instance_id := "" if raw_equipped == null else String(raw_equipped)
 		var item: Dictionary = owner.repository.get_item(instance_id) if not instance_id.is_empty() else {}
@@ -278,7 +278,8 @@ func combat_view() -> Dictionary:
 			"slot":slot_id,"instance_id":instance_id,
 			"name":String(item.get("name",item.get("display_name",item.get("template_id",instance_id)))) if not item.is_empty() else "",
 			"active":not instance_id.is_empty() and owner.character.is_equipment_active(instance_id,owner.repository),
-			"rarity":String(item.get("rarity","")) if not item.is_empty() else ""
+			"rarity":String(item.get("rarity","")) if not item.is_empty() else "",
+			"item":item.duplicate(true)
 		})
 	var equipment_slots := EquipmentAbilityLoadout.build(owner.character,owner.repository)
 	var five_slots: Array[Dictionary] = []
