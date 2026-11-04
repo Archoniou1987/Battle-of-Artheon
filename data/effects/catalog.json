@@ -225,5 +225,57 @@
     "crit_chance_direct_pct": 20,
     "block_crush": 20,
     "incoming_damage_direct_pct": 10
+  },
+  "EFF601": {
+    "id": "EFF601",
+    "name": "Заряд молота",
+    "kind": "buff",
+    "stacking": "permanent_charges",
+    "max_stacks": 100,
+    "permanent": true,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_CHARGE"
+    ],
+    "armour_and_resistance_direct_pct_per_stack": 0.25
+  },
+  "EFF602": {
+    "id": "EFF602",
+    "name": "Отражение",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 1,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_REFLECTION"
+    ],
+    "reflection_pct": 20
+  },
+  "EFF603": {
+    "id": "EFF603",
+    "name": "Разбитая броня",
+    "kind": "debuff",
+    "stacking": "unique",
+    "duration_rounds": 1,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_ZONE_ARMOUR_FRACTURE"
+    ],
+    "armour_zone": "chest",
+    "armour_reduction_pct": 0
+  },
+  "EFF604": {
+    "id": "EFF604",
+    "name": "Боевой прилив",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_SURGE"
+    ],
+    "physical_damage_outgoing_direct_pct": 0,
+    "magic_damage_direct_pct": 0,
+    "damage_lifesteal_pct": 20
   }
 }
