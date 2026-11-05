@@ -7,14 +7,23 @@ static func load_json(path: String) -> Dictionary:
 	var parsed = JSON.parse_string(file.get_as_text())
 	return parsed if parsed is Dictionary else {}
 
-## No active numbered ABI below 301 remain in the game. These legacy
-## references can still occur in old saves; never expose them as castable.
-## TEST_ names are isolated development fixtures, not production ABI IDs.
+## Only the approved numbered sword/dagger/axe/hammer ABI can surface
+## in production loadouts. Older save IDs are left intact in persistence but
+## cannot become executable or occupy an ability slot. TEST_* is isolated
+## developer fixture naming, not a numbered game ABI.
 static func is_retired_numbered_abi(ability_id: String) -> bool:
 	if not ability_id.begins_with("ABI"):
 		return false
 	var suffix := ability_id.substr(3)
-	return suffix.is_valid_int() and int(suffix)<301
+	if not suffix.is_valid_int():
+		return false
+	var index := int(suffix)
+	return not (
+		(index>=301 and index<=308)
+		or (index>=401 and index<=408)
+		or (index>=501 and index<=508)
+		or (index>=601 and index<=606)
+	)
 
 static func definition(abilities: Dictionary, ability_id: String) -> Dictionary:
 	var value = abilities.get(ability_id, {})

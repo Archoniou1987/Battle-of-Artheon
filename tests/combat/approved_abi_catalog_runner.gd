@@ -19,8 +19,10 @@ func _initialize() -> void:
 			ok = ok and not definition.is_empty() and AbilityRuntime.validate_definition(String(id),definition).is_empty()
 	for id in expected:
 		ok = ok and defs.has(id)
-	for retired in ["ABI001","ABI002","ABI003","ABI004","ABI005","ABI006"]:
+	for retired in ["ABI001","ABI002","ABI003","ABI004","ABI005","ABI006","ABI300","ABI309","ABI400","ABI409","ABI500","ABI509","ABI600","ABI607","ABI700"]:
 		ok = ok and not defs.has(retired) and AbilityCatalog.is_retired_numbered_abi(retired)
+	for current in expected:
+		ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(current))
 	var templates := ItemTemplateService.load_templates()
 	ok = ok and not templates.has("training_fire_staff_abi003") and not templates.has("training_healer_chest_abi004")
 	print("APPROVED_ABI_CATALOG_TEST=" + ("PASS" if ok else "FAIL"))
