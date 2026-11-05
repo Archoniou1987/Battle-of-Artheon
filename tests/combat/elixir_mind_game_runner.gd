@@ -65,10 +65,19 @@ func _test_mana_and_ownership() -> void:
 	var ch: CharacterState = setup["hero"]
 	check(not ch.assign_elixir(2,"elixir_test_mana_v1",repo),"duplicate_slot_blocked")
 	check(not ch.remove_item("elixir_test_mana_v1"),"cannot_remove_equipped_quickslot")
-	# The potion restores Mana during Mind Game, enabling a Standard ABI.
-	session.ability_scheduler.loadouts[session.player_id]=["ABI004"]
-	session.player_ability_slots=["ABI004","","","",""]
-	check(bool(session.activate_ability("ABI004").get("ok",false)),"mana_potion_enables_standard_abi")
+	# No approved physical weapon ABI consumes mana yet. Exercise the
+	# existing same-round mana-funding contract with a synthetic test-only
+	# action, not a resurrected production Healing ABI.
+	const TEST_MANA_ID := "TEST_LAB_MANA"
+	session.ability_scheduler.definitions[TEST_MANA_ID] = {
+		"name":"Тест маны","delivery_type":"DIRECT",
+		"target_scope":"SINGLE","target_team":"ALLY",
+		"components":[{"kind":"heal","amount":1}],
+		"mana_cost":10,"cooldown_rounds":1
+	}
+	session.ability_scheduler.loadouts[session.player_id]=[TEST_MANA_ID]
+	session.player_ability_slots=[TEST_MANA_ID,"","","","",""]
+	check(bool(session.activate_ability(TEST_MANA_ID).get("ok",false)),"mana_potion_enables_standard_abi")
 	check(hero.mana==mini(hero.max_mana,30)-10,"standard_abi_mana_cost_after_potion")
 
 
