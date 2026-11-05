@@ -107,6 +107,12 @@ func _run() -> void:
 	assert((screen.detail_values["PAR033"] as Label).text.contains("→ DR"))
 	assert((screen.detail_values["PAR031"] as Label).text.contains("→ DR"))
 	assert((screen.detail_values["PAR071"] as Label).text.contains("→ DR"))
+	# School and general magic penetration must be present, converted by
+	# attacker level but NEVER shown with defender's magic-resist DR.
+	for pen_id in ["PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170"]:
+		var rendered := (screen.detail_values[pen_id] as Label).text
+		assert(rendered.contains("без DR"))
+		assert(rendered.contains("%"))
 
 	assert(screen.detail_values.size() == ParCalculationService.registry().size())
 	assert(screen.detail_values.size() == 108)

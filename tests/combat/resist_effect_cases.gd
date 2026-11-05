@@ -11,6 +11,7 @@ static func run(base_balance:Dictionary) -> bool:
 		and _case_penetration_reduces_actual_magic_damage(balance)
 		and _case_penetration_affects_effect_chance(balance)
 		and _case_penetration_school_aliases(balance)
+		and _case_penetration_only_reduces_matching_school(balance)
 		and _case_effect_chance_100_to_60(balance)
 		and _case_effect_chance_80_to_48(balance)
 		and _case_effect_immunity(balance)
@@ -85,6 +86,27 @@ static func _case_penetration_school_aliases(balance:Dictionary) -> bool:
 		and CombatDamagePayload.is_magic_damage_type("nature")
 		and CombatDamagePayload.is_magic_damage_type("holy")
 		and CombatModifierService.magic_school("lightning")=="air"
+	)
+
+static func _case_penetration_only_reduces_matching_school(balance:Dictionary) -> bool:
+	var state := _state()
+	var source: CombatantState = state.get_combatant("source")
+	var target: CombatantState = state.get_combatant("target")
+	# Fire and water have equal raw school defence, but only PAR165 applies
+	# to fire. General PAR164 must reduce both when present.
+	var per_100 := RatingMatrix.to_percent(100.0,target.level)
+	target.combat_stats["par_totals"]["PAR191"] = 40.0*100.0/per_100
+	target.combat_stats["par_totals"]["PAR192"] = 40.0*100.0/per_100
+	source.combat_stats["par_totals"]["PAR165"] = 100.0
+	var fire := CombatModifierService.magic_resist(target,"fire",1,source)
+	var water := CombatModifierService.magic_resist(target,"water",1,source)
+	if not fire<water:
+		return false
+	source.combat_stats["par_totals"]["PAR164"] = 100.0
+	return (
+		CombatModifierService.magic_resist(target,"fire",1,source) < fire
+		and CombatModifierService.magic_resist(target,"water",1,source) < water
+		and is_equal_approx(CombatModifierService.magic_resist(target,"water",1),water)
 	)
 
 static func _effect_event(state:CombatState, chance:float, roll:int) -> CombatEvent:
