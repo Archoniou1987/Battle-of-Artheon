@@ -60,7 +60,8 @@ func _initialize() -> void:
 	orchestrator.begin_round()
 	var requests: Array[Dictionary] = [{"weapon_index":0,"attack_profile_id":"basic"},{"weapon_index":1,"attack_profile_id":"basic"}]
 	var queued := api.queue_weapon_attack_sequence(fighter.combatant_id, requests)
-	check(bool(queued.ok) and queued.event_ids.size() == 2, "valid ABI001 dual sequence")
+	check(bool(queued.ok) and queued.event_ids.size() == 2, "valid basic MH/OH dual sequence")
+	check(String(state.pending_events[0].payload.get("ability_id","")).is_empty() and String(state.pending_events[1].payload.get("ability_id","")).is_empty(), "basic weapon attacks never claim an ABI ID")
 	check(state.pending_events[0].payload.source_par == "PAR050" and state.pending_events[1].payload.source_par == "PAR051", "events identify mandatory PAR sources")
 	state.pending_events.clear()
 	var saved_range: Dictionary = fighter.combat_stats.par_attack_ranges.PAR051.duplicate(true)
@@ -72,7 +73,7 @@ func _initialize() -> void:
 	Engine.print_error_messages = previous_print_errors
 	check(not bool(rejected.ok) and state.pending_events.is_empty(), "missing OH rejects whole sequence atomically")
 	fighter.combat_stats.par_attack_ranges.PAR051 = saved_range
-	check(not bool(ParAttackContract.resolve(fighter, {"weapon_index":0,"hit_count":2}).ok), "ABI001 cannot synthesize multiple hits from one weapon")
+	check(not bool(ParAttackContract.resolve(fighter, {"weapon_index":0,"hit_count":2}).ok), "single weapon cannot synthesize multiple hits")
 	var off_id: String = fighter.combat_stats.weapon_profiles[1].instance_id
 	fighter.combat_stats.weapon_profiles[1].instance_id = fighter.combat_stats.weapon_profiles[0].instance_id
 	check(not bool(ParAttackContract.validate(fighter).ok), "dual wield requires two distinct weapon instances")

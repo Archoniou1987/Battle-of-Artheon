@@ -54,7 +54,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 			continue # Weapon profiles are owned by EquipmentBuilder when equipped.
 		combatant.combat_stats[key] = canonical[key]
 	CombatTempoService.initialize(combatant, float(base.get("tempo", primary.get("PAR019", 0.0))), float(primary.get("PAR020", 100.0)), float(primary.get("PAR021", 0.0)))
-	# Canonical attack count and ranges are the only PAR inputs for future ABI001 dispatch.
+	# Canonical attack counts and ranges feed ordinary MH/OH weapon attacks; no synthetic ABI ID.
 	combatant.combat_stats["par_attack_count"] = int(primary["PAR057"])
 	# PAR073 overrides legacy equipment block metadata.
 	combatant.combat_stats["manual_block_zone_capacity"] = int(primary["PAR073"])

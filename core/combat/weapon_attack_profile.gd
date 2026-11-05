@@ -20,7 +20,7 @@ static func all(combatant:CombatantState)->Array[Dictionary]:
 			if String(profile.id) == "basic":
 				var resolved := ParAttackContract.resolve(combatant, profile)
 				if not bool(resolved.ok):
-					push_error("ABI001 invariant violated: " + String(resolved.reason))
+					push_error("Physical weapon PAR contract violated: " + String(resolved.reason))
 					return []
 				profile = resolved.profile
 			result.append(profile)
@@ -66,7 +66,7 @@ static func attack_payload(profile:Dictionary,rolls:Dictionary,zone:String="ches
 		"is_weapon_attack":true,
 		"attack_profile_id":String(profile.get("id","basic")),
 		"source_par":String(profile.get("source_par","")),
-		"ability_id":"ABI001" if String(profile.get("id","basic"))=="basic" else "",
+		"ability_id":"", # Basic weapon hits are NOT cast ABI abilities.
 		"hit_index":int(overrides.get("hit_index",0)),
 		"hit_count":maxi(1,int(profile.get("hit_count",1))),
 		"delivery_type":String(profile.get("delivery_type","MELEE")),

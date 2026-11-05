@@ -25,6 +25,11 @@ func _initialize() -> void:
 		ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(current))
 	var templates := ItemTemplateService.load_templates()
 	ok = ok and not templates.has("training_fire_staff_abi003") and not templates.has("training_healer_chest_abi004")
+	# Ordinary weapon attacks are not an undisclosed ABI001 cast.
+	var basic := WeaponAttackProfile.attack_payload(
+		{"id":"basic","damage_min":1.0,"damage_max":2.0,"damage_type":"slashing"},
+		{"damage":0.5})
+	ok = ok and String(basic.get("ability_id","")).is_empty()
 	var bot_fixtures := TestFixtureLoader.load_json("res://data/test/bot_equipment_templates.json")
 	for template in Array(bot_fixtures.get("templates",[])):
 		for ability_id in Array(Dictionary(template).get("abilities",[])):

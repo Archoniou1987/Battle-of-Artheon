@@ -230,7 +230,7 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 	return {"ok":true,"reason":"queued","event_id":event.event_id}
 
 
-func _abi001_damage_source(combatant:CombatantState,profile:Dictionary)->Dictionary:
+func _basic_weapon_damage_source(combatant:CombatantState,profile:Dictionary)->Dictionary:
 	return ParAttackContract.resolve(combatant, profile)
 
 
@@ -247,9 +247,9 @@ func queue_basic_attack(source_id:String,rolls:Dictionary={},attack_profile_id:S
 	var attacker:=state.get_combatant(source_id)
 	var abi_source:Dictionary={}
 	if String(profile.get("id","basic"))=="basic" and attacker!=null:
-		abi_source=_abi001_damage_source(attacker,profile)
+		abi_source=_basic_weapon_damage_source(attacker,profile)
 		if not bool(abi_source.get("ok",false)):
-			push_error("ABI001 invariant violated: "+String(abi_source.get("reason","")))
+			push_error("Physical weapon PAR contract violated: "+String(abi_source.get("reason","")))
 			return abi_source
 	var hit_count:=maxi(1,int(profile.get("hit_count",1)))
 	var event_ids:Array[int]=[]
@@ -295,7 +295,7 @@ func default_weapon_attack_sequence(source_id:String,rolls_by_weapon:Dictionary=
 	var attacks:Array[Dictionary]=[]
 	var weapon_indices:Array=by_weapon.keys()
 	weapon_indices.sort()
-	# Canonical PAR057 limits the ordinary MH/OH ABI001 sequence.
+	# Canonical PAR057 limits the ordinary MH/OH weapon attack sequence.
 	# No basic attack may bypass the canonical contract.
 	if combatant.combat_stats.has("par_totals"):
 		var checked := ParAttackContract.validate(combatant)
@@ -375,9 +375,9 @@ func queue_weapon_attack_sequence(source_id:String,attacks:Array[Dictionary])->D
 		if not bool(intent.get("ok",false)):
 			return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(intent.get("reason","")),"queued_event_ids":[]}
 		if String(request.get("attack_profile_id","basic"))=="basic":
-			var checked:Dictionary=_abi001_damage_source(source,Dictionary(intent.get("attack_profile",{})))
+			var checked:Dictionary=_basic_weapon_damage_source(source,Dictionary(intent.get("attack_profile",{})))
 			if not bool(checked.get("ok",false)):
-				push_error("ABI001 invariant violated: "+String(checked.get("reason","")))
+				push_error("Physical weapon PAR contract violated: "+String(checked.get("reason","")))
 				return {"ok":false,"reason":"sequence_attack_rejected","attack_index":attack_index,"attack_reason":String(checked.get("reason","")),"queued_event_ids":[]}
 	var sequence_event_ids:Array[int]=[]
 	var attack_results:Array[Dictionary]=[]
