@@ -26,7 +26,7 @@ func _count_abi_attacks(session: ArenaCombatSession, abi_id: String) -> int:
 			total += 1
 	return total
 
-func _make_session(archetype: String, seed_value: int) -> ArenaCombatSession:
+func _make_session(archetype: String, seed_value: int, dual_wield: bool = false) -> ArenaCombatSession:
 	var hero := CharacterState.new("DAGGER_"+archetype,"Dagger Test",40)
 	for par_id in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
 		hero.progression.base_stats[par_id] = 90
@@ -36,6 +36,14 @@ func _make_session(archetype: String, seed_value: int) -> ArenaCombatSession:
 	if item.is_empty():
 		return null
 	_check(hero.equip("main_hand",String(item.get("instance_id","")),repository),archetype+"_equipped")
+	if dual_wield:
+		var secondary := ItemV12InstanceFactory.grant_weapon(hero,repository,archetype,40,"purple",seed_value+10000)
+		_check(not secondary.is_empty(),archetype+"_offhand_generated")
+		if secondary.is_empty():
+			return null
+		_check(hero.equip("off_hand",String(secondary.get("instance_id","")),repository),archetype+"_offhand_equipped")
+		if String(hero.equipment.get_equipped_instance_id("off_hand")) != String(secondary.get("instance_id","")):
+			return null
 	var ability_sets := {
 		"DAGGER_DEF":["ABI401","ABI402","ABI403","ABI404"],
 		"DAGGER_ATTACK":["ABI401","ABI402","ABI405","ABI406"],
@@ -148,15 +156,16 @@ func _run() -> void:
 			_check(_count_abi_attacks(penetration,"ABI408") == 1,"pen_absolute_mh_only")
 
 
+	# Preparation effects are active immediately; ordinary on-hit EFF would activate next round.
 	# Burst skills consume poison on cast, but DEF_COMBO must preserve breach.
 	# The cast snapshot still determines damage and the number of strikes.
 	var consume_def := _make_session("DAGGER_DEF",202611075)
 	if consume_def != null:
 		consume_def.state.begin_round()
 		var def_target := consume_def.fighter(false)
-		var poison_event := consume_def.state.create_event(CombatEvent.Kind.EFFECT,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1})
+		var poison_event := consume_def.state.create_event(CombatEvent.Kind.EFFECT,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
 		consume_def.engine.resolve_event(poison_event)
-		var breach_event := consume_def.state.create_event(CombatEvent.Kind.EFFECT,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF401","base_chance":100.0,"effect_roll":1})
+		var breach_event := consume_def.state.create_event(CombatEvent.Kind.EFFECT,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF401","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
 		consume_def.engine.resolve_event(breach_event)
 		_check(not _active(def_target,"EFF403").is_empty(),"def_consume_poison_setup")
 		_check(not _active(def_target,"EFF401").is_empty(),"def_preserve_breach_setup")
@@ -168,12 +177,12 @@ func _run() -> void:
 		consume_def.engine.resolve_pending_events()
 		_check(_active(def_target,"EFF403").is_empty(),"def_poison_not_restored_by_abi_hits")
 
-	var consume_attack := _make_session("DAGGER_ATTACK",202611076)
+	var consume_attack := _make_session("DAGGER_ATTACK",202611076,true)
 	if consume_attack != null:
 		consume_attack.state.begin_round()
 		var attack_target := consume_attack.fighter(false)
 		for i in range(4):
-			var add_poison := consume_attack.state.create_event(CombatEvent.Kind.EFFECT,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1})
+			var add_poison := consume_attack.state.create_event(CombatEvent.Kind.EFFECT,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
 			consume_attack.engine.resolve_event(add_poison)
 		_check(int(_active(attack_target,"EFF403").get("stacks",0))==4,"flurry_consume_poison_setup")
 		var flurry_cast := consume_attack.state.create_event(CombatEvent.Kind.ACTION,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI406","zone":"chest"})
