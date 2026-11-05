@@ -9,10 +9,10 @@ const PAR_CHOICES := {
 	"caster:PAR035": "Игрок · PAR035 Сила крита (рейтинг)",
 	"caster:PAR125": "Игрок · PAR125 Плоское пробитие брони",
 	"caster:PAR126": "Игрок · PAR126 Пробитие брони, %",
-	"caster:PAR150": "Игрок · PAR150 Магический урон (рейтинг)",
+	"caster:PAR150": "Игрок · PAR150 Сила заклинаний (SP)",
 	"dummy:PAR034": "Манекен · PAR034 Антикрит (рейтинг)",
 	"dummy:PAR101": "Манекен · PAR101 Броня груди",
-	"dummy:PAR135": "Манекен · PAR135 Общее снижение урона, %",
+	"dummy:PAR135": "Манекен · PAR135 Снижение урона (рейтинг)",
 	"dummy:PAR190": "Манекен · PAR190 Общее сопротивление магии",
 	"dummy:PAR191": "Манекен · PAR191 Сопротивление огню",
 	"dummy:PAR192": "Манекен · PAR192 Сопротивление воде",
@@ -172,14 +172,14 @@ func _ready() -> void:
 
 func _build_ability_page(page: VBoxContainer) -> void:
 	preset_select = OptionButton.new()
-	for id in ["ABI003", "ABI004", "LAB_PHYSICAL", "LAB_MAGIC"]:
+	for id in ["LAB_PHYSICAL", "LAB_MAGIC", "LAB_HEAL"]:
 		preset_select.add_item("%s — %s" % [id, String(AbiTestLabSession.PRESETS[id])])
 		preset_select.set_item_metadata(preset_select.item_count - 1, id)
 	_add_full_row(page, "Способность", preset_select)
 	preset_select.item_selected.connect(_preset_changed)
 
 	locked_details = Label.new()
-	locked_details.text = "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
+	locked_details.text = "Действующие боевые умения находятся в каталоге ABI301–606; здесь только изолированные тестовые действия."
 	locked_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	page.add_child(locked_details)
 
@@ -381,44 +381,41 @@ func _selected_type() -> String:
 
 func _preset_changed(_index: int) -> void:
 	var preset := _preset_id()
-	var locked := preset in ["ABI003", "ABI004"]
-	locked_details.visible = locked
-	locked_details.text = "Healing · прямое HP настраивается · EFF004 HoT +10 HP/стак · 10 маны · КД 1" if preset == "ABI004" else "Fireball · огонь · 10 маны · КД 1 · EFF003 Горение"
-	target_row.visible = preset == "ABI004"
-	initial_hp_row.visible = preset == "ABI004"
-	max_hp_row.visible = preset == "ABI004"
-	injection_row.visible = preset == "ABI004"
-	hits_row.visible = preset == "ABI004"
-	order_row.visible = preset == "ABI004"
-	(amount_row.get_child(0) as Label).text = "Прямое лечение" if preset == "ABI004" else "Базовый урон"
+	var healing := preset == "LAB_HEAL"
+	locked_details.visible = false
+	target_row.visible = healing
+	initial_hp_row.visible = healing
+	max_hp_row.visible = healing
+	injection_row.visible = healing
+	hits_row.visible = healing
+	order_row.visible = healing
+	(amount_row.get_child(0) as Label).text = "Прямое лечение" if healing else "Базовый урон"
 	target_select.clear()
-	if preset == "ABI004":
-		for pair in [["ally", "Союзник"], ["caster", "На себя"]]:
+	if healing:
+		for pair in [["ally","Союзник"],["caster","На себя"]]:
 			target_select.add_item(String(pair[1]))
-			target_select.set_item_metadata(target_select.item_count - 1, pair[0])
+			target_select.set_item_metadata(target_select.item_count - 1,pair[0])
 	else:
 		target_select.add_item("Манекен")
-		target_select.set_item_metadata(0, "dummy")
-	custom_name_row.visible = not locked
-	type_row.visible = not locked
-	mana_row.visible = not locked
-	cooldown_row.visible = not locked
-
-	# Never offer invalid physical/magical combinations.
+		target_select.set_item_metadata(0,"dummy")
+	custom_name_row.visible = true
+	type_row.visible = not healing
+	mana_row.visible = true
+	cooldown_row.visible = true
 	type_select.clear()
 	for id in AbiTestLabSession.DAMAGE_TYPES:
 		var physical := CombatDamagePayload.is_physical_damage_type(String(id))
-		if locked and id != "fire":
-			continue
 		if preset == "LAB_PHYSICAL" and not physical:
 			continue
 		if preset == "LAB_MAGIC" and physical:
 			continue
-		type_select.add_item(String(TYPE_NAMES.get(id, id)))
-		type_select.set_item_metadata(type_select.item_count - 1, id)
+		if healing and String(id)!="fire":
+			continue
+		type_select.add_item(String(TYPE_NAMES.get(id,id)))
+		type_select.set_item_metadata(type_select.item_count - 1,id)
 	type_select.select(0)
-	(fields["mana_cost"] as SpinBox).value = 10 if locked else 0
-	(fields["cooldown_rounds"] as SpinBox).value = 1 if locked else 0
+	(fields["mana_cost"] as SpinBox).value = 0
+	(fields["cooldown_rounds"] as SpinBox).value = 0
 	_mark_dirty()
 
 func _mark_dirty(_value: Variant = null) -> void:

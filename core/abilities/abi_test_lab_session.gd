@@ -9,7 +9,7 @@ const ALLY_ID := "abi_lab_ally"
 const CASTER_PARS := ["PAR030", "PAR033", "PAR035", "PAR125", "PAR126", "PAR150"]
 const DUMMY_PARS := ["PAR034", "PAR101", "PAR135", "PAR190", "PAR191", "PAR192", "PAR193", "PAR194", "PAR195", "PAR196"]
 const DAMAGE_TYPES := ["slashing", "piercing", "chopping", "blunt", "fire", "water", "air", "earth", "dark", "light"]
-const PRESETS := {"ABI003": "Fireball + EFF003", "ABI004": "Healing + EFF004", "LAB_PHYSICAL": "Физическая ABI", "LAB_MAGIC": "Магическая ABI"}
+const PRESETS := {"LAB_PHYSICAL": "Физическая проверка", "LAB_MAGIC": "Магическая проверка", "LAB_HEAL": "Проверка лечения"}
 
 var state: CombatState
 var engine: CombatEngine
@@ -22,7 +22,7 @@ static func allowed_pars() -> Dictionary:
 	return {"caster": CASTER_PARS.duplicate(), "dummy": DUMMY_PARS.duplicate()}
 
 func reset(settings: Dictionary = {}) -> Dictionary:
-	var preset := String(settings.get("preset", "ABI003"))
+	var preset := String(settings.get("preset", "LAB_MAGIC"))
 	if not PRESETS.has(preset):
 		return {"ok": false, "reason": "invalid_preset"}
 	var damage_type := String(settings.get("damage_type", "fire" if preset != "LAB_PHYSICAL" else "slashing")).to_lower()
@@ -38,20 +38,29 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	var caster_level := clampi(int(settings.get("caster_level", 1)), 1, 100)
 	var dummy_level := clampi(int(settings.get("dummy_level", 1)), 1, 100)
 	var ability_def: Dictionary = {}
-	if preset in ["ABI003", "ABI004"]:
-		ability_def = AbilityCatalog.definition(AbilityCatalog.load_json("res://data/abilities/catalog.json"), preset).duplicate(true)
-		if ability_def.is_empty():
-			return {"ok": false, "reason": "missing_" + preset}
-	else:
-		ability_def = {
-			"name": String(settings.get("name", "Test ability")),
-			"delivery_type": "PROJECTILE",
-			"target_scope": "SINGLE",
-			"uses_magic_hit": preset == "LAB_MAGIC",
-			"components": [{"kind": "damage", "amount": float(raw_damage), "damage_type": damage_type}],
-			"mana_cost": clampi(int(settings.get("mana_cost", 0)), 0, 1000),
-			"cooldown_rounds": clampi(int(settings.get("cooldown_rounds", 0)), 0, 20)
-		}
+	# Synthetic laboratory IDs are never looked up in the production ABI
+	# catalog and can never be equipped by a real character.
+	var healing := preset == "LAB_HEAL"
+	ability_def = {
+		"name": String(settings.get("name","Test action")),
+		"delivery_type": "DIRECT" if healing else "PROJECTILE",
+		"target_scope": "SINGLE",
+		"target_team": "ALLY" if healing else "ENEMY",
+		"uses_magic_hit": preset == "LAB_MAGIC",
+		"components": ([{"kind":"heal","amount":float(raw_damage)}] if healing else [{"kind":"damage","amount":float(raw_damage),"damage_type":damage_type}]),
+		"mana_cost": clampi(int(settings.get("mana_cost",0)),0,1000),
+		"cooldown_rounds": clampi(int(settings.get("cooldown_rounds",0)),0,20)
+	}
+	var extra_effect_id := String(settings.get("test_effect_id",""))
+	if not extra_effect_id.is_empty():
+		if EffectCatalog.definition(EffectCatalog.load_json(),extra_effect_id).is_empty():
+			return {"ok":false,"reason":"invalid_test_effect"}
+		ability_def["components"].append({"kind":"effect","effect_id":extra_effect_id,"resist_type":damage_type})
+	var k_value: Variant = settings.get("spell_power_scale",0.0)
+	if not RatingMatrix._number(k_value) or float(k_value)<0.0:
+		return {"ok":false,"reason":"invalid_spell_power_scale"}
+	if float(k_value)>0.0 and preset!="LAB_PHYSICAL":
+		ability_def["components"][0]["spell_power_scale"] = float(k_value)
 	if not AbilityRuntime.validate_definition(preset, ability_def).is_empty():
 		return {"ok": false, "reason": "invalid_ability_definition"}
 
@@ -60,8 +69,7 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 		return {"ok": false, "reason": "missing_damage_component"}
 	var primary_damage: Dictionary = Dictionary(components[0]).duplicate(true)
 	primary_damage["amount"] = float(raw_damage)
-	# Fireball retains its canonical FIRE type and burning EFF003 when edited.
-	if not preset in ["ABI003", "ABI004"]:
+	if preset != "LAB_HEAL":
 		primary_damage["damage_type"] = damage_type
 	components[0] = primary_damage
 	ability_def["components"] = components
@@ -93,16 +101,16 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	config = settings.duplicate(true)
 	config["preset"] = preset
 	config["damage"] = float(raw_damage)
-	config["damage_type"] = "fire" if preset == "ABI003" else ("healing" if preset == "ABI004" else damage_type)
-	var target_choice := String(settings.get("target", "ally" if preset == "ABI004" else "dummy"))
-	if not target_choice in ["caster", "ally", "dummy"] or (preset == "ABI004" and target_choice == "dummy") or (preset != "ABI004" and target_choice != "dummy"):
+	config["damage_type"] = "healing" if preset == "LAB_HEAL" else damage_type
+	var target_choice := String(settings.get("target", "ally" if preset == "LAB_HEAL" else "dummy"))
+	if not target_choice in ["caster","ally","dummy"] or (preset == "LAB_HEAL" and target_choice == "dummy") or (preset != "LAB_HEAL" and target_choice != "dummy"):
 		return {"ok": false, "reason": "invalid_target_selection"}
 	config["target"] = target_choice
 	state = CombatState.new()
 	var caster := TestFixtureLoader.new_combatant(CASTER_ID, "ABI Lab", caster_level, 10000, 500)
 	var dummy := TestFixtureLoader.new_combatant(DUMMY_ID, "Манекен", dummy_level, 10000, 0)
 	var ally := TestFixtureLoader.new_combatant(ALLY_ID, "Союзник", caster_level, 10000, 0)
-	if preset == "ABI004":
+	if preset == "LAB_HEAL":
 		var target_max_hp := clampi(int(settings.get("target_max_hp", 10000)), 1, 100000)
 		var starting_hp := clampi(int(settings.get("initial_hp", 5000)), 1, target_max_hp)
 		caster.max_hp = target_max_hp
@@ -236,6 +244,9 @@ func _set_par(combatant: CombatantState, id: String, value: float) -> bool:
 		var key := String(ParCombatContract.RATINGS[id])
 		combatant.combat_stats[key] = value
 		combatant.combat_stats[key + "_percent"] = RatingMatrix.to_percent(value, combatant.level)
+	elif ParCombatContract.ABSOLUTE_STATS.has(id):
+		var absolute_key := String(ParCombatContract.ABSOLUTE_STATS[id])
+		combatant.combat_stats[absolute_key] = value
 	elif id == "PAR125":
 		combatant.combat_stats["armour_penetration_flat"] = value
 	elif id == "PAR126":
