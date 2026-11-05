@@ -60,8 +60,13 @@ func _initialize() -> void:
 	valid = valid and AbilityRuntime.validate_definition("SP_BAD_PHY",wrong_physical).has("spell_power_scale_requires_magic_damage_or_heal")
 	var wrong_scale := {"components":[{"kind":"damage","amount":25,"damage_type":"fire","spell_power_scale":-1.0}]}
 	valid = valid and AbilityRuntime.validate_definition("SP_BAD_K",wrong_scale).has("invalid_spell_power_scale")
-	var no_k := AbilityCatalog.definition(AbilityCatalog.load_json("res://data/abilities/catalog.json"),"ABI003")
-	valid = valid and not Dictionary(Array(no_k.get("components",[]))[0]).has("spell_power_scale")
+	# The current production catalog contains ONLY the 30 approved physical
+	# weapon abilities; none currently has a magic scaling coefficient K.
+	var active_defs := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	valid = valid and active_defs.size()==30
+	for ability_id in active_defs:
+		for component in Array(Dictionary(active_defs[ability_id]).get("components",[])):
+			valid = valid and not Dictionary(component).has("spell_power_scale")
 
 	print("MAGIC_ABI_SCALING_TEST=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
