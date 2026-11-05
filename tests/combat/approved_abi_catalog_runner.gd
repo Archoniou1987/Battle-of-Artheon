@@ -25,11 +25,11 @@ func _initialize() -> void:
 	for id in expected:
 		var approved: Dictionary = defs.get(id,{})
 		var family_field := "sword_ability_mode"
-		if id.begins_with("ABI4"):
+		if String(id).begins_with("ABI4"):
 			family_field = "dagger_ability_mode"
-		elif id.begins_with("ABI5"):
+		elif String(id).begins_with("ABI5"):
 			family_field = "axe_ability_mode"
-		elif id.begins_with("ABI6"):
+		elif String(id).begins_with("ABI6"):
 			family_field = "hammer_ability_mode"
 		ok = ok and not String(approved.get(family_field,"")).is_empty()
 		for effect_field in ["effect_id","sword_eff_id","eff"]:
@@ -81,7 +81,7 @@ func _initialize() -> void:
 	var zones := CombatZoneState.new(group)
 	var orchestrator := RoundOrchestrator.new(state,CombatEngine.new(state),group,zones)
 	var command := CombatCommandApi.new(state,group,zones,orchestrator,old_only)
-	var actions := command.available_actions("CASTER",injected)
+	var actions := command.available_actions("CASTER",{"ABI001":injected["ABI001"],"ABI0301":injected["ABI0301"],"ABI301":injected["ABI301"]})
 	var shown: Dictionary = actions.get("abilities",{})
 	ok = ok and not shown.has("ABI001") and not shown.has("ABI0301") and shown.has("ABI301")
 	ok = ok and not bool(command.cast_ability("CASTER","TARGET","ABI001").get("ok",false))
