@@ -30,6 +30,11 @@ static func build(npc:NpcState, combat_level:int=-1)->CombatantState:
 			push_error("NPC missing canonical rating: " + npc.npc_id + ": " + id)
 			return null
 		combatant.combat_stats[ParCombatContract.RATINGS[id]] = combatant.combat_stats["par_totals"][id]
+	for id in ParCombatContract.ABSOLUTE_STATS:
+		if not combatant.combat_stats["par_totals"].has(id):
+			push_error("NPC missing absolute PAR: " + npc.npc_id + ": " + id)
+			return null
+		combatant.combat_stats[ParCombatContract.ABSOLUTE_STATS[id]] = combatant.combat_stats["par_totals"][id]
 	var converted := CharacterStatsService.convert_ratings(combatant.combat_stats, level)
 	if converted.is_empty():
 		return null

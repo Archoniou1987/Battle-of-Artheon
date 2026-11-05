@@ -228,7 +228,7 @@ func _ready() -> void:
 	var groups: Array = [
 		["Атака", ["Урон оружия", "Попадание", "Крит"]],
 		["Защита", ["Броня по зонам", "Уклонение", "Блок"]],
-		["Маг. атака", ["Мана", "Магический урон", "Усиление стихий"]],
+		["Маг. атака", ["Мана", "Сила заклинаний", "Усиление стихий"]],
 		["Маг. защита", ["Общее сопротивление", "Сопротивления стихиям"]]
 	]
 	for group in groups:
@@ -583,8 +583,8 @@ func _refresh_combat_stats() -> void:
 	(stat_rows["Уклонение"] as Label).tooltip_text = "После DR; антиуворот конкретного противника применяется только в бою"
 	(stat_rows["Блок"] as Label).text = "%.2f%% / %d зон" % [float(current.get("auto_block_after_dr_pct",0.0)),int(current.get("manual_block_zone_capacity",0))]
 	(stat_rows["Блок"] as Label).tooltip_text = "Автоматический блок после DR / количество зон ручного блока"
-	(stat_rows["Магический урон"] as Label).text = "%.2f%%" % float(current.get("magic_damage_rating_percent",0.0))
-	(stat_rows["Магический урон"] as Label).tooltip_text = "Текущий процентный контракт PAR150; перевод в абсолютный SP — отдельный этап аудита"
+	(stat_rows["Сила заклинаний"] as Label).text = "%.1f SP" % float(current.get("spell_power",0.0))
+	(stat_rows["Сила заклинаний"] as Label).tooltip_text = "PAR150: абсолютная сила заклинаний без DR. ABI получает бонус только при заданном K; отдельный магический бонус: %.1f%%." % float(current.get("magic_damage_bonus_pct",0.0))
 	# Registered PAR151–157 must not disappear from the UI if they have
 	# nonzero item bonuses. Show their ratings, NOT an unverified effective %.
 	var registry_totals: Dictionary = combat.get("par_totals",{})

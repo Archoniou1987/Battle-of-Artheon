@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "notes": "All percentage-derived attributes on Attack/Defense/Magic tabs use level-scaled ratings. Other tab retains direct percentages. ABI/EFF direct percentage points are separate overlays, never stored as ratings.",
+  "notes": "v1.2: PAR150 keeps immutable source key magic_damage_rating, but is absolute Spell Power. ABI damage/heal with optional spell_power_scale K uses base + K*SP; no DR. Other ratings remain level-scaled, direct percentage overlays are separate.",
   "effects": {
     "PAR001": {
       "physical_damage_flat": 1
@@ -143,7 +143,6 @@
     "pierce_resistance_rating",
     "chop_resistance_rating",
     "blunt_resistance_rating",
-    "magic_damage_rating",
     "fire_damage_rating",
     "water_damage_rating",
     "air_damage_rating",
