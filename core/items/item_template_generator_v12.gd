@@ -212,17 +212,21 @@ func generate(config: Dictionary) -> Dictionary:
 		if String(entry["kind"]) == "armor":
 			slots = rules.get("armor_slots", [])
 		elif String(entry.get("slot","")) == "MH/OH":
-			# One archetype supports two independently budgeted template
-			# variants, not a single item with an ambiguous 15% PAR share.
-			slots = ["MH","OH"]
+			# One template per archetype; equip position does not change rolls.
+			slots = ["MH"]
 		var school_options: Array = [{"id":"","name":"","pen":""}]
 		if bool(entry.get("school_required", false)):
 			school_options = schools()
 		for slot in slots:
 			if chosen_slot != "any" and (not ["armor","jewelry"].has(String(entry["kind"])) or chosen_slot != String(slot)):
 				continue
-			if String(entry["kind"]) == "weapon" and chosen_hand != "any" and String(slot) != chosen_hand:
-				continue
+			if String(entry["kind"]) == "weapon" and chosen_hand != "any":
+				if chosen_hand == "OH" and (String(slot) != "MH" or not WeaponHandPolicy.DUAL_ARCHETYPES.has(String(entry["id"]))):
+					continue
+				if chosen_hand == "MH" and String(slot) != "MH":
+					continue
+				if chosen_hand == "2H" and String(slot) != "2H":
+					continue
 			if exclude_oh and String(slot) == "OH":
 				continue
 			if chosen_school != "any" and not bool(entry.get("school_required",false)):
@@ -285,8 +289,7 @@ func _variant(choice: Dictionary, quality: String) -> Dictionary:
 	var offhand_damage: Array = []
 	if String(spec["kind"]) == "weapon":
 		damage = _weapon_damage(spec, level, slot, float(Dictionary(rules["damage_quality_factors"]).get(quality,1.0)))
-		# MH/OH archetypes now produce distinct MH and OH variants.
-		# "damage" always refers to the selected hand; no second phantom hit.
+		# One persistent base damage range; off-hand scaling occurs at equip.
 	elif String(spec["kind"]) == "armor":
 		armour = _base_armour(spec,slot,level,quality_factor)
 	# Template CORE lines belong to the white foundation, not rarity rolls.
@@ -389,8 +392,7 @@ func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_f
 	var avg := base*float(WEAPON_FACTOR.get(family,1.0))*damage_quality_factor
 	if slot == "2H":
 		avg *= 1.65
-	elif slot == "OH":
-		avg *= 0.80
+	# No OH-only item variant or generation-time damage penalty.
 	var spread := float(DAMAGE_SPREAD.get(family,0.15))
 	return [maxi(1,roundi(avg*(1.0-spread))),maxi(1,roundi(avg*(1.0+spread)))]
 

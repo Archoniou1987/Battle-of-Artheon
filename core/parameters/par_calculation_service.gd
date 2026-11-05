@@ -81,14 +81,26 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				if not valid_damage_range(damage):
 					push_error("Invalid mandatory weapon range: " + target_par)
 					return {}
-				attack_ranges[target_par] = damage.duplicate(true)
+				var effective_damage: Dictionary = damage.duplicate(true)
+				if in_off:
+					effective_damage["min"] = float(damage["min"]) * WeaponHandPolicy.OFF_HAND_MULTIPLIER
+					effective_damage["max"] = float(damage["max"]) * WeaponHandPolicy.OFF_HAND_MULTIPLIER
+				attack_ranges[target_par] = effective_damage
 				if float(Dictionary(item.get("par_stats", {})).get("PAR057", 0)) != 1.0 or Dictionary(item.get("par_bonuses", {})).has("PAR057"):
 					push_error("Each equipped weapon must contribute exactly PAR057 = 1: " + String(instance_id))
 					return {}
 			elif Dictionary(item.get("par_stats", {})).has("PAR057") or Dictionary(item.get("par_bonuses", {})).has("PAR057"):
 				push_error("Non-weapon cannot contribute PAR057: " + String(instance_id))
 				return {}
-			if not _accumulate(equipment, item.get("par_stats", {}), definitions) or not _accumulate(equipment, item.get("par_bonuses", {}), definitions):
+			var is_off_hand_weapon := declared_weapon and str(character.equipment.get_equipped_instance_id("off_hand")) == String(instance_id)
+			var item_par_stats: Dictionary = Dictionary(item.get("par_stats",{})).duplicate(true)
+			var item_par_bonuses: Dictionary = Dictionary(item.get("par_bonuses",{})).duplicate(true)
+			if is_off_hand_weapon:
+				for item_par_id in item_par_stats:
+					item_par_stats[item_par_id] = float(item_par_stats[item_par_id]) * WeaponHandPolicy.par_multiplier(String(item_par_id),true)
+				for item_par_id in item_par_bonuses:
+					item_par_bonuses[item_par_id] = float(item_par_bonuses[item_par_id]) * WeaponHandPolicy.par_multiplier(String(item_par_id),true)
+			if not _accumulate(equipment,item_par_stats,definitions) or not _accumulate(equipment,item_par_bonuses,definitions):
 				return {}
 			# Explicit structural armour data remains supported, accumulated once here.
 			for zone_index in range(EquipmentBuilder.HIT_ZONES.size()):
@@ -96,6 +108,8 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 				var zone_ids := {"head":"PAR100", "chest":"PAR101", "arms":"PAR102", "waist":"PAR103", "legs":"PAR104"}
 				var armour := float(Dictionary(item.get("armour_by_zone", {})).get(zone, 0)) + float(item.get("armour_all_zones_all_physical", 0))
 				var armour_id: String = zone_ids[zone]
+				if is_off_hand_weapon:
+					armour *= WeaponHandPolicy.OFF_HAND_MULTIPLIER
 				equipment[armour_id] = float(equipment.get(armour_id, 0)) + armour
 	var main_unarmed: bool = Dictionary(attack_ranges["PAR050"]).is_empty()
 	# PAR073 baseline: bare fists defend one zone, equipped melee weapons

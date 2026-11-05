@@ -234,7 +234,7 @@ func _verify() -> void:
 		problems.append("Unclassified regen must not receive invented budget direction")
 	if String(Dictionary(generator.rules.get("stat_par",{})).get("mana_regen","")) != "PAR015":
 		problems.append("Support staff must use combat mana regeneration, not out-of-combat PAR013")
-	# v1.2 K30:N32 and K51:N51: MH 15%, OH 7.5%, OH base damage 80%.
+	# Hand-neutral rolls: the 75% OH factor applies only at equip.
 	var mh_dagger := generator.generate({"archetypes":["DAGGER_ATTACK"],
 		"min_level":100,"max_level":100,"quality":"purple",
 		"weapon_hand":"MH","count":3,"seed":440})
@@ -242,35 +242,26 @@ func _verify() -> void:
 		"min_level":100,"max_level":100,"quality":"purple",
 		"weapon_hand":"OH","count":3,"seed":440})
 	if not bool(mh_dagger.get("ok",false)) or not bool(oh_dagger.get("ok",false)):
-		problems.append("Independent MH and OH dagger variants missing")
+		problems.append("Universal dagger candidate unavailable")
 	else:
 		var mh: Dictionary = mh_dagger["rows"][0]
 		var oh: Dictionary = oh_dagger["rows"][0]
 		var mh_variant: Dictionary = mh["variant"]
 		var oh_variant: Dictionary = oh["variant"]
-		if String(mh["slot"]) != "MH" or String(oh["slot"]) != "OH":
-			problems.append("Dagger hand filter ignored")
-		if float(mh_variant.get("par_slot_budget_pct",0.0)) != 15.0 or float(oh_variant.get("par_slot_budget_pct",0.0)) != 7.5:
-			problems.append("Dagger PAR budgets do not follow selected hand")
-		var mh_dmg: Array = mh_variant.get("damage",[])
-		var oh_dmg: Array = oh_variant.get("damage",[])
-		if mh_dmg.size() != 2 or oh_dmg.size() != 2:
-			problems.append("Dagger physical damage was not generated")
-		else:
-			var mh_mid := 0.5 * float(int(mh_dmg[0])+int(mh_dmg[1]))
-			var oh_mid := 0.5 * float(int(oh_dmg[0])+int(oh_dmg[1]))
-			if absf(oh_mid/mh_mid-0.8) > 0.03:
-				problems.append("OH base damage is not 80 percent of MH")
-		var mh_affix := generator.nominal_affix("hp",100,"MH",1.0)
-		var oh_affix := generator.nominal_affix("hp",100,"OH",1.0)
-		if absf(oh_affix/mh_affix-0.5) > 0.0001:
-			problems.append("OH PAR value does not use half of MH slot share")
+		if String(mh["slot"]) != "MH" or String(oh["slot"]) != "MH":
+			problems.append("Hand filter created separate item slots")
+		if mh_variant.get("damage",[]) != oh_variant.get("damage",[]) or mh_variant.get("total_par",{}) != oh_variant.get("total_par",{}):
+			problems.append("Hand-specific generation changed rolls")
+		if float(mh_variant.get("par_slot_budget_pct",0.0)) != 15.0 or float(oh_variant.get("par_slot_budget_pct",0.0)) != 15.0:
+			problems.append("Universal item must use one MH PAR budget")
+		if not is_equal_approx(WeaponHandPolicy.OFF_HAND_MULTIPLIER,0.75):
+			problems.append("OH must scale to 75%")
 	var both_hands := generator.generate({"archetypes":["DAGGER_ATTACK"],
 		"min_level":30,"max_level":30,"quality":"white",
 		"weapon_hand":"any","count":2,"seed":440})
-	if not bool(both_hands.get("ok",false)) or int(both_hands.get("candidate_count",0)) != 2:
-		problems.append("MH/OH archetype must expose exactly two hand candidates")
-	var impossible_hand := generator.generate({"archetypes":["SWORD_CRIT"],
+	if not bool(both_hands.get("ok",false)) or int(both_hands.get("candidate_count",0)) != 1:
+		problems.append("MH/OH archetype must have one candidate")
+	var impossible_hand := generator.generate({"archetypes":["SWORD_DEF"],
 		"min_level":30,"max_level":30,"quality":"white",
 		"weapon_hand":"OH","count":1,"seed":440})
 	if bool(impossible_hand.get("ok",false)):
@@ -294,7 +285,7 @@ func _verify() -> void:
 		"weapon_hand":"OH","count":50,"seed":782})
 	if bool(hand_only.get("ok",false)):
 		for hand_item in hand_only["rows"]:
-			if String(Dictionary(hand_item).get("kind","")) != "weapon" or String(Dictionary(hand_item).get("slot","")) != "OH":
+			if String(Dictionary(hand_item).get("kind","")) != "weapon" or String(Dictionary(hand_item).get("slot","")) != "MH" or not WeaponHandPolicy.DUAL_ARCHETYPES.has(String(Dictionary(hand_item).get("archetype_id",""))):
 				problems.append("Weapon-hand filter allowed armour or another hand")
 				break
 	else:

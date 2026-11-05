@@ -19,11 +19,11 @@ static func generate_sword(archetype_id: String, level: int, quality: String, se
 static func generate_weapon(archetype_id: String, level: int, quality: String, seed_value: int, hand: String = "MH") -> Dictionary:
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH"].has(hand):
 		return {}
-	if hand == "OH" and not DAGGER_ARCHETYPES.has(archetype_id):
+	if hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id):
 		return {}
 	var engine := ItemTemplateGeneratorV12.new()
 	var generated := engine.generate({
-		"archetypes": [archetype_id], "weapon_hand": hand,
+		"archetypes": [archetype_id], "weapon_hand": "MH",
 		"min_level": level, "max_level": level,
 		"quality": quality, "count": 1, "seed": maxi(1, seed_value),
 		"group_qualities": false
@@ -42,7 +42,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var quality := String(row.get("quality", ""))
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
 		return {}
-	if not ["MH", "OH"].has(hand) or (hand == "OH" and not DAGGER_ARCHETYPES.has(archetype_id)):
+	if not ["MH", "OH"].has(hand) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
 		return {}
 	if not row.get("variant", null) is Dictionary:
 		return {}
@@ -69,8 +69,8 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		if not ParCalculationService.PRIMARY_IDS.has(String(key)):
 			return {}
 	var family := _weapon_family(archetype_id)
-	var slot := "off_hand" if hand == "OH" else "main_hand"
-	var template_id := "V12_%s_%s_L%03d" % [archetype_id, hand, level]
+	var allowed_slots := WeaponHandPolicy.allowed_slots(archetype_id)
+	var template_id := "V12_%s_L%03d" % [archetype_id, level]
 	var result := {
 		"id": template_id,
 		"generated_from_template": archetype_id,
@@ -83,9 +83,9 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"quality": quality,
 		"rarity": quality,
 		"origin": "v12_game_generator",
-		"slot": slot,
-		"equip_slots": [slot],
-		"slot_usage": [slot],
+		"slot": "main_hand",
+		"equip_slots": allowed_slots,
+		"slot_usage": [],
 		"icon_id": "ICON_0002", # Placeholder until visual templates/atlas binding stage.
 		"damage": {"min": int(damage[0]), "max": int(damage[1]), "type": _damage_type(family)},
 		"damage_type": _damage_type(family),
@@ -98,7 +98,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"v12_core_rolls": (variant.get("core_rolls", []) as Array).duplicate(true),
 		"v12_rarity_rolls": (variant.get("rolls", []) as Array).duplicate(true),
 		# ABI positions are genuine canonical IDs and survive normal save/restore.
-		"abilities": _physical_weapon_abilities(archetype_id, hand),
+		"abilities": _physical_weapon_abilities(archetype_id, "MH"),
 		"v12_seed": seed_value
 	}
 	ItemDurabilityService.initialize_item(result, 100)
@@ -150,9 +150,7 @@ static func grant_generated_row(character: CharacterState, repository: ItemRepos
 	return item
 
 static func _physical_weapon_abilities(archetype_id: String, hand: String) -> Array[String]:
-	# One global MH weapon ABI loadout: OH items never create duplicate ABI slots.
-	if hand != "MH":
-		return []
+	# Item carries ABI; EquipmentAbilityLoadout activates them only in MH.
 	if SWORD_ARCHETYPES.has(archetype_id):
 		return _physical_sword_abilities(archetype_id)
 	match archetype_id:

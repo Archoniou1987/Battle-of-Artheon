@@ -29,6 +29,7 @@ func _run() -> void:
 			continue
 		_check(String(item.get("instance_id","")).begins_with("ITEMID"),archetype_id+"_id")
 		_check(String(item.get("slot",""))=="main_hand",archetype_id+"_slot")
+		_check(item.get("equip_slots",[]) == WeaponHandPolicy.allowed_slots(archetype_id),archetype_id+"_hand_compatibility")
 		_check(Array(item.get("abilities",[])).size()==(4 if archetype_id.begins_with("SWORD_") or archetype_id.begins_with("DAGGER_") or archetype_id.begins_with("AXE_") or archetype_id.begins_with("HAMMER_") else 0),archetype_id+"_runtime_abi_gate")
 		for prefix in families:
 			if archetype_id.begins_with(String(prefix)):
@@ -40,8 +41,9 @@ func _run() -> void:
 	for archetype_id in ["DAGGER_DEF","DAGGER_ATTACK","DAGGER_PEN"]:
 		var offhand := ItemV12InstanceFactory.generate_weapon(archetype_id,40,"purple",seed_value,"OH")
 		_check(not offhand.is_empty(),archetype_id+"_offhand_generated")
-		_check(String(offhand.get("slot",""))=="off_hand",archetype_id+"_offhand_slot")
-		_check(Array(offhand.get("abilities",[])).is_empty(),archetype_id+"_offhand_no_duplicate_abi")
+		_check(offhand.get("equip_slots",[])==["main_hand","off_hand"],archetype_id+"_universal")
+		_check(Array(offhand.get("abilities",[])).size()==4,archetype_id+"_abi_stored_for_mh")
+		_check(offhand.get("damage",{})==ItemV12InstanceFactory.generate_weapon(archetype_id,40,"purple",seed_value,"MH").get("damage",{}),archetype_id+"_hand_neutral_damage")
 		seed_value += 1
 	# Selecting a mass-generator result must not roll its CORE/PAR again.
 	var engine := ItemTemplateGeneratorV12.new()
@@ -73,6 +75,8 @@ func _run() -> void:
 			if not profiles.is_empty():
 				_check(int(Dictionary(profiles[0]).get("item_level",-1))==40,"level_profile_preserved")
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_DEF",40,"purple",1,"OH").is_empty(),"axe_no_oh")
+	_check(not ItemV12InstanceFactory.generate_weapon("AXE_ATTACK",40,"purple",1,"OH").is_empty(),"axe_attack_oh")
+	_check(not ItemV12InstanceFactory.generate_weapon("HAMMER_ATTACK",40,"purple",1,"OH").is_empty(),"hammer_attack_oh")
 	_check(ItemV12InstanceFactory.generate_weapon("HAMMER_MAGIC",40,"purple",1).is_empty(),"magic_not_implemented")
 	print("PHYSICAL_WEAPON_V12_FACTORY=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
