@@ -15,12 +15,12 @@ func _initialize() -> void:
 			var actual := RatingMatrix.to_percent(rating,level)
 			assert(is_equal_approx(actual,CombatRatingCurves.rating_to_pct(rating,level)))
 			assert(is_equal_approx(actual,ItemTemplateGeneratorV12.rating_to_pct(rating,level)))
+	var old_print := Engine.print_error_messages
+	Engine.print_error_messages = false
 	# Legacy configuration cannot silently pass v1.2 validation.
 	var obsolete: Dictionary = config.duplicate(true)
 	obsolete["version"] = 1
 	assert(is_nan(RatingMatrix.evaluate(100,1,obsolete)))
-	var old_print := Engine.print_error_messages
-	Engine.print_error_messages = false
 	for level in [0,101,1.5,NAN,INF,"1"]:
 		assert(is_nan(RatingMatrix.evaluate(100, level, config)))
 	for rating in [NAN,INF,"bad",null]:
