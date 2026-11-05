@@ -1,8 +1,8 @@
 extends SceneTree
 
-## Twenty real Arena rounds: weapon attacks, equipped ABI003/ABI004,
-## automatically cast NPC healing, engine-created DoT/HoT, elixirs and
-## round diagnostics. No active_effects are inserted by the test.
+## Twenty real Arena rounds: approved sword ABI301, synthetic test-only
+## ally heal, engine-created bleeding/HoT, elixirs and round diagnostics.
+## No active_effects are inserted by the test.
 const TOTAL_ROUNDS := 20
 var failures: Array[String] = []
 
@@ -23,7 +23,7 @@ func _run_long_battle() -> void:
 		"instance_id": "LONG_BATTLE_SWORD",
 		"equip_slots": ["main_hand"],
 		"slot_usage": ["main_hand"],
-		"abilities": ["ABI003"],
+		"abilities": ["ABI301"],
 		"par_stats": {"PAR057": 1},
 		"damage": {"min": 3.0, "max": 4.0, "type": "slashing"}
 	}
@@ -31,7 +31,7 @@ func _run_long_battle() -> void:
 		"instance_id": "LONG_BATTLE_CHEST",
 		"equip_slots": ["chest"],
 		"slot_usage": ["chest"],
-		"abilities": ["ABI004"]
+		"abilities": ["TEST_LAB_HEAL"]
 	}
 	for item in [sword, chest]:
 		ItemDurabilityService.initialize_item(item, 100)
@@ -64,12 +64,18 @@ func _run_long_battle() -> void:
 	npc.combat_stats["hp_regen_round"] = 0.0
 	npc.combat_stats["mana_regen_round"] = 0.0
 	session.engine.combat_rng.seed = 20261021
-	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["ABI004"]
-	# Same deterministic magic hit override as the already-green live-EFF
-	# test. Effect definitions, cost, cooldown and stacking stay canonical.
-	var fireball: Dictionary = AbilityCatalog.definition(session.ability_scheduler.definitions, "ABI003").duplicate(true)
-	fireball["magic_hit_roll"] = 1
-	session.ability_scheduler.definitions["ABI003"] = fireball
+	# Generic ally healing is test-only and never lives in production ABI.
+	session.ability_scheduler.definitions["TEST_LAB_HEAL"] = {
+		"name":"Тестовое лечение",
+		"delivery_type":"DIRECT","target_scope":"SINGLE","target_team":"ALLY",
+		"components":[{"kind":"heal","amount":100},{"kind":"effect","effect_id":"EFF004","base_chance":100}],
+		"mana_cost":10,"cooldown_rounds":1
+	}
+	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["TEST_LAB_HEAL"]
+	player.combat_stats["hit_chance_rating_percent"] = 100.0
+	npc.combat_stats["dodge_rating_percent"] = 0.0
+	npc.combat_stats["shield_auto_block_rating_percent"] = 0.0
+	npc.combat_loadout["can_auto_block"] = false
 
 	var blocks: Array[String] = []
 	for zone in ["chest", "arms", "waist", "legs"]:
@@ -78,27 +84,27 @@ func _run_long_battle() -> void:
 	_check(blocks.size() == CombatModifierService.manual_block_zone_capacity(player), "block_fixture")
 	_check(session.player_attack_count() == 1, "one_weapon_action_per_round")
 	var slots: Array[Dictionary] = session.player_ability_options()
-	_check(slots.size() == 5, "five_abi_slots")
-	if slots.size() != 5 or not failures.is_empty():
+	_check(slots.size() == 6, "six_abi_slots")
+	if slots.size() != 6 or not failures.is_empty():
 		return
-	_check(String(slots[0].get("id", "")) == "ABI003", "real_fireball_slot")
-	_check(String(slots[3].get("id", "")) == "ABI004", "real_healing_slot")
+	_check(String(slots[0].get("id", "")) == "ABI301", "approved_sword_slot")
+	_check(String(slots[4].get("id", "")) == "TEST_LAB_HEAL", "isolated_healing_slot")
 	if not failures.is_empty():
 		return
 
-	var fire_casts := 0
+	var sword_casts := 0
 	var heal_casts := 0
 	var npc_heals := 0
-	var burn_ticks := 0
+	var bleed_ticks := 0
 	var regen_ticks := 0
 	var unique_events: Dictionary = {}
 	var previous_logged_events := 0
 	for round_number in range(1, TOTAL_ROUNDS + 1):
 		var selected_abi := ""
 		if round_number % 3 == 1:
-			selected_abi = "ABI003"
+			selected_abi = "ABI301"
 		elif round_number % 3 == 2:
-			selected_abi = "ABI004"
+			selected_abi = "TEST_LAB_HEAL"
 		# Two different real elixirs across the same persistent session.
 		# One potion may be combined with physical attacks and a selected ABI.
 		if round_number == 5 or round_number == 11:
@@ -135,7 +141,7 @@ func _run_long_battle() -> void:
 			_check(session.ability_scheduler.cooldowns_by_combatant == before_cooldowns, "late_reject_no_cooldown_change")
 		var options: Array[Dictionary] = session.player_ability_options()
 		if not selected_abi.is_empty():
-			var option_index := 0 if selected_abi == "ABI003" else 3
+			var option_index := 0 if selected_abi == "ABI301" else 4
 			_check(bool(options[option_index].get("available", false)), "ability_ready_round_%d" % round_number)
 		var mana_before := player.mana
 		var npc_mana_before := npc.mana
@@ -149,7 +155,7 @@ func _run_long_battle() -> void:
 		_check(String(result.get("outcome", "")) == "ongoing", "round_%d_still_fighting" % round_number)
 		_check(not player.is_death_finalized() and not npc.is_death_finalized(), "round_%d_both_alive" % round_number)
 		_check(player.mana >= 0 and player.mana <= player.max_mana and npc.mana >= 0 and npc.mana <= npc.max_mana, "round_%d_resource_bounds" % round_number)
-		_check(player.mana == mana_before - (10 if not selected_abi.is_empty() else 0), "round_%d_player_mana_debit" % round_number)
+		_check(player.mana == mana_before - (10 if selected_abi == "TEST_LAB_HEAL" else 0), "round_%d_player_mana_debit" % round_number)
 		var audit: Dictionary = CombatDiagnostics.round_trace(session.state, round_number)
 		_check(bool(audit.get("valid_event_lineage", false)), "lineage_round_%d" % round_number)
 		_check(int(audit.get("event_count", 0)) > 0, "events_round_%d" % round_number)
@@ -162,17 +168,17 @@ func _run_long_battle() -> void:
 		_check(round_npc_casts <= 1, "npc_one_abi_max_round_%d" % round_number)
 		_check(npc.mana == npc_mana_before - 10 * round_npc_casts, "npc_abi_mana_debit_round_%d" % round_number)
 		npc_heals += round_npc_casts
-		if selected_abi == "ABI003":
-			fire_casts += 1
-			_check(int(Dictionary(audit.get("applied_effects_by_id", {})).get("EFF003", 0)) == 1, "engine_burning_applied_round_%d" % round_number)
-		elif selected_abi == "ABI004":
+		if selected_abi == "ABI301":
+			sword_casts += 1
+			_check(int(Dictionary(audit.get("applied_effects_by_id", {})).get("EFF301", 0)) <= 1, "engine_sword_bleed_applied_at_most_once_round_%d" % round_number)
+		elif selected_abi == "TEST_LAB_HEAL":
 			heal_casts += 1
 			_check(int(Dictionary(audit.get("applied_effects_by_id", {})).get("EFF004", 0)) >= 1, "engine_regeneration_applied_round_%d" % round_number)
 		var ticks: Dictionary = audit.get("periodic_ticks_by_id", {})
-		burn_ticks += int(ticks.get("EFF003", 0))
+		bleed_ticks += int(ticks.get("EFF301", 0))
 		regen_ticks += int(ticks.get("EFF004", 0))
 		if round_number == 2:
-			_check(int(ticks.get("EFF003", 0)) == 1, "burning_starts_next_round")
+			_check(int(ticks.get("EFF301", 0)) <= 1, "bleeding_does_not_duplicate_next_round")
 		if round_number == 3:
 			_check(int(ticks.get("EFF004", 0)) >= 1, "regeneration_starts_next_round")
 		_check(Array(result.get("lines", [])).size() > 0, "journal_round_%d" % round_number)
@@ -187,13 +193,15 @@ func _run_long_battle() -> void:
 				var record: Dictionary = raw
 				var effect_id := String(record.get("effect_id", ""))
 				_check(int(record.get("remaining_rounds", 0)) > 0, "no_expired_effects_in_state_%d" % round_number)
-				if effect_id == "EFF003" or effect_id == "EFF004":
-					_check(int(record.get("stacks", 0)) <= 3, "real_eff_stack_cap_%d" % round_number)
+				if effect_id == "EFF301":
+					_check(int(record.get("stacks",0))<=5,"real_bleed_stack_cap_%d" % round_number)
+				elif effect_id == "EFF004":
+					_check(int(record.get("stacks",0))<=3,"real_heal_stack_cap_%d" % round_number)
 		print("ARENA_LONG_BATTLE_ROUND=", round_number, " player_abi=", selected_abi,
-			" npc_abi=", round_npc_casts, " burn_ticks=", ticks.get("EFF003", 0),
+			" npc_abi=", round_npc_casts, " bleed_ticks=", ticks.get("EFF301", 0),
 			" regen_ticks=", ticks.get("EFF004", 0), " events=", audit.get("event_count", 0))
-	_check(fire_casts == 7 and heal_casts == 7, "expected_selected_abi_count")
+	_check(sword_casts == 7 and heal_casts == 7, "expected_selected_abi_count")
 	_check(npc_heals > 0 and npc_heals <= 10, "npc_automated_heal_schedule")
-	_check(burn_ticks >= 7 and regen_ticks >= 7, "multiple_real_effect_ticks_across_rounds")
+	_check(bleed_ticks >= 7 and regen_ticks >= 7, "multiple_real_effect_ticks_across_rounds")
 	_check(unique_events.size() == session.state.event_log.size(), "canonical_global_event_count")
 	_check(session.orchestrator.battle_outcome() == "ongoing", "combat_open_after_twenty_rounds")
