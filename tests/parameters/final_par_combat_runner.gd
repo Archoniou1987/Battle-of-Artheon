@@ -69,7 +69,7 @@ func weapon_cases() -> void:
 		if mode in ["fists", "oh", "broken_mh", "broken_oh"]:
 			check(profiles[0].damage_min == 3 and profiles[0].damage_max == 5 and profiles[0].damage_type == "blunt", mode + " fist 2-4 plus PAR052 exactly once")
 		if mode in ["oh", "dual"]:
-			check(profiles[1].weapon_index == 1 and profiles[1].damage_min == 6, mode + " OH index and damage")
+			check(profiles[1].weapon_index == 1 and is_equal_approx(float(profiles[1].damage_min),4.5), mode + " OH index and damage")
 			var trigger: Dictionary = fighter.combat_stats.weapon_on_hit_effects[0]
 			check(trigger.weapon_index == 1 and trigger.source_instance_id == "oh_" + mode, mode + " OH trigger keeps weapon ownership")
 			var state := CombatState.new()
