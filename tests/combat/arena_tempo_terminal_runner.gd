@@ -45,6 +45,14 @@ func _fixture(id: String, damage: float) -> ArenaCombatSession:
 	npc.hp = 15000
 	npc.max_mana = 250
 	npc.mana = 250
+	# Test-only support action exercises stunned NPC and provisional-death
+	# ordering without resurrecting obsolete production ABI004.
+	session.ability_scheduler.definitions["TEST_LAB_HEAL"] = {
+		"name":"Тестовое лечение","delivery_type":"DIRECT",
+		"target_scope":"SINGLE","target_team":"ALLY",
+		"components":[{"kind":"heal","amount":100}],
+		"mana_cost":10,"cooldown_rounds":1
+	}
 	session.engine.combat_rng.seed = 20261021
 	return session
 
@@ -95,7 +103,7 @@ func _tempo_cycle() -> void:
 	}
 	session.ability_scheduler.loadouts[session.player_id] = [CONTROL_ABI]
 	session.player_ability_slots = [CONTROL_ABI, "", "", "", ""]
-	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["ABI004"]
+	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["TEST_LAB_HEAL"]
 	_check(AbilityRuntime.validate_definition(CONTROL_ABI, session.ability_scheduler.definitions[CONTROL_ABI]).is_empty(), "tempo_ability_fixture_valid")
 	_check(bool(session.player_ability_options()[0].get("available", false)), "tempo_ability_available_round_one")
 	if not failures.is_empty():
@@ -155,7 +163,7 @@ func _terminal_battle() -> void:
 	# Force the seed-independent physical hit, but keep all following
 	# physical stages in the production engine, including one-shot damage.
 	player.combat_stats["hit_chance_rating_percent"] = 100.0
-	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["ABI004"]
+	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["TEST_LAB_HEAL"]
 	var blocks := _blocks(player)
 	var result: Dictionary = session.play_round(["chest"], blocks)
 	_check(bool(result.get("ok", false)), "terminal_round_accepted")
@@ -168,7 +176,7 @@ func _terminal_battle() -> void:
 	_check(_npc_abi_count(session, 1) == 1, "lethally_hit_npc_still_resolves_locked_heal")
 	var npc_heal_cast_id := -1
 	for logged in session.state.event_log:
-		if logged.kind == CombatEvent.Kind.ACTION and logged.source_id == ArenaCombatSession.ENEMY_ID and String(logged.payload.get("ability_id", "")) == "ABI004":
+		if logged.kind == CombatEvent.Kind.ACTION and logged.source_id == ArenaCombatSession.ENEMY_ID and String(logged.payload.get("ability_id", "")) == "TEST_LAB_HEAL":
 			npc_heal_cast_id = logged.event_id
 	var resolved_heals := 0
 	for logged in session.state.event_log:
