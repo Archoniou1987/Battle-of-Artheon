@@ -195,8 +195,9 @@ func resolve_active_timed_effects() -> Array[int]:
 			var amount:=float(definition.get("healing",0.0) if is_hot else definition.get("damage",0.0)) * float(shared_stacks)
 			var source := state.get_combatant(String(active.get("source_id", "")))
 			if not is_hot and source != null and CombatDamagePayload.is_magic_damage_type(String(definition.get("damage_type", ""))):
-				# The source's current PAR150 is applied once, on each DoT tick.
-				amount *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(source, "magic_damage_rating", state.round_number) / 100.0)
+				# DoT ticks use direct magic-damage percentage overlays, not PAR150 Spell Power.
+				# PAR150 is an absolute rating and must only scale ABI with an explicit coefficient.
+				amount *= maxf(0.0, 1.0 + CombatModifierService.magic_damage_bonus_pct(source, state.round_number) / 100.0)
 			if amount<=0.0:
 				continue
 			var event:=state.create_event(CombatEvent.Kind.EFFECT if is_hot else CombatEvent.Kind.DAMAGE,String(active.get("source_id","")),combatant.combatant_id,{
