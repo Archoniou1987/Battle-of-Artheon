@@ -197,14 +197,12 @@ func _run() -> void:
 			var poison_add := convert_session.state.create_event(CombatEvent.Kind.EFFECT,convert_session.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
 			convert_session.engine.resolve_event(poison_add)
 		_check(int(_active(convert_target,"EFF403").get("stacks",0))==poison_count,"pen_conversion_poison_setup_"+str(poison_count))
-		var convert_action := convert_session.state.create_event(CombatEvent.Kind.ACTION,convert_session.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI407","zone":"chest"})
+		var convert_action := convert_session.state.create_event(CombatEvent.Kind.ACTION,convert_session.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI407","zone":"chest","rolls":{"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100}})
 		DaggerAbiCombatService.dispatch(convert_session.engine,convert_action)
 		var expected_breach := mini(5,poison_count / 2)
 		_check(int(convert_action.result.get("poison_stacks_consumed",-1))==poison_count,"pen_conversion_consumed_"+str(poison_count))
 		_check(_active(convert_target,"EFF403").is_empty(),"pen_conversion_poison_removed_"+str(poison_count))
 		_check(int(convert_action.result.get("breach_stacks_to_apply",-1))==expected_breach,"pen_conversion_expected_"+str(poison_count))
-		# Do not require an ordinary hit: directly resolve one guaranteed connected attack via test rolls.
-		convert_session.ability_scheduler.definitions["ABI407"]["rolls"] = {"hit":1,"dodge":100,"auto_block":100,"crit":100}
 		convert_session.engine.resolve_pending_events()
 		_check(int(_active(convert_target,"EFF401").get("stacks",0))==expected_breach,"pen_conversion_breach_after_hit_"+str(poison_count))
 
@@ -215,6 +213,8 @@ func _run() -> void:
 		for index in range(4):
 			var poison_miss := missed_conversion.state.create_event(CombatEvent.Kind.EFFECT,missed_conversion.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
 			missed_conversion.engine.resolve_event(poison_miss)
+		# Force a true miss regardless of initial hit bonuses.
+		missed_conversion.fighter(true).combat_stats["hit_chance_rating_percent"] = -1000.0
 		var miss_action := missed_conversion.state.create_event(CombatEvent.Kind.ACTION,missed_conversion.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI407","zone":"chest","rolls":{"hit":100,"dodge":100,"auto_block":100,"crit":100}})
 		DaggerAbiCombatService.dispatch(missed_conversion.engine,miss_action)
 		_check(_active(missed_target,"EFF403").is_empty(),"pen_miss_consumes_poison")
