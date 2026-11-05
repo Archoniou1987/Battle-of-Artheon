@@ -46,6 +46,30 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: expected exactly six ABI controls")
 		quit(1)
 		return
+	# Avatar readout comes from real effective EFF, never the uneffected
+	# CharacterStatsService snapshot. This test runs at a disclosure boundary.
+	var actor := arena.combat_session.fighter(true)
+	var baseline_crit := float(CombatModifierService.combat_readout(actor,arena.combat_session.state.round_number+1).get("crit_after_dr_pct",0.0))
+	actor.active_effects.append({
+		"effect_id":"EFF_UI_ACTIVE_CRIT",
+		"definition":{"kind":"buff","name":"Боевое усиление","crit_chance_direct_pct":25.0,"physical_damage_outgoing_direct_pct":15.0},
+		"start_round":1,"remaining_rounds":2,"revealed":true
+	})
+	arena._sync_combat_session()
+	var displayed_crit := float(arena.published_player_readout.get("crit_after_dr_pct",0.0))
+	if displayed_crit <= baseline_crit or not is_equal_approx(displayed_crit,CombatMath.effective_crit(
+		CombatModifierService.effective_percent(actor,"crit_chance_rating",1),0.0)):
+		push_error("ARENA_OPEN_SMOKE=FAIL: avatar readout ignores active ABI/EFF")
+		quit(1)
+		return
+	arena._show_fighter_details(true)
+	if not arena.fighter_popup_text.text.contains("%.2f%%" % displayed_crit) or not arena.fighter_popup_text.text.contains("+15.00%"):
+		push_error("ARENA_OPEN_SMOKE=FAIL: avatar popup does not show effective buff values")
+		quit(1)
+		return
+	arena.fighter_popup.hide()
+	actor.active_effects.clear()
+	arena._sync_combat_session()
 	# Use a canonical definition for UI selection; no fake combat damage.
 	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id] = ["ABI003"]
 	arena.combat_session.player_ability_slots[0] = "ABI003"

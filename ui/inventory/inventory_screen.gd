@@ -566,7 +566,7 @@ func _refresh_combat_stats() -> void:
 	var current := CombatModifierService.combat_readout(snapshot,1)
 	var combat: Dictionary = snapshot.combat_stats
 	var profiles: Array = combat.get("weapon_profiles",[])
-	var damage_lines: Array[String] = []
+	var damage_lines := PackedStringArray()
 	for raw_profile in profiles:
 		if not raw_profile is Dictionary:
 			continue
