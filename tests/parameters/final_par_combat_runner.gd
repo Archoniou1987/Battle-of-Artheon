@@ -225,4 +225,4 @@ func balance_cases() -> void:
 	var event := state.create_event(CombatEvent.Kind.ATTACK, attacker.combatant_id, defender.combatant_id, {"raw_damage":100.0,"damage_type":"slashing","zone":"chest","rolls":{"hit":1,"crit":100,"dodge":100}})
 	state.queue_event(event)
 	engine.resolve_pending_events()
-	check(defender.hp == 975, "default runtime engine converts 50 armour to 25 percent at level 1")
+	check(defender.hp == 925, "50 armour at Lv1 absorbs 25 of 100 damage and leaves 925 HP")
