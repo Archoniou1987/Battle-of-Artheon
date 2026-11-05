@@ -31,16 +31,8 @@ const ARMOUR_ZONES := {
 const WEAPON_FACTOR := {"sword":0.90,"dagger":0.65,"axe":1.0,"hammer":0.85,"spear":1.0} # Spear coefficient is provisional, until separately balanced.
 const DAMAGE_SPREAD := {"sword":0.15,"dagger":0.05,"axe":0.30,"hammer":0.25,"spear":0.15}
 ## Project 25 Core-Balance v1.2. DR acts on percentages after reductions.
-const DR_RULES := {
-	"armour":{"threshold":30.0,"cap":85.1,"smooth":1.5},
-	"dodge":{"threshold":15.0,"cap":80.0,"smooth":1.5},
-	"crit":{"threshold":20.0,"cap":100.0,"smooth":1.5},
-	"crit_damage":{"threshold":50.0,"cap":250.0,"smooth":1.0},
-	"reduce":{"threshold":5.0,"cap":35.0,"smooth":1.0},
-	"magic_res":{"threshold":30.0,"cap":85.1,"smooth":1.5},
-	"block":{"threshold":20.0,"cap":75.0,"smooth":1.5},
-	"attack":{"threshold":75.0,"cap":250.0,"smooth":1.0}
-}
+const DR_RULES = CombatRatingCurves.DR_RULES
+
 const ARMOUR_IDS := ["PAR100","PAR101","PAR102","PAR103","PAR104"]
 ## v1.2 K15:N15: only these budget directions are explicitly specified.
 ## This is diagnostic metadata, NOT a hidden item-value multiplier.
@@ -82,16 +74,7 @@ static func par_budget_direction(logical: String) -> Dictionary:
 ## Exact Project 25 A13/B13 spreadsheet curve. Never apply to
 ## primary attributes, HP, Mana, regeneration or Spell Power.
 static func diminishing(raw_pct: float, category: String) -> float:
-	var cfg: Dictionary = DR_RULES.get(category,{})
-	if cfg.is_empty():
-		return raw_pct
-	var threshold := float(cfg["threshold"])
-	if raw_pct <= threshold:
-		return raw_pct
-	var width := float(cfg["cap"]) - threshold
-	var smooth := float(cfg["smooth"])
-	var x := (raw_pct-threshold)/width
-	return threshold + width*x/pow(1.0 + pow(x,smooth),1.0/smooth)
+	return CombatRatingCurves.diminishing(raw_pct,category)
 
 ## Lv1:20% / 100 rating; Lv100:4% / 100 rating.
 static func rating_to_pct(rating: float, level: int) -> float:
@@ -99,8 +82,7 @@ static func rating_to_pct(rating: float, level: int) -> float:
 	return maxf(0.0,rating)*pct_per_100/100.0
 
 static func armour_raw_pct(armour_rating: float, level: int) -> float:
-	var age := 1.0 + 3.0*float(clampi(level,1,100)-1)/99.0
-	return maxf(0.0,armour_rating)/(2.0*age)
+	return CombatRatingCurves.armour_raw_pct(armour_rating,level)
 
 ## Pure diagnostics: DR is a display calculation, not mutation of raw PAR.
 func preview_effects(armour: Dictionary, bonus: Dictionary, level: int) -> Dictionary:

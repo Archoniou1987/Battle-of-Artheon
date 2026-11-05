@@ -14,14 +14,16 @@ func _init() -> void:
 	_defence_priority()
 	_critical_before_armour()
 	_typed_and_flat_penetration()
+	_v12_armour_diminishing()
 	_event_lineage_and_read_only_projection()
 	print("PHYSICAL_STAGE_MATRIX_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=", failures)
 	quit(0 if failures.is_empty() else 1)
 
 func _scenario(settings: Dictionary = {}) -> Dictionary:
 	var state := CombatState.new()
-	var actor := TestFixtureLoader.new_combatant("matrix_actor", "Attacker", 10, 1000)
-	var victim := TestFixtureLoader.new_combatant("matrix_victim", "Defender", 10, 1000)
+	var test_level := int(settings.get("level",10))
+	var actor := TestFixtureLoader.new_combatant("matrix_actor", "Attacker", test_level, 1000)
+	var victim := TestFixtureLoader.new_combatant("matrix_victim", "Defender", test_level, 1000)
 	actor.combat_stats["crit_chance_rating_percent"] = float(settings.get("crit", 0.0))
 	actor.combat_stats["block_crush"] = float(settings.get("crush", 0.0))
 	actor.combat_stats["armour_penetration_percent"] = float(settings.get("general_pen", 0.0))
@@ -93,7 +95,7 @@ func _typed_and_flat_penetration() -> void:
 	_check(is_equal_approx(float(hit.result.get("base_armour", -1.0)), 35.0), "canonical_zone_armour")
 	_check(is_equal_approx(float(hit.result.get("armour_penetration_percent", -1.0)), 0.2), "par126_percentage_points")
 	_check(is_equal_approx(float(hit.result.get("typed_armour_penetration_percent", -1.0)), 0.5), "par132_only_slashing")
-	_check(is_equal_approx(float(hit.result.get("effective_armour", -1.0)), 14.0), "sequential_general_typed_armour")
+	_check(is_equal_approx(float(hit.result.get("effective_armour", -1.0)), 10.0), "flat_pen_before_general_and_typed")
 	_check(is_equal_approx(float(hit.result.get("armour_penetration_flat", -1.0)), 10.0), "flat_penetration_rating")
 	_check(float(hit.result.get("armour_reduction", 1.0)) < float(base.result.get("armour_reduction", 0.0)), "penetration_reduces_mitigation")
 	_check(float(hit.result.get("after_armour_damage", 0.0)) > float(base.result.get("after_armour_damage", 0.0)), "penetration_increases_resolved_damage")
@@ -103,6 +105,21 @@ func _typed_and_flat_penetration() -> void:
 	_check(String(piercing_hit.result.get("outcome", "")) == "connected", "other_physical_type_connected")
 	_check(is_zero_approx(float(piercing_hit.result.get("typed_armour_penetration_percent", -1.0))), "par132_does_not_affect_piercing")
 	_check(is_equal_approx(float(piercing_hit.result.get("effective_armour", -1.0)), 35.0), "wrong_type_keeps_armour")
+
+func _v12_armour_diminishing() -> void:
+	# End-to-end engine test at both generator v1.2 armour anchor levels.
+	var lv1 := _scenario({"level":1,"armour":80.0})
+	var lv100 := _scenario({"level":100,"armour":320.0})
+	for scenario in [lv1,lv100]:
+		var hit: CombatEvent = scenario["attack"]
+		_check(String(hit.result.get("outcome",""))=="connected","v12_armour_hit_connected")
+		_check(is_equal_approx(float(hit.result.get("armour_raw_percent",-1.0)),40.0),"v12_armour_raw40")
+		_check(absf(float(hit.result.get("armour_reduction",-1.0))*100.0-39.515635)<0.01,"v12_armour_diminishing40")
+		_check((scenario["victim"] as CombatantState).hp == 940,"v12_armour_damage60")
+	var heavy := _scenario({"level":1,"armour":200.0})
+	var reduced: float = float((heavy["attack"] as CombatEvent).result.get("armour_reduction",-1.0))
+	_check(absf(reduced*100.0-68.707771)<0.01,"v12_armour_diminishing100")
+	_check((heavy["victim"] as CombatantState).hp == 969,"v12_armour_no_full_immunity")
 
 func _event_lineage_and_read_only_projection() -> void:
 	var scenario := _scenario({"armour": 35.0, "general_pen": 20.0})

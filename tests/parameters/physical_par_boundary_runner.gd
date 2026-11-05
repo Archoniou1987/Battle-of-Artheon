@@ -130,8 +130,8 @@ func penetration_cases() -> void:
 	if flat_attacker != null and flat_target != null:
 		var before := flat_target.hp
 		var event := strike(flat_attacker, flat_target, "slashing", "chest")
-		check(is_equal_approx(float(event.result.get("armour_reduction", -1)), 0.2), "PAR125 rating conversion after 50% armour")
-		check(before - flat_target.hp == 80, "PAR125 net damage 80")
+		check(is_equal_approx(float(event.result.get("armour_reduction", -1)), 0.1), "PAR125 flat rating before ageing and DR")
+		check(before - flat_target.hp == 90, "PAR125 net damage 90")
 	var overlay_target := fighter({"PAR127":30.0})
 	if overlay_target != null:
 		overlay_target.active_effects.append({
