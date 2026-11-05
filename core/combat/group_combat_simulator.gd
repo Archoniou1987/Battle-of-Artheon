@@ -99,6 +99,12 @@ func player_controls(player_id: String, elixir_slot: int = -1) -> Dictionary:
 		ready = ready and scheduler.can_cast_this_round(player_id,next_round)
 		ready = ready and AbilityRuntime.can_use(ability_id,cd,next_round)
 		ready = ready and projected_mana >= int(definition.get("mana_cost",0))
+		ready = ready and AbilityRuntime.can_pay_action_points(definition,player)
+		# Match Scheduler/CombatCommandApi: conditional ABIs inspect the
+		# immediately preceding completed round, not an older critical hit.
+		ready = ready and AbilityRuntime.previous_round_trigger_met(state,player_id,String(definition.get("trigger_previous_round","")),next_round)
+		if AxeAbiCombatService.is_axe_ability(ability_id):
+			ready = ready and AxeAbiCombatService.can_cast(state,player_id,target_id,ability_id)
 		ready = ready and AbilityRuntime.validate_definition(ability_id,definition).is_empty()
 		ready = ready and policy.valid_ability_targets(player_id,definition).has(target_id)
 		options.append({

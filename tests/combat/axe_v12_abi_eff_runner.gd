@@ -103,6 +103,46 @@ func _run() -> void:
 
 	_check(int(catalog.get("ABI507",{}).get("cooldown_rounds",-1))==5,"crusher_cd5")
 
+	# Solo UI preflight must match the actual Scheduler trigger and axe
+	# prerequisites; a stale crit may never leave ABI502 selectable.
+	var ui_session := _make_session("AXE_DEF",202611084)
+	if ui_session != null:
+		var teams := GroupCombatState.new(ui_session.state)
+		teams.add_member("players",ui_session.player_id)
+		teams.add_member("enemies",ArenaCombatSession.ENEMY_ID)
+		var solo := GroupCombatSimulator.new(ui_session.state,teams)
+		solo.attack_pipeline.ability_scheduler = ui_session.ability_scheduler
+		ui_session.fighter(true).action_points = 8
+		var initial_controls := solo.player_controls(ui_session.player_id)
+		var initial_502 := false
+		for raw_option in Array(initial_controls.get("abilities",[])):
+			if String(raw_option.get("id",""))=="ABI502":
+				initial_502 = bool(raw_option.get("available",false))
+		_check(not initial_502,"solo_502_initial_trigger_missing")
+		ui_session.state.begin_round() # round 1: own critical hit
+		var first_crit := ui_session.state.create_event(CombatEvent.Kind.ATTACK,ui_session.player_id,ArenaCombatSession.ENEMY_ID)
+		first_crit.set_result("outcome","connected")
+		first_crit.set_result("critical",true)
+		ui_session.state.record_event(first_crit)
+		var ready_controls := solo.player_controls(ui_session.player_id)
+		var ready_502 := false
+		for raw_option in Array(ready_controls.get("abilities",[])):
+			if String(raw_option.get("id",""))=="ABI502":
+				ready_502 = bool(raw_option.get("available",false))
+		_check(ready_502,"solo_502_crit_previous_round")
+		ui_session.state.begin_round() # round 2: ordinary strike without crit
+		var normal_hit := ui_session.state.create_event(CombatEvent.Kind.ATTACK,ui_session.player_id,ArenaCombatSession.ENEMY_ID)
+		normal_hit.set_result("outcome","connected")
+		normal_hit.set_result("critical",false)
+		ui_session.state.record_event(normal_hit)
+		var stale_controls := solo.player_controls(ui_session.player_id)
+		var stale_502 := false
+		for raw_option in Array(stale_controls.get("abilities",[])):
+			if String(raw_option.get("id",""))=="ABI502":
+				stale_502 = bool(raw_option.get("available",false))
+		_check(not stale_502,"solo_502_stale_crit_rejected")
+	
+
 	var defence := _make_session("AXE_DEF",202611081)
 	if defence != null:
 		if _cast(defence,"ABI501"):
