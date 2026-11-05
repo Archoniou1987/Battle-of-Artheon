@@ -952,6 +952,10 @@ func _show_fighter_details(is_player: bool) -> void:
 		lines.append("Общее снижение урона: %.2f%%" % (100.0*float(readout.get("damage_reduction",0.0))))
 		lines.append("Пробивание брони: %.2f%%" % float(readout.get("armour_penetration_percent",0.0)))
 		lines.append("Пробивание брони (плоское): %.2f" % float(readout.get("armour_penetration_flat",0.0)))
+		var spell_pen: Dictionary = readout.get("magic_penetration_by_school_pct",{})
+		if not spell_pen.is_empty():
+			lines.append("Пробивание магии: огонь %.1f%% · вода %.1f%% · воздух %.1f%%" % [float(spell_pen.get("fire",0)),float(spell_pen.get("water",0)),float(spell_pen.get("air",0))])
+			lines.append("Земля %.1f%% · тьма %.1f%% · свет %.1f%%" % [float(spell_pen.get("earth",0)),float(spell_pen.get("dark",0)),float(spell_pen.get("light",0))])
 		var elemental: Dictionary = readout.get("elemental_resists_pct",{})
 		if not elemental.is_empty():
 			lines.append("Сопротивления: огонь %.1f%% · вода %.1f%% · воздух %.1f%%" % [float(elemental.get("fire",0)),float(elemental.get("water",0)),float(elemental.get("air",0))])

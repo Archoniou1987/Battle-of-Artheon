@@ -2,7 +2,7 @@ class_name CombatDamagePayload
 extends RefCounted
 
 const PHYSICAL_DAMAGE_TYPES := ["physical","slashing","piercing","chopping","blunt"]
-const MAGIC_DAMAGE_TYPES := ["fire","water","frost","air","earth","dark","light","lightning"]
+const MAGIC_DAMAGE_TYPES := ["fire","water","frost","air","earth","nature","dark","light","holy","lightning"]
 
 static func is_physical_damage_type(damage_type:String) -> bool:
 	return PHYSICAL_DAMAGE_TYPES.has(damage_type.to_lower())

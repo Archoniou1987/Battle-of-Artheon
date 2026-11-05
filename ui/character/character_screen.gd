@@ -308,7 +308,7 @@ func _refresh_detail_values() -> void:
 		var other := float(parts.get("talents", 0.0)) + float(parts.get("effects", 0.0))
 		var total := float(totals[par_id])
 		# Zero in a registry placeholder does not prove that the mechanic is implemented.
-		var supported := ParCalculationService.PRIMARY_IDS.has(par_id) or derived_keys.has(source_key) or ["PAR014", "PAR050", "PAR051", "PAR057", "PAR071", "PAR073", "PAR100", "PAR101", "PAR102", "PAR103", "PAR104", "PAR125", "PAR126", "PAR131", "PAR132", "PAR133", "PAR134", "PAR135", "PAR190", "PAR191", "PAR192", "PAR193", "PAR194", "PAR195", "PAR196"].has(par_id)
+		var supported := ParCalculationService.PRIMARY_IDS.has(par_id) or derived_keys.has(source_key) or ["PAR014", "PAR050", "PAR051", "PAR057", "PAR071", "PAR073", "PAR100", "PAR101", "PAR102", "PAR103", "PAR104", "PAR125", "PAR126", "PAR131", "PAR132", "PAR133", "PAR134", "PAR135", "PAR164", "PAR165", "PAR166", "PAR167", "PAR168", "PAR169", "PAR170", "PAR190", "PAR191", "PAR192", "PAR193", "PAR194", "PAR195", "PAR196"].has(par_id)
 		# Every registry PAR gets its own row. An unimplemented zero remains
 		# an explicit dash, never a fabricated effective combat stat.
 		(detail_values[par_id] as Label).tooltip_text = "Зарегистрирован; применение в бою ещё не подтверждено" if not supported else "Базовые значения вне боя, без временных ABI/EFF"
@@ -327,6 +327,8 @@ func _refresh_detail_values() -> void:
 				rendered += " → DR %.2f%%" % CombatMath.effective_crit(raw_pct,0.0)
 			elif par_id == "PAR035":
 				rendered += " → DR %.2f%%" % CombatRatingCurves.diminishing(maxf(0.0,raw_pct),"crit_damage")
+		elif par_id in ["PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170"]:
+			rendered += " (%.2f%%, без DR)" % RatingMatrix.to_percent(total,character.progression.level)
 		elif par_id == "PAR135":
 			var raw_reduction := RatingMatrix.to_percent(total,character.progression.level)
 			rendered += " (%.2f%% → DR %.2f%%)" % [raw_reduction,CombatRatingCurves.diminishing(maxf(0.0,raw_reduction),"reduce")]

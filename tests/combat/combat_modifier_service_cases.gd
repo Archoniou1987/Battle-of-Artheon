@@ -9,6 +9,7 @@ static func run() -> bool:
 		and _case_combat_readout_matches_runtime_effects()
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_magic_resist_sequential_dr_and_overlay()
+		and _case_v12_magic_penetration_before_resistance_dr()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
 		and _case_v12_par135_rating_age_and_dr()
@@ -118,6 +119,37 @@ static func _case_magic_resist_sequential_dr_and_overlay() -> bool:
 		and is_equal_approx(water,CombatRatingCurves.diminishing(40.0,"magic_res")/100.0)
 		and CombatModifierService.magic_resist(fighter,"fire",2)<0.851
 		and is_equal_approx(float(CombatModifierService.combat_readout(fighter,2).get("elemental_resists_pct",{}).get("fire",-1.0)),active*100.0)
+	)
+
+static func _case_v12_magic_penetration_before_resistance_dr() -> bool:
+	var attacker := TestFixtureLoader.new_combatant("penetrator","Penetrator",1,100)
+	var defender := TestFixtureLoader.new_combatant("resist_target","Target",1,100)
+	attacker.combat_stats["par_totals"]["PAR164"] = 100.0
+	attacker.combat_stats["par_totals"]["PAR165"] = 100.0
+	defender.combat_stats["par_totals"]["PAR190"] = 200.0
+	defender.combat_stats["par_totals"]["PAR191"] = 200.0
+	defender.combat_stats["par_totals"]["PAR192"] = 200.0
+	# 40% common and 40% school -> 64% raw. 20% common pen + 20%
+	# fire pen -> 24% before DR. Water only receives common pen -> 44%.
+	var unpenetrated := CombatModifierService.magic_resist(defender,"fire",1)
+	var fire := CombatModifierService.magic_resist(defender,"fire",1,attacker)
+	var water := CombatModifierService.magic_resist(defender,"water",1,attacker)
+	attacker.active_effects.append({
+		"effect_id":"EFF_PENETRATION",
+		"definition":{"magic_pen_fire_direct_pct":10.0},
+		"start_round":2,"remaining_rounds":2
+	})
+	var pending := CombatModifierService.magic_resist(defender,"fire",1,attacker)
+	var active := CombatModifierService.magic_resist(defender,"fire",2,attacker)
+	var readout := CombatModifierService.combat_readout(attacker,2)
+	return (
+		is_equal_approx(fire,0.24)
+		and is_equal_approx(water,CombatRatingCurves.diminishing(44.0,"magic_res")/100.0)
+		and unpenetrated>water and water>fire and active<fire
+		and is_equal_approx(pending,fire)
+		and is_equal_approx(active,0.14)
+		and is_equal_approx(float(Dictionary(readout.get("magic_penetration_by_school_pct",{})).get("fire",0.0)),50.0)
+		and is_equal_approx(float(Dictionary(readout.get("elemental_resists_pct",{})).get("fire",0.0)),0.0)
 	)
 
 static func _case_mana_regen_uses_runtime_overlay() -> bool:

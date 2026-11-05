@@ -8,6 +8,9 @@ static func run(base_balance:Dictionary) -> bool:
 	balance["effects"] = effects
 	return (
 		_case_magic_damage_resist(balance)
+		and _case_penetration_reduces_actual_magic_damage(balance)
+		and _case_penetration_affects_effect_chance(balance)
+		and _case_penetration_school_aliases(balance)
 		and _case_effect_chance_100_to_60(balance)
 		and _case_effect_chance_80_to_48(balance)
 		and _case_effect_immunity(balance)
@@ -32,6 +35,57 @@ static func _case_magic_damage_resist(balance:Dictionary) -> bool:
 	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
 	var expected := CombatRatingCurves.diminishing(40.0,"magic_res")/100.0
 	return state.get_combatant("target").hp == 94 and is_equal_approx(float(event.result.get("magic_resist",0.0)),expected)
+
+static func _case_penetration_reduces_actual_magic_damage(balance:Dictionary) -> bool:
+	var state := _state()
+	var source: CombatantState = state.get_combatant("source")
+	_set_resist_percent(state.get_combatant("target"),"PAR191",40.0)
+	# Attacker's 100 general rating converts at Lv10 to ~18.545%,
+	# removing that amount BEFORE DR. Other schools are unaffected.
+	source.combat_stats["par_totals"]["PAR164"] = 100.0
+	var attack_pen := RatingMatrix.to_percent(100.0,source.level)
+	var remaining := maxf(0.0,40.0-attack_pen)
+	var expected := CombatRatingCurves.diminishing(remaining,"magic_res")/100.0
+	var hit := state.create_event(CombatEvent.Kind.DAMAGE,"source","target",{"amount":100.0,"damage_type":"fire"})
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(hit)
+	return (
+		is_equal_approx(float(hit.result.get("magic_resist",-1.0)),expected)
+		and int(hit.result.get("final_damage",-1))==CombatMath.final_damage_floor(100.0*(1.0-expected))
+		and int(hit.result.get("final_damage",-1))==78
+	)
+
+static func _case_penetration_affects_effect_chance(balance:Dictionary) -> bool:
+	var state := _state()
+	var source: CombatantState = state.get_combatant("source")
+	_set_resist_percent(state.get_combatant("target"),"PAR192",40.0)
+	source.combat_stats["par_totals"]["PAR166"] = 100.0
+	var effect := _effect_event(state,100.0,70)
+	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(effect)
+	var expected := 40.0-RatingMatrix.to_percent(100.0,source.level)
+	return (
+		bool(effect.result.get("resolved",false))
+		and is_equal_approx(float(effect.result.get("resist",-1.0)),expected/100.0)
+		and is_equal_approx(float(effect.result.get("effective_chance",-1.0)),100.0-expected)
+	)
+
+static func _case_penetration_school_aliases(balance:Dictionary) -> bool:
+	var state := _state()
+	var source: CombatantState = state.get_combatant("source")
+	var target: CombatantState = state.get_combatant("target")
+	_set_resist_percent(target,"PAR192",40.0)
+	source.combat_stats["par_totals"]["PAR166"] = 100.0
+	var pen := CombatModifierService.magic_resist(target,"frost",1,source)
+	var ordinary := CombatModifierService.magic_resist(target,"water",1,source)
+	# Fire never inherits the water penetration. No magic resist for physical.
+	var fire := CombatModifierService.magic_resist(target,"fire",1,source)
+	return (
+		is_equal_approx(pen,ordinary)
+		and pen<CombatModifierService.magic_resist(target,"water",1)
+		and is_zero_approx(fire)
+		and CombatDamagePayload.is_magic_damage_type("nature")
+		and CombatDamagePayload.is_magic_damage_type("holy")
+		and CombatModifierService.magic_school("lightning")=="air"
+	)
 
 static func _effect_event(state:CombatState, chance:float, roll:int) -> CombatEvent:
 	return state.create_event(CombatEvent.Kind.EFFECT,"source","target",{

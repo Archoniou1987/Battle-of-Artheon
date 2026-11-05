@@ -143,8 +143,46 @@ static func manual_block_effects(combatant: CombatantState) -> Array:
 static func abilities(combatant: CombatantState) -> Array:
 	return Array(combatant.combat_stats.get("abilities", [])).duplicate(true)
 
-static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int) -> float:
-	var key := resist_type.to_lower()
+## Spell delivery names may differ from the canonical six magic schools.
+static func magic_school(damage_type: String) -> String:
+	match damage_type.to_lower():
+		"frost": return "water"
+		"lightning": return "air"
+		"nature": return "earth"
+		"holy": return "light"
+		_: return damage_type.to_lower()
+
+## PAR164 is universal; PAR165–170 apply only to their corresponding school.
+## Both remain ratings until converted at ATTACKER level and are subtracted
+## as percentage points before the target's magic resistance DR.
+static func magic_penetration_percent(attacker: CombatantState, school: String, round_number: int) -> float:
+	if attacker == null:
+		return 0.0
+	const PEN_PAR := {"fire":"PAR165","water":"PAR166","air":"PAR167","earth":"PAR168","dark":"PAR169","light":"PAR170"}
+	var key := magic_school(school)
+	if not PEN_PAR.has(key):
+		return 0.0
+	var totals: Variant = attacker.combat_stats.get("par_totals",{})
+	if not totals is Dictionary:
+		push_error("Magic penetration requires canonical attacker PAR totals")
+		return 0.0
+	var general_rating: Variant = totals.get("PAR164",0.0)
+	var school_rating: Variant = totals.get(PEN_PAR[key],0.0)
+	if not RatingMatrix._number(general_rating) or not RatingMatrix._number(school_rating):
+		push_error("Invalid magic penetration PAR rating")
+		return 0.0
+	var raw_points := RatingMatrix.to_percent(float(general_rating)+float(school_rating),attacker.level)
+	# Direct EFF/TRA/item overlays are explicitly percentage points, not ratings.
+	var general_direct := "magic_pen_direct_pct"
+	var school_direct := "magic_pen_"+key+"_direct_pct"
+	raw_points += float(attacker.combat_stats.get(general_direct,0.0))
+	raw_points += float(attacker.combat_stats.get(school_direct,0.0))
+	raw_points += modifier(attacker,general_direct,round_number)
+	raw_points += modifier(attacker,school_direct,round_number)
+	return maxf(0.0,raw_points)
+
+static func magic_resist(combatant: CombatantState, resist_type: String, round_number: int, attacker: CombatantState = null) -> float:
+	var key := magic_school(resist_type)
 	const ELEMENT_PAR := {"fire":"PAR191", "water":"PAR192", "air":"PAR193", "earth":"PAR194", "dark":"PAR195", "light":"PAR196"}
 	if not ELEMENT_PAR.has(key):
 		return 0.0
@@ -152,9 +190,10 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	if not totals is Dictionary:
 		push_error("Magic resistance requires canonical PAR totals")
 		return 0.0
-	# General PAR190 and school-specific PAR191-196 are sequential layers.
-	# Combine both RAW percentages, then run the v1.2 magic DR ONCE so
-	# the final resistance never bypasses its 85.1% asymptotic cap.
+	# General PAR190 and school PAR191–196 combine sequentially in RAW %.
+	# Attacker's converted PAR164 and matching PAR165–170 are subtracted
+	# from the COMBINED raw defence before the single v1.2 magic DR.
+	# A stat panel without an attacker still shows the unpenetrated defence.
 	var general_raw := RatingMatrix.to_percent(float(totals.get("PAR190",0.0)),combatant.level)
 	var school_raw := RatingMatrix.to_percent(float(totals.get(ELEMENT_PAR[key],0.0)),combatant.level)
 	if not is_finite(general_raw) or not is_finite(school_raw):
@@ -167,7 +206,9 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	var general_fraction := clampf(general_raw/100.0,0.0,1.0)
 	var school_fraction := clampf((school_raw+school_bonus+charge_bonus)/100.0,0.0,1.0)
 	var sequential_raw_pct := 100.0*(1.0-(1.0-general_fraction)*(1.0-school_fraction))
-	var after_dr_pct := CombatRatingCurves.diminishing(sequential_raw_pct,"magic_res")
+	var penetration_pct := magic_penetration_percent(attacker,key,round_number)
+	var remaining_raw_pct := maxf(0.0,sequential_raw_pct-penetration_pct)
+	var after_dr_pct := CombatRatingCurves.diminishing(remaining_raw_pct,"magic_res")
 	return clampf(after_dr_pct/100.0,0.0,1.0)
 
 ## The shared combat/UI read contract. A caller can request any derived stat
@@ -215,6 +256,12 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	for school in ["fire","water","air","earth","dark","light"]:
 		elemental_resists[school] = magic_resist(combatant,school,round_number)*100.0
 	result["elemental_resists_pct"] = elemental_resists
+	# Offensive penetration shown separately; elemental_resists_pct remains
+	# the character's own defence, not a fabricated value against an enemy.
+	var penetration_by_school := {}
+	for school in ["fire","water","air","earth","dark","light"]:
+		penetration_by_school[school] = magic_penetration_percent(combatant,school,round_number)
+	result["magic_penetration_by_school_pct"] = penetration_by_school
 	return result
 
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:

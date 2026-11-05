@@ -461,7 +461,8 @@ func _resolve_damage(event: CombatEvent) -> void:
 		var bleed_source := state.get_combatant(event.source_id)
 		if bleed_source != null:
 			amount *= maxf(0.0,1.0+CombatModifierService.modifier(bleed_source,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
-	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number)
+	var magic_attacker := state.get_combatant(event.source_id)
+	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number, magic_attacker)
 	if CombatDamagePayload.is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
@@ -547,7 +548,8 @@ func _resolve_effect(event: CombatEvent) -> void:
 		return
 	var base_chance := clampf(float(event.payload.get("base_chance", 100.0)), 0.0, 100.0)
 	var resist_type := String(event.payload.get("resist_type", ""))
-	var resist := 0.0 if effect_kind == "hot" else CombatModifierService.magic_resist(target, resist_type, state.round_number)
+	var magic_attacker := state.get_combatant(event.source_id)
+	var resist := 0.0 if effect_kind == "hot" else CombatModifierService.magic_resist(target, resist_type, state.round_number, magic_attacker)
 	var effective_chance := base_chance * (1.0 - resist)
 	event.set_result("base_chance", base_chance)
 	event.set_result("resist", resist)
