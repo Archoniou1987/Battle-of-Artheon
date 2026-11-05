@@ -98,7 +98,9 @@ func damage_cases() -> void:
 	if reduction_target != null:
 		var hp_before := reduction_target.hp
 		strike(attacker, reduction_target, "piercing", "chest")
-		check(hp_before - reduction_target.hp == 88, "PAR135 20% after typed PAR053 10%: 110 -> 88")
+		# PAR135=20 is a rating: at Lv1 it converts to 4%, below the
+		# reduce-DR threshold. PAR053 adds 10%: 110 * .96 floors to 105.
+		check(hp_before - reduction_target.hp == 105, "PAR135 rating 20 -> 4%: 110 -> 105")
 
 func penetration_cases() -> void:
 	var baseline := fighter({}, {}, {"chest":{"piercing":40.0,"slashing":40.0}})
@@ -178,5 +180,6 @@ func npc_cases() -> void:
 	check(is_equal_approx(CombatModifierService.effective_stat(enemy, "physical_damage_piercing_pct", 1), 25.0), "NPC PAR053 adapter")
 	check(is_equal_approx(CombatModifierService.armour_reduction_percent(enemy, 1), 0.01), "NPC PAR126 adapter")
 	check(is_equal_approx(CombatModifierService.armour_penetration_flat(enemy, 1), 5.0), "NPC PAR125 adapter")
-	check(is_equal_approx(CombatModifierService.damage_reduction(enemy, 1), 0.1), "NPC PAR135 adapter")
+	# NPC PAR135=10 is also a rating, not direct 10% damage reduction.
+	check(is_equal_approx(CombatModifierService.damage_reduction(enemy, 1), 0.02), "NPC PAR135 rating 10 -> 2% at Lv1")
 	check(is_equal_approx(CombatModifierService.block_chance(enemy, 1), 20.0), "NPC PAR071 direct block adapter")

@@ -79,11 +79,16 @@ func _test_fire_ward_and_surprise() -> void:
 	var baseline := CombatModifierService.magic_resist(hero,"fire",1)
 	check(bool(session.use_elixir(2).get("ok",false)),"fire_ward_click_succeeds")
 	var after := CombatModifierService.magic_resist(hero,"fire",1)
-	check(after>baseline and after>=0.89,"fire_ward_applied_before_combat")
+	# EFF005 adds 90 raw percentage points, not 90 final resistance.
+	# Approved v1.2 magic-resist DR 30/85.1/1.5 applies before damage.
+	var expected := CombatRatingCurves.diminishing(90.0,"magic_res")/100.0
+	check(after>baseline and is_equal_approx(after,expected),"fire_ward_applied_before_combat_with_v12_dr")
 	check(Array(session.effect_view(true).get("buffs",[])).is_empty(),"ward_hidden_until_end_round")
 	var hit := session.state.create_event(CombatEvent.Kind.DAMAGE,ArenaCombatSession.ENEMY_ID,session.player_id,{"amount":100,"damage_type":"fire"})
 	session.engine.resolve_event(hit)
-	check(int(hit.result.get("final_damage",-1))<=11,"ward_reduces_current_round_fire_damage")
+	var expected_damage := CombatMath.final_damage_floor(100.0*(1.0-expected))
+	check(is_equal_approx(float(hit.result.get("magic_resist",-1.0)),expected),"ward_resistance_matches_damage_event")
+	check(int(hit.result.get("final_damage",-1))==expected_damage,"ward_reduces_current_round_fire_damage_after_dr")
 	session.orchestrator.end_round()
 	check(Array(session.effect_view(true).get("buffs",[])).size()==1,"ward_revealed_after_round")
 
