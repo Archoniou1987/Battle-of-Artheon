@@ -14,6 +14,7 @@ func _init() -> void:
 	_defence_priority()
 	_critical_before_armour()
 	_v12_chance_diminishing()
+	_v12_active_effects_affect_combat()
 	_typed_and_flat_penetration()
 	_v12_armour_diminishing()
 	_event_lineage_and_read_only_projection()
@@ -38,6 +39,18 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	victim.combat_stats["anti_crit_rating_percent"] = float(settings.get("anti_crit", 0.0))
 	victim.combat_stats["shield_auto_block_rating_percent"] = float(settings.get("auto", 0.0))
 	victim.combat_stats["manual_block_zones"] = ["chest"] if bool(settings.get("manual", false)) else []
+	if settings.has("actor_effect"):
+		actor.active_effects.append({
+			"effect_id":"EFF_ACTIVE_ATTACKER","definition":Dictionary(settings["actor_effect"]),
+			"start_round":int(settings.get("effect_start_round",1)),
+			"remaining_rounds":2,"revealed":true
+		})
+	if settings.has("victim_effect"):
+		victim.active_effects.append({
+			"effect_id":"EFF_ACTIVE_DEFENDER","definition":Dictionary(settings["victim_effect"]),
+			"start_round":int(settings.get("effect_start_round",1)),
+			"remaining_rounds":2,"revealed":true
+		})
 	var physical_type := String(settings.get("damage_type", "slashing"))
 	var zone_armour: Dictionary = {}
 	zone_armour[physical_type] = float(settings.get("armour", 0.0))
@@ -118,6 +131,40 @@ func _v12_chance_diminishing() -> void:
 	_check(absf(float((block_44["attack"] as CombatEvent).result.get("auto_block_chance",-1.0))-43.939486)<0.001,"auto_block_event_final_chance")
 	# After negative anti-rating EFF, subtraction still occurs before DR.
 	_check(absf(CombatMath.effective_dodge(20.0,-5.0)-CombatRatingCurves.diminishing(25.0,"dodge"))<0.001,"negative_anti_dodge_effect")
+
+func _v12_active_effects_affect_combat() -> void:
+	# A real EFF with temporary dodge affects CombatEngine and the readout
+	# equally. A pending EFF is excluded from BOTH until its start round.
+	var with_dodge := _scenario({
+		"dodge":20.0,"dodge_roll":40,
+		"victim_effect":{"dodge_direct_pct":40.0},"effect_start_round":1
+	})
+	var pending_dodge := _scenario({
+		"dodge":20.0,"dodge_roll":40,
+		"victim_effect":{"dodge_direct_pct":40.0},"effect_start_round":2
+	})
+	var dodge_event: CombatEvent = with_dodge["attack"]
+	var pending_event: CombatEvent = pending_dodge["attack"]
+	var defender: CombatantState = with_dodge["victim"]
+	var display := CombatModifierService.combat_readout(defender,1)
+	_check(String(dodge_event.result.get("outcome",""))=="dodge","active_eff_changes_actual_dodge_outcome")
+	_check(String(pending_event.result.get("outcome",""))=="connected","pending_eff_not_applied_early")
+	_check(is_equal_approx(float(dodge_event.result.get("dodge_chance",-1.0)),float(display.get("dodge_after_dr_pct",-2.0))),"dodge_ui_matches_actual_roll_chance")
+	var with_crit := _scenario({
+		"crit":20.0,"crit_roll":40,
+		"actor_effect":{"crit_chance_direct_pct":40.0},"effect_start_round":1
+	})
+	var pending_crit := _scenario({
+		"crit":20.0,"crit_roll":40,
+		"actor_effect":{"crit_chance_direct_pct":40.0},"effect_start_round":2
+	})
+	var crit_event: CombatEvent = with_crit["attack"]
+	var pending_crit_event: CombatEvent = pending_crit["attack"]
+	var attacker: CombatantState = with_crit["actor"]
+	var crit_display := CombatModifierService.combat_readout(attacker,1)
+	_check(bool(crit_event.result.get("critical",false)),"active_eff_changes_actual_crit_outcome")
+	_check(not bool(pending_crit_event.result.get("critical",true)),"pending_crit_eff_not_applied_early")
+	_check(is_equal_approx(float(crit_event.result.get("crit_chance",-1.0)),float(crit_display.get("crit_after_dr_pct",-2.0))),"crit_ui_matches_actual_roll_chance")
 
 func _typed_and_flat_penetration() -> void:
 	var baseline := _scenario({"armour": 35.0})

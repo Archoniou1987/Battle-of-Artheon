@@ -593,7 +593,7 @@ func _refresh_combat_stats() -> void:
 		var par_id := "PAR%d" % par_index
 		var par_amount := float(registry_totals.get(par_id,0.0))
 		if not is_zero_approx(par_amount):
-			school_ratings.append("%s: %g" % [par_id,par_amount])
+			school_ratings.append("%s: %s" % [par_id,str(par_amount)])
 	(stat_rows["Усиление стихий"] as Label).text = " / ".join(school_ratings) if not school_ratings.is_empty() else "—"
 	(stat_rows["Усиление стихий"] as Label).tooltip_text = "Исходные PAR151–157; применение к итоговому урону требует отдельной проверки ABI/Combat Engine"
 	(stat_rows["Общее сопротивление"] as Label).text = "PAR190: %s" % str(registry_totals.get("PAR190",0))
