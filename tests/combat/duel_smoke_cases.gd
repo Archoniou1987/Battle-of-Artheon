@@ -186,9 +186,9 @@ static func _multiple_profiles_require_default(balance:Dictionary)->bool:
 static func _abi_v2_schema() -> bool:
 	var definitions:=AbilityCatalog.load_json("res://data/test/abilities.json")
 	var fireball:=AbilityRuntime.normalized_definition("TEST_ABI_FIREBALL",AbilityCatalog.definition(definitions,"TEST_ABI_FIREBALL"))
-	var legacy:=AbilityRuntime.normalized_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004"))
-	var charge:=AbilityRuntime.normalized_definition("ABI005",AbilityCatalog.definition(definitions,"ABI005"))
-	var blizzard:=AbilityRuntime.normalized_definition("ABI006",AbilityCatalog.definition(definitions,"ABI006"))
+	var legacy:=AbilityRuntime.normalized_definition("TEST_ABI_SHIELD_BASH",AbilityCatalog.definition(definitions,"TEST_ABI_SHIELD_BASH"))
+	var charge:=AbilityRuntime.normalized_definition("TEST_ABI_CHARGE",AbilityCatalog.definition(definitions,"TEST_ABI_CHARGE"))
+	var blizzard:=AbilityRuntime.normalized_definition("TEST_ABI_BLIZZARD",AbilityCatalog.definition(definitions,"TEST_ABI_BLIZZARD"))
 	if String(fireball.get("delivery_type",""))!="PROJECTILE" or String(fireball.get("target_scope",""))!="SINGLE": return false
 	var fire_components:Array=fireball.get("components",[])
 	if fire_components.size()!=1 or float(fire_components[0].get("amount",0))!=5.0: return false
@@ -203,7 +203,7 @@ static func _abi_v2_schema() -> bool:
 static func _abi_v2_scheduler_payload() -> bool:
 	var definitions:=AbilityCatalog.load_json("res://data/test/abilities.json")
 	if not AbilityRuntime.validate_definition("TEST_ABI_FIREBALL",AbilityCatalog.definition(definitions,"TEST_ABI_FIREBALL")).is_empty(): return false
-	if not AbilityRuntime.validate_definition("ABI004",AbilityCatalog.definition(definitions,"ABI004")).is_empty(): return false
+	if not AbilityRuntime.validate_definition("TEST_ABI_SHIELD_BASH",AbilityCatalog.definition(definitions,"TEST_ABI_SHIELD_BASH")).is_empty(): return false
 	if AbilityRuntime.validate_definition("BAD",{"delivery_type":"TELEPORT","target_scope":"SINGLE","components":[]}).is_empty(): return false
 	var source:=TestFixtureLoader.new_combatant("abi_source","ABI Source",10,100)
 	source.mana=100

@@ -13,7 +13,7 @@
     "cooldown_rounds": 2,
     "mana_cost": 10
   },
-  "ABI002": {
+  "TEST_ABI_FROST": {
     "name": "Frostball",
     "delivery_type": "PROJECTILE",
     "target_scope": "SINGLE",
@@ -41,14 +41,14 @@
     "cooldown_rounds": 2,
     "mana_cost": 5
   },
-  "ABI004": {
+  "TEST_ABI_SHIELD_BASH": {
     "name": "Shield Bash",
     "damage": 5,
     "damage_type": "physical",
     "cooldown_rounds": 2,
     "mana_cost": 2
   },
-  "ABI005": {
+  "TEST_ABI_CHARGE": {
     "name": "Charge",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
@@ -66,7 +66,7 @@
     "cooldown_rounds": 3,
     "mana_cost": 0
   },
-  "ABI006": {
+  "TEST_ABI_BLIZZARD": {
     "name": "Blizzard",
     "delivery_type": "AREA",
     "target_scope": "ALL_ENEMIES",

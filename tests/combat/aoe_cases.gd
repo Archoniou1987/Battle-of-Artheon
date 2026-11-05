@@ -22,7 +22,7 @@ static func _targets(count:int)->Array[String]:
 	return ids
 
 static func _blizzard(state:CombatState,count:int)->CombatEvent:
-	var event:=AbilityRuntime.build_action_event(state,"source","t0","ABI006",{
+	var event:=AbilityRuntime.build_action_event(state,"source","t0","TEST_ABI_BLIZZARD",{
 		"delivery_type":"AREA","target_scope":"ALL_ENEMIES",
 		"components":[
 			{"kind":"damage","amount":25.0,"damage_type":"frost","full_targets":5},
