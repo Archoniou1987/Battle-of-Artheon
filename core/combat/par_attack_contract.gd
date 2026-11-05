@@ -58,6 +58,8 @@ static func resolve(combatant: CombatantState, profile: Dictionary) -> Dictionar
 	var id := "PAR051" if String(weapons[index]["slot"]) == "off_hand" else "PAR050"
 	var damage: Dictionary = combatant.combat_stats["par_attack_ranges"][id]
 	var bonus := float(combatant.combat_stats["par_totals"]["PAR052"])
+	if id == "PAR051":
+		bonus *= WeaponHandPolicy.OFF_HAND_MULTIPLIER
 	var result := profile.duplicate(true)
 	result["damage_min"] = float(damage["min"]) + bonus
 	result["damage_max"] = float(damage["max"]) + bonus

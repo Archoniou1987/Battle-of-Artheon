@@ -56,8 +56,9 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 		if damage.is_empty():
 			result.erase(hand + "_damage")
 			continue
-		result[hand + "_min_damage"] = float(damage["min"]) + bonus
-		result[hand + "_max_damage"] = float(damage["max"]) + bonus
+		var hand_bonus := bonus * (WeaponHandPolicy.OFF_HAND_MULTIPLIER if hand == "off_hand" else 1.0)
+		result[hand + "_min_damage"] = float(damage["min"]) + hand_bonus
+		result[hand + "_max_damage"] = float(damage["max"]) + hand_bonus
 		result[hand + "_damage_type"] = String(damage["type"])
 		result[hand + "_damage"] = [result[hand + "_min_damage"], result[hand + "_max_damage"]]
 	return convert_ratings(result, character.progression.level, config)

@@ -70,20 +70,22 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		runtime_profiles.push_front({"slot":"main_hand", "instance_id":"unarmed_main_hand", "is_unarmed":true, "damage_min":float(fist["min"]), "damage_max":float(fist["max"]), "damage_type":String(fist["type"]), "attack_profiles":[]})
 	for i in range(runtime_profiles.size()):
 		var profile: Dictionary = runtime_profiles[i]
+		var off_hand_factor := WeaponHandPolicy.OFF_HAND_MULTIPLIER if String(profile.get("slot","")) == "off_hand" else 1.0
+		var hand_bonus := damage_bonus * off_hand_factor
 		var attacks: Array = profile.get("attack_profiles", [])
 		for j in range(attacks.size()):
 			if attacks[j] is Dictionary:
 				var attack: Dictionary = attacks[j]
 				if attack.has("damage_min"):
-					attack["damage_min"] = float(attack["damage_min"]) + damage_bonus
+					attack["damage_min"] = float(attack["damage_min"]) * off_hand_factor + hand_bonus
 				if attack.has("damage_max"):
-					attack["damage_max"] = float(attack["damage_max"]) + damage_bonus
+					attack["damage_max"] = float(attack["damage_max"]) * off_hand_factor + hand_bonus
 		# PAR050/PAR051 are authoritative for the ordinary weapon damage range.
 		# Preserve specialised attack profiles until ABI migration is complete.
 		var source_par := "PAR051" if String(profile.get("slot", "")) == "off_hand" else "PAR050"
 		var canonical_range: Dictionary = par_snapshot["attack_ranges"][source_par]
-		profile["damage_min"] = float(canonical_range["min"]) + damage_bonus
-		profile["damage_max"] = float(canonical_range["max"]) + damage_bonus
+		profile["damage_min"] = float(canonical_range["min"]) + hand_bonus
+		profile["damage_max"] = float(canonical_range["max"]) + hand_bonus
 		profile["damage_type"] = String(canonical_range["type"])
 		runtime_profiles[i] = profile
 	combatant.combat_stats["weapon_profiles"] = runtime_profiles
