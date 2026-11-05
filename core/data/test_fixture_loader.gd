@@ -75,9 +75,9 @@ static func new_combatant(id: String, name: String, level: int, hp: int, mana: i
 		combatant.combat_stats["par_totals"][par_id] = 0.0
 		combatant.combat_stats[key] = 0.0
 		combatant.combat_stats[key + "_percent"] = 0.0
-	for id in ParCombatContract.ABSOLUTE_STATS:
-		var key: String = ParCombatContract.ABSOLUTE_STATS[id]
-		combatant.combat_stats["par_totals"][id] = 0.0
+	for par_id in ParCombatContract.ABSOLUTE_STATS:
+		var key: String = ParCombatContract.ABSOLUTE_STATS[par_id]
+		combatant.combat_stats["par_totals"][par_id] = 0.0
 		combatant.combat_stats[key] = 0.0
 	combatant.combat_stats["shield_auto_block_rating_percent"] = 0.0
 	combatant.combat_stats["block_crush"] = 0.0
