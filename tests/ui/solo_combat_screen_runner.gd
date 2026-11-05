@@ -42,7 +42,7 @@ func _run() -> void:
 		],
 		"equipment_slots": gear,
 		"ability_slots": [
-			{"id": "ABI003", "available": true, "name": "Fire", "mana_cost": 10},
+			{"id": "ABI301", "available": true, "name": "Кровавый порез", "mana_cost": 0},
 			{"id": "", "available": false}, {"id": "", "available": false},
 			{"id": "", "available": false}, {"id": "", "available": false}
 		],
@@ -135,9 +135,9 @@ func _run() -> void:
 	check(arena.pending_external_ability_index == 0, "reopened ABI card has selected index")
 	arena.ability_confirm_popup.hide()
 	arena._confirm_ability()
-	check(screen.chosen_abi == "ABI003", "solo ABI confirmation selects ability")
+	check(screen.chosen_abi == "ABI301", "solo ABI confirmation selects ability")
 	screen._choose_elixir(0)
-	check(last_elixir == 0 and screen.chosen_abi == "ABI003", "ABI and potion selections coexist")
+	check(last_elixir == 0 and screen.chosen_abi == "ABI301", "ABI and potion selections coexist")
 	check(arena.player_elixir_slots[0].toggle_mode, "live potion uses selectable button mode")
 	check(arena.ability_buttons[0].button_pressed and arena.player_elixir_slots[0].button_pressed, "selected ABI and potion are visible on the shared Arena")
 	# Real Arena callbacks, not duplicate Solo widgets, produce one exact command.
@@ -146,7 +146,7 @@ func _run() -> void:
 	check(last_orders.get("player_id", "") == "player", "submitted owner identity")
 	check(last_orders.get("attack_zones", []) == ["chest", "head"], "submitted split hits")
 	check(last_orders.get("block_zones", []) == ["chest", "legs"], "submitted exact block zones")
-	check(last_orders.get("ability_id", "") == "ABI003" and int(last_orders.get("elixir_slot", -1)) == 0, "submitted one ABI and elixir")
+	check(last_orders.get("ability_id", "") == "ABI301" and int(last_orders.get("elixir_slot", -1)) == 0, "submitted one ABI and elixir")
 	check(screen.round_button.disabled, "submission locks duplicate taps")
 	last_orders.clear()
 	screen._submit()
@@ -179,7 +179,7 @@ func _run() -> void:
 	check(screen.round_button.disabled, "one of two attack selections cannot advance a round")
 	screen.present(fixture)
 	screen._choose_elixir(0)
-	screen.set_ability_options([{"id": "ABI003", "available": false}])
+	screen.set_ability_options([{"id": "ABI301", "available": false}])
 	check(screen.shared_arena.ability_buttons[0].disabled, "ability availability updates after potion selection")
 	# Unarmed fighters have one real manual block, not zero.
 	var fists: Dictionary = fixture.duplicate(true)

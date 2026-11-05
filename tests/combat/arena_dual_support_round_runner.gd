@@ -10,7 +10,7 @@ func _init() -> void:
 		"instance_id": "ARENA_SUPPORT_CHEST",
 		"equip_slots": ["chest"],
 		"slot_usage": ["chest"],
-		"abilities": ["ABI004"]
+		"abilities": ["TEST_LAB_HEAL]
 	}
 	ItemDurabilityService.initialize_item(chest, 100)
 	if not repository.add_item(chest) or not hero.receive_item("ARENA_SUPPORT_CHEST",repository) or not hero.equip("chest","ARENA_SUPPORT_CHEST",repository):
@@ -25,11 +25,20 @@ func _init() -> void:
 	npc.mana = 100
 	player.hp = maxi(1, int(floor(float(player.max_hp) / 2.0)))
 	npc.hp = npc.max_hp - 150
+	# Test-only healing payload: do not restore the deleted production ABI004.
+	# The same real scheduler still tests two allies healing in one round.
+	session.ability_scheduler.definitions["TEST_LAB_HEAL"] = {
+		"name":"Тестовое лечение",
+		"delivery_type":"DIRECT","target_scope":"SINGLE","target_team":"ALLY",
+		"uses_magic_hit":false,"application_timing":"standard",
+		"components":[{"kind":"heal","amount":100},{"kind":"effect","effect_id":"EFF004","base_chance":100}],
+		"mana_cost":10,"cooldown_rounds":1
+	}
 	# The NPC's scheduler intentionally uses a fixture-assigned ability. No
 	# separate NPC combat logic may be used for the automatic cast.
-	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["ABI004"]
+	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = ["TEST_LAB_HEAL]
 	var options: Array[Dictionary] = session.player_ability_options()
-	if options.size() != 6 or String(options[4].get("id","")) != "ABI004" or not bool(options[4].get("available",false)):
+	if options.size() != 6 or String(options[4].get("id","")) != "TEST_LAB_HEAL or not bool(options[4].get("available",false)):
 		_finish(false,"chest_ability_option")
 		return
 	if String(options[4].get("target_id","")) != session.player_id:
@@ -39,7 +48,7 @@ func _init() -> void:
 	for zone in ["chest","arms","waist","legs"]:
 		if blocks.size() < CombatModifierService.manual_block_zone_capacity(player):
 			blocks.append(zone)
-	var first: Dictionary = session.play_round(["chest"],blocks,"ABI004")
+	var first: Dictionary = session.play_round(["chest"],blocks,"TEST_LAB_HEAL)
 	if not bool(first.get("ok",false)):
 		_finish(false,"first_round_"+String(first.get("reason","")))
 		return
@@ -50,7 +59,7 @@ func _init() -> void:
 	for event in session.state.event_log:
 		if int(event.payload.get("round",-1)) != 1:
 			continue
-		if event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) == "ABI004":
+		if event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) == "TEST_LAB_HEAL:
 			if event.source_id == session.player_id: player_abi += 1
 			if event.source_id == ArenaCombatSession.ENEMY_ID: npc_abi += 1
 		elif event.kind == CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)):
@@ -58,7 +67,7 @@ func _init() -> void:
 			if event.source_id == ArenaCombatSession.ENEMY_ID: physical_npc += 1
 	var heal_lines := 0
 	for line in Array(first.get("lines",[])):
-		if String(line).contains("ABI «Healing»") and String(line).contains("+"):
+		if String(line).contains("ABI «Тестовое лечение»") and String(line).contains("+"):
 			heal_lines += 1
 	if player_abi != 1 or npc_abi != 1 or physical_player < 1 or physical_npc < 1 or heal_lines != 2:
 		_finish(false,"peer_casts_player_"+str(player_abi)+"_npc_"+str(npc_abi)+"_attacks_"+str(physical_player)+"_"+str(physical_npc)+"_logs_"+str(heal_lines))
