@@ -25,10 +25,31 @@ static func is_retired_numbered_abi(ability_id: String) -> bool:
 		or (index>=601 and index<=606)
 	)
 
+## A stale numbered ABI can remain in a save/checkpoint, but may never
+## reach the battle scheduler. LAB_* and TEST_* are isolated developer IDs.
+## Reject malformed ABI aliases (e.g. ABI0301) as well as retired numbers.
+static func is_executable_id(ability_id: String) -> bool:
+	if not ability_id.begins_with("ABI"):
+		return true
+	var suffix := ability_id.substr(3)
+	if not suffix.is_valid_int():
+		return false
+	return ability_id == "ABI%d" % int(suffix) and not is_retired_numbered_abi(ability_id)
+
 static func definition(abilities: Dictionary, ability_id: String) -> Dictionary:
+	if not is_executable_id(ability_id):
+		return {}
 	var value = abilities.get(ability_id, {})
 	return value if value is Dictionary else {}
 
 static func assigned_abilities(loadouts: Dictionary, combatant_id: String) -> Array:
 	var value = loadouts.get(combatant_id, [])
-	return value if value is Array else []
+	if not value is Array:
+		return []
+	# Return a filtered view, never mutate stored saves or loadouts.
+	var active: Array = []
+	for raw_id in value:
+		var ability_id := String(raw_id)
+		if is_executable_id(ability_id):
+			active.append(ability_id)
+	return active
