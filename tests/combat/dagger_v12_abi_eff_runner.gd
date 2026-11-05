@@ -147,5 +147,42 @@ func _run() -> void:
 			_check(_active(penetration.fighter(false),"EFF401").is_empty(),"pen_absolute_consumes_after_hit")
 			_check(_count_abi_attacks(penetration,"ABI408") == 1,"pen_absolute_mh_only")
 
+
+	# Burst skills consume poison on cast, but DEF_COMBO must preserve breach.
+	# The cast snapshot still determines damage and the number of strikes.
+	var consume_def := _make_session("DAGGER_DEF",202611075)
+	if consume_def != null:
+		consume_def.state.begin_round()
+		var def_target := consume_def.fighter(false)
+		var poison_event := consume_def.state.create_event(CombatEvent.Kind.EFFECT,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1})
+		consume_def.engine.resolve_event(poison_event)
+		var breach_event := consume_def.state.create_event(CombatEvent.Kind.EFFECT,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF401","base_chance":100.0,"effect_roll":1})
+		consume_def.engine.resolve_event(breach_event)
+		_check(not _active(def_target,"EFF403").is_empty(),"def_consume_poison_setup")
+		_check(not _active(def_target,"EFF401").is_empty(),"def_preserve_breach_setup")
+		var def_cast := consume_def.state.create_event(CombatEvent.Kind.ACTION,consume_def.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI404","zone":"chest"})
+		DaggerAbiCombatService.dispatch(consume_def.engine,def_cast)
+		_check(int(def_cast.result.get("poison_stacks_consumed",0))==1,"def_consumed_count")
+		_check(_active(def_target,"EFF403").is_empty(),"def_consumes_poison_at_cast")
+		_check(not _active(def_target,"EFF401").is_empty(),"def_preserves_breach")
+		consume_def.engine.resolve_pending_events()
+		_check(_active(def_target,"EFF403").is_empty(),"def_poison_not_restored_by_abi_hits")
+
+	var consume_attack := _make_session("DAGGER_ATTACK",202611076)
+	if consume_attack != null:
+		consume_attack.state.begin_round()
+		var attack_target := consume_attack.fighter(false)
+		for i in range(4):
+			var add_poison := consume_attack.state.create_event(CombatEvent.Kind.EFFECT,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1})
+			consume_attack.engine.resolve_event(add_poison)
+		_check(int(_active(attack_target,"EFF403").get("stacks",0))==4,"flurry_consume_poison_setup")
+		var flurry_cast := consume_attack.state.create_event(CombatEvent.Kind.ACTION,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI406","zone":"chest"})
+		DaggerAbiCombatService.dispatch(consume_attack.engine,flurry_cast)
+		_check(int(flurry_cast.result.get("poison_stacks_consumed",0))==4,"flurry_consumed_count")
+		_check(Array(flurry_cast.result.get("child_event_ids",[])).size()==4,"flurry_snapshot_four_strikes")
+		_check(_active(attack_target,"EFF403").is_empty(),"flurry_consumes_poison_at_cast")
+		consume_attack.engine.resolve_pending_events()
+		_check(_active(attack_target,"EFF403").is_empty(),"flurry_poison_not_restored_by_abi_hits")
+
 	print("DAGGER_V12_ABI_EFF=",("PASS" if problems.is_empty() else "FAIL")," problems=",problems)
 	quit(0 if problems.is_empty() else 1)

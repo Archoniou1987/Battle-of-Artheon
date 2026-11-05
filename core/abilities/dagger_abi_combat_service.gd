@@ -131,6 +131,11 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var oh_average := _average(oh)
 	var poison_stacks := _active_stacks(target,POISON,engine.state.round_number,10)
 	var breach_stacks := _active_stacks(target,BREACH,engine.state.round_number,5)
+	# Consume at cast time AFTER snapshotting bonuses and strike count.
+	# Miss/dodge/block cannot refund spent poison. Breach stays for DEF_COMBO.
+	if id in [DEF_COMBO, ATTACK_FLURRY]:
+		_remove_effect(target,POISON)
+		action.set_result("poison_stacks_consumed",poison_stacks)
 	var ids: Array[int] = []
 	if id == QUICK:
 		var damage := CombatMath.roll_damage(float(mh.get("damage_min",0.0)),float(mh.get("damage_max",0.0)),engine.combat_rng.randf()) * 0.20

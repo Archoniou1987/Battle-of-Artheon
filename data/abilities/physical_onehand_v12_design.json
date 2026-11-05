@@ -42,7 +42,8 @@
       "cooldown_rounds": 5,
       "damage": "one MH plus one OH attack; +10% outgoing damage per target POISON stack, up to 100%",
       "buff": "DODGE +5% per target ARMOR_BREACH stack, max +25%, 2 rounds, standard DR",
-      "notes": "does not consume stacks; missing OH=0"
+      "notes": "consumes all target POISON stacks on cast (including failed hits), does not consume ARMOR_BREACH; missing OH=0",
+      "consume": "all target POISON stacks on cast, after reading damage multiplier; never consumes ARMOR_BREACH"
     },
     "DAGGER_ATTACK_03": {
       "name": "Сокрушительный выпад",
@@ -57,7 +58,8 @@
       "ap_cost": 3,
       "cooldown_rounds": 7,
       "damage": "N separate attacks, N=target POISON stacks snapshotted before cast, max 10; alternating MH/OH, 60% average damage of corresponding dagger; OH absent=0",
-      "notes": "independent hit,dodge,block,crit,armour per nonzero attack"
+      "notes": "independent hit,dodge,block,crit,armour per nonzero attack; consumes all target POISON on cast even if every strike fails",
+      "consume": "all target POISON stacks on cast after snapshotting N"
     },
     "DAGGER_PEN_03": {
       "name": "Глубокий прокол",
