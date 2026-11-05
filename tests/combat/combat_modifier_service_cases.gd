@@ -6,6 +6,7 @@ static func run() -> bool:
 		_case_canonical_percent_avoids_direct_pct_double_count()
 		and _case_runtime_direct_pct_overlay_applies_once()
 		and _case_auto_block_runtime_overlay_dr_once()
+		and _case_combat_readout_matches_runtime_effects()
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
@@ -49,6 +50,35 @@ static func _case_auto_block_runtime_overlay_dr_once() -> bool:
 	})
 	var actual := CombatModifierService.block_chance(combatant,1)
 	return absf(actual-43.939486)<0.001
+
+static func _case_combat_readout_matches_runtime_effects() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["crit_chance_rating_percent"] = 40.0
+	combatant.combat_stats["dodge_rating_percent"] = 25.0
+	combatant.combat_stats["shield_auto_block_rating_percent"] = 30.0
+	combatant.active_effects.append({
+		"effect_id":"EFF_READOUT_TEST",
+		"definition":{
+			"crit_chance_direct_pct":15.0,"dodge_direct_pct":10.0,
+			"shield_auto_block_direct_pct":20.0,
+			"physical_damage_outgoing_direct_pct":25.0,
+			"damage_reduction":0.15
+		},
+		"start_round":2,"remaining_rounds":2
+	})
+	var before := CombatModifierService.combat_readout(combatant,1)
+	var active := CombatModifierService.combat_readout(combatant,2)
+	var after := CombatModifierService.combat_readout(combatant,1)
+	return (
+		is_equal_approx(float(before.get("crit_after_dr_pct",-1.0)),CombatMath.effective_crit(40.0,0.0))
+		and is_equal_approx(float(active.get("crit_after_dr_pct",-1.0)),CombatMath.effective_crit(55.0,0.0))
+		and is_equal_approx(float(active.get("dodge_after_dr_pct",-1.0)),CombatMath.effective_dodge(35.0,0.0))
+		and is_equal_approx(float(active.get("auto_block_after_dr_pct",-1.0)),CombatRatingCurves.diminishing(50.0,"block"))
+		and is_equal_approx(float(active.get("physical_outgoing_bonus_pct",-1.0)),25.0)
+		and is_equal_approx(float(active.get("damage_reduction",-1.0)),0.15)
+		and is_equal_approx(float(after.get("physical_outgoing_bonus_pct",-1.0)),0.0)
+		and is_equal_approx(float(combatant.combat_stats.get("crit_chance_rating_percent",0.0)),40.0)
+	)
 
 static func _case_magic_resist_prefers_canonical_stats() -> bool:
 	var combatant := _combatant()

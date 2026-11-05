@@ -400,7 +400,10 @@ func combat_view() -> Dictionary:
 		"round":simulator.state.round_number,
 		"finished":simulator.controller.combat_finished(),
 		"winner":simulator.controller.winning_team(),
-		"player":{"id":player_id,"name":hero.display_name,"hp":hero.visible_hp(),"max_hp":hero.max_hp,"mana":hero.mana,"max_mana":hero.max_mana,"dead":hero.is_death_finalized(),"effects":_disclosed_effects(hero)},
+		"player":{"id":player_id,"name":hero.display_name,"hp":hero.visible_hp(),"max_hp":hero.max_hp,"mana":hero.mana,"max_mana":hero.max_mana,"dead":hero.is_death_finalized(),"effects":_disclosed_effects(hero),
+			# Authored by the existing authoritative simulator, never by UI.
+			# NPC retains effects-only disclosure; no enemy stat readout.
+			"combat_readout":CombatModifierService.combat_readout(hero,simulator.state.round_number+1)},
 		"enemies":enemy_views,
 		"equipment_slots":worn,
 		"ability_slots":five_slots,

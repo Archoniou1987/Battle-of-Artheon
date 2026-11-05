@@ -186,6 +186,18 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
 	result["armour_penetration_flat"] = armour_penetration_flat(combatant, round_number)
 	result["armour_penetration_percent"] = armour_reduction_percent(combatant, round_number) * 100.0
+	# These are the SAME runtime calculations used by CombatEngine, not UI
+	# approximations of flat/current EFF, ABI and TRA. Opponent counters,
+	# body zone, distance and individual ABI packets are contextual.
+	result["crit_after_dr_pct"] = CombatMath.effective_crit(effective_percent(combatant,"crit_chance_rating",round_number)+modifier(combatant,"crit_bonus",round_number),0.0)
+	result["dodge_after_dr_pct"] = CombatMath.effective_dodge(effective_percent(combatant,"dodge_rating",round_number),0.0)
+	result["auto_block_after_dr_pct"] = block_chance(combatant,round_number)
+	result["crit_abi_bonus_pct"] = modifier(combatant,"crit_bonus",round_number)
+	result["physical_outgoing_bonus_pct"] = modifier(combatant,"physical_damage_outgoing_direct_pct",round_number)
+	var elemental_resists := {}
+	for school in ["fire","water","air","earth","dark","light"]:
+		elemental_resists[school] = magic_resist(combatant,school,round_number)*100.0
+	result["elemental_resists_pct"] = elemental_resists
 	return result
 
 static func snapshot(combatant: CombatantState, round_number: int) -> Dictionary:

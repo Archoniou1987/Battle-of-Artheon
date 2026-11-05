@@ -120,6 +120,10 @@ var fighter_popup_text: RichTextLabel
 var disclosed_enemy_stats: Dictionary = {}
 var disclosed_enemy_ratings: Dictionary = {}
 var disclosed_enemy_equipment: Dictionary = {}
+## Only released snapshots enter the avatar panel. Mid-round surprise EFF
+## are mechanically live but must not leak numeric information before reveal.
+var published_player_readout: Dictionary = {}
+var external_player_readout: Dictionary = {}
 var player_elixir_slots: Array[Button] = []
 var enemy_elixir_slots: Array[Button] = []
 var player_elixirs: Array[Dictionary] = []
@@ -913,10 +917,17 @@ func _show_equipment_ability_info(meta: Variant) -> void:
 func _show_fighter_details(is_player: bool) -> void:
 	var primary: Dictionary = {}
 	var ratings: Dictionary = {}
-	if is_player and character != null and repository != null:
-		primary = character.effective_stats(repository)
-		ratings = CharacterStatsService.snapshot(character, repository)
+	var readout: Dictionary = {}
+	if is_player:
+		if external_combat_mode:
+			readout = external_player_readout
+		elif combat_session != null:
+			readout = published_player_readout
+		if character != null and repository != null:
+			primary = character.effective_stats(repository)
 	elif not is_player:
+		# Enemy values are disclosed equipment/primary only. Hidden NPC
+		# statistics and unrevealed EFF must never be read from CombatState.
 		primary = disclosed_enemy_stats
 		ratings = disclosed_enemy_ratings
 	fighter_popup.title = "Игрок" if is_player else "Противник"
@@ -924,27 +935,49 @@ func _show_fighter_details(is_player: bool) -> void:
 	lines.append("[b]Характеристики[/b]")
 	for key in PRIMARY_NAMES:
 		if primary.has(key):
-			lines.append("%s: %s" % [PRIMARY_NAMES[key], str(primary[key])])
-	lines.append("")
-	lines.append("[b]Рейтинги[/b]")
-	for key in RATING_KEYS:
-		if ratings.has(key):
-			lines.append("%s: %s" % [RATING_NAMES[key], str(ratings[key])])
-	if combat_session != null:
-		var fighter := combat_session.fighter(is_player)
+			lines.append("%s: %s" % [PRIMARY_NAMES[key],str(primary[key])])
+	if not readout.is_empty():
+		lines.append("")
+		lines.append("[b]В бою — с действующими раскрытыми эффектами[/b]")
+		# The chance without enemy anti-rating is shown explicitly; hit also
+		# depends on level, distance and weapon skill. No fabricated final hit%.
+		lines.append("Точность (бонус): %.2f%%" % float(readout.get("hit_chance_rating_percent",0.0)))
+		lines.append("Крит (до антикрита цели): %.2f%%" % float(readout.get("crit_after_dr_pct",0.0)))
+		lines.append("Уклонение (до антиуворота): %.2f%%" % float(readout.get("dodge_after_dr_pct",0.0)))
+		lines.append("Автоблок: %.2f%%" % float(readout.get("auto_block_after_dr_pct",0.0)))
+		lines.append("Критический урон (добавка): %.2f%%" % float(readout.get("crit_damage_rating_percent",0.0)))
+		lines.append("Магический урон (текущая шкала): %.2f%%" % float(readout.get("magic_damage_rating_percent",0.0)))
+		lines.append("Модификатор физ. урона: %+.2f%%" % float(readout.get("physical_outgoing_bonus_pct",0.0)))
+		lines.append("Общее снижение урона: %.2f%%" % (100.0*float(readout.get("damage_reduction",0.0))))
+		lines.append("Пробивание брони: %.2f%%" % float(readout.get("armour_penetration_percent",0.0)))
+		lines.append("Пробивание брони (плоское): %.2f" % float(readout.get("armour_penetration_flat",0.0)))
+		var elemental: Dictionary = readout.get("elemental_resists_pct",{})
+		if not elemental.is_empty():
+			lines.append("Сопротивления: огонь %.1f%% · вода %.1f%% · воздух %.1f%%" % [float(elemental.get("fire",0)),float(elemental.get("water",0)),float(elemental.get("air",0))])
+			lines.append("Земля %.1f%% · тьма %.1f%% · свет %.1f%%" % [float(elemental.get("earth",0)),float(elemental.get("dark",0)),float(elemental.get("light",0))])
+	elif not ratings.is_empty():
+		lines.append("")
+		lines.append("[b]Известные рейтинги (без скрытых эффектов)[/b]")
+		for key in RATING_KEYS:
+			if ratings.has(key):
+				lines.append("%s: %s" % [RATING_NAMES[key],str(ratings[key])])
+	if combat_session != null and is_player and not external_combat_mode:
+		var fighter := combat_session.fighter(true)
 		if fighter != null:
 			lines.append("")
 			lines.append("[b]Tempo PAR019–021[/b]")
-			lines.append("Текущее: %s  •  Базовое: %s" % [str(fighter.tempo), str(fighter.base_tempo)])
-			lines.append("Максимум: %s  •  Восстановление/раунд: %s" % [str(fighter.max_tempo), str(fighter.tempo_regen)])
+			lines.append("Текущее: %s  •  Базовое: %s" % [str(fighter.tempo),str(fighter.base_tempo)])
+			lines.append("Максимум: %s  •  Восстановление/раунд: %s" % [str(fighter.max_tempo),str(fighter.tempo_regen)])
 			var round_number := combat_session.state.round_number
-			lines.append("Состояние: %s" % ("Оглушён" if CombatTempoService.is_stunned(fighter, round_number) else ("Иммунитет к стану" if CombatTempoService.is_immune(fighter, round_number) else "Обычное")))
+			lines.append("Состояние: %s" % ("Оглушён" if CombatTempoService.is_stunned(fighter,round_number) else ("Иммунитет к стану" if CombatTempoService.is_immune(fighter,round_number) else "Обычное")))
 			if fighter.tempo_stun_round > round_number:
 				lines.append("Оглушение назначено на раунд %d" % fighter.tempo_stun_round)
 			elif fighter.tempo_immunity_until_round >= round_number and fighter.tempo_immunity_until_round > 0:
 				lines.append("Иммунитет до конца раунда %d" % fighter.tempo_immunity_until_round)
-	if primary.is_empty() and ratings.is_empty():
-		lines.append("Нет доступных характеристик")
+	if is_player and not external_combat_mode and combat_session != null and combat_session.active_round != null:
+		lines.append("[i]Изменения текущего незавершённого раунда станут видны после его завершения.[/i]")
+	if primary.is_empty() and readout.is_empty() and ratings.is_empty():
+		lines.append("Нет раскрытых характеристик")
 	fighter_popup_text.text = "\n".join(lines)
 	fighter_popup.popup_centered()
 
@@ -1491,6 +1524,10 @@ func _sync_combat_session() -> void:
 	set_fighter_hp(false, enemy.visible_hp(), enemy.max_hp)
 	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
 	set_fighter_resources(false, enemy.mana, enemy.max_mana, enemy.action_points, enemy.max_action_points)
+	# A confirmed end-of-round boundary can publish the next-round stats.
+	# During instant/preparation ABI actions this cache must not update.
+	if combat_session.active_round == null:
+		published_player_readout = CombatModifierService.combat_readout(player,combat_session.state.round_number+1)
 	set_elixir_display(true, character.elixir_capacity(repository), combat_session.elixir_options())
 	set_elixir_display(false, 0, [])
 	set_elixir_cooldown(combat_session.elixir_cooldown())
@@ -1615,6 +1652,8 @@ func present_external(view: Dictionary) -> void:
 		"player": Array(player.get("effects", [])).duplicate(true),
 		"enemy": Array(opponent.get("effects", [])).duplicate(true)
 	}
+	# Only the authoritative Solo snapshot may supply current numeric values.
+	external_player_readout = Dictionary(player.get("combat_readout",{})).duplicate(true)
 	set_fighter_header(true, String(player.get("name", "Герой")), int(player.get("level", 1)))
 	set_fighter_header(false, String(opponent.get("name", "Противник")), int(opponent.get("level", 1)))
 	for side in [true, false]:

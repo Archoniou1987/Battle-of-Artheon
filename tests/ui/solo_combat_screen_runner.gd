@@ -78,6 +78,20 @@ func _run() -> void:
 	check(arena._effect_entries(true, "Баффы").size() == 1, "player disclosed buff appears in shared Arena")
 	check(arena._effect_entries(false, "Дебаффы").size() == 1, "enemy disclosed debuff appears in shared Arena")
 	check(arena._effect_entries(false, "Баффы").is_empty(), "effect polarity does not leak into wrong row")
+	# Solo receives an explicit user-only combat readout, never hidden NPC PAR.
+	var readout_fixture: Dictionary = effects_fixture.duplicate(true)
+	readout_fixture["player"]["combat_readout"] = {
+		"hit_chance_rating_percent":12.0,"crit_after_dr_pct":32.5,
+		"dodge_after_dr_pct":18.0,"auto_block_after_dr_pct":10.0,
+		"elemental_resists_pct":{"fire":15.0}
+	}
+	screen.present(readout_fixture)
+	arena._show_fighter_details(true)
+	check(arena.fighter_popup_text.text.contains("32.50%"),"solo_player_avatar_uses_snapshot_readout")
+	arena.fighter_popup.hide()
+	arena._show_fighter_details(false)
+	check(not arena.fighter_popup_text.text.contains("32.50%"),"solo_enemy_avatar_never_inherits_player_stats")
+	arena.fighter_popup.hide()
 	check(arena.effects_rows["player_Баффы"].visible and arena.effects_rows["enemy_Дебаффы"].visible, "live buff/debuff overlay rows are visible")
 	arena._show_effect_detail(true, "Баффы", 0)
 	check(screen.detail_text.text.contains("Guard"), "tap on live effect opens details in owning battle UI")
