@@ -219,7 +219,10 @@ static func _case_effect_trigger_accessors_copy_values() -> bool:
 
 static func _case_abilities_accessor_copies_values() -> bool:
 	var combatant := _combatant()
-	combatant.combat_stats["abilities"] = ["ABI001"]
+	combatant.combat_stats["abilities"] = ["ABI001","ABI301","ABI700"]
 	var abilities := CombatModifierService.abilities(combatant)
 	abilities.append("ABI999")
-	return CombatModifierService.abilities(combatant) == ["ABI001"]
+	return (
+		CombatModifierService.abilities(combatant)==["ABI301"]
+		and combatant.combat_stats["abilities"]==["ABI001","ABI301","ABI700"]
+	)

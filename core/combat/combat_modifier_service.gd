@@ -159,7 +159,13 @@ static func manual_block_effects(combatant: CombatantState) -> Array:
 	return Array(combatant.combat_stats.get("on_manual_block_effects", [])).duplicate(true)
 
 static func abilities(combatant: CombatantState) -> Array:
-	return Array(combatant.combat_stats.get("abilities", [])).duplicate(true)
+	# Read-only projection for old saves, NPC and Solo. Never mutate raw
+	# snapshots, but never offer retired numbered game ABI to a scheduler.
+	var approved: Array = []
+	for raw_id in Array(combatant.combat_stats.get("abilities", [])):
+		if not AbilityCatalog.is_retired_numbered_abi(String(raw_id)):
+			approved.append(raw_id)
+	return approved
 
 ## Spell delivery names may differ from the canonical six magic schools.
 static func magic_school(damage_type: String) -> String:
