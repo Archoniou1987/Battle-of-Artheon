@@ -231,8 +231,14 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 	var kind := String(component.get("kind", ""))
 	var delivery_type := String(parent.payload.get("delivery_type", "DIRECT"))
 	if kind=="heal":
+		var heal_amount := float(component.get("amount",0.0))
+		var heal_k := float(component.get("spell_power_scale",0.0))
+		if not is_zero_approx(heal_k):
+			var healer := state.get_combatant(parent.source_id)
+			if healer != null:
+				heal_amount += heal_k*CombatModifierService.spell_power(healer,state.round_number)
 		return state.create_event(CombatEvent.Kind.EFFECT,parent.source_id,target_id,{
-			"inline_heal":int(round(float(component.get("amount",0.0))*scale)),
+			"inline_heal":int(round(maxf(0.0,heal_amount)*scale)),
 			"source_type":"ability",
 			"ability_id":String(parent.payload.get("ability_id","")),
 			"delivery_type":delivery_type,
@@ -241,14 +247,15 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 	if kind == "damage":
 		var damage_type := String(component.get("damage_type", "physical"))
 		var amount := float(component.get("amount", 0.0))
-		# ABI magic damage uses the attacker's canonical rating percentage plus
-		# active EFF overlays. Physical ABI and periodic EFF are unchanged.
+		# ABI magic: base + optional K*absolute SP. Direct % EFF/TRA are
+		# separate. No K means no SP. DoT ticks do not inherit SP.
 		if CombatDamagePayload.is_magic_damage_type(damage_type):
 			var caster := state.get_combatant(parent.source_id)
 			if caster != null:
-				var bonus_percent := CombatModifierService.effective_percent(caster, "magic_damage_rating", state.round_number)
-				# Magic damage rating and direct percentage bonuses use one overlay.
-				amount = maxf(0.0, amount) * maxf(0.0, 1.0 + bonus_percent / 100.0)
+				var k := float(component.get("spell_power_scale",0.0))
+				amount = maxf(0.0,amount+k*CombatModifierService.spell_power(caster,state.round_number))
+				var bonus_percent := CombatModifierService.magic_damage_bonus_pct(caster,state.round_number)
+				amount *= maxf(0.0,1.0+bonus_percent/100.0)
 		amount *= scale
 		if delivery_type in ["MELEE", "PROJECTILE"]:
 			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, CombatDamagePayload.ability_attack_payload(parent, component, amount, scale), parent.event_id)
@@ -372,7 +379,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 		raw_damage *= maxf(0.0, 1.0 + physical_bonus / 100.0)
 		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.modifier(attacker,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
 	if CombatDamagePayload.is_magic_damage_type(String(event.payload.get("damage_type", ""))) and not bool(event.payload.get("magic_rating_applied", false)):
-		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(attacker, "magic_damage_rating", state.round_number) / 100.0)
+		# Only direct percent EFF/TRA; PAR150 requires an ABI K.
+		raw_damage *= maxf(0.0,1.0+CombatModifierService.magic_damage_bonus_pct(attacker,state.round_number)/100.0)
 	if is_crit:
 		var ability_critical_bonus := float(event.payload.get("sword_crit_damage_pct",0.0))
 		var critical_rating_bonus := CombatModifierService.crit_damage_bonus(attacker,state.round_number,ability_critical_bonus)
@@ -795,6 +803,10 @@ func _require_canonical(event: CombatEvent, combatant: CombatantState) -> bool:
 			event.set_result("outcome", "invalid_par_contract")
 			event.set_result("error", "invalid_runtime_" + String(key))
 			return false
+	if not is_finite(CombatModifierService.spell_power(combatant,state.round_number)) or not is_finite(CombatModifierService.magic_damage_bonus_pct(combatant,state.round_number)):
+		event.set_result("outcome","invalid_par_contract")
+		event.set_result("error","invalid_runtime_spell_power")
+		return false
 	return true
 
 func _common_hit_chance(source: CombatantState, target: CombatantState) -> float:

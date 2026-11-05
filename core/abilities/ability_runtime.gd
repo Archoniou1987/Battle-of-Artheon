@@ -116,6 +116,14 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 		if not ["damage","effect","heal","cleanse"].has(kind): errors.append("invalid_component_kind")
 		if kind=="cleanse" and not ["BUFF","DEBUFF"].has(String(raw_component.get("dispel_polarity","")).to_upper()): errors.append("invalid_dispel_polarity")
 		if kind=="damage" and float(raw_component.get("amount",-1.0))<0.0: errors.append("invalid_damage_amount")
+		# Optional non-negative K only for direct magic damage or healing.
+		# Reject silently ignored K on physical attacks or effects/DoT.
+		if raw_component.has("spell_power_scale"):
+			var k: Variant = raw_component["spell_power_scale"]
+			if not RatingMatrix._number(k) or float(k)<0.0:
+				errors.append("invalid_spell_power_scale")
+			elif not (kind=="heal" or (kind=="damage" and CombatDamagePayload.is_magic_damage_type(String(raw_component.get("damage_type","physical"))))):
+				errors.append("spell_power_scale_requires_magic_damage_or_heal")
 		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
 		# Timings are hand-authored. Reject an incompatible instant ABI rather
 		# than silently rewriting it; periodic damage/healing still means Standard.

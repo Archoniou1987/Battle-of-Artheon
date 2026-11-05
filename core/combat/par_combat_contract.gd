@@ -1,13 +1,14 @@
 class_name ParCombatContract
 extends RefCounted
 
-## Shared mandatory inputs for physical and magical combat. These are ratings;
-## direct percentage overlays are separate and applied after RatingMatrix.
+## Shared mandatory combat inputs. Percentage ratings remain distinct from
+## PAR150 ABSOLUTE Spell Power (immutable historical key magic_damage_rating).
+## Direct percent overlays are independent of both.
 const RATINGS := {
 	"PAR030":"hit_chance_rating", "PAR031":"dodge_rating", "PAR032":"anti_dodge_rating",
-	"PAR033":"crit_chance_rating", "PAR034":"anti_crit_rating", "PAR035":"crit_damage_rating",
-	"PAR150":"magic_damage_rating"
+	"PAR033":"crit_chance_rating", "PAR034":"anti_crit_rating", "PAR035":"crit_damage_rating"
 }
+const ABSOLUTE_STATS := {"PAR150":"magic_damage_rating"}
 
 static func validate(combatant: CombatantState) -> Dictionary:
 	if combatant == null:
@@ -32,6 +33,15 @@ static func validate(combatant: CombatantState) -> Dictionary:
 				return {"ok":false, "reason":"missing_or_invalid_" + field}
 		if float(combatant.combat_stats[key]) != float(totals[id]):
 			return {"ok":false, "reason":"PAR_source_mismatch_" + id}
+	# PAR150 is never RatingMatrix-converted or required to have _percent.
+	for id in ABSOLUTE_STATS:
+		var key: String = ABSOLUTE_STATS[id]
+		if not totals.has(id) or not RatingMatrix._number(totals[id]):
+			return {"ok":false,"reason":"missing_or_invalid_"+id}
+		if not combatant.combat_stats.has(key) or not RatingMatrix._number(combatant.combat_stats[key]):
+			return {"ok":false,"reason":"missing_or_invalid_"+key}
+		if float(combatant.combat_stats[key]) != float(totals[id]):
+			return {"ok":false,"reason":"PAR_source_mismatch_"+id}
 	return {"ok":true}
 
 static func action_status(combatant: CombatantState, round_number: int) -> Dictionary:

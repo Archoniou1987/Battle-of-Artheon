@@ -42,6 +42,24 @@ static func flag(combatant: CombatantState, key: String, round_number: int) -> b
 static func effective_stat(combatant: CombatantState, key: String, round_number: int) -> float:
 	return float(combatant.combat_stats.get(key, 0.0)) + modifier(combatant, key, round_number)
 
+## PAR150's immutable source key is magic_damage_rating, but its unit is now
+## absolute Spell Power. SP is never a percent and has no DR.
+static func spell_power(combatant: CombatantState, round_number: int) -> float:
+	var base: Variant = combatant.combat_stats.get("magic_damage_rating",null)
+	if not RatingMatrix._number(base):
+		push_error("Missing or invalid PAR150 Spell Power")
+		return NAN
+	return float(base) + modifier(combatant,"spell_power_flat",round_number)
+
+## Independent direct magic-damage percentage overlays; never from PAR150.
+## Permanent direct bonuses are already in the detached combat snapshot.
+static func magic_damage_bonus_pct(combatant: CombatantState, round_number: int) -> float:
+	var permanent: Variant = combatant.combat_stats.get("magic_damage_direct_pct",0.0)
+	if not RatingMatrix._number(permanent):
+		push_error("Invalid direct magic damage percentage")
+		return NAN
+	return float(permanent) + modifier(combatant,"magic_damage_direct_pct",round_number)
+
 ## Rating conversion is owned by CharacterStatsService. Canonical *_percent
 ## already includes permanent *_direct_pct, so this layer adds runtime overlays only.
 static func effective_percent(combatant: CombatantState, key: String, round_number: int) -> float:
@@ -236,7 +254,7 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	result["weapon_on_hit_effects"] = weapon_on_hit_effects(combatant)
 	result["on_manual_block_effects"] = manual_block_effects(combatant)
 	result["abilities"] = abilities(combatant)
-	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "crit_damage_rating", "magic_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
+	for rating_key in ["hit_chance_rating", "dodge_rating", "anti_dodge_rating", "crit_chance_rating", "anti_crit_rating", "crit_damage_rating", "shield_auto_block_rating", "manual_block_rating", "block_crush_rating"]:
 		if combatant.combat_stats.has(rating_key + "_percent"):
 			result[rating_key + "_percent"] = effective_percent(combatant, rating_key, round_number)
 	result["armour_penetration_flat"] = armour_penetration_flat(combatant, round_number)
@@ -249,6 +267,8 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	result["auto_block_after_dr_pct"] = block_chance(combatant,round_number)
 	result["crit_abi_bonus_pct"] = modifier(combatant,"crit_bonus",round_number)
 	result["crit_damage_after_dr_pct"] = crit_damage_bonus(combatant,round_number)
+	result["spell_power"] = spell_power(combatant,round_number)
+	result["magic_damage_bonus_pct"] = magic_damage_bonus_pct(combatant,round_number)
 	result["damage_reduction_par_after_dr_pct"] = CombatRatingCurves.diminishing(
 		maxf(0.0,RatingMatrix.to_percent(value(combatant,"damage_reduction_pct",round_number),combatant.level)),"reduce")
 	result["physical_outgoing_bonus_pct"] = modifier(combatant,"physical_damage_outgoing_direct_pct",round_number)
