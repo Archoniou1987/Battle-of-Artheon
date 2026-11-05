@@ -62,7 +62,7 @@
       "armour_all_zones_all_physical": 3.0,
       "manual_block_zones_added": 0,
       "abilities": [
-        "ABI004"
+        "TEST_ABI_SHIELD_BASH"
       ]
     },
     {

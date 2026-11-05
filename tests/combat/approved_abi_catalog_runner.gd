@@ -25,5 +25,9 @@ func _initialize() -> void:
 		ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(current))
 	var templates := ItemTemplateService.load_templates()
 	ok = ok and not templates.has("training_fire_staff_abi003") and not templates.has("training_healer_chest_abi004")
+	var bot_fixtures := TestFixtureLoader.load_json("res://data/test/bot_equipment_templates.json")
+	for template in Array(bot_fixtures.get("templates",[])):
+		for ability_id in Array(Dictionary(template).get("abilities",[])):
+			ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(ability_id))
 	print("APPROVED_ABI_CATALOG_TEST=" + ("PASS" if ok else "FAIL"))
 	quit(0 if ok else 1)
