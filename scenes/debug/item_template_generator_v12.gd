@@ -68,7 +68,7 @@ func _build() -> void:
 		var data: Dictionary = school
 		school_select.add_item(String(data["name"]))
 		school_select.set_item_metadata(school_select.item_count - 1,String(data["id"]))
-	hand_select = _option(settings,"Рука оружия",[["Любая","any"],["Основная (MH)","MH"],["Вторая (OH)","OH"],["Двуручное (2H)","2H"]])
+	hand_select = _option(settings,"Рука оружия",[["Любая","any"],["Основная (MH)","MH"],["Совместимые с OH","OH"],["Двуручное (2H)","2H"]])
 	slot_select = _option(settings,"Слот брони",[["Любой","any"]])
 	for slot in (engine.rules.get("armor_slots",[]) as Array) + ["Кулон","Кольцо","Плащ"]:
 		slot_select.add_item(String(slot))
@@ -90,7 +90,7 @@ func _build() -> void:
 	bulk.custom_minimum_size.y = 52
 	bulk.pressed.connect(_generate_bulk)
 	settings.add_child(bulk)
-	settings.add_child(_label("Массовый тест: уровни 1–100, все доступные редкости; OH и ювелирка исключены. CSV сохраняет все 500 предметов и настройки.",12,Color("#c4d5e4")))
+	settings.add_child(_label("Массовый тест: уровни 1–100, все доступные редкости; отдельные OH-варианты не создаются, ювелирка исключена. CSV сохраняет все 500 предметов и настройки.",12,Color("#c4d5e4")))
 	var tools := HFlowContainer.new()
 	settings.add_child(tools)
 	var save := Button.new()
