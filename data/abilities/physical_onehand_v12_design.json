@@ -65,8 +65,10 @@
       "name": "Глубокий прокол",
       "ap_cost": 2,
       "cooldown_rounds": 5,
-      "damage": "50% average MH per existing target ARMOR_BREACH stack, max 250% at 5",
-      "on_hit": "add ARMOR_BREACH +1 after damage snapshot"
+      "damage": "50% average MH per existing target ARMOR_BREACH stack, max 250% at 5; use pre-conversion breach snapshot",
+      "on_hit": "convert floor(consumed POISON stacks / 2) into ARMOR_BREACH stacks (max 5 total); no breach added on miss/dodge/block",
+      "consume": "all target POISON stacks at cast, even when strike misses; existing ARMOR_BREACH preserved",
+      "notes": "odd POISON count rounds down (1 -> 0, 3 -> 1, 5 -> 2, 10 -> 5)"
     },
     "DAGGER_PEN_04": {
       "name": "Абсолютное пробитие",

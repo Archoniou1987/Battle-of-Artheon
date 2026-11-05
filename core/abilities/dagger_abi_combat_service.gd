@@ -133,7 +133,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var breach_stacks := _active_stacks(target,BREACH,engine.state.round_number,5)
 	# Consume at cast time AFTER snapshotting bonuses and strike count.
 	# Miss/dodge/block cannot refund spent poison. Breach stays for DEF_COMBO.
-	if id in [DEF_COMBO, ATTACK_FLURRY]:
+	if id in [DEF_COMBO, ATTACK_FLURRY, PEN_DEEP]:
 		_remove_effect(target,POISON)
 		action.set_result("poison_stacks_consumed",poison_stacks)
 	var ids: Array[int] = []
@@ -157,7 +157,10 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			var strike := _queue_attack(engine,action,action.target_id,current,_average(current)*0.60,{"dagger_strike_index":i})
 			if strike > 0: ids.append(strike)
 	elif id == PEN_DEEP:
-		var pierce := _queue_attack(engine,action,action.target_id,mh,mh_average*0.50*float(breach_stacks))
+		# Existing breach stacks determine damage; converted poison adds breach only on hit.
+		var converted_breach := mini(5,poison_stacks / 2)
+		action.set_result("breach_stacks_to_apply",converted_breach)
+		var pierce := _queue_attack(engine,action,action.target_id,mh,mh_average*0.50*float(breach_stacks),{"dagger_breach_on_hit":converted_breach})
 		if pierce > 0: ids.append(pierce)
 	elif id == PEN_ABSOLUTE:
 		var extras := {"dagger_armour_bypass_pct":20.0*float(breach_stacks)}
@@ -175,7 +178,10 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 		_effect(engine,attack.source_id,attack.target_id,attack.event_id,BREACH)
 		return
 	if abi == PEN_DEEP:
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,BREACH)
+		# All poison was consumed at cast time. Only connected hits convert it.
+		# The shared-duration EFF401 record caps the total at five stacks.
+		for i in range(int(attack.payload.get("dagger_breach_on_hit",0))):
+			_effect(engine,attack.source_id,attack.target_id,attack.event_id,BREACH)
 		return
 	if abi == PEN_ABSOLUTE:
 		# All hits read one cast-time snapshot; consume only after at least one

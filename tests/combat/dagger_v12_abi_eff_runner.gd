@@ -142,7 +142,7 @@ func _run() -> void:
 		if _cast(penetration,"ABI401"):
 			_check(int(_active(penetration.fighter(false),"EFF401").get("stacks",0)) >= 1,"pen_breach_first")
 		if _cast(penetration,"ABI407"):
-			_check(int(_active(penetration.fighter(false),"EFF401").get("stacks",0)) >= 2,"pen_deep_adds_stack")
+			_check(int(_active(penetration.fighter(false),"EFF401").get("stacks",0)) >= 1,"pen_deep_preserves_existing_breach_without_poison")
 		if _cast(penetration,"ABI408"):
 			_check(_active(penetration.fighter(false),"EFF401").is_empty(),"pen_absolute_consumes_after_hit")
 			_check(_count_abi_attacks(penetration,"ABI408") == 1,"pen_absolute_mh_only")
@@ -183,6 +183,43 @@ func _run() -> void:
 		_check(_active(attack_target,"EFF403").is_empty(),"flurry_consumes_poison_at_cast")
 		consume_attack.engine.resolve_pending_events()
 		_check(_active(attack_target,"EFF403").is_empty(),"flurry_poison_not_restored_by_abi_hits")
+
+
+	# PEN_DEEP converts consumed poison into breach ONLY on connected hits.
+	# Test odd rounding, maximum five stacks and a failed strike.
+	for poison_count in [1, 5, 10]:
+		var convert_session := _make_session("DAGGER_PEN",202611080+poison_count)
+		if convert_session == null:
+			continue
+		convert_session.state.begin_round()
+		var convert_target := convert_session.fighter(false)
+		for index in range(poison_count):
+			var poison_add := convert_session.state.create_event(CombatEvent.Kind.EFFECT,convert_session.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
+			convert_session.engine.resolve_event(poison_add)
+		_check(int(_active(convert_target,"EFF403").get("stacks",0))==poison_count,"pen_conversion_poison_setup_"+str(poison_count))
+		var convert_action := convert_session.state.create_event(CombatEvent.Kind.ACTION,convert_session.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI407","zone":"chest"})
+		DaggerAbiCombatService.dispatch(convert_session.engine,convert_action)
+		var expected_breach := mini(5,poison_count / 2)
+		_check(int(convert_action.result.get("poison_stacks_consumed",-1))==poison_count,"pen_conversion_consumed_"+str(poison_count))
+		_check(_active(convert_target,"EFF403").is_empty(),"pen_conversion_poison_removed_"+str(poison_count))
+		_check(int(convert_action.result.get("breach_stacks_to_apply",-1))==expected_breach,"pen_conversion_expected_"+str(poison_count))
+		# Do not require an ordinary hit: directly resolve one guaranteed connected attack via test rolls.
+		convert_session.ability_scheduler.definitions["ABI407"]["rolls"] = {"hit":1,"dodge":100,"auto_block":100,"crit":100}
+		convert_session.engine.resolve_pending_events()
+		_check(int(_active(convert_target,"EFF401").get("stacks",0))==expected_breach,"pen_conversion_breach_after_hit_"+str(poison_count))
+
+	var missed_conversion := _make_session("DAGGER_PEN",202611099)
+	if missed_conversion != null:
+		missed_conversion.state.begin_round()
+		var missed_target := missed_conversion.fighter(false)
+		for index in range(4):
+			var poison_miss := missed_conversion.state.create_event(CombatEvent.Kind.EFFECT,missed_conversion.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
+			missed_conversion.engine.resolve_event(poison_miss)
+		var miss_action := missed_conversion.state.create_event(CombatEvent.Kind.ACTION,missed_conversion.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI407","zone":"chest","rolls":{"hit":100,"dodge":100,"auto_block":100,"crit":100}})
+		DaggerAbiCombatService.dispatch(missed_conversion.engine,miss_action)
+		_check(_active(missed_target,"EFF403").is_empty(),"pen_miss_consumes_poison")
+		missed_conversion.engine.resolve_pending_events()
+		_check(_active(missed_target,"EFF401").is_empty(),"pen_miss_no_breach")
 
 	print("DAGGER_V12_ABI_EFF=",("PASS" if problems.is_empty() else "FAIL")," problems=",problems)
 	quit(0 if problems.is_empty() else 1)
