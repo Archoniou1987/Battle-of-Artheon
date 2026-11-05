@@ -27,7 +27,7 @@ func _init() -> void:
 	npc.hp = npc.max_hp - 150
 	# Test-only healing payload: do not restore the deleted production ABI004.
 	# The same real scheduler still tests two allies healing in one round.
-	session.ability_scheduler.definitions["TEST_LAB_HEAL""] = {
+	session.ability_scheduler.definitions["TEST_LAB_HEAL"] = {
 		"name":"Тестовое лечение",
 		"delivery_type":"DIRECT","target_scope":"SINGLE","target_team":"ALLY",
 		"uses_magic_hit":false,"application_timing":"standard",
