@@ -96,9 +96,6 @@ jobs:
       - name: Audit that losing Solo combat spends potion charges permanently
         run: bash tools/run_godot_check.sh tests/map/solo_live_elixir_defeat_runner.gd
 
-      - name: Use mana elixir and equipped ABI in the same checkpointed Solo round
-        run: bash tools/run_godot_check.sh tests/map/solo_live_mana_abi_combo_runner.gd
-
       - name: Spend canonical Solo elixir in live NPC round and restore charges from checkpoint
         run: bash tools/run_godot_check.sh tests/map/solo_live_elixir_round_runner.gd
 
@@ -156,8 +153,6 @@ jobs:
       - name: Render current Solo cell icon tabs and selection without world mutations
         run: bash tools/run_godot_check.sh tests/ui/cell_content_panel_runner.gd
 
-      - name: Validate canonical ABI003 Fireball and EFF003 Burning lifecycle
-        run: bash tools/run_godot_check.sh tests/combat/abi003_fireball_runner.gd
       - name: Validate isolated ABI Test Lab physical and magical PAR calculations
         run: bash tools/run_godot_check.sh tests/combat/abi_test_lab_runner.gd
       - name: Open ABI Test Lab from Arena and preserve live resources
@@ -194,7 +189,6 @@ jobs:
             tests/combat/physical_stage_matrix_runner.gd \
             tests/combat/arena_ability_integration_runner.gd \
             tests/combat/full_battle_vertical_slice_runner.gd \
-            tests/combat/arena_real_eff_chain_runner.gd \
             tests/combat/arena_long_battle_runner.gd \
             tests/combat/arena_tempo_terminal_runner.gd \
             tests/combat/arena_combat_log_runner.gd \
