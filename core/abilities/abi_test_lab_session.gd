@@ -107,9 +107,9 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 		return {"ok": false, "reason": "invalid_target_selection"}
 	config["target"] = target_choice
 	state = CombatState.new()
-	var caster := TestFixtureLoader.new_combatant(CASTER_ID, "ABI Lab", caster_level, 10000, 500)
-	var dummy := TestFixtureLoader.new_combatant(DUMMY_ID, "Манекен", dummy_level, 10000, 0)
-	var ally := TestFixtureLoader.new_combatant(ALLY_ID, "Союзник", caster_level, 10000, 0)
+	var caster: CombatantState = TestFixtureLoader.new_combatant(CASTER_ID, "ABI Lab", caster_level, 10000, 500)
+	var dummy: CombatantState = TestFixtureLoader.new_combatant(DUMMY_ID, "Манекен", dummy_level, 10000, 0)
+	var ally: CombatantState = TestFixtureLoader.new_combatant(ALLY_ID, "Союзник", caster_level, 10000, 0)
 	if preset == "LAB_HEAL":
 		var target_max_hp := clampi(int(settings.get("target_max_hp", 10000)), 1, 100000)
 		var starting_hp := clampi(int(settings.get("initial_hp", 5000)), 1, target_max_hp)
@@ -122,7 +122,7 @@ func reset(settings: Dictionary = {}) -> Dictionary:
 	state.add_combatant(ally)
 	for raw_key in par_values:
 		var parts := String(raw_key).split(":")
-		var combatant := caster if parts[0] == "caster" else dummy
+		var combatant: CombatantState = caster if parts[0] == "caster" else dummy
 		if not _set_par(combatant, String(parts[1]), float(par_values[raw_key])):
 			return {"ok": false, "reason": "invalid_PAR", "key": String(raw_key)}
 	dummy.armour = PhysicalArmourService.assemble({}, dummy.combat_stats["par_totals"])
