@@ -103,6 +103,12 @@ func shared_combat_cases() -> void:
 	Engine.print_error_messages = old_errors
 	var direct := CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":7})
 	check(is_equal_approx(float(direct.magic_damage_direct_pct),7.0) and float(direct.magic_damage_rating)==105.0, "direct percentage and absolute SP have independent units")
+	var invalid_abs := view.duplicate(true)
+	invalid_abs["magic_damage_rating"] = NAN
+	var old_absolute_errors := Engine.print_error_messages
+	Engine.print_error_messages = false
+	check(CharacterStatsService.convert_ratings(invalid_abs,hero.progression.level).is_empty(), "reject non-finite absolute Spell Power before combat")
+	Engine.print_error_messages = old_absolute_errors
 	var target := CharacterCombatBuilder.build(CharacterState.new("target", "Target"), ItemRepository.new(), {"health":2000})
 	var state := CombatState.new()
 	state.add_combatant(fighter)

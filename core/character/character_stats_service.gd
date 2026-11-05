@@ -73,6 +73,11 @@ static func convert_ratings(values: Dictionary, level: int, config: Dictionary =
 		if not values.has(key) or not RatingMatrix._number(values[key]):
 			push_error("Missing mandatory rating: " + String(key))
 			return {}
+	# Absolute SP participates in stat validation, not rating conversion.
+	for key in ParCombatContract.ABSOLUTE_STATS.values():
+		if not values.has(key) or not RatingMatrix._number(values[key]):
+			push_error("Missing mandatory absolute Spell Power: " + String(key))
+			return {}
 	var result := values.duplicate(true)
 	for key in config["rating_stats"]:
 		var direct_key := String(key).trim_suffix("_rating") + "_direct_pct"

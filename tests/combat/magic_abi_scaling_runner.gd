@@ -38,6 +38,22 @@ func _initialize() -> void:
 	valid = valid and is_equal_approx(float(unscaled_after.payload.get("amount",-1.0)),37.5)
 	var physical := engine._make_action_component_event(parent,{"kind":"damage","amount":25.0,"damage_type":"physical"},"target",1.0)
 	valid = valid and is_equal_approx(float(physical.payload.get("amount",-1.0)),25.0)
+	# A live absolute SP effect changes both combat and the avatar readout.
+	caster.active_effects.append({
+		"effect_id":"EFF_SP_FLAT",
+		"definition":{"spell_power_flat":100.0},
+		"start_round":state.round_number+1,"remaining_rounds":2
+	})
+	var before_sp := engine._make_action_component_event(parent,boosted,"target",1.0)
+	valid = valid and is_equal_approx(float(before_sp.payload.get("amount",-1.0)),75.0)
+	state.begin_round()
+	var with_sp := engine._make_action_component_event(parent,boosted,"target",1.0)
+	valid = valid and is_equal_approx(float(with_sp.payload.get("amount",-1.0)),112.5)
+	var with_sp_heal := engine._make_action_component_event(parent,{"kind":"heal","amount":30.0,"spell_power_scale":0.5},"caster",1.0)
+	valid = valid and int(with_sp_heal.payload.get("inline_heal",-1))==130
+	var avatar := CombatModifierService.combat_readout(caster,state.round_number)
+	valid = valid and is_equal_approx(float(avatar.get("spell_power",-1.0)),200.0)
+	valid = valid and is_equal_approx(float(caster.combat_stats["par_totals"]["PAR150"]),100.0)
 	var described := AbilityCardText.describe("SP_TEST",{"name":"Scale","components":[boosted],"mana_cost":0,"cooldown_rounds":0})
 	valid = valid and described.contains("0.250 × SP")
 	var wrong_physical := {"components":[{"kind":"damage","amount":25,"damage_type":"physical","spell_power_scale":1.0}]}
