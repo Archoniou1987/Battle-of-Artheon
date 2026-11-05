@@ -329,6 +329,8 @@ func _refresh_detail_values() -> void:
 				rendered += " → DR %.2f%%" % CombatRatingCurves.diminishing(maxf(0.0,raw_pct),"crit_damage")
 		elif par_id in ["PAR164","PAR165","PAR166","PAR167","PAR168","PAR169","PAR170"]:
 			rendered += " (%.2f%%, без DR)" % RatingMatrix.to_percent(total,character.progression.level)
+		elif par_id == "PAR150":
+			rendered += " SP (абсолютно, без DR; ABI требуется K)"
 		elif par_id == "PAR135":
 			var raw_reduction := RatingMatrix.to_percent(total,character.progression.level)
 			rendered += " (%.2f%% → DR %.2f%%)" % [raw_reduction,CombatRatingCurves.diminishing(maxf(0.0,raw_reduction),"reduce")]

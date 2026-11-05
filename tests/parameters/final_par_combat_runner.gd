@@ -95,14 +95,14 @@ func shared_combat_cases() -> void:
 	check(view.hit_chance_rating == 15 and is_equal_approx(view.hit_chance_rating_percent, 5.0), "primary and equipment hit sum before matrix")
 	check(view.crit_damage_rating == 105 and is_equal_approx(view.crit_damage_rating_percent, 21.0), "PAR035 is a rating")
 	check(not view.has("counterattack_rating") and not view.has("counterattack_rating_percent"), "retired PAR075 must not be exposed as a live stat")
-	check(view.magic_damage_rating == 105 and is_equal_approx(view.magic_damage_rating_percent, 21.0), "PAR150 is a rating")
+	check(view.magic_damage_rating == 105 and not view.has("magic_damage_rating_percent"), "PAR150 keeps absolute SP, no RatingMatrix conversion")
 	var old_errors := Engine.print_error_messages
 	Engine.print_error_messages = false
 	for invalid in ["bad", null, NAN, INF]:
 		check(CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":invalid}).is_empty(), "reject invalid snapshot overlay before coercion")
 	Engine.print_error_messages = old_errors
 	var direct := CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":7})
-	check(is_equal_approx(direct.magic_damage_rating_percent, 28.0), "direct percentage is added after conversion")
+	check(is_equal_approx(float(direct.magic_damage_direct_pct),7.0) and float(direct.magic_damage_rating)==105.0, "direct percentage and absolute SP have independent units")
 	var target := CharacterCombatBuilder.build(CharacterState.new("target", "Target"), ItemRepository.new(), {"health":2000})
 	var state := CombatState.new()
 	state.add_combatant(fighter)
@@ -119,7 +119,7 @@ func shared_combat_cases() -> void:
 	check(is_equal_approx(float(observed[0].result.hit_chance), 100.0) and is_equal_approx(float(observed[1].result.hit_chance), 100.0), "one PAR030 and one approved hit baseline for both attack types")
 	check(bool(observed[0].result.critical) and bool(observed[1].result.critical), "PAR033 critical applies to physical and magical attacks")
 	check(is_equal_approx(observed[0].result.raw_damage, 17.1), "existing 1.5 crit plus PAR035 percentage points")
-	check(is_equal_approx(observed[1].result.raw_damage, 20.691), "weapon magic PAR150 and PAR035 each apply once")
+	check(is_equal_approx(observed[1].result.raw_damage, 17.1), "magic attack is not multiplied by PAR150 without an ABI K")
 	var action := AbilityRuntime.build_action_event(state, "caster", "target", "AUDIT_PROJECTILE", {"delivery_type":"PROJECTILE","uses_magic_hit":true,"magic_hit_roll":1,"rolls":{"crit":1},"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]})
 	state.queue_event(action)
 	engine.resolve_pending_events()
@@ -130,9 +130,9 @@ func shared_combat_cases() -> void:
 	check(child != null, "ABI projectile creates an attack")
 	if child != null:
 		check(bool(child.payload.uses_magic_hit) and bool(child.payload.hit_already_resolved), "ABI preserves magic routing and does not reroll hit")
-		check(is_equal_approx(child.result.raw_damage, 20.691), "ABI magic percent is not applied twice")
+		check(is_equal_approx(child.result.raw_damage, 17.1), "ABI with no K does not receive SP or duplicate magic percent")
 	var zero := engine._make_action_component_event(action, {"kind":"damage","amount":0,"damage_type":"fire"}, "target", 1)
-	check(zero.payload.raw_damage == 0, "PAR150 never creates flat damage from zero")
+	check(zero.payload.raw_damage == 0, "a missing ABI K keeps zero-base magic damage at zero")
 	var group := GroupCombatState.new(state)
 	group.add_member("A", "caster")
 	group.add_member("B", "target")
@@ -141,7 +141,7 @@ func shared_combat_cases() -> void:
 	zones.set_zone("caster", CombatZoneState.ZONE_2)
 	zones.set_zone("target", CombatZoneState.ZONE_2)
 	var api := CombatCommandApi.new(state, group, zones, RoundOrchestrator.new(state, engine, group, zones))
-	for id in ParCombatContract.RATINGS.keys() + ["PAR073"]:
+	for id in ParCombatContract.RATINGS.keys() + ParCombatContract.ABSOLUTE_STATS.keys() + ["PAR073"]:
 		var saved: Variant = fighter.combat_stats.par_totals[id]
 		fighter.combat_stats.par_totals.erase(id)
 		check(not bool(ParCombatContract.validate(fighter).ok), "diagnose missing " + id)
@@ -164,6 +164,9 @@ func shared_combat_cases() -> void:
 	fighter.combat_stats.hit_chance_rating += 1
 	check(not bool(ParCombatContract.validate(fighter).ok), "semantic rating cannot diverge from PAR source")
 	fighter.combat_stats.hit_chance_rating -= 1
+	fighter.combat_stats.magic_damage_rating += 1
+	check(not bool(ParCombatContract.validate(fighter).ok), "PAR150 absolute SP cannot diverge from canonical source")
+	fighter.combat_stats.magic_damage_rating -= 1
 	fighter.active_effects.append({"definition":{"magic_damage_direct_pct":NAN},"start_round":state.round_number,"remaining_rounds":1})
 	var saved_print := Engine.print_error_messages
 	Engine.print_error_messages = false
@@ -176,6 +179,8 @@ func shared_combat_cases() -> void:
 func npc_level_cases() -> void:
 	var totals := {"PAR052":0,"PAR057":1,"PAR073":1}
 	for id in ParCombatContract.RATINGS:
+		totals[id] = 100
+	for id in ParCombatContract.ABSOLUTE_STATS:
 		totals[id] = 100
 	var npc := NpcState.new({"id":"audit_npc","name":"NPC","level":1,"base":{"health":100,"mana":0,"par_totals":totals,"par_attack_ranges":{"PAR050":{"min":2,"max":4,"type":"blunt"}},"combat_stats":{"weapon_profiles":[{"slot":"main_hand","damage_min":2,"damage_max":4,"damage_type":"blunt"}]}}})
 	check(is_equal_approx(NpcCombatBuilder.build(npc).combat_stats.crit_chance_rating_percent, 20), "NPC template-level rating")
