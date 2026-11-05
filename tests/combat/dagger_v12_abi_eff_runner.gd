@@ -37,7 +37,7 @@ func _make_session(archetype: String, seed_value: int, dual_wield: bool = false)
 		return null
 	_check(hero.equip("main_hand",String(item.get("instance_id","")),repository),archetype+"_equipped")
 	if dual_wield:
-		var secondary := ItemV12InstanceFactory.grant_weapon(hero,repository,archetype,40,"purple",seed_value+10000)
+		var secondary := ItemV12InstanceFactory.grant_weapon(hero,repository,archetype,40,"purple",seed_value+10000,"OH")
 		_check(not secondary.is_empty(),archetype+"_offhand_generated")
 		if secondary.is_empty():
 			return null
