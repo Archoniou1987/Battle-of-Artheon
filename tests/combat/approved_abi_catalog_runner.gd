@@ -19,6 +19,27 @@ func _initialize() -> void:
 			ok = ok and not definition.is_empty() and AbilityRuntime.validate_definition(String(id),definition).is_empty()
 	for id in expected:
 		ok = ok and defs.has(id)
+	# Every approved ABI must retain its weapon-family dispatch mode, and
+	# all referenced EFF definitions must exist before runtime application.
+	var effect_defs := EffectCatalog.load_json()
+	for id in expected:
+		var approved: Dictionary = defs.get(id,{})
+		var family_field := "sword_ability_mode"
+		if id.begins_with("ABI4"):
+			family_field = "dagger_ability_mode"
+		elif id.begins_with("ABI5"):
+			family_field = "axe_ability_mode"
+		elif id.begins_with("ABI6"):
+			family_field = "hammer_ability_mode"
+		ok = ok and not String(approved.get(family_field,"")).is_empty()
+		for effect_field in ["effect_id","sword_eff_id","eff"]:
+			var effect_id := String(approved.get(effect_field,""))
+			if not effect_id.is_empty():
+				ok = ok and not EffectCatalog.definition(effect_defs,effect_id).is_empty()
+		for component in Array(approved.get("components",[])):
+			if component is Dictionary and String(component.get("kind","")) == "effect":
+				var effect_id := String(component.get("effect_id",""))
+				ok = ok and not effect_id.is_empty() and not EffectCatalog.definition(effect_defs,effect_id).is_empty()
 	for retired in ["ABI001","ABI002","ABI003","ABI004","ABI005","ABI006","ABI300","ABI309","ABI400","ABI409","ABI500","ABI509","ABI600","ABI607","ABI700"]:
 		ok = ok and not defs.has(retired) and AbilityCatalog.is_retired_numbered_abi(retired)
 	for current in expected:
