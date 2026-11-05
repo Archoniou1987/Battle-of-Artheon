@@ -14,6 +14,7 @@ func _init() -> void:
 	_defence_priority()
 	_critical_before_armour()
 	_v12_critical_damage_diminishing()
+	_v12_par135_damage_reduction()
 	_v12_chance_diminishing()
 	_v12_active_effects_affect_combat()
 	_typed_and_flat_penetration()
@@ -38,6 +39,7 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 		totals["PAR132"] = float(settings["typed_pen"])
 		actor.combat_stats["par_totals"] = totals
 	victim.combat_stats["dodge_rating_percent"] = float(settings.get("dodge", 0.0))
+	victim.combat_stats["damage_reduction_pct"] = float(settings.get("reduction_rating",0.0))
 	victim.combat_stats["anti_crit_rating_percent"] = float(settings.get("anti_crit", 0.0))
 	victim.combat_stats["shield_auto_block_rating_percent"] = float(settings.get("auto", 0.0))
 	victim.combat_stats["manual_block_zones"] = ["chest"] if bool(settings.get("manual", false)) else []
@@ -110,6 +112,24 @@ func _v12_critical_damage_diminishing() -> void:
 	_check(bool(attack.result.get("critical",false)),"v12_crit_damage_is_critical")
 	_check(is_equal_approx(float(attack.result.get("crit_damage_bonus_after_dr_pct",-1)),90.0),"v12_crit_damage_bonus_dr90")
 	_check(is_equal_approx(float(attack.result.get("raw_damage",-1)),240.0),"v12_crit_damage_baseline150_plus90")
+
+func _v12_par135_damage_reduction() -> void:
+	# A physical attack is ultimately reduced by the converted PAR135,
+	# after zone armour. 100 rating at Lv1 = 20% raw and 15% after DR.
+	var protected := _scenario({"level":1,"reduction_rating":100.0})
+	var baseline := _scenario({"level":1})
+	var protection_event: CombatEvent = protected["attack"]
+	_check(String(protection_event.result.get("outcome",""))=="connected","par135_attack_connected")
+	_check((protected["victim"] as CombatantState).hp==915,"par135_final_85_damage")
+	_check((baseline["victim"] as CombatantState).hp==900,"par135_baseline_100_damage")
+	var result_damage: CombatEvent = null
+	for logged in (protected["state"] as CombatState).event_log:
+		if logged.kind==CombatEvent.Kind.DAMAGE and logged.parent_event_id==protection_event.event_id:
+			result_damage=logged
+	if result_damage!=null:
+		_check(is_equal_approx(float(result_damage.result.get("damage_reduction",-1.0)),0.15),"par135_damage_packet_15pct")
+	else:
+		_check(false,"par135_damage_event_exists")
 
 func _v12_chance_diminishing() -> void:
 	# Independent approved v1.2 numerical anchors, before probability rolls.
