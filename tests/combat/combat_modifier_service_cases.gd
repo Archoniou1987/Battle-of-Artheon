@@ -133,7 +133,7 @@ static func _case_v12_crit_damage_bonus_dr() -> bool:
 		and is_equal_approx(float(CombatModifierService.combat_readout(fighter,1).get("crit_damage_after_dr_pct",-1)),90.0)
 	)
 
-static func _case_manual_block_accessors_use_par073() -> void:
+static func _case_manual_block_accessors_use_par073() -> bool:
 	var combatant := _combatant()
 	combatant.combat_stats["par_totals"]["PAR073"] = 2
 	combatant.combat_stats["manual_block_zones"] = ["head", "chest"]
