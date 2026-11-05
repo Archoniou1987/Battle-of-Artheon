@@ -7,16 +7,23 @@ func _init() -> void:
 	print("ARENA_COMBAT_LOG_TEST=", "PASS" if success else "FAIL")
 	quit(0 if success else 1)
 
+static func _test_catalog() -> Dictionary:
+	# Pure event-log fixtures. These IDs never exist in production catalog.
+	var definitions := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	definitions["TEST_LOG_MAGIC"] = {"name":"Тест магии"}
+	definitions["TEST_LOG_HEAL"] = {"name":"Тест лечения"}
+	return definitions
+
 func _test_event_ancestry() -> bool:
 	var state := CombatState.new()
 	state.begin_round()
-	var cast := state.create_event(CombatEvent.Kind.ACTION,"hero","enemy",{"source_kind":"ability","ability_id":"ABI003"})
+	var cast := state.create_event(CombatEvent.Kind.ACTION,"hero","enemy",{"source_kind":"ability","ability_id":"TEST_LOG_MAGIC"})
 	cast.set_result("outcome","dispatched")
-	var projectile := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"source_kind":"ability","ability_id":"ABI003"},cast.event_id)
+	var projectile := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"source_kind":"ability","ability_id":"TEST_LOG_MAGIC"},cast.event_id)
 	projectile.set_result("outcome","connected")
-	var spell_damage := state.create_event(CombatEvent.Kind.DAMAGE,"hero","enemy",{"ability_id":"ABI003","amount":23.0},projectile.event_id)
+	var spell_damage := state.create_event(CombatEvent.Kind.DAMAGE,"hero","enemy",{"ability_id":"TEST_LOG_MAGIC","amount":23.0},projectile.event_id)
 	spell_damage.set_result("hp_removed",23)
-	var ignite := state.create_event(CombatEvent.Kind.EFFECT,"hero","enemy",{"effect_id":"EFF003","ability_id":"ABI003"},cast.event_id)
+	var ignite := state.create_event(CombatEvent.Kind.EFFECT,"hero","enemy",{"effect_id":"EFF003","ability_id":"TEST_LOG_MAGIC"},cast.event_id)
 	ignite.set_result("resolved",true)
 	var blade := state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{"is_weapon_attack":true,"zone":"arms"})
 	blade.set_result("outcome","connected")
@@ -26,15 +33,15 @@ func _test_event_ancestry() -> bool:
 	dot.set_result("hp_removed",3)
 	for event in [cast,projectile,spell_damage,ignite,blade,blade_damage,dot]:
 		state.record_event(event)
-	var logs: Array[String] = ArenaCombatLog.lines_for_round(state.event_log,1,"hero",AbilityCatalog.load_json("res://data/abilities/catalog.json"))
+	var logs: Array[String] = ArenaCombatLog.lines_for_round(state.event_log,1,"hero",_test_catalog())
 	if logs.size()!=3:
 		print("ARENA_LOG_ANCESTRY_BAD_COUNT=",logs)
 		return false
 	var spell_line: String = logs[0]
 	var weapon_line: String = logs[1]
 	var tick_line: String = logs[2]
-	var good: bool = spell_line.contains("ABI «Fireball»") and spell_line.contains("23 урона") and spell_line.contains("EFF003")
-	good = good and weapon_line.contains("руки") and weapon_line.contains("7 урона") and not weapon_line.contains("Fireball")
+	var good: bool = spell_line.contains("ABI «Тест магии»") and spell_line.contains("23 урона") and spell_line.contains("EFF003")
+	good = good and weapon_line.contains("руки") and weapon_line.contains("7 урона") and not weapon_line.contains("Тест магии")
 	good = good and tick_line.contains("EFF003") and tick_line.contains("3 урона")
 	if not good:
 		print("ARENA_LOG_ANCESTRY_WRONG=",logs)
@@ -43,22 +50,22 @@ func _test_event_ancestry() -> bool:
 func _test_heal_cleanse_and_miss() -> bool:
 	var state := CombatState.new()
 	state.begin_round()
-	var heal := state.create_event(CombatEvent.Kind.ACTION,"hero","hero",{"source_kind":"ability","ability_id":"ABI004"})
+	var heal := state.create_event(CombatEvent.Kind.ACTION,"hero","hero",{"source_kind":"ability","ability_id":"TEST_LOG_HEAL"})
 	heal.set_result("outcome","dispatched")
-	var heal_child := state.create_event(CombatEvent.Kind.EFFECT,"hero","hero",{"inline_heal":40,"ability_id":"ABI004"},heal.event_id)
+	var heal_child := state.create_event(CombatEvent.Kind.EFFECT,"hero","hero",{"inline_heal":40,"ability_id":"TEST_LOG_HEAL"},heal.event_id)
 	heal_child.set_result("healed",40)
-	var hot_child := state.create_event(CombatEvent.Kind.EFFECT,"hero","hero",{"effect_id":"EFF004","ability_id":"ABI004"},heal.event_id)
+	var hot_child := state.create_event(CombatEvent.Kind.EFFECT,"hero","hero",{"effect_id":"EFF004","ability_id":"TEST_LOG_HEAL"},heal.event_id)
 	hot_child.set_result("resolved",true)
 	var cleanse := state.create_event(CombatEvent.Kind.ACTION,"hero","enemy",{"source_kind":"ability","ability_id":"ABI_CLEANSE"})
 	cleanse.set_result("outcome","dispatched")
 	var dispel := state.create_event(CombatEvent.Kind.EFFECT,"hero","enemy",{"dispel_polarity":"BUFF","ability_id":"ABI_CLEANSE"},cleanse.event_id)
 	dispel.set_result("resolved",true)
 	dispel.set_result("removed_effect_ids",["EFF004"])
-	var failed := state.create_event(CombatEvent.Kind.ACTION,"enemy","hero",{"source_kind":"ability","ability_id":"ABI003"})
+	var failed := state.create_event(CombatEvent.Kind.ACTION,"enemy","hero",{"source_kind":"ability","ability_id":"TEST_LOG_MAGIC"})
 	failed.set_result("outcome","magic_miss")
 	for event in [heal,heal_child,hot_child,cleanse,dispel,failed]:
 		state.record_event(event)
-	var logs: Array[String] = ArenaCombatLog.lines_for_round(state.event_log,1,"hero",AbilityCatalog.load_json("res://data/abilities/catalog.json"))
+	var logs: Array[String] = ArenaCombatLog.lines_for_round(state.event_log,1,"hero",_test_catalog())
 	var good: bool = logs.size()==3
 	if good:
 		good = logs[0].contains("+40 HP") and logs[0].contains("EFF004")
@@ -95,7 +102,7 @@ func _test_dagger_crit_and_flurry_hits() -> bool:
 	single_damage.set_result("hp_removed",90)
 	for event in [flurry,first,first_damage,second,third,third_damage,single,single_hit,single_damage]:
 		state.record_event(event)
-	var logs := ArenaCombatLog.lines_for_round(state.event_log,1,"hero",AbilityCatalog.load_json("res://data/abilities/catalog.json"))
+	var logs := ArenaCombatLog.lines_for_round(state.event_log,1,"hero",_test_catalog())
 	var good := logs.size() == 5
 	if good:
 		good = logs[0].contains("127 урона") and logs[1].contains("Удар 1 (MH") and logs[1].contains("87 урона (крит)")
