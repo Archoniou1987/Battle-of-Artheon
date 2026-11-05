@@ -19,7 +19,7 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 			continue
 		for raw_id in item.get("abilities", []):
 			var ability_id := String(raw_id)
-			if ability_id.is_empty() or seen.has(ability_id) or weapon_index >= MAX_WEAPON_ABILITIES:
+			if ability_id.is_empty() or AbilityCatalog.is_retired_numbered_abi(ability_id) or seen.has(ability_id) or weapon_index >= MAX_WEAPON_ABILITIES:
 				continue
 			weapon[weapon_index] = ability_id
 			seen[ability_id] = true
@@ -52,5 +52,5 @@ static func _first_unique_ability(slot: String, character: CharacterState, repos
 		return null
 	for raw_id in item.get("abilities", []):
 		var ability_id := String(raw_id)
-		if not ability_id.is_empty() and not seen.has(ability_id): return ability_id
+		if not ability_id.is_empty() and not AbilityCatalog.is_retired_numbered_abi(ability_id) and not seen.has(ability_id): return ability_id
 	return null

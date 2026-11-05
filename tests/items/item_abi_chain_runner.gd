@@ -52,6 +52,13 @@ func _init() -> void:
 				ok = ok and real_effects is Dictionary and Dictionary(real_effects).has(String(Dictionary(component).get("effect_id","")))
 	ok = ok and not ItemTemplateService.load_templates().has("training_fire_staff_abi003")
 	ok = ok and not ItemTemplateService.load_templates().has("training_healer_chest_abi004")
+	# Retired ID in a historical item save remains stored for archaeology,
+	# but cannot leak into a playable ability slot.
+	var stale_item := repository.get_item("ABI-SWORD-1")
+	stale_item["abilities"] = ["ABI003","TEST_ABI_FIREBALL"]
+	ok = ok and repository.update_item(stale_item)
+	var cleaned := EquipmentAbilityLoadout.active_abilities(hero,repository)
+	ok = ok and cleaned.has("TEST_ABI_FIREBALL") and not cleaned.has("ABI003")
 	print("ITEM_ABI_PRODUCTION_TEMPLATES=",actual_abilities," effects_valid=",ok)
 	print("ITEM_ABI_CHAIN weapon=", slots.get("weapon", []), " chest=", slots.get("chest", []), " head=", slots.get("head", []))
 	print("ITEM_ABI_CHAIN duplicate_deduped=", duplicate_deduped, " active=", active, " oh_excluded=", oh_excluded)
