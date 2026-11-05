@@ -105,12 +105,21 @@ static func typed_armour_penetration_percent(combatant: CombatantState, damage_t
 	var percent := float(totals.get(key, 0.0)) + modifier(combatant, "armour_pen_" + damage_type.to_lower(), round_number)
 	return clampf(percent / 100.0, 0.0, 1.0)
 
+## PAR035 bonus is a rating. Item/direct percentages are summed before
+## v1.2 critical-damage diminishing; the 1.5x base crit is unaffected.
+static func crit_damage_bonus(combatant: CombatantState, round_number: int, ability_bonus_pct: float = 0.0) -> float:
+	var raw_bonus := effective_percent(combatant,"crit_damage_rating",round_number)+ability_bonus_pct
+	return maxf(0.0,CombatRatingCurves.diminishing(raw_bonus,"crit_damage"))
+
 static func damage_reduction(combatant: CombatantState, round_number: int) -> float:
-	# PAR135 is a percentage (e.g. 20 = 20%); runtime overlays retain
-	# their existing fractional damage_reduction contract.
-	var par_percent := value(combatant, "damage_reduction_pct", round_number)
-	var runtime_fraction := value(combatant, "damage_reduction", round_number)
-	return clampf(par_percent / 100.0 + runtime_fraction, 0.0, 1.0)
+	# PAR135 is a RATING, not direct percentage points. Convert by owner
+	# level then apply 5/35/1 DR. Legacy EFF/TRA 'damage_reduction' overlays
+	# are explicit fractions and stay distinct from the item PAR budget.
+	var par_rating := value(combatant,"damage_reduction_pct",round_number)
+	var raw_par_percent := RatingMatrix.to_percent(par_rating,combatant.level)
+	var par_after_dr := CombatRatingCurves.diminishing(maxf(0.0,raw_par_percent),"reduce")
+	var direct_fraction := value(combatant,"damage_reduction",round_number)
+	return clampf(par_after_dr/100.0+direct_fraction,0.0,1.0)
 
 static func manual_block_zone_capacity(combatant: CombatantState) -> int:
 	var totals: Variant = combatant.combat_stats.get("par_totals")
@@ -193,6 +202,9 @@ static func combat_readout(combatant: CombatantState, round_number: int) -> Dict
 	result["dodge_after_dr_pct"] = CombatMath.effective_dodge(effective_percent(combatant,"dodge_rating",round_number),0.0)
 	result["auto_block_after_dr_pct"] = block_chance(combatant,round_number)
 	result["crit_abi_bonus_pct"] = modifier(combatant,"crit_bonus",round_number)
+	result["crit_damage_after_dr_pct"] = crit_damage_bonus(combatant,round_number)
+	result["damage_reduction_par_after_dr_pct"] = CombatRatingCurves.diminishing(
+		maxf(0.0,RatingMatrix.to_percent(value(combatant,"damage_reduction_pct",round_number),combatant.level)),"reduce")
 	result["physical_outgoing_bonus_pct"] = modifier(combatant,"physical_damage_outgoing_direct_pct",round_number)
 	var elemental_resists := {}
 	for school in ["fire","water","air","earth","dark","light"]:

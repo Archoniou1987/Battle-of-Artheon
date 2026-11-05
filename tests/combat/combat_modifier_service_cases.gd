@@ -10,6 +10,8 @@ static func run() -> bool:
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
+		and _case_v12_par135_rating_age_and_dr()
+		and _case_v12_crit_damage_bonus_dr()
 		and _case_manual_block_accessors_use_par073()
 		and _case_equipped_item_types_accessor_copies_values()
 		and _case_effect_trigger_accessors_copy_values()
@@ -111,7 +113,27 @@ static func _case_damage_reduction_uses_runtime_overlay() -> bool:
 	})
 	return is_equal_approx(CombatModifierService.damage_reduction(combatant, 1), 1.0)
 
-static func _case_manual_block_accessors_use_par073() -> bool:
+static func _case_v12_par135_rating_age_and_dr() -> bool:
+	var lv1 := TestFixtureLoader.new_combatant("par135_lv1","Damage Reduction 1",1,100)
+	var lv100 := TestFixtureLoader.new_combatant("par135_lv100","Damage Reduction 100",100,100)
+	for target in [lv1,lv100]:
+		target.combat_stats["damage_reduction_pct"] = 100.0
+	var first := CombatModifierService.damage_reduction(lv1,1)
+	var last := CombatModifierService.damage_reduction(lv100,1)
+	# Rating 100 -> 20% at L1; DR 5/35/1 maps 20 -> 15.
+	return is_equal_approx(first,0.15) and is_equal_approx(last,0.04) and first>last
+
+static func _case_v12_crit_damage_bonus_dr() -> bool:
+	var fighter := TestFixtureLoader.new_combatant("crit_dr","Crit Damage",1,100)
+	fighter.combat_stats["crit_damage_rating_percent"] = 100.0
+	return (
+		is_equal_approx(CombatModifierService.crit_damage_bonus(fighter,1),90.0)
+		and is_equal_approx(CombatModifierService.crit_damage_bonus(fighter,1,25.0),CombatRatingCurves.diminishing(125.0,"crit_damage"))
+		and CombatModifierService.crit_damage_bonus(fighter,1,10000.0)<250.0
+		and is_equal_approx(float(CombatModifierService.combat_readout(fighter,1).get("crit_damage_after_dr_pct",-1)),90.0)
+	)
+
+static func _case_manual_block_accessors_use_par073() -> void:
 	var combatant := _combatant()
 	combatant.combat_stats["par_totals"]["PAR073"] = 2
 	combatant.combat_stats["manual_block_zones"] = ["head", "chest"]

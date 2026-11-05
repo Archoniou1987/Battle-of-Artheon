@@ -325,6 +325,11 @@ func _refresh_detail_values() -> void:
 				rendered += " → DR %.2f%%" % CombatMath.effective_dodge(raw_pct,0.0)
 			elif par_id == "PAR033":
 				rendered += " → DR %.2f%%" % CombatMath.effective_crit(raw_pct,0.0)
+			elif par_id == "PAR035":
+				rendered += " → DR %.2f%%" % CombatRatingCurves.diminishing(maxf(0.0,raw_pct),"crit_damage")
+		elif par_id == "PAR135":
+			var raw_reduction := RatingMatrix.to_percent(total,character.progression.level)
+			rendered += " (%.2f%% → DR %.2f%%)" % [raw_reduction,CombatRatingCurves.diminishing(maxf(0.0,raw_reduction),"reduce")]
 		elif par_id == "PAR071":
 			var block_pct := float(stats.get("shield_auto_block_rating_percent",0.0))
 			rendered += " (%.2f%% → DR %.2f%%)" % [block_pct,CombatRatingCurves.diminishing(block_pct,"block")]

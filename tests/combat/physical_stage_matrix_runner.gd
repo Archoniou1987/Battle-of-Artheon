@@ -13,6 +13,7 @@ func _check(condition: bool, id: String) -> void:
 func _init() -> void:
 	_defence_priority()
 	_critical_before_armour()
+	_v12_critical_damage_diminishing()
 	_v12_chance_diminishing()
 	_v12_active_effects_affect_combat()
 	_typed_and_flat_penetration()
@@ -27,6 +28,7 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	var actor := TestFixtureLoader.new_combatant("matrix_actor", "Attacker", test_level, 1000)
 	var victim := TestFixtureLoader.new_combatant("matrix_victim", "Defender", test_level, 1000)
 	actor.combat_stats["crit_chance_rating_percent"] = float(settings.get("crit", 0.0))
+	actor.combat_stats["crit_damage_rating_percent"] = float(settings.get("crit_damage_bonus",0.0))
 	actor.combat_stats["anti_dodge_rating_percent"] = float(settings.get("anti_dodge", 0.0))
 	actor.combat_stats["block_crush"] = float(settings.get("crush", 0.0))
 	actor.combat_stats["armour_penetration_percent"] = float(settings.get("general_pen", 0.0))
@@ -101,6 +103,13 @@ func _critical_before_armour() -> void:
 	_check(not bool(normal_event.result.get("critical", true)) and bool(crit_event.result.get("critical", false)), "critical_roll_control")
 	_check(is_equal_approx(float(crit_event.result.get("raw_damage", 0.0)), 1.5 * float(normal_event.result.get("raw_damage", 0.0))), "critical_before_mitigation")
 	_check(float(crit_event.result.get("after_armour_damage", 0.0)) > float(normal_event.result.get("after_armour_damage", 0.0)), "crit_survives_armour")
+
+func _v12_critical_damage_diminishing() -> void:
+	var crit := _scenario({"crit":100.0,"crit_roll":1,"crit_damage_bonus":100.0})
+	var attack: CombatEvent = crit["attack"]
+	_check(bool(attack.result.get("critical",false)),"v12_crit_damage_is_critical")
+	_check(is_equal_approx(float(attack.result.get("crit_damage_bonus_after_dr_pct",-1)),90.0),"v12_crit_damage_bonus_dr90")
+	_check(is_equal_approx(float(attack.result.get("raw_damage",-1)),240.0),"v12_crit_damage_baseline150_plus90")
 
 func _v12_chance_diminishing() -> void:
 	# Independent approved v1.2 numerical anchors, before probability rolls.

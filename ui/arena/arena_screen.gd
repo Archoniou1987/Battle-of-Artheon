@@ -945,7 +945,7 @@ func _show_fighter_details(is_player: bool) -> void:
 		lines.append("Крит (до антикрита цели): %.2f%%" % float(readout.get("crit_after_dr_pct",0.0)))
 		lines.append("Уклонение (до антиуворота): %.2f%%" % float(readout.get("dodge_after_dr_pct",0.0)))
 		lines.append("Автоблок: %.2f%%" % float(readout.get("auto_block_after_dr_pct",0.0)))
-		lines.append("Критический урон (добавка): %.2f%%" % float(readout.get("crit_damage_rating_percent",0.0)))
+		lines.append("Критический урон (добавка после DR): %.2f%%" % float(readout.get("crit_damage_after_dr_pct",0.0)))
 		lines.append("Магический урон (текущая шкала): %.2f%%" % float(readout.get("magic_damage_rating_percent",0.0)))
 		var physical_bonus := float(readout.get("physical_outgoing_bonus_pct",0.0))
 		lines.append("Модификатор физ. урона: %s%.2f%%" % ["+" if physical_bonus>=0.0 else "",physical_bonus])

@@ -374,8 +374,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 	if CombatDamagePayload.is_magic_damage_type(String(event.payload.get("damage_type", ""))) and not bool(event.payload.get("magic_rating_applied", false)):
 		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.effective_percent(attacker, "magic_damage_rating", state.round_number) / 100.0)
 	if is_crit:
-		var critical_rating_bonus := CombatModifierService.effective_percent(attacker, "crit_damage_rating", state.round_number)
-		raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5)) + (critical_rating_bonus + float(event.payload.get("sword_crit_damage_pct",0.0))) / 100.0
+		var ability_critical_bonus := float(event.payload.get("sword_crit_damage_pct",0.0))
+		var critical_rating_bonus := CombatModifierService.crit_damage_bonus(attacker,state.round_number,ability_critical_bonus)
+		raw_damage *= float(physical_balance.get("crit_damage_multiplier",1.5)) + critical_rating_bonus/100.0
+		event.set_result("crit_damage_bonus_after_dr_pct",critical_rating_bonus)
 	if _event_bypasses_physical_mitigation(event):
 		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, CombatDamagePayload.direct_damage_payload(event, String(event.payload.get("damage_type", "physical")), raw_damage, "ability"), event.event_id)
 		state.queue_event(ability_damage)
