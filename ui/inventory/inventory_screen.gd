@@ -561,8 +561,45 @@ func _refresh_combat_stats() -> void:
 	hp_bar.value = snapshot.hp
 	_set_hp_colour(float(snapshot.hp) / float(maxi(1, snapshot.max_hp)))
 	(stat_rows["Мана"] as Label).text = "%d / %d" % [snapshot.mana, snapshot.max_mana]
+	# All display values are projected from the same CombatantState used by
+	# the Arena. They are not a second calculation of equipment or EFF.
+	var current := CombatModifierService.combat_readout(snapshot,1)
+	var combat: Dictionary = snapshot.combat_stats
+	var profiles: Array = combat.get("weapon_profiles",[])
+	var damage_lines: Array[String] = []
+	for raw_profile in profiles:
+		if not raw_profile is Dictionary:
+			continue
+		var profile: Dictionary = raw_profile
+		var hand := "OH" if String(profile.get("slot",""))=="off_hand" else "MH"
+		damage_lines.append("%s %.1f–%.1f" % [hand,float(profile.get("damage_min",0.0)),float(profile.get("damage_max",0.0))])
+	if not damage_lines.is_empty():
+		(stat_rows["Урон оружия"] as Label).text = " / ".join(damage_lines)
+	(stat_rows["Попадание"] as Label).text = "+%.2f%%" % float(current.get("hit_chance_rating_percent",0.0))
+	(stat_rows["Попадание"] as Label).tooltip_text = "Бонус рейтинга; полный шанс зависит от уровня цели, навыка оружия и дистанции"
+	(stat_rows["Крит"] as Label).text = "%.2f%%" % float(current.get("crit_after_dr_pct",0.0))
+	(stat_rows["Крит"] as Label).tooltip_text = "После DR; антикрит конкретного противника применяется только в бою"
+	(stat_rows["Уклонение"] as Label).text = "%.2f%%" % float(current.get("dodge_after_dr_pct",0.0))
+	(stat_rows["Уклонение"] as Label).tooltip_text = "После DR; антиуворот конкретного противника применяется только в бою"
+	(stat_rows["Блок"] as Label).text = "%.2f%% / %d зон" % [float(current.get("auto_block_after_dr_pct",0.0)),int(current.get("manual_block_zone_capacity",0))]
+	(stat_rows["Блок"] as Label).tooltip_text = "Автоматический блок после DR / количество зон ручного блока"
+	(stat_rows["Магический урон"] as Label).text = "%.2f%%" % float(current.get("magic_damage_rating_percent",0.0))
+	(stat_rows["Магический урон"] as Label).tooltip_text = "Текущий процентный контракт PAR150; перевод в абсолютный SP — отдельный этап аудита"
+	# PAR151-157 are registry entries but not yet wired as separate
+	# outgoing damage modifiers. Do not fabricate a working percentage.
+	(stat_rows["Усиление стихий"] as Label).text = "—"
+	(stat_rows["Усиление стихий"] as Label).tooltip_text = "Отдельные PAR151–157 ещё не подключены к боевой формуле"
+	var registry_totals: Dictionary = combat.get("par_totals",{})
+	(stat_rows["Общее сопротивление"] as Label).text = "PAR190: %s" % str(registry_totals.get("PAR190",0))
+	(stat_rows["Общее сопротивление"] as Label).tooltip_text = "Исходный рейтинг; итоговый процент рассчитывается для каждой стихии отдельно"
+	var elemental: Dictionary = current.get("elemental_resists_pct",{})
+	(stat_rows["Сопротивления стихиям"] as Label).text = "О %.1f%% · В %.1f%% · Воз %.1f%% · З %.1f%% · Т %.1f%% · С %.1f%%" % [
+		float(elemental.get("fire",0)),float(elemental.get("water",0)),float(elemental.get("air",0)),
+		float(elemental.get("earth",0)),float(elemental.get("dark",0)),float(elemental.get("light",0))]
+	(stat_rows["Сопротивления стихиям"] as Label).tooltip_text = "Проценты по текущей формуле Combat Engine; магический DR будет аудирован отдельно"
 	if not snapshot.armour.is_empty():
-		(stat_rows["Броня по зонам"] as Label).text = str(snapshot.armour)
+		(stat_rows["Броня по зонам"] as Label).text = "5 зон (по типам)"
+		(stat_rows["Броня по зонам"] as Label).tooltip_text = JSON.stringify(snapshot.armour)
 
 func _set_hp_colour(remaining_fraction: float) -> void:
 	if hp_bar == null:
