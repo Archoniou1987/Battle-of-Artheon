@@ -304,7 +304,8 @@ func _add_primary_bonuses(stats: Dictionary, item: Dictionary) -> void:
 			continue
 		for par_id in progression.base_stats:
 			if bonuses.has(par_id):
-				var in_off_hand: bool = String(equipment.get_equipped_instance_id("off_hand")) == String(item.get("instance_id",""))
+				var off_hand_id: Variant = equipment.get_equipped_instance_id("off_hand")
+				var in_off_hand: bool = off_hand_id != null and String(off_hand_id) == String(item.get("instance_id", ""))
 				var factor := WeaponHandPolicy.par_multiplier(String(par_id),in_off_hand)
 				stats[par_id] = int(stats[par_id]) + int(float(bonuses[par_id])*factor)
 
