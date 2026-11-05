@@ -30,7 +30,8 @@ static func _case_magic_damage_resist(balance:Dictionary) -> bool:
 	_set_resist_percent(state.get_combatant("target"), "PAR191", 40.0)
 	var event := state.create_event(CombatEvent.Kind.DAMAGE,"source","target",{"amount":10.0,"damage_type":"fire"})
 	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
-	return state.get_combatant("target").hp == 94 and is_equal_approx(float(event.result.get("magic_resist",0.0)),0.40)
+	var expected := CombatRatingCurves.diminishing(40.0,"magic_res")/100.0
+	return state.get_combatant("target").hp == 94 and is_equal_approx(float(event.result.get("magic_resist",0.0)),expected)
 
 static func _effect_event(state:CombatState, chance:float, roll:int) -> CombatEvent:
 	return state.create_event(CombatEvent.Kind.EFFECT,"source","target",{
@@ -42,14 +43,16 @@ static func _case_effect_chance_100_to_60(balance:Dictionary) -> bool:
 	_set_resist_percent(state.get_combatant("target"), "PAR192", 40.0)
 	var event := _effect_event(state,100.0,60)
 	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
-	return bool(event.result.get("resolved",false)) and is_equal_approx(float(event.result.get("effective_chance",0.0)),60.0)
+	var expected := 100.0-CombatRatingCurves.diminishing(40.0,"magic_res")
+	return bool(event.result.get("resolved",false)) and is_equal_approx(float(event.result.get("effective_chance",0.0)),expected)
 
 static func _case_effect_chance_80_to_48(balance:Dictionary) -> bool:
 	var state := _state()
 	_set_resist_percent(state.get_combatant("target"), "PAR192", 40.0)
 	var event := _effect_event(state,80.0,49)
 	CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance).resolve_event(event)
-	return not bool(event.result.get("resolved",true)) and String(event.result.get("outcome","")) == "resisted" and is_equal_approx(float(event.result.get("effective_chance",0.0)),48.0)
+	var expected := 80.0*(1.0-CombatRatingCurves.diminishing(40.0,"magic_res")/100.0)
+	return not bool(event.result.get("resolved",true)) and String(event.result.get("outcome","")) == "resisted" and is_equal_approx(float(event.result.get("effective_chance",0.0)),expected)
 
 static func _case_effect_immunity(balance:Dictionary) -> bool:
 	var state := _state()

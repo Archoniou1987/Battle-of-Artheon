@@ -152,18 +152,23 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	if not totals is Dictionary:
 		push_error("Magic resistance requires canonical PAR totals")
 		return 0.0
-	var rating := float(totals.get("PAR190", 0.0)) + float(totals.get(ELEMENT_PAR[key], 0.0))
-	var percent := RatingMatrix.to_percent(rating, combatant.level)
-	if not is_finite(percent):
+	# General PAR190 and school-specific PAR191-196 are sequential layers.
+	# Combine both RAW percentages, then run the v1.2 magic DR ONCE so
+	# the final resistance never bypasses its 85.1% asymptotic cap.
+	var general_raw := RatingMatrix.to_percent(float(totals.get("PAR190",0.0)),combatant.level)
+	var school_raw := RatingMatrix.to_percent(float(totals.get(ELEMENT_PAR[key],0.0)),combatant.level)
+	if not is_finite(general_raw) or not is_finite(school_raw):
 		push_error("Invalid magic resistance rating")
 		return 0.0
-	# Existing EFF overlay contributes direct percentage points, not PAR rating.
-	# The CombatEngine damage formula remains unchanged.
-	var effect_bonus: float = modifier(combatant, key + "_resist_direct_pct", round_number)
-	# Passive hammer charges: 0.25 percentage points to elemental resistance
-	# per charge, max +25; do not alter underlying magic PAR ratings.
-	var charge_resist := 0.25*float(HammerAbiCombatService.charges(combatant,round_number))
-	return clampf((percent + effect_bonus + charge_resist) / 100.0, 0.0, 1.0)
+	# EFF is a percentage-point overlay for this school; hammer charges
+	# contribute +0.25 p.p. per charge to the same raw school layer.
+	var school_bonus := modifier(combatant,key+"_resist_direct_pct",round_number)
+	var charge_bonus := 0.25*float(HammerAbiCombatService.charges(combatant,round_number))
+	var general_fraction := clampf(general_raw/100.0,0.0,1.0)
+	var school_fraction := clampf((school_raw+school_bonus+charge_bonus)/100.0,0.0,1.0)
+	var sequential_raw_pct := 100.0*(1.0-(1.0-general_fraction)*(1.0-school_fraction))
+	var after_dr_pct := CombatRatingCurves.diminishing(sequential_raw_pct,"magic_res")
+	return clampf(after_dr_pct/100.0,0.0,1.0)
 
 ## The shared combat/UI read contract. A caller can request any derived stat
 ## without reimplementing the overlay. Raw ratings remain available separately.

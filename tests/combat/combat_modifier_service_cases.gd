@@ -8,6 +8,7 @@ static func run() -> bool:
 		and _case_auto_block_runtime_overlay_dr_once()
 		and _case_combat_readout_matches_runtime_effects()
 		and _case_magic_resist_prefers_canonical_stats()
+		and _case_magic_resist_sequential_dr_and_overlay()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
 		and _case_v12_par135_rating_age_and_dr()
@@ -88,8 +89,36 @@ static func _case_magic_resist_prefers_canonical_stats() -> bool:
 	combatant.combat_stats["fire_resistance"] = 40.0
 	combatant.combat_stats["par_totals"]["PAR190"] = 100.0
 	combatant.combat_stats["par_totals"]["PAR191"] = 100.0
-	var expected := RatingMatrix.to_percent(200.0, combatant.level) / 100.0
-	return is_equal_approx(CombatModifierService.magic_resist(combatant, "fire", 1), expected)
+	var per_layer := RatingMatrix.to_percent(100.0,combatant.level)/100.0
+	var raw_combined_pct := 100.0*(1.0-(1.0-per_layer)*(1.0-per_layer))
+	var expected := CombatRatingCurves.diminishing(raw_combined_pct,"magic_res")/100.0
+	return is_equal_approx(CombatModifierService.magic_resist(combatant,"fire",1),expected)
+
+static func _case_magic_resist_sequential_dr_and_overlay() -> bool:
+	var fighter := TestFixtureLoader.new_combatant("resist_lv1","Magic Resist",1,100)
+	fighter.combat_stats["par_totals"]["PAR190"] = 200.0
+	fighter.combat_stats["par_totals"]["PAR191"] = 200.0
+	var base := CombatModifierService.magic_resist(fighter,"fire",1)
+	# 200 rating = 40% per layer; sequentially combining yields 64% raw,
+	# then one DR keeps the final output strictly below the 85.1% cap.
+	var expected := CombatRatingCurves.diminishing(64.0,"magic_res")/100.0
+	fighter.active_effects.append({
+		"effect_id":"EFF_MAGIC_RESIST_BONUS",
+		"definition":{"fire_resist_direct_pct":20.0},
+		"start_round":2,"remaining_rounds":2
+	})
+	var active := CombatModifierService.magic_resist(fighter,"fire",2)
+	var pending := CombatModifierService.magic_resist(fighter,"fire",1)
+	# Fire bonus cannot add to the unaffected water resistance.
+	var water := CombatModifierService.magic_resist(fighter,"water",2)
+	return (
+		is_equal_approx(base,expected)
+		and is_equal_approx(pending,base)
+		and active>base
+		and is_equal_approx(water,CombatRatingCurves.diminishing(40.0,"magic_res")/100.0)
+		and CombatModifierService.magic_resist(fighter,"fire",2)<0.851
+		and is_equal_approx(float(CombatModifierService.combat_readout(fighter,2).get("elemental_resists_pct",{}).get("fire",-1.0)),active*100.0)
+	)
 
 static func _case_mana_regen_uses_runtime_overlay() -> bool:
 	var combatant := _combatant()
