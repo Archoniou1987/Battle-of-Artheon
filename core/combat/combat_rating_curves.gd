@@ -27,6 +27,11 @@ static func diminishing(raw_pct: float, category: String) -> float:
 	var x := (raw_pct-threshold)/width
 	return threshold + width*x/pow(1.0+pow(x,smooth),1.0/smooth)
 
+## v1.2 100 rating -> 20% (Lv1), 4% (Lv100); keep signed ratings.
+static func rating_to_pct(rating: float, level: int) -> float:
+	var fraction := float(clampi(level,1,100)-1)/99.0
+	return rating/100.0*lerpf(20.0,4.0,fraction)
+
 static func armour_raw_pct(armour_rating: float, level: int) -> float:
 	var age := 1.0 + 3.0*float(clampi(level,1,100)-1)/99.0
 	return maxf(0.0,armour_rating)/(2.0*age)

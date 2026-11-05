@@ -2,13 +2,23 @@ extends SceneTree
 
 func _initialize() -> void:
 	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(RatingMatrix.CONFIG_PATH))
-	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 1), 10.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 100), 1.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 1), 25.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 100), 2.5))
-	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 50), 10.0 - 9.0 * 49.0 / 99.0))
-	assert(is_equal_approx(RatingMatrix.to_percent(-100.0, 1), -10.0)) # No invented universal cap.
+	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 1), 20.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 100), 4.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 1), 50.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(250.0, 100), 10.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 50), 20.0 - 16.0 * 49.0 / 99.0))
+	assert(is_equal_approx(RatingMatrix.to_percent(-100.0, 1), -20.0)) # No invented universal cap.
 	assert(RatingMatrix.to_percent(0, 100) == 0)
+	# Drift gate across five levels and varied ratings.
+	for level in [1,25,50,75,100]:
+		for rating in [0.0,1.0,100.0,250.0,1500.0]:
+			var actual := RatingMatrix.to_percent(rating,level)
+			assert(is_equal_approx(actual,CombatRatingCurves.rating_to_pct(rating,level)))
+			assert(is_equal_approx(actual,ItemTemplateGeneratorV12.rating_to_pct(rating,level)))
+	# Legacy configuration cannot silently pass v1.2 validation.
+	var obsolete: Dictionary = config.duplicate(true)
+	obsolete["version"] = 1
+	assert(is_nan(RatingMatrix.evaluate(100,1,obsolete)))
 	var old_print := Engine.print_error_messages
 	Engine.print_error_messages = false
 	for level in [0,101,1.5,NAN,INF,"1"]:
@@ -28,5 +38,5 @@ func _initialize() -> void:
 			assert(is_nan(RatingMatrix.evaluate(100, 1, bad)))
 	assert(is_nan(RatingMatrix.to_percent(100, 1, "user://missing_rating_matrix.json")))
 	Engine.print_error_messages = old_print
-	print("RatingMatrix v1: PASS")
+	print("RatingMatrix v1.2: PASS")
 	quit(0)

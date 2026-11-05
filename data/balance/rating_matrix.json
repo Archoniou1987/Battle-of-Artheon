@@ -1,9 +1,9 @@
 {
-  "version": 1,
+  "version": 2,
   "reference_rating": 100,
   "minimum_level": 1,
   "maximum_level": 100,
-  "percent_at_level_1": 10,
-  "percent_at_level_100": 1,
+  "percent_at_level_1": 20,
+  "percent_at_level_100": 4,
   "interpolation": "linear"
 }

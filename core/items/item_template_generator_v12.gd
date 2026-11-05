@@ -76,10 +76,9 @@ static func par_budget_direction(logical: String) -> Dictionary:
 static func diminishing(raw_pct: float, category: String) -> float:
 	return CombatRatingCurves.diminishing(raw_pct,category)
 
-## Lv1:20% / 100 rating; Lv100:4% / 100 rating.
+## Generator and runtime use one approved percentage conversion.
 static func rating_to_pct(rating: float, level: int) -> float:
-	var pct_per_100 := lerpf(20.0,4.0,float(clampi(level,1,100)-1)/99.0)
-	return maxf(0.0,rating)*pct_per_100/100.0
+	return CombatRatingCurves.rating_to_pct(maxf(0.0,rating),level)
 
 static func armour_raw_pct(armour_rating: float, level: int) -> float:
 	return CombatRatingCurves.armour_raw_pct(armour_rating,level)
