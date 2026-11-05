@@ -74,6 +74,39 @@ func _run() -> void:
 			_check(not profiles.is_empty(),"level_weapon_profile")
 			if not profiles.is_empty():
 				_check(int(Dictionary(profiles[0]).get("item_level",-1))==40,"level_profile_preserved")
+	# One instance remains identical while hand placement changes its effective
+	# PAR and attack ranges. Stored ABI stay intact but are enabled only for MH.
+	var switch_hero := CharacterState.new("V12_SWITCH","Hand Switch",40)
+	for par_id in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
+		switch_hero.progression.base_stats[par_id] = 90
+	var switch_repo := ItemRepository.new()
+	var switch_item := ItemV12InstanceFactory.grant_weapon(switch_hero,switch_repo,"DAGGER_ATTACK",40,"purple",202611050)
+	_check(not switch_item.is_empty(),"switch_generated")
+	if not switch_item.is_empty():
+		var switch_id := String(switch_item["instance_id"])
+		var original_damage: Dictionary = Dictionary(switch_item["damage"]).duplicate(true)
+		var original_bonuses: Dictionary = Dictionary(switch_item["par_bonuses"]).duplicate(true)
+		_check(switch_hero.equip("main_hand",switch_id,switch_repo),"switch_equip_mh")
+		var mh_par := ParCalculationService.calculate(switch_hero,switch_repo)
+		var mh_abilities := EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo)
+		_check(mh_abilities.has("ABI406"),"switch_mh_has_abi")
+		var main_range: Dictionary = mh_par.get("attack_ranges",{}).get("PAR050",{})
+		_check(switch_hero.unequip("main_hand",switch_repo)==switch_id,"switch_unequip_mh")
+		_check(switch_hero.equip("off_hand",switch_id,switch_repo),"switch_equip_oh")
+		var oh_par := ParCalculationService.calculate(switch_hero,switch_repo)
+		var off_range: Dictionary = oh_par.get("attack_ranges",{}).get("PAR051",{})
+		_check(is_equal_approx(float(off_range.get("min",-1)),float(main_range.get("min",0))*0.75),"switch_oh_damage75")
+		_check(not EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo).has("ABI406"),"switch_oh_no_abi")
+		for par_id in original_bonuses:
+			var expected := float(original_bonuses[par_id])*0.75
+			var actual := float(Dictionary(oh_par.get("sources",{}).get(par_id,{})).get("equipment",0.0))
+			_check(is_equal_approx(actual,expected),"switch_oh_par75_"+String(par_id))
+		_check(int(Dictionary(oh_par.get("totals",{})).get("PAR057",0))==2,"switch_oh_keeps_attack_count")
+		var unchanged := switch_repo.get_item(switch_id)
+		_check(unchanged.get("damage",{})==original_damage and unchanged.get("par_bonuses",{})==original_bonuses,"switch_item_not_mutated")
+		_check(switch_hero.unequip("off_hand",switch_repo)==switch_id,"switch_unequip_oh")
+		_check(switch_hero.equip("main_hand",switch_id,switch_repo),"switch_return_mh")
+		_check(EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo).has("ABI406"),"switch_mh_abi_restored")
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_DEF",40,"purple",1,"OH").is_empty(),"axe_no_oh")
 	_check(not ItemV12InstanceFactory.generate_weapon("AXE_ATTACK",40,"purple",1,"OH").is_empty(),"axe_attack_oh")
 	_check(not ItemV12InstanceFactory.generate_weapon("HAMMER_ATTACK",40,"purple",1,"OH").is_empty(),"hammer_attack_oh")
