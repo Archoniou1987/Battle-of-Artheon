@@ -100,7 +100,7 @@ static func _case_penetration_only_reduces_matching_school(balance:Dictionary) -
 	source.combat_stats["par_totals"]["PAR165"] = 100.0
 	var fire := CombatModifierService.magic_resist(target,"fire",1,source)
 	var water := CombatModifierService.magic_resist(target,"water",1,source)
-	if not fire<water:
+	if fire >= water:
 		return false
 	source.combat_stats["par_totals"]["PAR164"] = 100.0
 	return (
