@@ -585,11 +585,17 @@ func _refresh_combat_stats() -> void:
 	(stat_rows["Блок"] as Label).tooltip_text = "Автоматический блок после DR / количество зон ручного блока"
 	(stat_rows["Магический урон"] as Label).text = "%.2f%%" % float(current.get("magic_damage_rating_percent",0.0))
 	(stat_rows["Магический урон"] as Label).tooltip_text = "Текущий процентный контракт PAR150; перевод в абсолютный SP — отдельный этап аудита"
-	# PAR151-157 are registry entries but not yet wired as separate
-	# outgoing damage modifiers. Do not fabricate a working percentage.
-	(stat_rows["Усиление стихий"] as Label).text = "—"
-	(stat_rows["Усиление стихий"] as Label).tooltip_text = "Отдельные PAR151–157 ещё не подключены к боевой формуле"
+	# Registered PAR151–157 must not disappear from the UI if they have
+	# nonzero item bonuses. Show their ratings, NOT an unverified effective %.
 	var registry_totals: Dictionary = combat.get("par_totals",{})
+	var school_ratings := PackedStringArray()
+	for par_index in range(151,158):
+		var par_id := "PAR%d" % par_index
+		var par_amount := float(registry_totals.get(par_id,0.0))
+		if not is_zero_approx(par_amount):
+			school_ratings.append("%s: %g" % [par_id,par_amount])
+	(stat_rows["Усиление стихий"] as Label).text = " / ".join(school_ratings) if not school_ratings.is_empty() else "—"
+	(stat_rows["Усиление стихий"] as Label).tooltip_text = "Исходные PAR151–157; применение к итоговому урону требует отдельной проверки ABI/Combat Engine"
 	(stat_rows["Общее сопротивление"] as Label).text = "PAR190: %s" % str(registry_totals.get("PAR190",0))
 	(stat_rows["Общее сопротивление"] as Label).tooltip_text = "Исходный рейтинг; итоговый процент рассчитывается для каждой стихии отдельно"
 	var elemental: Dictionary = current.get("elemental_resists_pct",{})
