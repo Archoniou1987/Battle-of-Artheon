@@ -50,7 +50,7 @@ func _initialize() -> void:
 	ok = ok and old_only.cast_event(state,"CASTER","TARGET","ABI001") == null
 	ok = ok and old_only.cast_event(state,"CASTER","TARGET","ABI0301") == null
 	ok = ok and old_only.cast_zone_event(state,"CASTER",1,"ABI001") == null
-	ok = ok and fighter.mana == mana_before and old_only.cooldowns_by_combatant.is_empty()
+	ok = ok and fighter.mana == mana_before and Dictionary(old_only.cooldowns_by_combatant.get("CASTER",{})).is_empty() and old_only.cast_round_by_combatant.is_empty()
 	var group := GroupCombatState.new(state)
 	group.add_member("A","CASTER")
 	group.add_member("B","TARGET")
