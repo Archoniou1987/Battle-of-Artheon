@@ -60,13 +60,27 @@ func _configure(sim: GroupCombatSimulator) -> void:
 	var controlled_npc := sim.state.get_combatant("PATROL_02")
 	CombatTempoService.initialize(controlled_npc,40.0,100.0,5.0)
 	CombatTempoService.apply_control(controlled_npc,150.0)
-	sim.attack_pipeline.ability_scheduler = AbilityScheduler.new(
-		AbilityCatalog.load_json("res://data/abilities/catalog.json"),
-		{"PLAYER":["ABI003","ABI004"],"PATROL_01":["ABI004"],"PATROL_02":[]})
-	# Force deterministic magic hits, not artificial direct EFF mutations.
-	var fireball := AbilityCatalog.definition(sim.attack_pipeline.ability_scheduler.definitions,"ABI003").duplicate(true)
-	fireball["magic_hit_roll"] = 1
-	sim.attack_pipeline.ability_scheduler.definitions["ABI003"] = fireball
+	# This checkpoint test preserves the generic projectile/DoT and ally
+	# HoT lifecycle using isolated test IDs. No deleted numbered game ABI
+	# is loaded. Full scheduler definitions are saved in each checkpoint.
+	var definitions := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	definitions["TEST_CHECKPOINT_FIRE"] = {
+		"name":"Test projectile","delivery_type":"PROJECTILE",
+		"target_scope":"SINGLE","uses_magic_hit":true,"magic_hit_roll":1,
+		"components":[{"kind":"damage","amount":100,"damage_type":"fire"},
+			{"kind":"effect","effect_id":"EFF003","base_chance":100,"resist_type":"fire"}],
+		"cooldown_rounds":1,"mana_cost":10,"application_timing":"standard"
+	}
+	definitions["TEST_CHECKPOINT_HEAL"] = {
+		"name":"Test healing","delivery_type":"DIRECT",
+		"target_scope":"SINGLE","target_team":"ALLY",
+		"components":[{"kind":"heal","amount":100},
+			{"kind":"effect","effect_id":"EFF004","base_chance":100}],
+		"cooldown_rounds":1,"mana_cost":10,"application_timing":"standard"
+	}
+	sim.attack_pipeline.ability_scheduler = AbilityScheduler.new(definitions,
+		{"PLAYER":["TEST_CHECKPOINT_FIRE","TEST_CHECKPOINT_HEAL"],
+			"PATROL_01":["TEST_CHECKPOINT_HEAL"],"PATROL_02":[]})
 
 func _signature(sim: GroupCombatSimulator, encounter_key: String, fingerprint: String) -> String:
 	var captured := GroupCombatCheckpointService.capture(sim,encounter_key,fingerprint)
