@@ -13,6 +13,7 @@ func _check(condition: bool, id: String) -> void:
 func _init() -> void:
 	_defence_priority()
 	_critical_before_armour()
+	_v12_chance_diminishing()
 	_typed_and_flat_penetration()
 	_v12_armour_diminishing()
 	_event_lineage_and_read_only_projection()
@@ -25,6 +26,7 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	var actor := TestFixtureLoader.new_combatant("matrix_actor", "Attacker", test_level, 1000)
 	var victim := TestFixtureLoader.new_combatant("matrix_victim", "Defender", test_level, 1000)
 	actor.combat_stats["crit_chance_rating_percent"] = float(settings.get("crit", 0.0))
+	actor.combat_stats["anti_dodge_rating_percent"] = float(settings.get("anti_dodge", 0.0))
 	actor.combat_stats["block_crush"] = float(settings.get("crush", 0.0))
 	actor.combat_stats["armour_penetration_percent"] = float(settings.get("general_pen", 0.0))
 	actor.combat_stats["armour_penetration_flat"] = float(settings.get("flat_pen", 0.0))
@@ -33,6 +35,7 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 		totals["PAR132"] = float(settings["typed_pen"])
 		actor.combat_stats["par_totals"] = totals
 	victim.combat_stats["dodge_rating_percent"] = float(settings.get("dodge", 0.0))
+	victim.combat_stats["anti_crit_rating_percent"] = float(settings.get("anti_crit", 0.0))
 	victim.combat_stats["shield_auto_block_rating_percent"] = float(settings.get("auto", 0.0))
 	victim.combat_stats["manual_block_zones"] = ["chest"] if bool(settings.get("manual", false)) else []
 	var physical_type := String(settings.get("damage_type", "slashing"))
@@ -44,8 +47,8 @@ func _scenario(settings: Dictionary = {}) -> Dictionary:
 	state.begin_round()
 	var rolls: Dictionary = {
 		"hit": int(settings.get("hit_roll", 1)),
-		"reaction": 100, "dodge": 1, "auto_block": 1,
-		"block_crush": 1, "crit": 1,
+		"reaction": 100, "dodge": int(settings.get("dodge_roll",1)), "auto_block": int(settings.get("auto_roll",1)),
+		"block_crush": 1, "crit": int(settings.get("crit_roll",1)),
 		"on_hit_effect": 100, "manual_block_effect": 100,
 		"damage": 0.5
 	}
@@ -85,6 +88,36 @@ func _critical_before_armour() -> void:
 	_check(not bool(normal_event.result.get("critical", true)) and bool(crit_event.result.get("critical", false)), "critical_roll_control")
 	_check(is_equal_approx(float(crit_event.result.get("raw_damage", 0.0)), 1.5 * float(normal_event.result.get("raw_damage", 0.0))), "critical_before_mitigation")
 	_check(float(crit_event.result.get("after_armour_damage", 0.0)) > float(normal_event.result.get("after_armour_damage", 0.0)), "crit_survives_armour")
+
+func _v12_chance_diminishing() -> void:
+	# Independent approved v1.2 numerical anchors, before probability rolls.
+	_check(absf(CombatMath.effective_dodge(50.0,20.0)-28.984671)<0.001,"dodge_anti_before_dr")
+	_check(absf(CombatMath.effective_crit(50.0,10.0)-38.489634)<0.001,"crit_anti_before_dr")
+	_check(absf(CombatRatingCurves.diminishing(50.0,"block")-43.939486)<0.001,"block_v12_dr")
+	_check(is_equal_approx(CombatMath.effective_dodge(15.0,0.0),15.0),"dodge_no_dr_below_threshold")
+	_check(is_equal_approx(CombatMath.effective_crit(20.0,0.0),20.0),"crit_no_dr_at_threshold")
+	_check(is_equal_approx(CombatRatingCurves.diminishing(20.0,"block"),20.0),"block_no_dr_at_threshold")
+	_check(CombatMath.effective_dodge(10000.0,0.0)<80.0,"dodge_asymptotic_cap")
+	_check(CombatMath.effective_crit(10000.0,0.0)<100.0,"crit_asymptotic_cap")
+	_check(CombatRatingCurves.diminishing(10000.0,"block")<75.0,"block_asymptotic_cap")
+	# Defences must use the post-counter, post-DR chance in real CombatEngine.
+	var dodge_28 := _scenario({"dodge":50.0,"anti_dodge":20.0,"dodge_roll":28})
+	var dodge_29 := _scenario({"dodge":50.0,"anti_dodge":20.0,"dodge_roll":29})
+	_check(String((dodge_28["attack"] as CombatEvent).result.get("outcome",""))=="dodge","dodge_roll_below_post_dr")
+	_check(String((dodge_29["attack"] as CombatEvent).result.get("outcome",""))=="connected","dodge_roll_above_post_dr")
+	_check(absf(float((dodge_29["attack"] as CombatEvent).result.get("dodge_chance",-1.0))-28.984671)<0.001,"dodge_event_final_chance")
+	var crit_38 := _scenario({"crit":50.0,"anti_crit":10.0,"crit_roll":38})
+	var crit_39 := _scenario({"crit":50.0,"anti_crit":10.0,"crit_roll":39})
+	_check(bool((crit_38["attack"] as CombatEvent).result.get("critical",false)),"crit_roll_below_post_dr")
+	_check(not bool((crit_39["attack"] as CombatEvent).result.get("critical",true)),"crit_roll_above_post_dr")
+	_check(absf(float((crit_39["attack"] as CombatEvent).result.get("crit_chance",-1.0))-38.489634)<0.001,"crit_event_final_chance")
+	var block_43 := _scenario({"auto":50.0,"auto_roll":43})
+	var block_44 := _scenario({"auto":50.0,"auto_roll":44})
+	_check(String((block_43["attack"] as CombatEvent).result.get("outcome",""))=="auto_block","auto_block_roll_below_post_dr")
+	_check(String((block_44["attack"] as CombatEvent).result.get("outcome",""))=="connected","auto_block_roll_above_post_dr")
+	_check(absf(float((block_44["attack"] as CombatEvent).result.get("auto_block_chance",-1.0))-43.939486)<0.001,"auto_block_event_final_chance")
+	# After negative anti-rating EFF, subtraction still occurs before DR.
+	_check(absf(CombatMath.effective_dodge(20.0,-5.0)-CombatRatingCurves.diminishing(25.0,"dodge"))<0.001,"negative_anti_dodge_effect")
 
 func _typed_and_flat_penetration() -> void:
 	var baseline := _scenario({"armour": 35.0})

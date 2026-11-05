@@ -67,7 +67,10 @@ static func effective_percent(combatant: CombatantState, key: String, round_numb
 	return result
 
 static func block_chance(combatant: CombatantState, round_number: int) -> float:
-	return effective_percent(combatant, "shield_auto_block_rating", round_number)
+	# One combined permanent+runtime percent, then v1.2 block diminishing.
+	# Manual zone block is a separate deterministic defence, not this chance.
+	var raw_chance := maxf(0.0,effective_percent(combatant,"shield_auto_block_rating",round_number))
+	return clampf(CombatRatingCurves.diminishing(raw_chance,"block"),0.0,100.0)
 
 static func block_crush_chance(combatant: CombatantState, round_number: int) -> float:
 	# RAGE: each stack adds +2 percentage points vs ALL manual/auto blocks.

@@ -8,12 +8,16 @@ static func roll_success(chance: float, roll: int) -> bool:
 	return roll >= 1 and roll <= 100 and float(roll) <= effective_chance
 
 
+## Offence counter-ratings are subtracted BEFORE v1.2 diminishing.
+## The base rating and ABI/EFF direct percent overlays are in the same units.
 static func effective_dodge(dodge: float, anti_dodge: float) -> float:
-	return clampf(dodge - anti_dodge, 0.0, 100.0)
+	var raw_chance := maxf(0.0,dodge-anti_dodge)
+	return clampf(CombatRatingCurves.diminishing(raw_chance,"dodge"),0.0,100.0)
 
 
 static func effective_crit(crit: float, anti_crit: float) -> float:
-	return clampf(crit - anti_crit, 0.0, 100.0)
+	var raw_chance := maxf(0.0,crit-anti_crit)
+	return clampf(CombatRatingCurves.diminishing(raw_chance,"crit"),0.0,100.0)
 
 
 static func effective_armour(raw_armour: float, flat_penetration: float, percent_reduction: float) -> float:

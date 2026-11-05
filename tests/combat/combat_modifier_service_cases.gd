@@ -5,6 +5,7 @@ static func run() -> bool:
 	return (
 		_case_canonical_percent_avoids_direct_pct_double_count()
 		and _case_runtime_direct_pct_overlay_applies_once()
+		and _case_auto_block_runtime_overlay_dr_once()
 		and _case_magic_resist_prefers_canonical_stats()
 		and _case_mana_regen_uses_runtime_overlay()
 		and _case_damage_reduction_uses_runtime_overlay()
@@ -36,6 +37,18 @@ static func _case_runtime_direct_pct_overlay_applies_once() -> bool:
 	})
 	var actual := CombatModifierService.effective_percent(combatant, "crit_chance_rating", 1)
 	return is_equal_approx(actual, 15.0)
+
+static func _case_auto_block_runtime_overlay_dr_once() -> bool:
+	var combatant := _combatant()
+	combatant.combat_stats["shield_auto_block_rating_percent"] = 30.0
+	combatant.active_effects.append({
+		"effect_id":"EFF_TEST_AUTO_BLOCK",
+		"definition":{"shield_auto_block_direct_pct":20.0},
+		"start_round":1,
+		"remaining_rounds":1
+	})
+	var actual := CombatModifierService.block_chance(combatant,1)
+	return absf(actual-43.939486)<0.001
 
 static func _case_magic_resist_prefers_canonical_stats() -> bool:
 	var combatant := _combatant()
