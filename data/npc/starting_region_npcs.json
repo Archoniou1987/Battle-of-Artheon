@@ -295,9 +295,7 @@
           }
         }
       },
-      "abilities": [
-        "ABI001"
-      ],
+      "abilities": [],
       "traits": [
         "TRA_ELITE"
       ],
