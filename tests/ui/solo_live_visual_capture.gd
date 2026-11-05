@@ -56,10 +56,10 @@ func _run() -> void:
 		],
 		"equipment_slots": equipment,
 		"ability_slots": [
-			{"id": "ABI003", "name": "Огненный шар", "mana_cost": 12, "available": true},
-			{"id": "", "available": false}, {"id": "", "available": false},
-			{"id": "ABI004", "name": "Лечение", "mana_cost": 10, "available": true},
-			{"id": "", "available": false}
+			{"id":"ABI301","name":"Кровавый порез","mana_cost":0,"available":true},
+			{"id":"ABI302","name":"Круговой удар","mana_cost":0,"available":true},
+			{"id":"","available":false},{"id":"","available":false},
+			{"id":"","available":false},{"id":"","available":false}
 		],
 		"elixir_loadout": {"slots": [
 			{"instance_id": "potion_1", "charges": 2, "max_charges": 3},
