@@ -13,7 +13,10 @@ const DUAL_ARCHETYPES := [
 const STRUCTURAL_PAR_IDS := ["PAR057"]
 
 static func allowed_slots(archetype_id: String) -> Array[String]:
-	return ["main_hand","off_hand"] if DUAL_ARCHETYPES.has(archetype_id) else ["main_hand"]
+	var slots: Array[String] = ["main_hand"]
+	if DUAL_ARCHETYPES.has(archetype_id):
+		slots.append("off_hand")
+	return slots
 
 static func par_multiplier(par_id: String, is_off_hand: bool) -> float:
 	return OFF_HAND_MULTIPLIER if is_off_hand and not STRUCTURAL_PAR_IDS.has(par_id) else 1.0
