@@ -76,6 +76,15 @@ func _init() -> void:
 		_finish(false,"three_actions_physical_"+str(physical)+"_abi_"+str(casts)+"_mana_"+str(actor.mana))
 		return
 	var after_round:=session.state.round_number
+	var remaining_options := session.player_ability_options()
+	var next_round := after_round + 1
+	var remaining_expected := AbilityRuntime.remaining_cooldown("ABI003",session.ability_scheduler.cooldowns_by_combatant.get(session.player_id,{}),next_round)
+	if remaining_options.is_empty() or int(remaining_options[0].get("cooldown_remaining",-1)) != remaining_expected or remaining_expected <= 0:
+		_finish(false,"cooldown_remaining_matches_next_round")
+		return
+	if not ArenaScreen.abi_button_label(remaining_options[0]).contains("КД %d" % remaining_expected):
+		_finish(false,"cooldown_text_visible")
+		return
 	var after_mana:=actor.mana
 	var duplicate:=session.play_round(["chest","chest"],blocks,"ABI003")
 	if bool(duplicate.get("ok",true)) or session.state.round_number!=after_round or actor.mana!=after_mana:

@@ -106,7 +106,8 @@ func player_controls(player_id: String, elixir_slot: int = -1) -> Dictionary:
 			"available":ready,"target_id":target_id,
 			"target_label":"Себя" if is_ally else "Противник",
 			"mana_cost":int(definition.get("mana_cost",0)),
-			"cooldown_until":int(cd.get(ability_id,0))
+			"cooldown_until":int(cd.get(ability_id,0)),
+			"cooldown_remaining":AbilityRuntime.remaining_cooldown(ability_id,cd,next_round)
 		})
 	return {
 		"ok":true,

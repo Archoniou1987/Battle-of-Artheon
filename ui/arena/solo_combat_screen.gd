@@ -347,7 +347,9 @@ func set_ability_options(options: Array) -> void:
 	for i in range(abi_slots.size()):
 		var slot: Dictionary = abi_slots[i]
 		var id := String(slot.get("id", ""))
-		slot["available"] = not bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)) and not id.is_empty() and indexed.has(id) and bool(Dictionary(indexed.get(id, {})).get("available", false))
+		var live_option: Dictionary = Dictionary(indexed.get(id,{}))
+		slot["available"] = not bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)) and not id.is_empty() and indexed.has(id) and bool(live_option.get("available", false))
+		slot["cooldown_remaining"] = maxi(0,int(live_option.get("cooldown_remaining",0)))
 		abi_slots[i] = slot
 	if not chosen_abi.is_empty():
 		var remains := false
@@ -360,7 +362,10 @@ func set_ability_options(options: Array) -> void:
 	if shared_arena != null:
 		for index in range(shared_arena.ability_buttons.size()):
 			var option: Dictionary = abi_slots[index] if index < abi_slots.size() else {}
-			shared_arena.ability_buttons[index].disabled = bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)) or not bool(option.get("available", false))
+			var abi_button := shared_arena.ability_buttons[index]
+			abi_button.disabled = bool(Dictionary(snapshot.get("controls",{})).get("stunned",false)) or not bool(option.get("available", false))
+			abi_button.text = ArenaScreen.abi_button_label(option)
+			abi_button.tooltip_text = ArenaScreen.abi_button_tooltip(option,String(option.get("name","")))
 	_update_selection()
 
 func _style_button(button: Button, selected: bool, accent: Color) -> void:

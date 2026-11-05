@@ -1082,6 +1082,18 @@ func _use_elixir(index: int) -> void:
 			resources_changed.emit()
 	inventory_changed.emit()
 
+## One consistent compact button presentation for internal and shared solo Arena.
+static func abi_button_label(option: Dictionary) -> String:
+	var id := String(option.get("id",""))
+	if id.is_empty():
+		return ""
+	var remaining := maxi(0,int(option.get("cooldown_remaining",0)))
+	return id + ("\nКД %d" % remaining if remaining > 0 else "")
+
+static func abi_button_tooltip(option: Dictionary, base: String) -> String:
+	var remaining := maxi(0,int(option.get("cooldown_remaining",0)))
+	return base + (" | КД: %d раунд(ов)" % remaining if remaining > 0 else "")
+
 func _refresh_ability_buttons() -> void:
 	if combat_session == null:
 		return
@@ -1096,10 +1108,10 @@ func _refresh_ability_buttons() -> void:
 		if (selected_ability==ability_id and available and not ability_id.is_empty()) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty():
 			selected_still_valid=true
 		button.disabled=not available
-		button.text=ability_id if not ability_id.is_empty() else ""
+		button.text=abi_button_label(option)
 		button.add_theme_font_size_override("font_size",8)
 		var source := SquareUiGeometry.abi_source(index)
-		button.tooltip_text=("%s | %s — %s | Мана: %d | Цель: %s" % [source, ability_id, String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else (source + ": ABI не определена — " + ability_id if not ability_id.is_empty() else source + " — пусто")
+		button.tooltip_text=abi_button_tooltip(option,("%s | %s — %s | Мана: %d | Цель: %s" % [source, ability_id, String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else (source + ": ABI не определена — " + ability_id if not ability_id.is_empty() else source + " — пусто"))
 		button.set_pressed_no_signal((available and selected_ability==ability_id) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
 		SquareSlotFeedback.set_selected(button, combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
 	if not selected_still_valid:
@@ -1643,8 +1655,8 @@ func present_external(view: Dictionary) -> void:
 	for index in range(ability_buttons.size()):
 		var option: Dictionary = abilities[index] if index < abilities.size() and abilities[index] is Dictionary else {}
 		var button := ability_buttons[index]
-		button.text = String(option.get("id", ""))
-		button.tooltip_text = String(option.get("name", ""))
+		button.text = abi_button_label(option)
+		button.tooltip_text = abi_button_tooltip(option,String(option.get("name", "")))
 		button.disabled = round_stunned or not bool(option.get("available", false)) or finished
 	var loadout: Dictionary = view.get("elixir_loadout", {})
 	var potions: Array = loadout.get("slots", [])

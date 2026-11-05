@@ -4,6 +4,10 @@ extends RefCounted
 static func can_use(ability_id: String, cooldowns: Dictionary, round_number: int) -> bool:
 	return round_number >= int(cooldowns.get(ability_id, 0))
 
+## Number of full rounds still blocking the selected upcoming round.
+static func remaining_cooldown(ability_id: String, cooldowns: Dictionary, round_number: int) -> int:
+	return maxi(0,int(cooldowns.get(ability_id,0)) - round_number)
+
 static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_number: int, cooldown_rounds: int) -> void:
 	cooldowns[ability_id] = round_number + cooldown_rounds + 1
 
