@@ -15,7 +15,7 @@ func _init() -> void:
 	var hero := CharacterState.new("FULL_BATTLE_HERO", "Integrated Hero", 10)
 	var sword := {
 		"instance_id":"FULL_BATTLE_MH", "equip_slots":["main_hand","off_hand"],
-		"slot_usage":["main_hand"], "abilities":["ABI003"],
+		"slot_usage":["main_hand"], "abilities":["ABI301"],
 		"par_stats":{"PAR057":1},
 		"damage":{"min":3.0,"max":4.0,"type":"slashing"}
 	}
@@ -41,7 +41,7 @@ func _init() -> void:
 	player.max_mana = 100
 	_check(session.player_attack_count() == 2, "two_independent_weapon_attacks")
 	_check(session.player_ability_slots.size() == 6, "six_ability_slots")
-	_check(String(session.player_ability_slots[0]) == "ABI003", "main_hand_abi")
+	_check(String(session.player_ability_slots[0]) == "ABI301", "main_hand_abi")
 	_check(not CombatDiagnostics.combatant_trace(player,0).get("combat_stats",{}).is_empty(), "par_diagnostic_readout")
 
 	var block_count := CombatModifierService.manual_block_zone_capacity(player)
@@ -51,14 +51,14 @@ func _init() -> void:
 	var before_hp := player.hp
 	var before_mana := player.mana
 	var before_round := session.state.round_number
-	var rejected := session.play_round(["invalid_zone","legs"],blocks,"ABI003")
+	var rejected := session.play_round(["invalid_zone","legs"],blocks,"ABI301")
 	_check(not bool(rejected.get("ok",false)), "invalid_command_rejected")
 	_check(player.hp == before_hp and player.mana == before_mana, "rejection_no_resource_mutation")
 	_check(session.state.round_number == before_round, "rejection_no_round_consumption")
 	_check(session.state.pending_events.is_empty(), "rejection_no_pending_events")
 	_check(session.active_round == null, "rejection_does_not_open_round")
 
-	var result := session.play_round(["head","legs"],blocks,"ABI003")
+	var result := session.play_round(["head","legs"],blocks,"ABI301")
 	_check(bool(result.get("ok",false)), "valid_full_round_accepted")
 	if not bool(result.get("ok",false)):
 		_finish()
@@ -87,7 +87,7 @@ func _init() -> void:
 		if event.source_id == session.player_id and event.kind == CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)) and not bool(event.payload.get("is_counterattack",false)):
 			attacks += 1
 			physical_indices.append(int(event.payload.get("weapon_index",-1)))
-		if event.source_id == session.player_id and event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) == "ABI003":
+		if event.source_id == session.player_id and event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) == "ABI301":
 			casts += 1
 	var audit: Dictionary = CombatDiagnostics.round_trace(session.state,session.state.round_number)
 	_check(bool(audit.get("valid_event_lineage",false)), "engine_event_parentage")
@@ -97,7 +97,7 @@ func _init() -> void:
 	_check(round_events > 0, "engine_emitted_events")
 	_check(attacks == 2 and physical_indices.has(0) and physical_indices.has(1), "two_weapon_events")
 	_check(casts == 1, "single_abi_dispatch")
-	var mana_cost := int(AbilityCatalog.definition(session.ability_scheduler.definitions,"ABI003").get("mana_cost",0))
+	var mana_cost := int(AbilityCatalog.definition(session.ability_scheduler.definitions,"ABI301").get("mana_cost",0))
 	_check(player.mana == before_mana - mana_cost, "abi_uses_par_resources")
 
 	var journal: Array = Array(result.get("lines",[]))
@@ -107,7 +107,7 @@ func _init() -> void:
 		var line := String(line_value)
 		if line.contains("атакует"):
 			weapon_lines += 1
-		if line.contains("ABI «Fireball»"):
+		if line.contains("ABI «Кровавый порез»"):
 			abi_lines += 1
 	_check(weapon_lines >= 2 and abi_lines == 1, "journal_reconciles_physical_and_abi")
 

@@ -71,8 +71,8 @@ func _run() -> void:
 	actor.active_effects.clear()
 	arena._sync_combat_session()
 	# Use a canonical definition for UI selection; no fake combat damage.
-	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id] = ["ABI003"]
-	arena.combat_session.player_ability_slots[0] = "ABI003"
+	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id] = ["ABI301"]
+	arena.combat_session.player_ability_slots[0] = "ABI301"
 	# Keep the snapshot max pool canonical: press now writes spent mana back.
 	arena.combat_session.fighter(true).mana = arena.combat_session.fighter(true).max_mana
 	arena._refresh_ability_buttons()
@@ -81,18 +81,18 @@ func _run() -> void:
 		quit(1)
 		return
 	arena._select_ability(0)
-	if arena.selected_ability != "" or arena.combat_session.locked_ability_id != "" or arena.pending_ability_id != "ABI003":
+	if arena.selected_ability != "" or arena.combat_session.locked_ability_id != "" or arena.pending_ability_id != "ABI301":
 		push_error("ARENA_OPEN_SMOKE=FAIL: ABI activated before confirmation")
 		quit(1)
 		return
 	arena._confirm_ability()
-	if arena.selected_ability != "ABI003":
+	if arena.selected_ability != "ABI301":
 		push_error("ARENA_OPEN_SMOKE=FAIL: ABI selection does not reach Arena")
 		quit(1)
 		return
 	# Confirmed action remains committed; second tap cannot deselect it.
 	arena._select_ability(0)
-	if arena.selected_ability != "ABI003" or arena.combat_session.locked_ability_id != "ABI003":
+	if arena.selected_ability != "ABI301" or arena.combat_session.locked_ability_id != "ABI301":
 		push_error("ARENA_OPEN_SMOKE=FAIL: committed ABI could be canceled")
 		quit(1)
 		return

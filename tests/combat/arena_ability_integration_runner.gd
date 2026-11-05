@@ -5,8 +5,8 @@ extends SceneTree
 func _init() -> void:
 	var repository := ItemRepository.new()
 	var hero := CharacterState.new("ARENA_ABI_HERO","Arena Hero",10)
-	var sword := {"instance_id":"ARENA-ABI-MH","equip_slots":["main_hand","off_hand"],"slot_usage":["main_hand"],"abilities":["ABI003"],"par_stats":{"PAR057":1},"damage":{"min":3.0,"max":4.0,"type":"slashing"}}
-	var offhand := {"instance_id":"ARENA-ABI-OH","equip_slots":["main_hand","off_hand"],"slot_usage":["off_hand"],"abilities":["ABI004"],"par_stats":{"PAR057":1},"damage":{"min":1.0,"max":2.0,"type":"piercing"}}
+	var sword := {"instance_id":"ARENA-ABI-MH","equip_slots":["main_hand","off_hand"],"slot_usage":["main_hand"],"abilities":["ABI301"],"par_stats":{"PAR057":1},"damage":{"min":3.0,"max":4.0,"type":"slashing"}}
+	var offhand := {"instance_id":"ARENA-ABI-OH","equip_slots":["main_hand","off_hand"],"slot_usage":["off_hand"],"abilities":["ABI401"],"par_stats":{"PAR057":1},"damage":{"min":1.0,"max":2.0,"type":"piercing"}}
 	for item in [sword,offhand]:
 		ItemDurabilityService.initialize_item(item,100)
 		if not repository.add_item(item) or not hero.receive_item(String(item["instance_id"]),repository):
@@ -16,11 +16,11 @@ func _init() -> void:
 		_finish(false,"fixture_equip_slots")
 		return
 	var session := ArenaCombatSession.new(hero,repository)
-	if session.player_ability_slots.size()!=6 or String(session.player_ability_slots[0])!="ABI003":
+	if session.player_ability_slots.size()!=6 or String(session.player_ability_slots[0])!="ABI301":
 		_finish(false,"mh_abi_slot")
 		return
 	var active: Array = Array(session.ability_scheduler.loadouts.get(session.player_id,[]))
-	if active.has("ABI004") or active!=["ABI003"]:
+	if active.has("ABI401") or active!=["ABI301"]:
 		_finish(false,"offhand_excluded")
 		return
 	var actor := session.fighter(true)
@@ -40,12 +40,12 @@ func _init() -> void:
 		blocks.append(candidate_blocks[i])
 	var initial_mana:=actor.mana
 	var initial_round:=session.state.round_number
-	var wrong:=session.play_round(["chest","arms"],blocks,"ABI004")
+	var wrong:=session.play_round(["chest","arms"],blocks,"ABI401")
 	if bool(wrong.get("ok",true)) or actor.mana!=initial_mana or session.state.round_number!=initial_round or not session.state.pending_events.is_empty():
 		_finish(false,"offhand_ability_must_reject_atomically")
 		return
-	# Real submit: two independent MH/OH physical strikes + one Fireball.
-	var result:=session.play_round(["head","legs"],blocks,"ABI003")
+	# Real submit: two independent MH/OH physical strikes + one Кровавый порез.
+	var result:=session.play_round(["head","legs"],blocks,"ABI301")
 	if not bool(result.get("ok",false)):
 		_finish(false,"round_rejected_"+String(result.get("reason","")))
 		return
@@ -53,7 +53,7 @@ func _init() -> void:
 	var weapon_lines: int = 0
 	for raw_line in Array(result.get("lines", [])):
 		var line: String = String(raw_line)
-		if line.contains("ABI «Fireball»"):
+		if line.contains("ABI «Кровавый порез»"):
 			named_abi_lines += 1
 		if line.contains("атакует"):
 			weapon_lines += 1
@@ -69,16 +69,16 @@ func _init() -> void:
 		if event.kind==CombatEvent.Kind.ATTACK and bool(event.payload.get("is_weapon_attack",false)):
 			physical+=1
 			weapons.append(int(event.payload.get("weapon_index",-1)))
-		elif event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI003":
+		elif event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI301":
 			casts+=1
-	var mana_cost:=int(AbilityCatalog.definition(session.ability_scheduler.definitions,"ABI003").get("mana_cost",0))
+	var mana_cost:=int(AbilityCatalog.definition(session.ability_scheduler.definitions,"ABI301").get("mana_cost",0))
 	if physical!=2 or casts!=1 or not weapons.has(0) or not weapons.has(1) or actor.mana!=initial_mana-mana_cost:
 		_finish(false,"three_actions_physical_"+str(physical)+"_abi_"+str(casts)+"_mana_"+str(actor.mana))
 		return
 	var after_round:=session.state.round_number
 	var remaining_options := session.player_ability_options()
 	var next_round := after_round + 1
-	var remaining_expected := AbilityRuntime.remaining_cooldown("ABI003",session.ability_scheduler.cooldowns_by_combatant.get(session.player_id,{}),next_round)
+	var remaining_expected := AbilityRuntime.remaining_cooldown("ABI301",session.ability_scheduler.cooldowns_by_combatant.get(session.player_id,{}),next_round)
 	if remaining_options.is_empty() or int(remaining_options[0].get("cooldown_remaining",-1)) != remaining_expected or remaining_expected <= 0:
 		_finish(false,"cooldown_remaining_matches_next_round")
 		return
@@ -86,7 +86,7 @@ func _init() -> void:
 		_finish(false,"cooldown_text_visible")
 		return
 	var after_mana:=actor.mana
-	var duplicate:=session.play_round(["chest","chest"],blocks,"ABI003")
+	var duplicate:=session.play_round(["chest","chest"],blocks,"ABI301")
 	if bool(duplicate.get("ok",true)) or session.state.round_number!=after_round or actor.mana!=after_mana:
 		_finish(false,"cooldown_rejects_before_round")
 		return
