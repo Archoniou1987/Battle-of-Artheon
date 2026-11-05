@@ -123,7 +123,8 @@ func _v12_par135_damage_reduction() -> void:
 	_check((protected["victim"] as CombatantState).hp==915,"par135_final_85_damage")
 	_check((baseline["victim"] as CombatantState).hp==900,"par135_baseline_100_damage")
 	var result_damage: CombatEvent = null
-	for logged in (protected["state"] as CombatState).event_log:
+	var protected_state: CombatState = protected["state"]
+	for logged in protected_state.event_log:
 		if logged.kind==CombatEvent.Kind.DAMAGE and logged.parent_event_id==protection_event.event_id:
 			result_damage=logged
 	if result_damage!=null:
