@@ -410,11 +410,12 @@ func _resolve_attack(event: CombatEvent) -> void:
 	dagger_breach_stacks = mini(5,dagger_breach_stacks)
 	# Flat penetration was already applied to the armour RATING above.
 	# EFF401 is a percentage-point reduction, before v1.2 diminishing.
+	# EFF401 penetration and hammer armour bonuses enter the raw percentage
+	# before DR. Post-DR additions could recreate 100% physical immunity.
 	var after_breach_pct := maxf(0.0,raw_armour_pct-3.0*float(dagger_breach_stacks))
-	var armour_percent := CombatRatingCurves.diminishing(after_breach_pct,"armour")
-	# Hammer charges add 0.25 percentage points to armour/resistance per
-	# stack; an active zone fracture only reduces its named physical zone.
-	armour_percent += 0.25*float(HammerAbiCombatService.charges(defender,state.round_number))
+	var armour_before_dr := after_breach_pct+0.25*float(HammerAbiCombatService.charges(defender,state.round_number))
+	var armour_percent := CombatRatingCurves.diminishing(armour_before_dr,"armour")
+	# Active zone fracture only reduces its named physical zone.
 	for fracture in CombatModifierService.active_effects(defender,state.round_number):
 		if String(fracture.get("effect_id","")) == HammerAbiCombatService.FRACTURE_EFF:
 			var fdef: Dictionary = fracture.get("definition",{})
@@ -429,7 +430,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
-	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_raw_percent",raw_armour_pct); event.set_result("armour_after_breach_percent",after_breach_pct); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
+	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_raw_percent",raw_armour_pct); event.set_result("armour_after_breach_percent",after_breach_pct); event.set_result("armour_before_dr_percent",armour_before_dr); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
 	DaggerAbiCombatService.on_connected_attack(self,event,attacker)
 	AxeAbiCombatService.on_connected_attack(self,event)

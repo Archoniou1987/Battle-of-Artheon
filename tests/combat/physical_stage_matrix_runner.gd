@@ -120,6 +120,7 @@ func _v12_armour_diminishing() -> void:
 	var reduced: float = float((heavy["attack"] as CombatEvent).result.get("armour_reduction",-1.0))
 	_check(absf(reduced*100.0-68.707771)<0.01,"v12_armour_diminishing100")
 	_check((heavy["victim"] as CombatantState).hp == 969,"v12_armour_no_full_immunity")
+	_check(CombatRatingCurves.diminishing(10000.0,"armour") < 85.1,"v12_extreme_armour_stays_below_cap")
 
 func _event_lineage_and_read_only_projection() -> void:
 	var scenario := _scenario({"armour": 35.0, "general_pen": 20.0})

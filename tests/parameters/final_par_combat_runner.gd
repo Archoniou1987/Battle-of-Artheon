@@ -212,7 +212,7 @@ func balance_cases() -> void:
 	var state := CombatState.new()
 	var engine := CombatEngine.new(state)
 	check(engine._hit_chance(-10) == 20 and engine._hit_chance(5) == 100, "default engine loads approved level hit table")
-	check(is_equal_approx(BalanceCurve.sample(engine.physical_balance.armour_reduction_curve, 500), 0.5), "default engine loads approved armour curve")
+	check(is_equal_approx(CombatRatingCurves.armour_raw_pct(80.0,1),40.0), "v1.2 armour curve owns mitigation, not legacy physical_combat.json")
 	var explicit := CombatEngine.new(state, TestFixtureLoader.load_json("res://data/balance/physical_combat.json"))
 	check(engine.physical_balance == explicit.physical_balance, "Arena/default and explicit balance contracts agree")
 
