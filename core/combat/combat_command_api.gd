@@ -133,6 +133,8 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 	var abilities:Dictionary={}
 	for raw_id in ability_definitions.keys():
 		var ability_id:=String(raw_id)
+		if not AbilityCatalog.is_executable_id(ability_id):
+			continue
 		var definition:Dictionary=ability_definitions[raw_id]
 		var targets:=action_policy.valid_ability_targets(source_id,definition)
 		var cooldown_ready:=true
