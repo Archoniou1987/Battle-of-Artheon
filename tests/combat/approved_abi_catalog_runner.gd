@@ -23,6 +23,46 @@ func _initialize() -> void:
 		ok = ok and not defs.has(retired) and AbilityCatalog.is_retired_numbered_abi(retired)
 	for current in expected:
 		ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(current))
+	# A forged catalog, legacy save/loadout, or noncanonical ABI alias must
+	# never activate a retired numbered ability. Developer TEST_* IDs remain usable.
+	var injected: Dictionary = defs.duplicate(true)
+	injected["ABI001"] = Dictionary(defs["ABI301"]).duplicate(true)
+	injected["ABI0301"] = Dictionary(defs["ABI301"]).duplicate(true)
+	var saved_loadouts := {"CASTER":["ABI001","ABI0301","ABI301","TEST_ABI_FIREBALL"]}
+	var active := AbilityCatalog.assigned_abilities(saved_loadouts,"CASTER")
+	ok = ok and active == ["ABI301","TEST_ABI_FIREBALL"]
+	ok = ok and saved_loadouts["CASTER"].size() == 4 # Persisted legacy IDs are not erased.
+	ok = ok and AbilityCatalog.definition(injected,"ABI001").is_empty()
+	ok = ok and AbilityCatalog.definition(injected,"ABI0301").is_empty()
+	ok = ok and not AbilityCatalog.definition(injected,"ABI301").is_empty()
+	ok = ok and not AbilityCatalog.is_executable_id("ABI_NOT_A_NUMBER")
+	ok = ok and AbilityCatalog.is_executable_id("TEST_ABI_FIREBALL")
+	var fixture_defs := AbilityCatalog.load_json("res://data/test/abilities.json")
+	ok = ok and not AbilityCatalog.definition(fixture_defs,"TEST_ABI_FIREBALL").is_empty()
+	var state := CombatState.new()
+	var fighter := TestFixtureLoader.new_combatant("CASTER","Tester",10,1000,100)
+	var target := TestFixtureLoader.new_combatant("TARGET","Target",10,1000,100)
+	state.add_combatant(fighter)
+	state.add_combatant(target)
+	var old_only := AbilityScheduler.new(injected,{"CASTER":["ABI001","ABI0301"]})
+	var mana_before := fighter.mana
+	ok = ok and old_only.ready_events(state,"CASTER","TARGET").is_empty()
+	ok = ok and old_only.cast_event(state,"CASTER","TARGET","ABI001") == null
+	ok = ok and old_only.cast_event(state,"CASTER","TARGET","ABI0301") == null
+	ok = ok and old_only.cast_zone_event(state,"CASTER",1,"ABI001") == null
+	ok = ok and fighter.mana == mana_before and old_only.cooldowns_by_combatant.is_empty()
+	var group := GroupCombatState.new(state)
+	group.add_member("A","CASTER")
+	group.add_member("B","TARGET")
+	group.set_active_opponent("CASTER","TARGET")
+	group.set_active_opponent("TARGET","CASTER")
+	var zones := CombatZoneState.new(group)
+	var orchestrator := RoundOrchestrator.new(state,CombatEngine.new(state),group,zones)
+	var command := CombatCommandApi.new(state,group,zones,orchestrator,old_only)
+	var actions := command.available_actions("CASTER",injected)
+	var shown: Dictionary = actions.get("abilities",{})
+	ok = ok and not shown.has("ABI001") and not shown.has("ABI0301") and shown.has("ABI301")
+	ok = ok and not bool(command.cast_ability("CASTER","TARGET","ABI001").get("ok",false))
 	var templates := ItemTemplateService.load_templates()
 	ok = ok and not templates.has("training_fire_staff_abi003") and not templates.has("training_healer_chest_abi004")
 	# Ordinary weapon attacks are not an undisclosed ABI001 cast.
