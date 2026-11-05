@@ -40,6 +40,7 @@ func _initialize() -> void:
 	var fixture_defs := AbilityCatalog.load_json("res://data/test/abilities.json")
 	ok = ok and not AbilityCatalog.definition(fixture_defs,"TEST_ABI_FIREBALL").is_empty()
 	var state := CombatState.new()
+	state.round_number = 1
 	var fighter := TestFixtureLoader.new_combatant("CASTER","Tester",10,1000,100)
 	var target := TestFixtureLoader.new_combatant("TARGET","Target",10,1000,100)
 	state.add_combatant(fighter)
