@@ -51,6 +51,7 @@ jobs:
           for script in \
             tests/combat/arena_basic_round_runner.gd \
             tests/combat/battle_baseline_runner.gd \
+            tests/parameters/rating_matrix_runner.gd \
             tests/parameters/final_par_combat_runner.gd \
             tests/parameters/physical_par_boundary_runner.gd \
             tests/combat/combat_regression_runner.gd \
