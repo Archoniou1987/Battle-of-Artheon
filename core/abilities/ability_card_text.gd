@@ -97,7 +97,9 @@ static func describe(ability_id: String, definition: Dictionary, ap_available: i
 					lines.append("Урон: %s (%s)" % [str(component.get("amount", 0)), String(component.get("damage_type", "физический"))])
 				elif kind == "heal":
 					lines.append("Восстановление HP: %s" % str(component.get("amount", 0)))
-				elif kind == "effect":
+				if kind in ["damage","heal"] and float(component.get("spell_power_scale",0.0))>0.0:
+					lines.append("Масштабирование SP: база + %.3f × SP" % float(component.get("spell_power_scale",0.0)))
+				if kind == "effect":
 					var eff_id := String(component.get("effect_id", ""))
 					var effect := EffectCatalog.definition(EffectCatalog.load_json(), eff_id)
 					lines.append("Эффект: %s (%s)" % [String(effect.get("name", eff_id)), eff_id])

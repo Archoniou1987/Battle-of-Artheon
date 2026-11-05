@@ -38,6 +38,8 @@ func _initialize() -> void:
 	valid = valid and is_equal_approx(float(unscaled_after.payload.get("amount",-1.0)),37.5)
 	var physical := engine._make_action_component_event(parent,{"kind":"damage","amount":25.0,"damage_type":"physical"},"target",1.0)
 	valid = valid and is_equal_approx(float(physical.payload.get("amount",-1.0)),25.0)
+	var described := AbilityCardText.describe("SP_TEST",{"name":"Scale","components":[boosted],"mana_cost":0,"cooldown_rounds":0})
+	valid = valid and described.contains("0.250 × SP")
 	var wrong_physical := {"components":[{"kind":"damage","amount":25,"damage_type":"physical","spell_power_scale":1.0}]}
 	valid = valid and AbilityRuntime.validate_definition("SP_BAD_PHY",wrong_physical).has("spell_power_scale_requires_magic_damage_or_heal")
 	var wrong_scale := {"components":[{"kind":"damage","amount":25,"damage_type":"fire","spell_power_scale":-1.0}]}
