@@ -4,10 +4,10 @@ extends SceneTree
 ## instant ABI from either actor precedes STANDARD ABI and weapon damage in
 ## the SAME round, including early dispel against a standard re-buff.
 const EFF_GUARD := "EFF_ARENA_TIMING_GUARD"
-const EARLY_GUARD := "ABI_TEST_INSTANT_GUARD"
-const STANDARD_HIT := "ABI_TEST_STANDARD_HIT"
-const EARLY_DISPEL := "ABI_TEST_INSTANT_DISPEL"
-const STANDARD_GUARD := "ABI_TEST_STANDARD_GUARD"
+const EARLY_GUARD := "TEST_ABI_TEST_INSTANT_GUARD"
+const STANDARD_HIT := "TEST_ABI_TEST_STANDARD_HIT"
+const EARLY_DISPEL := "TEST_ABI_TEST_INSTANT_DISPEL"
+const STANDARD_GUARD := "TEST_ABI_TEST_STANDARD_GUARD"
 
 func _init() -> void:
 	if not _test_player_instant_npc_standard():
