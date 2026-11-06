@@ -194,6 +194,7 @@ func _test_ability(abi: String) -> void:
 	var ability_attacks := 0
 	var effect_events := 0
 	var final_outcome := ""
+	var final_action_result: Dictionary = {}
 	var abi_attack_ids: Dictionary = {}
 	for event in session.state.event_log:
 		if event.source_id != session.player_id or int(event.payload.get("round",-1)) != planned_round:
@@ -201,6 +202,7 @@ func _test_ability(abi: String) -> void:
 		if event.kind == CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) == abi:
 			action_count += 1
 			final_outcome = String(event.result.get("outcome",""))
+			final_action_result = event.result.duplicate(true)
 		elif event.kind == CombatEvent.Kind.ATTACK:
 			if bool(event.payload.get("is_weapon_attack",false)):
 				if int(event.payload.get("weapon_index",-1)) == 0:
@@ -226,6 +228,16 @@ func _test_ability(abi: String) -> void:
 	if not LINKED_MH.has(abi) and not NON_ATTACK.has(abi):
 		_check(ability_attacks > 0,abi + ":ability_attacks_dispatched")
 		_check(abi_damage_events > 0,abi + ":damage_event_from_abi_attack")
+	if ["ABI404","ABI405","ABI408"].has(abi):
+		_check(ability_attacks == 2,abi + ":mh_oh_ability_constituents")
+	if abi == "ABI406":
+		_check(ability_attacks == 6,abi + ":one_strike_per_consumed_poison")
+	if ["ABI301","ABI302","ABI401"].has(abi):
+		_check(actor.action_points == mini(actor.max_action_points,ap_after + int(definition.get("ap_gain",0))),abi + ":on_hit_ap_awarded")
+	if abi == "ABI407":
+		_check(int(final_action_result.get("poison_stacks_consumed",-1)) == 6 and int(final_action_result.get("breach_stacks_to_apply",-1)) == 3,abi + ":poison_to_breach_ratio")
+	if abi in ["ABI603","ABI604","ABI605","ABI606"]:
+		_check(int(final_action_result.get("charges_consumed",0)) > 0,abi + ":hammer_charges_consumed")
 	if abi in ["ABI402","ABI501","ABI504","ABI507","ABI602","ABI603","ABI605"]:
 		_check(effect_events > 0,abi + ":effect_event_dispatched")
 	var next_options := session.player_ability_options()
