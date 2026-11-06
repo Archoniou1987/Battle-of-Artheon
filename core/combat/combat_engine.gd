@@ -2,7 +2,23 @@ class_name CombatEngine
 extends RefCounted
 
 var state: CombatState
+var combat_rng := RandomNumberGenerator.new()
+
+func attack_rolls() -> Dictionary:
+	return {"hit": combat_rng.randi_range(1,100), "magic_hit": combat_rng.randi_range(1,100), "reaction": combat_rng.randi_range(1,100), "dodge": combat_rng.randi_range(1,100), "auto_block": combat_rng.randi_range(1,100), "block_crush": combat_rng.randi_range(1,100), "crit": combat_rng.randi_range(1,100), "on_hit_effect": combat_rng.randi_range(1,100), "manual_block_effect": combat_rng.randi_range(1,100), "damage": combat_rng.randf()}
+
+func complete_attack_rolls(provided: Dictionary) -> Dictionary:
+	var result := provided.duplicate(true)
+	for key in ["hit", "magic_hit", "reaction", "dodge", "auto_block", "block_crush", "crit", "on_hit_effect", "manual_block_effect"]:
+		if not result.has(key):
+			result[key] = combat_rng.randi_range(1, 100)
+	if not result.has("damage"):
+		result["damage"] = combat_rng.randf()
+	return result
+
 var physical_balance: Dictionary
+var canonical_effects: Dictionary = {}
+var _balance_valid := true
 var _next_effect_stack_id: int = 1
 var group_state:GroupCombatState
 var zone_state:CombatZoneState
@@ -15,7 +31,16 @@ func configure_spatial_context(groups:GroupCombatState,zones:CombatZoneState)->v
 
 func _init(combat_state: CombatState, balance: Dictionary = {}) -> void:
 	state = combat_state
-	physical_balance = balance
+	canonical_effects = EffectCatalog.load_json()
+	physical_balance = balance.duplicate(true)
+	if balance.is_empty():
+		var file := FileAccess.open("res://data/balance/physical_combat.json", FileAccess.READ)
+		var parsed: Variant = JSON.parse_string(file.get_as_text()) if file != null else null
+		if not parsed is Dictionary or not parsed.get("hit_by_level_difference") is Dictionary or not parsed.get("armour_reduction_curve") is Array or parsed.get("armour_reduction_curve", []).is_empty():
+			_balance_valid = false
+			push_error("CombatEngine: required physical_combat.json is missing or invalid")
+			return
+		physical_balance = parsed
 
 func resolve_pending_events() -> void:
 	while not state.pending_events.is_empty():
@@ -23,6 +48,10 @@ func resolve_pending_events() -> void:
 		resolve_event(event)
 
 func resolve_event(event: CombatEvent) -> void:
+	if not _balance_valid:
+		event.set_result("outcome", "invalid_balance_config")
+		state.record_event(event)
+		return
 	match event.kind:
 		CombatEvent.Kind.ACTION: _resolve_action(event)
 		CombatEvent.Kind.ATTACK: _resolve_attack(event)
@@ -35,10 +64,44 @@ func _resolve_action(event: CombatEvent) -> void:
 	if source == null:
 		event.set_result("outcome", "invalid_combatant")
 		return
+	if source.is_death_finalized():
+		event.set_result("outcome", "source_dead")
+		return
+	if not _require_canonical(event, source):
+		return
+	if CombatTempoService.is_stunned(source, state.round_number):
+		event.set_result("outcome", "stunned")
+		return
+	if SwordAbiCombatService.is_sword_ability(String(event.payload.get("ability_id",""))):
+		SwordAbiCombatService.dispatch(self,event)
+		return
+	if DaggerAbiCombatService.is_dagger_ability(String(event.payload.get("ability_id",""))):
+		DaggerAbiCombatService.dispatch(self,event)
+		return
+	if AxeAbiCombatService.is_axe_ability(String(event.payload.get("ability_id",""))):
+		AxeAbiCombatService.dispatch(self,event)
+		return
+	if HammerAbiCombatService.is_hammer_ability(String(event.payload.get("ability_id",""))):
+		HammerAbiCombatService.dispatch(self,event)
+		return
 	var target_ids := _valid_action_targets(event)
 	if target_ids.is_empty():
 		event.set_result("outcome", "invalid_combatant")
 		return
+	for target_id in target_ids:
+		if not _require_canonical(event, state.get_combatant(String(target_id))):
+			return
+	# A counter ABI targets the body zone of this round's first MH strike.
+	# Resolve from sealed round metadata or explicit queued/logged MH attack.
+	if bool(event.payload.get("is_counterattack_abi",false)):
+		var mh_zone:=String(event.payload.get("counter_abi_mh_zone",""))
+		if not HIT_ZONES.has(mh_zone):
+			mh_zone=_counter_abi_current_mh_zone(event.source_id)
+		if not HIT_ZONES.has(mh_zone):
+			event.set_result("outcome","missing_current_mh_zone")
+			return
+		event.payload["zone"]=mh_zone
+		event.set_result("counter_abi_body_zone",mh_zone)
 	var child_event_ids:Array[int] = []
 	var unsupported_components:Array[String] = []
 	# Magic AREA/CHAIN is one cast roll, not one independent roll per victim.
@@ -54,7 +117,7 @@ func _resolve_action(event: CombatEvent) -> void:
 			continue
 		var component:Dictionary = raw_component
 		var kind := String(component.get("kind", ""))
-		if not ["damage","effect","heal"].has(kind):
+		if not ["damage","effect","heal","cleanse"].has(kind):
 			unsupported_components.append(kind if not kind.is_empty() else "unknown")
 			continue
 		var scale := _aoe_component_scale(component, target_ids.size())
@@ -113,9 +176,16 @@ func _action_is_support(event:CombatEvent)->bool:
 		var kind:=String(raw_component.get("kind",""))
 		if kind=="heal":
 			has_support=true
+		elif kind=="effect" and String(event.payload.get("target_team",""))=="ALLY":
+			has_support=true
+		elif kind=="cleanse":
+			if String(event.payload.get("target_team","")).to_upper()=="ALLY":
+				has_support=true
+			else:
+				has_offense=true
 		elif kind in ["damage","effect"]:
 			has_offense=true
-	return has_support and not has_offense
+	return String(event.payload.get("target_team",""))=="ALLY" or (has_support and not has_offense)
 
 func _distance_modifier(event:CombatEvent,target_id:String)->float:
 	if zone_state==null:
@@ -136,8 +206,18 @@ func _magic_hit_success(event:CombatEvent,target_id:String)->bool:
 	var source:=state.get_combatant(event.source_id)
 	if source==null:
 		return false
-	var chance:=float(source.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+_distance_modifier(event,target_id)
-	return CombatMath.roll_success(clampf(chance,0.0,100.0),int(event.payload.get("magic_hit_roll",1)))
+	var target := state.get_combatant(target_id)
+	if not _require_canonical(event, source) or not _require_canonical(event, target):
+		return false
+	var chance := _common_hit_chance(source, target) + float(event.payload.get("magic_hit_modifier",0.0)) + _distance_modifier(event,target_id)
+	# Roll once per cast using the seeded engine RNG, then reuse the result
+	# for every component of the same ability. Explicit rolls remain testable.
+	var magic_roll := int(event.payload.get("magic_hit_roll", 0))
+	if magic_roll < 1 or magic_roll > 100:
+		magic_roll = combat_rng.randi_range(1,100)
+		event.payload["magic_hit_roll"] = magic_roll
+	event.set_result("magic_hit_roll", magic_roll)
+	return CombatMath.roll_success(clampf(chance,0.0,100.0), magic_roll)
 
 func _aoe_component_scale(component:Dictionary, target_count:int) -> float:
 	if target_count <= 0:
@@ -151,8 +231,14 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 	var kind := String(component.get("kind", ""))
 	var delivery_type := String(parent.payload.get("delivery_type", "DIRECT"))
 	if kind=="heal":
+		var heal_amount := float(component.get("amount",0.0))
+		var heal_k := float(component.get("spell_power_scale",0.0))
+		if not is_zero_approx(heal_k):
+			var healer := state.get_combatant(parent.source_id)
+			if healer != null:
+				heal_amount += heal_k*CombatModifierService.spell_power(healer,state.round_number)
 		return state.create_event(CombatEvent.Kind.EFFECT,parent.source_id,target_id,{
-			"inline_heal":int(round(float(component.get("amount",0.0))*scale)),
+			"inline_heal":int(round(maxf(0.0,heal_amount)*scale)),
 			"source_type":"ability",
 			"ability_id":String(parent.payload.get("ability_id","")),
 			"delivery_type":delivery_type,
@@ -160,34 +246,30 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 		},parent.event_id)
 	if kind == "damage":
 		var damage_type := String(component.get("damage_type", "physical"))
-		var amount := float(component.get("amount", 0.0)) * scale
+		var amount := float(component.get("amount", 0.0))
+		# ABI magic: base + optional K*absolute SP. Direct % EFF/TRA are
+		# separate. No K means no SP. DoT ticks do not inherit SP.
+		if CombatDamagePayload.is_magic_damage_type(damage_type):
+			var caster := state.get_combatant(parent.source_id)
+			if caster != null:
+				var k := float(component.get("spell_power_scale",0.0))
+				amount = maxf(0.0,amount+k*CombatModifierService.spell_power(caster,state.round_number))
+				var bonus_percent := CombatModifierService.magic_damage_bonus_pct(caster,state.round_number)
+				amount *= maxf(0.0,1.0+bonus_percent/100.0)
+		amount *= scale
 		if delivery_type in ["MELEE", "PROJECTILE"]:
-			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, {
-				"raw_damage": amount,
-				"damage_type": damage_type,
-				"zone": String(component.get("zone", parent.payload.get("zone", "chest"))),
-				"rolls": parent.payload.get("rolls", {}),
-				"source": "ability",
-				"source_kind": "ability",
-				"ability_id": String(parent.payload.get("ability_id", "")),
-				"delivery_type": delivery_type,
-				"min_zone_distance": int(parent.payload.get("min_zone_distance", 0)),
-				"max_zone_distance": int(parent.payload.get("max_zone_distance", 2)),
-				"two_zone_hit_modifier": float(parent.payload.get("two_zone_hit_modifier", -50.0)),
-				"uses_physical_block": damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
-				"bypass_physical_mitigation": not damage_type in ["physical", "slashing", "piercing", "chopping", "blunt"],
-				"generates_ap": false,
-				"aoe_scale": scale
-			}, parent.event_id)
-		return state.create_event(CombatEvent.Kind.DAMAGE, parent.source_id, target_id, {
-			"amount": amount,
-			"raw_damage": amount,
-			"damage_type": damage_type,
-			"source": "ability",
-			"ability_id": String(parent.payload.get("ability_id", "")),
-			"delivery_type": delivery_type,
-			"aoe_scale": scale
-		}, parent.event_id)
+			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, CombatDamagePayload.ability_attack_payload(parent, component, amount, scale), parent.event_id)
+		var direct_payload := CombatDamagePayload.direct_damage_payload(parent, damage_type, amount, "ability")
+		direct_payload["aoe_scale"] = scale
+		return state.create_event(CombatEvent.Kind.DAMAGE, parent.source_id, target_id, direct_payload, parent.event_id)
+	if kind == "cleanse":
+		return state.create_event(CombatEvent.Kind.EFFECT,parent.source_id,target_id,{
+			"dispel_polarity":String(component.get("dispel_polarity","")).to_upper(),
+			"max_effects":maxi(1,int(component.get("max_effects",1))),
+			"source_type":"ability",
+			"ability_id":String(parent.payload.get("ability_id","")),
+			"delivery_type":delivery_type
+		},parent.event_id)
 	if kind == "effect":
 		return state.create_event(CombatEvent.Kind.EFFECT, parent.source_id, target_id, {
 			"effect_id": String(component.get("effect_id", "")),
@@ -198,86 +280,204 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 			"source_type": "ability",
 			"ability_id": String(parent.payload.get("ability_id", "")),
 			"delivery_type": delivery_type,
-			"aoe_scale": scale
+			"aoe_scale": scale,
+			"preparation_effect": String(parent.payload.get("application_timing", "standard")) == "instant"
 		}, parent.event_id)
 	return null
+
+func _counter_abi_current_mh_zone(source_id:String)->String:
+	for attacks in [state.pending_events,state.event_log]:
+		for candidate in attacks:
+			if candidate.kind != CombatEvent.Kind.ATTACK or candidate.source_id != source_id:
+				continue
+			if int(candidate.payload.get("round",-1)) != state.round_number or not bool(candidate.payload.get("is_weapon_attack",false)):
+				continue
+			if int(candidate.payload.get("weapon_index",-1)) != 0 or int(candidate.payload.get("hit_index",0)) != 0:
+				continue
+			var zone:=String(candidate.payload.get("zone",""))
+			if HIT_ZONES.has(zone):
+				return zone
+	return ""
 
 func _resolve_attack(event: CombatEvent) -> void:
 	var attacker := state.get_combatant(event.source_id)
 	var defender := state.get_combatant(event.target_id)
 	if attacker == null or defender == null:
 		event.set_result("outcome", "invalid_combatant"); return
+	if attacker.is_death_finalized() or defender.is_death_finalized():
+		event.set_result("outcome", "source_dead" if attacker.is_death_finalized() else "target_dead")
+		return
+	if not _require_canonical(event, attacker) or not _require_canonical(event, defender):
+		return
+	if bool(event.payload.get("is_counterattack_abi",false)) and (String(event.payload.get("source_kind",""))!="ability" or not CombatDamagePayload.is_physical_damage_type(String(event.payload.get("damage_type","")))):
+		event.set_result("outcome","invalid_counter_abi")
+		return
+	if CombatTempoService.is_stunned(attacker, state.round_number):
+		event.set_result("outcome", "stunned")
+		return
 	var rolls: Dictionary = event.payload.get("rolls", {})
 	var uses_magic_hit:=bool(event.payload.get("uses_magic_hit",false))
 	var distance_hit_modifier:=_distance_modifier(event,event.target_id) if uses_magic_hit else _physical_ranged_distance_hit_modifier(event)
 	var is_weapon_attack:=bool(event.payload.get("is_weapon_attack",event.payload.has("weapon_index") and String(event.payload.get("source_kind",""))!="ability"))
 	var weapon_skill_penalty:=0.0 if uses_magic_hit or not is_weapon_attack else _weapon_skill_hit_penalty(attacker, int(event.payload.get("weapon_index",0)))
-	var hit_chance:=float(attacker.combat_stats.get("magic_hit",95.0))+float(event.payload.get("magic_hit_modifier",0.0))+distance_hit_modifier if uses_magic_hit else _hit_chance(attacker.level - defender.level) + float(attacker.combat_stats.get("hit_modifier", 0.0)) - weapon_skill_penalty + distance_hit_modifier
+	var shared_hit := _common_hit_chance(attacker, defender)
+	var hit_chance := shared_hit - weapon_skill_penalty + distance_hit_modifier
+	if uses_magic_hit:
+		hit_chance += float(event.payload.get("magic_hit_modifier",0.0))
 	event.set_result("distance_hit_modifier",distance_hit_modifier)
 	event.set_result("weapon_skill_hit_penalty",weapon_skill_penalty)
 	event.set_result("hit_system","magic" if uses_magic_hit else "physical")
 	var hit_roll:=int(event.payload.get("magic_hit_roll",rolls.get("magic_hit",1))) if uses_magic_hit else int(rolls.get("hit",100))
-	if not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
-		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); _gain_basic_attack_ap(attacker, event); return
-	var active_defence_available := not uses_magic_hit and _active_defence_available(defender.tempo, int(rolls.get("reaction", 100)))
+	event.set_result("hit_chance",clampf(hit_chance,0.0,100.0))
+	event.set_result("hit_roll",hit_roll)
+	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
+		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); return
+	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not bool(event.payload.get("skip_dodge_block",false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
+	event.set_result("active_defence_available",active_defence_available)
 	if active_defence_available:
-		var dodge := CombatMath.effective_dodge(float(defender.combat_stats.get("dodge", 0.0)), float(attacker.combat_stats.get("anti_dodge", 0.0)))
+		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
+		event.set_result("dodge_chance",dodge)
+		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
-			event.set_result("outcome", "dodge"); _queue_counterattack(event, defender, attacker, rolls); _gain_basic_attack_ap(attacker, event); return
+			event.set_result("outcome", "dodge")
+			AxeAbiCombatService.on_dodge(self,event,defender)
+			return
+		event.set_result("uses_physical_block",_event_uses_physical_block(event))
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
-			if not _block_crushed(attacker, rolls):
+			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
+			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
+			var manual_block_crushed:=_block_crushed(attacker, rolls)
+			event.set_result("manual_block_crushed",manual_block_crushed)
+			if not manual_block_crushed:
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
-				_gain_basic_attack_ap(attacker, event); return
-		var auto_block := float(defender.combat_stats.get("auto_block", 0.0))
+				return
+		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
+		event.set_result("auto_block_chance",auto_block)
+		event.set_result("auto_block_roll",int(rolls.get("auto_block", 100)))
 		if _event_uses_physical_block(event) and defender.can_auto_block() and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
-			if not _block_crushed(attacker, rolls):
-				event.set_result("outcome", "auto_block"); _gain_basic_attack_ap(attacker, event); return
+			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
+			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
+			var auto_block_crushed:=_block_crushed(attacker, rolls)
+			event.set_result("auto_block_crushed",auto_block_crushed)
+			if not auto_block_crushed:
+				event.set_result("outcome", "auto_block"); return
 
-	if bool(event.payload.get("bypass_physical_mitigation", false)):
-		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {
-			"amount": float(event.payload.get("raw_damage", 0.0)),
-			"raw_damage": float(event.payload.get("raw_damage", 0.0)),
-			"damage_type": String(event.payload.get("damage_type", "physical")),
-			"source": "ability",
-			"ability_id": String(event.payload.get("ability_id", "")),
-			"delivery_type": String(event.payload.get("delivery_type", "PROJECTILE"))
-		}, event.event_id)
+	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
+	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
+	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
+	var raw_damage := float(event.payload.get("raw_damage", 0.0)) + float(event.payload.get("sword_mh_bonus_flat",0.0))
+	if String(event.payload.get("axe_abi_id","")) == AxeAbiCombatService.RAGE_ABI:
+		raw_damage *= 1.0 + float(event.payload.get("axe_mh_damage_bonus_pct",20.0))/100.0
+	if String(event.payload.get("hammer_abi_id","")) == HammerAbiCombatService.HEAVY:
+		raw_damage *= 1.0 + float(event.payload.get("hammer_mh_damage_bonus_pct",20.0))/100.0
+	# PAR053–056: physical damage bonus applies only to the matching damage type.
+	# Percent values are stored as percentages (e.g. 30 means +30%).
+	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
+	if physical_type in ["piercing", "slashing", "chopping", "blunt"]:
+		var physical_bonus := CombatModifierService.effective_stat(attacker, "physical_damage_" + physical_type + "_pct", state.round_number)
+		raw_damage *= maxf(0.0, 1.0 + physical_bonus / 100.0)
+		raw_damage *= maxf(0.0, 1.0 + CombatModifierService.modifier(attacker,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
+	if CombatDamagePayload.is_magic_damage_type(String(event.payload.get("damage_type", ""))) and not bool(event.payload.get("magic_rating_applied", false)):
+		# Only direct percent EFF/TRA; PAR150 requires an ABI K.
+		raw_damage *= maxf(0.0,1.0+CombatModifierService.magic_damage_bonus_pct(attacker,state.round_number)/100.0)
+	if is_crit:
+		var ability_critical_bonus := float(event.payload.get("sword_crit_damage_pct",0.0))
+		var critical_rating_bonus := CombatModifierService.crit_damage_bonus(attacker,state.round_number,ability_critical_bonus)
+		raw_damage *= float(physical_balance.get("crit_damage_multiplier",1.5)) + critical_rating_bonus/100.0
+		event.set_result("crit_damage_bonus_after_dr_pct",critical_rating_bonus)
+	if _event_bypasses_physical_mitigation(event):
+		var ability_damage := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, CombatDamagePayload.direct_damage_payload(event, String(event.payload.get("damage_type", "physical")), raw_damage, "ability"), event.event_id)
 		state.queue_event(ability_damage)
 		event.set_result("outcome", "connected")
+		event.set_result("critical", is_crit)
+		event.set_result("crit_chance", crit)
+		event.set_result("raw_damage", raw_damage)
 		event.set_result("damage_event_id", ability_damage.event_id)
 		# Non-physical weapon attacks still complete the weapon pipeline.
 		if is_weapon_attack:
 			_trigger_weapon_on_hit(event, attacker, defender, rolls)
-		_gain_basic_attack_ap(attacker, event)
 		return
 
-	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
-	var crit := CombatMath.effective_crit(float(attacker.combat_stats.get("crit", 0.0)) + active_crit_bonus, float(defender.combat_stats.get("anti_crit", 0.0)))
-	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
-	var raw_damage := float(event.payload.get("raw_damage", 0.0))
-	if is_crit: raw_damage *= float(physical_balance.get("crit_damage_multiplier", 1.5))
 	var zone := String(event.payload.get("zone", "chest")); var damage_type := String(event.payload.get("damage_type", "slashing"))
-	var effective_armour := CombatMath.effective_armour(_armour_for(defender, zone, damage_type), float(attacker.combat_stats.get("flat_armour_pen", 0.0)), float(attacker.combat_stats.get("percent_armour_reduction", 0.0)))
-	var reduction := BalanceCurve.sample(physical_balance.get("armour_reduction_curve", []), effective_armour)
+	# PAR127–130 are global flat armour: identical bonus in all five zones.
+	var base_armour:=_armour_for(defender, zone, damage_type) + CombatModifierService.global_physical_armour(defender, damage_type, state.round_number)
+	var armour_penetration_flat:=CombatModifierService.armour_penetration_flat(attacker, state.round_number)
+	var armour_penetration_percent:=CombatModifierService.armour_reduction_percent(attacker, state.round_number)
+	var typed_armour_penetration_percent:=CombatModifierService.typed_armour_penetration_percent(attacker, damage_type, state.round_number)
+	# PAR126 and PAR131–134 reduce the matching armour sequentially.
+	# PAR125 is flat armour-rating penetration, BEFORE percentages and DR.
+	# PAR126 and PAR131-134 retain their independently audited % reductions.
+	var effective_armour := maxf(0.0, base_armour - maxf(0.0,armour_penetration_flat))
+	effective_armour *= (1.0-armour_penetration_percent)*(1.0-typed_armour_penetration_percent)
+	var raw_armour_pct := CombatRatingCurves.armour_raw_pct(effective_armour, defender.level)
+	# Dagger EFF401 reduces the raw percentage before diminishing.
+	# Never change underlying item PAR or the armour rating matrix.
+	var dagger_breach_stacks := 0
+	for breach in CombatModifierService.active_effects(defender,state.round_number):
+		if String(breach.get("effect_id","")) == DaggerAbiCombatService.BREACH:
+			dagger_breach_stacks += int(breach.get("stacks",1))
+	dagger_breach_stacks = mini(5,dagger_breach_stacks)
+	# Flat penetration was already applied to the armour RATING above.
+	# EFF401 is a percentage-point reduction, before v1.2 diminishing.
+	# EFF401 penetration and hammer armour bonuses enter the raw percentage
+	# before DR. Post-DR additions could recreate 100% physical immunity.
+	var after_breach_pct := maxf(0.0,raw_armour_pct-3.0*float(dagger_breach_stacks))
+	var armour_before_dr := after_breach_pct+0.25*float(HammerAbiCombatService.charges(defender,state.round_number))
+	var armour_percent := CombatRatingCurves.diminishing(armour_before_dr,"armour")
+	# Active zone fracture only reduces its named physical zone.
+	for fracture in CombatModifierService.active_effects(defender,state.round_number):
+		if String(fracture.get("effect_id","")) == HammerAbiCombatService.FRACTURE_EFF:
+			var fdef: Dictionary = fracture.get("definition",{})
+			if String(fdef.get("armour_zone","")) == String(event.payload.get("zone","chest")):
+				armour_percent *= 1.0-clampf(float(fdef.get("armour_reduction_pct",0.0))/100.0,0.0,1.0)
+	# Apply ABI408 to the FINAL armour percentage (including temporary
+	# charge buffs) so five breach stacks actually mean zero armour.
+	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE:
+		armour_percent *= 1.0-clampf(float(event.payload.get("dagger_armour_bypass_pct",0.0))/100.0,0.0,1.0)
+	var reduction := clampf(armour_percent / 100.0,0.0,1.0)
+	event.set_result("dagger_breach_stacks",dagger_breach_stacks)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
-	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("raw_damage", raw_damage); event.set_result("damage_event_id", damage_event.event_id)
+	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_raw_percent",raw_armour_pct); event.set_result("armour_after_breach_percent",after_breach_pct); event.set_result("armour_before_dr_percent",armour_before_dr); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
+	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
+	DaggerAbiCombatService.on_connected_attack(self,event,attacker)
+	AxeAbiCombatService.on_connected_attack(self,event)
+	HammerAbiCombatService.on_connected_attack(self,event,attacker)
 	if is_weapon_attack:
 		_trigger_weapon_on_hit(event, attacker, defender, rolls)
-	_gain_basic_attack_ap(attacker, event)
 
 func _resolve_damage(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
 	if target == null: event.set_result("error", "target_not_found"); return
+	# Negative provisional HP is allowed until end_round; finalized death is not.
+	if target.is_death_finalized():
+		event.set_result("outcome", "target_dead")
+		event.set_result("connected", false)
+		event.set_result("final_damage", 0)
+		event.set_result("hp_removed", 0)
+		return
 	var amount := float(event.payload.get("amount", 0.0))
 	var damage_type := String(event.payload.get("damage_type", ""))
-	var magic_resist := _magic_resist(target, damage_type)
-	if _is_magic_damage_type(damage_type):
+	if String(event.payload.get("effect_id","")) == SwordAbiCombatService.BLEED and String(event.payload.get("source","")) == "effect":
+		# Bleeding ticks (including the ABI308 burst) ignore hit/dodge/crit,
+		# but still pass the victim's physical protection once.
+		var bleed_armour := _armour_for(target,"chest","slashing") + CombatModifierService.global_physical_armour(target,"slashing",state.round_number)
+		var bleed_armor_pct := RatingMatrix.to_percent(maxf(0.0,bleed_armour)*10.0,target.level)
+		amount *= maxf(0.0,1.0-clampf(bleed_armor_pct/100.0,0.0,1.0))
+		var bleed_source := state.get_combatant(event.source_id)
+		if bleed_source != null:
+			amount *= maxf(0.0,1.0+CombatModifierService.modifier(bleed_source,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
+	var magic_attacker := state.get_combatant(event.source_id)
+	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number, magic_attacker)
+	if CombatDamagePayload.is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
-	amount *= 1.0 - clampf(_active_effect_value(target, "damage_reduction"), 0.0, 1.0)
+	amount *= maxf(0.0,1.0+CombatModifierService.modifier(target,"incoming_damage_direct_pct",state.round_number)/100.0)
+	var total_reduction := CombatModifierService.damage_reduction(target, state.round_number)
+	amount *= 1.0 - total_reduction
+	event.set_result("damage_reduction", total_reduction)
 	var final_damage := CombatMath.final_damage_floor(amount)
 	var hp_before := target.hp
 	var applied := target.apply_damage(final_damage)
@@ -288,20 +488,66 @@ func _resolve_damage(event: CombatEvent) -> void:
 	event.set_result("hp_after", target.hp)
 	event.set_result("visible_hp_after", target.visible_hp())
 	event.set_result("connected", true)
+	HammerAbiCombatService.on_damage(self,event,target)
 
 func _resolve_effect(event: CombatEvent) -> void:
 	var target := state.get_combatant(event.target_id)
-	if target==null:
+	if target==null or target.is_death_finalized():
 		event.set_result("resolved",false)
+		if target!=null:
+			event.set_result("outcome", "target_dead")
+		return
+	if event.payload.has("dispel_polarity"):
+		_resolve_dispel(event,target)
+		return
+	if event.payload.has("inline_mana"):
+		var before_mana: int = target.mana
+		target.mana = mini(target.max_mana, target.mana + maxi(0, int(event.payload.get("inline_mana",0))))
+		event.set_result("mana_restored",target.mana-before_mana)
+		event.set_result("resolved",target.mana>before_mana)
 		return
 	if event.payload.has("inline_heal"):
-		var healed:=target.restore_hp(int(event.payload.get("inline_heal",0)))
+		var healed_amount: int = maxi(0,int(event.payload.get("inline_heal",0)))
+		if bool(event.payload.get("clamp_heal_to_max",false)):
+			healed_amount = mini(healed_amount, maxi(0,target.max_hp-target.hp))
+		var healed:=target.restore_hp(healed_amount)
 		event.set_result("healed",healed)
 		event.set_result("resolved",healed!=0)
 		return
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if definition.is_empty(): event.set_result("resolved", false); return
+	if effect_id == DaggerAbiCombatService.DODGE_BUFF:
+		definition = definition.duplicate(true)
+		definition["dodge_direct_pct"] = clampf(float(event.payload.get("dagger_dodge_pct",0.0)),0.0,25.0)
+	if effect_id == AxeAbiCombatService.STANCE_EFF:
+		definition = definition.duplicate(true)
+		definition["dodge_direct_pct"] = clampf(float(event.payload.get("axe_stance_dodge_pct",0.0)),0.0,25.0)
+	if effect_id == HammerAbiCombatService.FRACTURE_EFF:
+		definition = definition.duplicate(true)
+		definition["duration_rounds"] = clampi(int(event.payload.get("hammer_fracture_rounds",0)),1,10)
+		definition["armour_reduction_pct"] = clampf(float(event.payload.get("hammer_fracture_pct",0.0)),0.0,100.0)
+		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
+	if effect_id == HammerAbiCombatService.SURGE_EFF:
+		definition = definition.duplicate(true)
+		var surge := clampf(float(event.payload.get("hammer_surge_pct",0.0)),0.0,25.0)
+		definition["physical_damage_outgoing_direct_pct"] = surge
+		definition["magic_damage_direct_pct"] = surge
+	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
+		definition = definition.duplicate(true)
+		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
+		if effect_id == "EFF301":
+			definition["damage"] = float(clampi(eff_level,1,10))
+		else:
+			var blood := SwordAbiCombatService.active_bleeding(target)
+			var stack_snapshot := int(blood.get("stacks",0))
+			if effect_id == "EFF302":
+				definition["physical_damage_outgoing_direct_pct"] = -5.0 * stack_snapshot
+			elif effect_id == "EFF303":
+				definition["anti_dodge_direct_pct"] = -float(clampi(eff_level,1,5)) * stack_snapshot
+			else:
+				definition["anti_crit_direct_pct"] = -float(clampi(eff_level,1,5)) * stack_snapshot
+			event.set_result("sword_bleed_snapshot",stack_snapshot)
 	var effect_kind := String(definition.get("kind", ""))
 	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
 		event.set_result("effect_id", effect_id)
@@ -310,7 +556,8 @@ func _resolve_effect(event: CombatEvent) -> void:
 		return
 	var base_chance := clampf(float(event.payload.get("base_chance", 100.0)), 0.0, 100.0)
 	var resist_type := String(event.payload.get("resist_type", ""))
-	var resist := _magic_resist(target, resist_type)
+	var magic_attacker := state.get_combatant(event.source_id)
+	var resist := 0.0 if effect_kind == "hot" else CombatModifierService.magic_resist(target, resist_type, state.round_number, magic_attacker)
 	var effective_chance := base_chance * (1.0 - resist)
 	event.set_result("base_chance", base_chance)
 	event.set_result("resist", resist)
@@ -324,11 +571,70 @@ func _resolve_effect(event: CombatEvent) -> void:
 	if kind == "heal":
 		event.set_result("healed", target.restore_hp(int(definition.get("amount", 0))))
 	else:
+		# Tempo control is a one-time accumulated hit, never a repeat overlay.
+		var tempo_delta := float(definition.get("tempo_modifier", 0.0)) + float(definition.get("tempo", 0.0))
+		# Legacy stun/freeze/fear without an explicit magnitude is equivalent
+		# to a -100 control hit; actual stun still starts on the next round.
+		if not definition.has("tempo_modifier") and not definition.has("tempo") and kind in ["stun", "freeze", "fear"]:
+			tempo_delta = -100.0
+		if tempo_delta < 0.0:
+			CombatTempoService.apply_control(target, -tempo_delta)
+		elif tempo_delta > 0.0:
+			target.tempo = minf(target.max_tempo, target.tempo + tempo_delta)
 		_apply_timed_effect(target, effect_id, definition, event)
 	event.set_result("effect_id", effect_id); event.set_result("resolved", true)
+	DaggerAbiCombatService.on_effect_applied(self,event)
+
+## Cleanse only revealed EFF stacks. A shared-duration record may retain
+## an undisclosed instant addition while its previously known stacks vanish.
+## Unknown polarity cannot be dispelled accidentally; content may declare it.
+func _resolve_dispel(event:CombatEvent,target:CombatantState) -> void:
+	var polarity:=String(event.payload.get("dispel_polarity","")).to_upper()
+	if not ["BUFF","DEBUFF"].has(polarity):
+		event.set_result("resolved",false)
+		event.set_result("outcome","invalid_dispel_polarity")
+		return
+	var limit:=maxi(1,int(event.payload.get("max_effects",1)))
+	var removed:Array[String]=[]
+	for active in target.active_effects.duplicate():
+		if removed.size()>=limit:
+			break
+		# A newly applied instant ABI EFF is active but remains unknown
+		# until round end. No cleanse can remove it before the NEXT round,
+		# regardless of the order of instant casts in this same round.
+		# Legacy active records use start_round as their cleanse boundary.
+		if state.round_number < int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0)) <= 0:
+			continue
+		if not bool(active.get("revealed",true)):
+			continue
+		if state.round_number < int(active.get("dispel_available_round",active.get("start_round",999999))):
+			continue
+		var definition:Dictionary=Dictionary(active.get("definition",{}))
+		# Permanent hammer charge stacks are expended only through their ABI.
+		if bool(definition.get("undispellable",false)):
+			continue
+		if EffectPolarity.of(definition)!=polarity:
+			continue
+		removed.append(String(active.get("effect_id","")))
+		# One shared-duration record may contain old revealed stacks plus
+		# newly applied hidden instant stacks. Cleanse can take the known
+		# portion, but the unseen addition must survive until next round.
+		var hidden_stacks: int = maxi(0,int(active.get("undisclosed_stacks",0)))
+		var total_stacks: int = maxi(1,int(active.get("stacks",1)))
+		if String(definition.get("stacking",""))=="shared_duration" and hidden_stacks>0 and total_stacks>hidden_stacks:
+			active["stacks"]=hidden_stacks
+			active["active_stacks"]=0 # Known stacks were removed before the EFF tick.
+			active["revealed"]=false
+			active["dispel_available_round"]=state.round_number+1
+			active.erase("visible_remaining_rounds")
+			continue
+		target.active_effects.erase(active)
+	event.set_result("resolved",not removed.is_empty())
+	event.set_result("removed_effect_ids",removed)
+	event.set_result("removed_count",removed.size())
 
 func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defender: CombatantState, rolls: Dictionary) -> void:
-	var effects:Array=attacker.combat_stats.get("weapon_on_hit_effects",[])
+	var effects:Array=CombatModifierService.weapon_on_hit_effects(attacker)
 	if effects.is_empty(): return
 	var attack_weapon_index:=int(parent.payload.get("weapon_index",0))
 	var per_source_rolls:Array=rolls.get("on_hit_effects",[])
@@ -347,7 +653,7 @@ func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defen
 		state.queue_event(state.create_event(CombatEvent.Kind.EFFECT,attacker.combatant_id,defender.combatant_id if String(trigger.get("effect_id"))=="EFF001" else attacker.combatant_id,payload,parent.event_id))
 
 func _trigger_manual_block_effects(parent: CombatEvent, defender: CombatantState, rolls: Dictionary) -> void:
-	var triggers: Array = defender.combat_stats.get("on_manual_block_effects", [])
+	var triggers: Array = CombatModifierService.manual_block_effects(defender)
 	for trigger in triggers:
 		if CombatMath.roll_success(float(trigger.get("chance", 0.0)), int(rolls.get("manual_block_effect", 100))):
 			var payload := {"effect_id":String(trigger.get("effect_id", "")),"source_type":String(trigger.get("source_type", "item")),"source_instance_id":String(trigger.get("source_instance_id", ""))}
@@ -358,7 +664,40 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 	var max_stacks := maxi(1, int(definition.get("max_stacks", 1)))
 	var matching:Array = []
 	for active in target.active_effects:
-		if String(active.get("effect_id", "")) == effect_id: matching.append(active)
+		if String(active.get("effect_id", "")) == effect_id and (stacking != "shared_duration" or String(active.get("source_id", "")) == event.source_id): matching.append(active)
+	# Shared-duration DoT is per effect and caster. New stacks join the tick
+	# starting NEXT round; only previously active stacks deal damage this round.
+	# Refresh counts three future ticks, including when already at stack cap.
+	if stacking == "shared_duration":
+		if matching.is_empty():
+			var shared_record := _make_effect_record(effect_id, definition, event)
+			shared_record["stacks"] = mini(max_stacks,maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
+			shared_record["active_stacks"] = 0
+			# Shared DoT/HoT must not gain a periodic tick from an instant
+			# ABI's early application. Preserve the normal future tick count.
+			if state.round_number >= int(shared_record.get("start_round",999999)):
+				shared_record["remaining_rounds"] = int(shared_record["remaining_rounds"]) + 1
+			target.active_effects.append(shared_record)
+		else:
+			var shared: Dictionary = matching[0]
+			var previous_stacks: int = maxi(1,int(shared.get("stacks",1)))
+			var next_stacks: int = mini(max_stacks,previous_stacks+maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
+			# An instant cast can add an undisclosed stack to a pre-existing,
+			# visible shared EFF. Keep the single logical record/timer, but
+			# do not reveal the stack count or refreshed timer mid-round.
+			var surprise_addition: bool = bool(event.payload.get("preparation_effect",false)) and bool(shared.get("revealed",true)) and state.round_number>=int(shared.get("start_round",999999))
+			if surprise_addition:
+				if not shared.has("visible_remaining_rounds"):
+					shared["visible_remaining_rounds"]=int(shared.get("remaining_rounds",0))
+				# A cast at the stack cap still refreshes the timer invisibly,
+				# but does not manufacture a new protected stack.
+				if next_stacks>previous_stacks:
+					shared["undisclosed_stacks"]=int(shared.get("undisclosed_stacks",0))+(next_stacks-previous_stacks)
+			shared["stacks"]=next_stacks
+			# End-of-round expiry decrements records already active this round.
+			var ticks := maxi(1, int(definition.get("duration_rounds", 1)))
+			shared["remaining_rounds"] = ticks + (1 if state.round_number >= int(shared.get("start_round", 999999)) else 0)
+		return
 	var record := _make_effect_record(effect_id, definition, event)
 	if stacking == "stack":
 		if matching.size() < max_stacks: target.active_effects.append(record)
@@ -370,96 +709,44 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEvent)->Dictionary:
 	var stack_id := "%s:%d" % [effect_id, _next_effect_stack_id]
 	_next_effect_stack_id += 1
-	return {"effect_id":effect_id,"definition":definition.duplicate(true),"source_id":event.source_id,"source_type":String(event.payload.get("source_type","unknown")),"source_instance_id":String(event.payload.get("source_instance_id","")),"stack_id":stack_id,"start_round":state.round_number + 1,"remaining_rounds":int(definition.get("duration_rounds",1))}
+	var starts_now := bool(event.payload.get("preparation_effect",false))
+	var start_round: int = state.round_number if starts_now else state.round_number + 1
+	return {
+		"effect_id":effect_id,
+		"definition":definition.duplicate(true),
+		"source_id":event.source_id,
+		"source_type":String(event.payload.get("source_type","unknown")),
+		"source_instance_id":String(event.payload.get("source_instance_id","")),
+		"stack_id":stack_id,
+		"start_round":start_round,
+		"remaining_rounds":int(definition.get("duration_rounds",1)),
+		# Active immediately, but hidden and uncleanseable until the
+		# end-of-round reveal. Actual removal can begin NEXT round.
+		"revealed":not starts_now,
+		"dispel_available_round":state.round_number + 1 if starts_now else start_round
+	}
+
+func _effect_flag(target: CombatantState, field: String) -> bool:
+	return CombatModifierService.flag(target, field, state.round_number)
 
 func _active_effect_value(target: CombatantState, field: String) -> float:
-	var total := 0.0
-	for active in target.active_effects:
-		if state.round_number >= int(active.get("start_round", 999999)) and int(active.get("remaining_rounds", 0)) > 0:
-			total += float(active.get("definition", {}).get(field, 0.0))
-	return total
+	return CombatModifierService.modifier(target, field, state.round_number)
 
 func _effect_definition(effect_id: String) -> Dictionary:
-	return physical_balance.get("effects", {}).get(effect_id, {})
-
-func _queue_counterattack(parent: CombatEvent, defender: CombatantState, attacker: CombatantState, rolls: Dictionary) -> void:
-	if bool(parent.payload.get("is_counterattack", false)): return
-	var chance := float(defender.combat_stats.get("counterattack", 0.0))
-	if not CombatMath.roll_success(chance, int(rolls.get("counterattack", 100))): return
-	var weapon:=_counterattack_weapon_profile(defender)
-	if weapon.is_empty(): return
-	var counter_rolls:Dictionary=Dictionary(parent.payload.get("counterattack_rolls",{})).duplicate(true)
-	var damage_roll:=float(counter_rolls.get("damage",randf()))
-	counter_rolls["damage"]=damage_roll
-	var damage_min:=float(weapon.get("damage_min",defender.combat_stats.get("main_hand_damage",0.0)))
-	var damage_max:=float(weapon.get("damage_max",damage_min))
-	var raw_damage:=CombatMath.roll_damage(damage_min,damage_max,damage_roll)*float(physical_balance.get("counterattack_damage_coefficient",0.8))
-	var child := state.create_event(CombatEvent.Kind.ATTACK, defender.combatant_id, attacker.combatant_id, {
-		"raw_damage":raw_damage,
-		"damage_min":damage_min,
-		"damage_max":damage_max,
-		"damage_roll":damage_roll,
-		"zone":String(parent.payload.get("counterattack_zone","chest")),
-		"damage_type":String(weapon.get("damage_type",defender.combat_stats.get("main_hand_damage_type","slashing"))),
-		"rolls":counter_rolls,
-		"is_counterattack":true,
-		"is_weapon_attack":true,
-		"generates_ap":false,
-		"weapon_index":int(weapon.get("weapon_index",0)),
-		"attack_profile_id":String(weapon.get("id","basic")),
-		"delivery_type":String(weapon.get("delivery_type","MELEE")),
-		"min_zone_distance":int(weapon.get("min_zone_distance",0)),
-		"max_zone_distance":int(weapon.get("max_zone_distance",0)),
-		"uses_magic_hit":bool(weapon.get("uses_magic_hit",false)),
-		"magic_hit_modifier":float(weapon.get("magic_hit_modifier",0.0)),
-		"magic_hit_roll":int(counter_rolls.get("magic_hit",1)),
-		"uses_physical_block":not bool(weapon.get("uses_magic_hit",false)),
-		"bypass_physical_mitigation":not String(weapon.get("damage_type","slashing")).to_lower() in ["physical","slashing","piercing","chopping","blunt"]
-	}, parent.event_id)
-	state.queue_event(child); parent.set_result("counterattack_event_id", child.event_id)
-
-func _counterattack_weapon_profile(combatant:CombatantState)->Dictionary:
-	var by_weapon:Dictionary={}
-	for profile in WeaponAttackProfile.all(combatant):
-		if int(profile.get("min_zone_distance",0))>0 or int(profile.get("max_zone_distance",0))<0:
-			continue
-		var weapon_index:=int(profile.get("weapon_index",-1))
-		if not by_weapon.has(weapon_index):
-			by_weapon[weapon_index]=[]
-		by_weapon[weapon_index].append(profile)
-	var weapon_indices:Array=by_weapon.keys()
-	weapon_indices.sort()
-	for raw_weapon_index in weapon_indices:
-		var profiles:Array=by_weapon[raw_weapon_index]
-		if profiles.size()==1:
-			return Dictionary(profiles[0]).duplicate(true)
-		var selected:Dictionary={}
-		for raw_profile in profiles:
-			var candidate:Dictionary=raw_profile
-			if bool(candidate.get("is_default",false)):
-				if not selected.is_empty():
-					selected={}
-					break
-				selected=candidate
-		if not selected.is_empty():
-			return selected.duplicate(true)
-	return {}
-func _gain_basic_attack_ap(attacker: CombatantState, event: CombatEvent) -> void:
-	if not bool(event.payload.get("generates_ap",true)) or bool(event.payload.get("is_counterattack",false)) or bool(event.payload.get("is_extra_attack",false)):
-		return
-	# A Base Attack earns AP only when one of its constituent attacks connects.
-	if String(event.result.get("outcome",""))!="connected":
-		return
-	var ap_group_id:=int(event.payload.get("ap_group_id",event.event_id))
-	for logged_event in state.event_log:
-		if int(logged_event.payload.get("ap_group_id",logged_event.event_id))==ap_group_id and int(logged_event.result.get("ap_gained",0))>0:
-			return
-	event.set_result("ap_gained",attacker.gain_action_points(int(physical_balance.get("basic_physical_attack_ap_gain",1))))
+	# Explicit combat-fixture definitions override canonical content only in
+	# their injected test balance; ordinary combat uses the EFF catalog.
+	var override: Variant = Dictionary(physical_balance.get("effects", {})).get(effect_id, null)
+	if override is Dictionary:
+		return override
+	return EffectCatalog.definition(canonical_effects, effect_id)
 
 func _weapon_skill_hit_penalty(attacker: CombatantState, weapon_index: int) -> float:
-	var profiles:Array=attacker.combat_stats.get("weapon_profiles",[])
-	if profiles.is_empty(): return 0.0
-	var profile:Dictionary=profiles[clampi(weapon_index,0,profiles.size()-1)]
+	var profile:Dictionary={}
+	for candidate in WeaponAttackProfile.all(attacker):
+		if int(candidate.get("weapon_index",-1))==weapon_index:
+			profile=candidate
+			break
+	if profile.is_empty(): return 0.0
 	var weapon_class:=String(profile.get("weapon_class",""))
 	if weapon_class.is_empty(): return 0.0
 	var item_level:=maxi(1,int(profile.get("item_level",1)))
@@ -470,41 +757,31 @@ func _hit_chance(level_difference: int) -> float:
 	var table: Dictionary = physical_balance.get("hit_by_level_difference", {})
 	if table.is_empty(): return 95.0
 	return float(table.get(str(clampi(level_difference, -10, 5)), 95.0))
-func _active_defence_available(tempo: float, roll: int) -> bool:
-	if tempo <= -100.0: return false
-	if tempo >= 0.0: return true
-	return CombatMath.roll_success(100.0 + tempo, roll)
 func _event_uses_physical_block(event: CombatEvent) -> bool:
 	if not event.payload.has("uses_physical_block"):
-		return true
+		return bool(CombatDamagePayload.defence_flags(String(event.payload.get("damage_type","physical"))).get("uses_physical_block",true))
 	return bool(event.payload.get("uses_physical_block", false))
+
+func _event_bypasses_physical_mitigation(event: CombatEvent) -> bool:
+	if not event.payload.has("bypass_physical_mitigation"):
+		return bool(CombatDamagePayload.defence_flags(String(event.payload.get("damage_type","physical"))).get("bypass_physical_mitigation",false))
+	return bool(event.payload.get("bypass_physical_mitigation", false))
 
 func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool:
 	if not defender.can_manual_block():
 		return false
 	var attack_zone:=String(event.payload.get("zone",""))
-	var chosen_zones:Array=defender.combat_stats.get("manual_block_zones",[])
-	if chosen_zones.is_empty():
-		var legacy_zone:=String(defender.combat_stats.get("manual_block_zone",""))
-		if not legacy_zone.is_empty():
-			chosen_zones=[legacy_zone]
+	var chosen_zones:Array=CombatModifierService.manual_block_zones(defender)
 	return chosen_zones.has(attack_zone)
 func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
-	return CombatMath.roll_success(float(attacker.combat_stats.get("block_crush", 0.0)), int(rolls.get("block_crush", 100)))
+	var chance:=CombatModifierService.block_crush_chance(attacker, state.round_number)
+	return CombatMath.roll_success(chance, int(rolls.get("block_crush", 100)))
 func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
 	var zone_armour: Dictionary = defender.armour.get(zone, {}); return float(zone_armour.get(damage_type, 0.0))
 
 
-func _is_magic_damage_type(damage_type:String) -> bool:
-	return ["fire","water","frost","air","earth","dark","light","lightning"].has(damage_type.to_lower())
-
 func _magic_resist(target:CombatantState, resist_type:String) -> float:
-	if resist_type.is_empty():
-		return 0.0
-	var raw := float(target.magic_resists.get(resist_type.to_lower(), 0.0))
-	if raw > 1.0:
-		raw /= 100.0
-	return clampf(raw, 0.0, 1.0)
+	return CombatModifierService.magic_resist(target, resist_type, state.round_number)
 
 
 func _physical_ranged_distance_hit_modifier(event:CombatEvent)->float:
@@ -513,3 +790,24 @@ func _physical_ranged_distance_hit_modifier(event:CombatEvent)->float:
 	if bool(event.payload.get("uses_magic_hit",false)):
 		return 0.0
 	return _distance_modifier(event,event.target_id)
+
+func _require_canonical(event: CombatEvent, combatant: CombatantState) -> bool:
+	var checked := ParCombatContract.validate(combatant)
+	if not bool(checked.ok):
+		push_error("Combat PAR invariant violated: " + String(checked.reason))
+		event.set_result("outcome", "invalid_par_contract")
+		event.set_result("error", checked.reason)
+		return false
+	for key in ParCombatContract.RATINGS.values():
+		if not is_finite(CombatModifierService.effective_percent(combatant, key, state.round_number)):
+			event.set_result("outcome", "invalid_par_contract")
+			event.set_result("error", "invalid_runtime_" + String(key))
+			return false
+	if not is_finite(CombatModifierService.spell_power(combatant,state.round_number)) or not is_finite(CombatModifierService.magic_damage_bonus_pct(combatant,state.round_number)):
+		event.set_result("outcome","invalid_par_contract")
+		event.set_result("error","invalid_runtime_spell_power")
+		return false
+	return true
+
+func _common_hit_chance(source: CombatantState, target: CombatantState) -> float:
+	return _hit_chance(source.level - target.level) + CombatModifierService.effective_percent(source, "hit_chance_rating", state.round_number)

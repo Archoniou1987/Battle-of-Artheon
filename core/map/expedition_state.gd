@@ -1,6 +1,8 @@
 class_name ExpeditionState
 extends RefCounted
 
+const SOLO_START_CELL_KEY := "solo_start_cell_v1"
+const SOLO_DEFEAT_LEDGER_KEY := "solo_combat_defeats_v1"
 const STATUS_ACTIVE:="active"
 const STATUS_COMPLETED:="completed"
 const STATUS_EXITED:="exited"

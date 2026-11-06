@@ -1,13 +1,14 @@
 class_name EquipmentAbilityLoadout
 extends RefCounted
 
-const WEAPON_SLOTS := ["main_hand", "off_hand"]
-const MAX_WEAPON_ABILITIES := 3
+## Off-hand weapons contribute physical attacks and hit effects, NEVER active weapon ABI.
+const WEAPON_SLOTS := ["main_hand"]
+const MAX_WEAPON_ABILITIES := 4
 
-## Builds five ABI slots from actual equipped item instances:
-## weapon[0..2], chest[0], head[0]. Empty positions remain null.
+## Builds six ABI slots from equipped items:
+## weapon[0..3], chest[0], head[0]. Empty positions remain null.
 static func build(character: CharacterState, repository: ItemRepository) -> Dictionary:
-	var weapon: Array = [null, null, null]
+	var weapon: Array = [null, null, null, null]
 	var chest: Array = [null]
 	var head: Array = [null]
 	var seen := {}
@@ -18,11 +19,13 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 			continue
 		for raw_id in item.get("abilities", []):
 			var ability_id := String(raw_id)
-			if ability_id.is_empty() or seen.has(ability_id) or weapon_index >= MAX_WEAPON_ABILITIES:
+			if ability_id.is_empty() or AbilityCatalog.is_retired_numbered_abi(ability_id) or seen.has(ability_id) or weapon_index >= MAX_WEAPON_ABILITIES:
 				continue
 			weapon[weapon_index] = ability_id
 			seen[ability_id] = true
 			weapon_index += 1
+	# Resolve in visible slot order: Chest 5 takes precedence over Head 6
+	# if two equipped items supply the same ABI ID.
 	chest[0] = _first_unique_ability("chest", character, repository, seen)
 	if chest[0] != null: seen[String(chest[0])] = true
 	head[0] = _first_unique_ability("head", character, repository, seen)
@@ -49,5 +52,5 @@ static func _first_unique_ability(slot: String, character: CharacterState, repos
 		return null
 	for raw_id in item.get("abilities", []):
 		var ability_id := String(raw_id)
-		if not ability_id.is_empty() and not seen.has(ability_id): return ability_id
+		if not ability_id.is_empty() and not AbilityCatalog.is_retired_numbered_abi(ability_id) and not seen.has(ability_id): return ability_id
 	return null

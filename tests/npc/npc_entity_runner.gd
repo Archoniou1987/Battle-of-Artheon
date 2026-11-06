@@ -11,7 +11,8 @@ func _initialize()->void:
 		var fighter:=NpcCombatBuilder.build(npc)
 		valid=valid and fighter.combatant_id==id and fighter.level==npc.level and fighter.max_hp>0
 	var chief:=repo.get_npc("NPC005")
-	valid=valid and chief.rank=="elite" and "ABI001" in chief.abilities
+	valid=valid and chief.rank=="elite" and chief.abilities.is_empty()
+	valid=valid and CombatModifierService.abilities(NpcCombatBuilder.build(chief)).is_empty()
 	print("NPC_ENTITY_COUNT=%d chief=%s rank=%s hp=%d" % [repo.size(),chief.display_name,chief.rank,NpcCombatBuilder.build(chief).max_hp])
 	print("NPC_ENTITY_TEST="+("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)

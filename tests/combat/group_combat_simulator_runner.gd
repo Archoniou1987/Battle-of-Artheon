@@ -2,19 +2,21 @@ extends SceneTree
 
 func _initialize()->void:
 	var state:=CombatState.new()
-	var player:=CombatantState.new("PLAYER","Player",5,100)
-	player.combat_stats={"main_hand_damage_min":60.0,"main_hand_damage_max":60.0,"hit_modifier":100.0,"crit":0.0}
+	var player:=TestFixtureLoader.new_combatant("PLAYER","Player",5,100)
+	player.combat_stats.merge({"weapon_profiles":[{"damage_min":60.0,"damage_max":60.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 	state.add_combatant(player)
 	var group:=GroupCombatState.new(state)
 	group.add_member("players","PLAYER")
 	for i in range(3):
 		var id:="E%d"%i
-		var enemy:=CombatantState.new(id,id,1,50)
-		enemy.combat_stats={"main_hand_damage_min":5.0,"main_hand_damage_max":5.0,"hit_modifier":100.0,"crit":0.0}
+		var enemy:=TestFixtureLoader.new_combatant(id,id,1,50)
+		enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":5.0,"damage_max":5.0,"damage_type":"slashing"}],"hit_chance_rating_percent":100.0,"crit_chance_rating_percent":0.0}, true)
 		state.add_combatant(enemy)
 		group.add_member("enemies",id)
-	var simulator:=GroupCombatSimulator.new(state,group)
-	var valid:=group.active_opponent("PLAYER")=="E0"
+	var simulator:=GroupCombatSimulator.new(TestFixtureLoader.canonicalize_state(state),group)
+	var valid:=simulator.attack_pipeline.combat_engine == simulator.engine
+	valid=valid and simulator.attack_pipeline.rng == simulator.engine.combat_rng
+	valid=valid and group.active_opponent("PLAYER")=="E0"
 	var r1:=simulator.run_round()
 	valid=valid and bool(r1.get("ok",false)) and state.get_combatant("E0").is_death_finalized()
 	# A normal player action must hit only the active opponent, never every NPC.

@@ -1,0 +1,282 @@
+{
+  "EFF003": {
+    "id": "EFF003",
+    "name": "Burning",
+    "kind": "dot",
+    "damage": 10,
+    "damage_type": "fire",
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3
+  },
+  "EFF004": {
+    "id": "EFF004",
+    "name": "Regeneration",
+    "kind": "hot",
+    "healing": 10,
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3
+  },
+  "EFF005": {
+    "id": "EFF005",
+    "name": "Fire Ward",
+    "kind": "buff",
+    "fire_resist_direct_pct": 90,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF006": {
+    "id": "EFF006",
+    "name": "Guardian Ward",
+    "kind": "buff",
+    "damage_reduction": 0.2,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF007": {
+    "id": "EFF007",
+    "name": "Focus",
+    "kind": "buff",
+    "crit_chance_direct_pct": 20,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF301": {
+    "id": "EFF301",
+    "name": "Кровотечение",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "physical",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "tags": [
+      "BLEEDING",
+      "DOT"
+    ],
+    "polarity": "DEBUFF"
+  },
+  "EFF302": {
+    "id": "EFF302",
+    "name": "Калека",
+    "kind": "debuff",
+    "physical_damage_outgoing_direct_pct": -5,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "CRIPPLE"
+    ],
+    "snapshot_from": "EFF301"
+  },
+  "EFF303": {
+    "id": "EFF303",
+    "name": "Медлительность",
+    "kind": "debuff",
+    "anti_dodge_direct_pct": -1,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SLOWNESS"
+    ],
+    "snapshot_from": "EFF301"
+  },
+  "EFF304": {
+    "id": "EFF304",
+    "name": "Потерянность",
+    "kind": "debuff",
+    "anti_crit_direct_pct": -1,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "LOST"
+    ],
+    "snapshot_from": "EFF301"
+  },
+  "EFF401": {
+    "id": "EFF401",
+    "name": "Пробитая броня",
+    "kind": "debuff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "DEBUFF",
+    "tags": [
+      "ARMOR_BREACH"
+    ],
+    "armour_reduction_pct_per_stack": 3
+  },
+  "EFF402": {
+    "id": "EFF402",
+    "name": "Отравленные клинки",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_POISON_COATING"
+    ]
+  },
+  "EFF403": {
+    "id": "EFF403",
+    "name": "Яд кинжалов",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "physical",
+    "duration_rounds": 1,
+    "stacking": "shared_duration",
+    "max_stacks": 10,
+    "polarity": "DEBUFF",
+    "tags": [
+      "POISON",
+      "DOT"
+    ]
+  },
+  "EFF404": {
+    "id": "EFF404",
+    "name": "Уклонение смертоносной комбинации",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_DEF_COMBO"
+    ],
+    "dodge_direct_pct": 0
+  },
+  "EFF405": {
+    "id": "EFF405",
+    "name": "Открытая защита",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "DAGGER_ATTACK_HEAVY"
+    ],
+    "dodge_direct_pct": -50,
+    "anti_crit_direct_pct": -50
+  },
+  "EFF501": {
+    "id": "EFF501",
+    "name": "Ярость",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "BUFF",
+    "tags": [
+      "RAGE"
+    ],
+    "block_crush_per_stack": 2
+  },
+  "EFF502": {
+    "id": "EFF502",
+    "name": "Подсечён",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "AXE_DEF_SWEEP"
+    ],
+    "crit_chance_direct_pct": -25,
+    "anti_dodge_direct_pct": -25
+  },
+  "EFF503": {
+    "id": "EFF503",
+    "name": "Стойка возмездия",
+    "kind": "buff",
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "AXE_COUNTER_STANCE"
+    ],
+    "dodge_direct_pct": 0,
+    "counterattack_cap": 5
+  },
+  "EFF504": {
+    "id": "EFF504",
+    "name": "Разрушенная защита",
+    "kind": "debuff",
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "AXE_ATTACK_BREAKER"
+    ],
+    "dodge_direct_pct": -25,
+    "anti_crit_direct_pct": -25
+  },
+  "EFF505": {
+    "id": "EFF505",
+    "name": "Крушитель",
+    "kind": "buff",
+    "duration_rounds": 20,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "AXE_CRUSHER"
+    ],
+    "crit_chance_direct_pct": 20,
+    "block_crush": 20,
+    "incoming_damage_direct_pct": 10
+  },
+  "EFF601": {
+    "id": "EFF601",
+    "name": "Заряд молота",
+    "kind": "buff",
+    "stacking": "permanent_charges",
+    "max_stacks": 100,
+    "permanent": true,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_CHARGE"
+    ],
+    "armour_and_resistance_direct_pct_per_stack": 0.25,
+    "undispellable": true
+  },
+  "EFF602": {
+    "id": "EFF602",
+    "name": "Отражение",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 1,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_REFLECTION"
+    ],
+    "reflection_pct": 20
+  },
+  "EFF603": {
+    "id": "EFF603",
+    "name": "Разбитая броня",
+    "kind": "debuff",
+    "stacking": "unique",
+    "duration_rounds": 1,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_ZONE_ARMOUR_FRACTURE"
+    ],
+    "armour_zone": "chest",
+    "armour_reduction_pct": 0
+  },
+  "EFF604": {
+    "id": "EFF604",
+    "name": "Боевой прилив",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_SURGE"
+    ],
+    "physical_damage_outgoing_direct_pct": 0,
+    "magic_damage_direct_pct": 0,
+    "damage_lifesteal_pct": 20
+  }
+}

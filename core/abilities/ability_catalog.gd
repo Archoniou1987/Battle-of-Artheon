@@ -7,10 +7,49 @@ static func load_json(path: String) -> Dictionary:
 	var parsed = JSON.parse_string(file.get_as_text())
 	return parsed if parsed is Dictionary else {}
 
+## Only the approved numbered sword/dagger/axe/hammer ABI can surface
+## in production loadouts. Older save IDs are left intact in persistence but
+## cannot become executable or occupy an ability slot. TEST_* is isolated
+## developer fixture naming, not a numbered game ABI.
+static func is_retired_numbered_abi(ability_id: String) -> bool:
+	if not ability_id.begins_with("ABI"):
+		return false
+	var suffix := ability_id.substr(3)
+	if not suffix.is_valid_int():
+		return false
+	var index := int(suffix)
+	return not (
+		(index>=301 and index<=308)
+		or (index>=401 and index<=408)
+		or (index>=501 and index<=508)
+		or (index>=601 and index<=606)
+	)
+
+## A stale numbered ABI can remain in a save/checkpoint, but may never
+## reach the battle scheduler. LAB_* and TEST_* are isolated developer IDs.
+## Reject malformed ABI aliases (e.g. ABI0301) as well as retired numbers.
+static func is_executable_id(ability_id: String) -> bool:
+	if not ability_id.begins_with("ABI"):
+		return true
+	var suffix := ability_id.substr(3)
+	if not suffix.is_valid_int():
+		return false
+	return ability_id == "ABI%d" % int(suffix) and not is_retired_numbered_abi(ability_id)
+
 static func definition(abilities: Dictionary, ability_id: String) -> Dictionary:
+	if not is_executable_id(ability_id):
+		return {}
 	var value = abilities.get(ability_id, {})
 	return value if value is Dictionary else {}
 
 static func assigned_abilities(loadouts: Dictionary, combatant_id: String) -> Array:
 	var value = loadouts.get(combatant_id, [])
-	return value if value is Array else []
+	if not value is Array:
+		return []
+	# Return a filtered view, never mutate stored saves or loadouts.
+	var active: Array = []
+	for raw_id in value:
+		var ability_id := String(raw_id)
+		if is_executable_id(ability_id):
+			active.append(ability_id)
+	return active

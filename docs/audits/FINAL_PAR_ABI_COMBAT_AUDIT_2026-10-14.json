@@ -1,0 +1,3016 @@
+{
+  "date": "2026-10-14",
+  "repository": "Archoniou1987/Battle-of-Artheon",
+  "branch": "feature/character-inventory-ui-v1",
+  "verified_base": "ae840220f5e7a45092680e1c6f92e3ca1d7f3cd6",
+  "code_head": "106d5601ef2706bd10c72ec5cc7a852976633904",
+  "report_commit": "Report-only child follows code_head; refresh remote HEAD.",
+  "status": "audited_with_explicit_followups; not all game-rule questions or new-head CI closed",
+  "scope": {
+    "tracked_files": 273,
+    "extension_counts": {
+      ".yml": 7,
+      "": 5,
+      ".md": 7,
+      ".png": 11,
+      ".svg": 1,
+      ".jpg": 1,
+      ".gd": 206,
+      ".json": 25,
+      ".zip": 1,
+      ".cfg": 1,
+      ".godot": 1,
+      ".tscn": 3,
+      ".sh": 2,
+      ".py": 2
+    },
+    "all_tracked_json_valid": true,
+    "method": "source dependency trace + full tracked text scan + baseline/current Godot tests; no blind replace"
+  },
+  "registry": {
+    "unchanged": true,
+    "sha256": "d263795762dbf0fe99f647f54c346b94ae66db53f9af3f6ec8568aa91fd3fc26",
+    "entry_count": 108,
+    "maximum_id": "PAR231",
+    "approved_effect_coefficients_unchanged": true
+  },
+  "findings": [
+    {
+      "id": "C01",
+      "severity": "critical",
+      "title": "Разные контракты попадания физической и магической атаки",
+      "cause": "Физический путь добавлял базу попадания по уровням; магический использовал отдельный путь и мог терять PAR030. Старый combat_chance принимал устаревшие поля.",
+      "fix": "Единая _common_hit_chance с PAR030; обязательные исходные PAR и конечные проценты, без старых hit/magic_hit.",
+      "status": "fixed",
+      "file": "core/combat/combat_engine.gd",
+      "baseline_line": 192,
+      "current_line": 548,
+      "verification": "final_par_combat_runner, combat regression"
+    },
+    {
+      "id": "C02",
+      "severity": "critical",
+      "title": "Магическая атака обходила фазу крита и PAR035",
+      "cause": "Ветка нефизического урона завершалась до общей фазы критического удара.",
+      "fix": "Общий PAR033/PAR035 для ATTACK; сохранена существующая формула 1.5 + PAR035_percent/100.",
+      "status": "fixed",
+      "file": "core/combat/combat_engine.gd",
+      "baseline_line": 192,
+      "current_line": 279,
+      "verification": "final_par_combat_runner: physical/magical crit"
+    },
+    {
+      "id": "C03",
+      "severity": "critical",
+      "title": "PAR150 не применялся одинаково к оружию и ABI",
+      "cause": "Магическое оружие обходило множитель рейтинга; дочерние ABI-события теряли маршрутизацию попадания и могли повторно масштабироваться после исправления.",
+      "fix": "Процент PAR150 на магический базовый урон; флаги hit_already_resolved и magic_rating_applied исключают повторный hit/бонус. Нулевой базовый пакет остаётся нулём.",
+      "status": "fixed",
+      "file": "core/combat/combat_engine.gd",
+      "baseline_line": 150,
+      "current_line": 276,
+      "verification": "final_par_combat_runner; magic_abi_scaling_runner"
+    },
+    {
+      "id": "C04",
+      "severity": "critical",
+      "title": "Неполные обязательные PAR могли использовать fallback",
+      "cause": "Потребители принимали старые ключи/нулевые отсутствующие рейтинги; прямой ATTACK не проверял полный общий контракт.",
+      "fix": "ParCombatContract проверяет 8 raw PAR, 8 семантических raw и 8 percent, согласованность PAR/source, PAR073, числовые значения и runtime overlays. Отказ до создания дочерних событий.",
+      "status": "fixed",
+      "file": "core/combat/par_combat_contract.gd",
+      "baseline_line": null,
+      "current_line": 12,
+      "verification": "final_par_combat_runner: each missing PAR/cache, mismatch, invalid overlay"
+    },
+    {
+      "id": "C05",
+      "severity": "critical",
+      "title": "MH fist + OH dagger терял удар кулаком и владельца on-hit",
+      "cause": "Наличие любого оружия исключало виртуальную MH; индексы эффектов могли привязываться к кулаку после вставки профиля. Сломанная MH ошибочно считалась занятой активным оружием.",
+      "fix": "Сначала активная/виртуальная MH, затем OH; identity и эффекты сопоставлены по instance_id; PAR057 согласован с итоговыми профилями.",
+      "status": "fixed",
+      "file": "core/character/character_combat_builder.gd",
+      "baseline_line": 5,
+      "current_line": 58,
+      "verification": "final_par_combat_runner: A–E, broken MH/OH, on-hit ownership"
+    },
+    {
+      "id": "C06",
+      "severity": "critical",
+      "title": "Arena не загружала существующий физический баланс",
+      "cause": "Arena создаёт CombatEngine.new(state), а _init сохранял пустой Dictionary. Это давало hit95 при любой разнице уровней и нулевую кривую брони.",
+      "fix": "Пустой аргумент движка загружает data/balance/physical_combat.json. Отсутствие/повреждение обязательной структуры даёт invalid_balance_config. Явные тестовые конфигурации сохраняются как инъекция. Таблицы не изменены.",
+      "status": "fixed",
+      "file": "core/combat/combat_engine.gd",
+      "baseline_line": 18,
+      "current_line": 21,
+      "verification": "final_par_combat_runner: hit20/100; real attack100 with armour500 -> HP loss50"
+    },
+    {
+      "id": "C07",
+      "severity": "critical",
+      "title": "Stun обходился командами, scheduler и прямыми событиями",
+      "cause": "Путь API/ABI мог потратить ману/поставить атаку при effective Tempo <= -100. Простой отказ команды мог остановить раунды Arena навсегда.",
+      "fix": "Проверка action_status до очереди и затрат, проверка движка; Arena пропускает действия stunned участника и завершает раунд.",
+      "status": "fixed",
+      "file": "core/abilities/ability_scheduler.gd",
+      "baseline_line": 8,
+      "current_line": 17,
+      "verification": "final_par_combat_runner: API/scheduler/no mana/Arena round"
+    },
+    {
+      "id": "F01",
+      "severity": "functional",
+      "title": "RatingMatrix принимала некорректные данные и уровни",
+      "cause": "Конверсия не обеспечивала строгий отказ на отсутствующую конфигурацию, нечисловые/нефинитные значения и уровни вне 1–100.",
+      "fix": "Единственный владелец конверсии: RatingMatrix v1. NAN + диагностика на ошибке; нет универсального cap.",
+      "status": "fixed",
+      "file": "core/parameters/rating_matrix.gd",
+      "baseline_line": 6,
+      "current_line": 13,
+      "verification": "rating_matrix_runner: endpoints/midpoint/negative/large/invalid data"
+    },
+    {
+      "id": "F02",
+      "severity": "functional",
+      "title": "Дублирующая формула первичных характеристик и неиспользуемый rating_curve",
+      "cause": "ParCalculationService повторял коэффициентный расчёт PrimaryStatEffects. rating_curve уже не имел потребителей.",
+      "fix": "PrimaryStatEffects.calculate — одна реализация коэффициентов; ParCalculationService агрегирует PAR. Удалена только неиспользуемая старая настройка/аргументы. Все coefficients effects сохранены.",
+      "status": "fixed",
+      "file": "core/parameters/par_calculation_service.gd",
+      "baseline_line": 8,
+      "current_line": 132,
+      "verification": "par_migration_runner; rating_matrix_runner"
+    },
+    {
+      "id": "F03",
+      "severity": "functional",
+      "title": "PAR075 смешивался с прямым процентом",
+      "cause": "Адаптер старого counterattack мог дублировать вклад и обходить RatingMatrix.",
+      "fix": "PAR075 -> counterattack_rating -> RatingMatrix -> counterattack_rating_percent; прямой процент отдельным overlay.",
+      "status": "fixed",
+      "file": "core/character/character_stats_service.gd",
+      "baseline_line": 7,
+      "current_line": 62,
+      "verification": "final_par_combat_runner: rating105 =21 percent"
+    },
+    {
+      "id": "F04",
+      "severity": "functional",
+      "title": "Постоянные прямые бонусы предметов не доходили до конверсии",
+      "cause": "combat_stats *_direct_pct терялись между ItemRepository и CharacterStatsService. Старые fixtures записывали неканонические chance поля.",
+      "fix": "Прямые проценты активных предметов суммируются один раз после конверсии суммарного raw рейтинга. Фикстуры приведены к explicit direct_pct.",
+      "status": "fixed",
+      "file": "core/character/character_stats_service.gd",
+      "baseline_line": 7,
+      "current_line": 34,
+      "verification": "final_par_combat_runner: equipment+primary+direct"
+    },
+    {
+      "id": "F05",
+      "severity": "functional",
+      "title": "Некорректный direct_effects приводился к числу до проверки",
+      "cause": "float(\"bad\") мог превращать ошибочные входные данные в скрытый нулевой бонус.",
+      "fix": "Валидация типа/finite каждого direct_effects значения перед сложением.",
+      "status": "fixed",
+      "file": "core/character/character_stats_service.gd",
+      "baseline_line": 31,
+      "current_line": 45,
+      "verification": "final_par_combat_runner: string/null/NAN/INF"
+    },
+    {
+      "id": "F06",
+      "severity": "functional",
+      "title": "PAR073 имел запасной ручной блок вне ABI001",
+      "cause": "Общий боевой вход не требовал PAR073, а getter давал 1 и clamp при отсутствии par_totals.",
+      "fix": "PAR073 обязателен в общем контракте; существующая целая область 0–5 сохранена; fallback удалён. Также удалены неиспользуемые aliases flat_armour_pen/percent_armour_reduction.",
+      "status": "fixed",
+      "file": "core/combat/combat_modifier_service.gd",
+      "baseline_line": 78,
+      "current_line": 87,
+      "verification": "final_par_combat_runner: missing PAR073 rejects API and direct ATTACK"
+    },
+    {
+      "id": "F07",
+      "severity": "functional",
+      "title": "NPC теряли рейтинги и использовали уровень шаблона",
+      "cause": "NPC builder не обеспечивал canonical rating cache; encounter менял уровень после конверсии.",
+      "fix": "Явные raw PAR в данных NPC, прежний direct dodge сохранён. Конверсия CharacterStatsService на фактическом instance.level до боя, без выдуманного player-derived NPC баланса.",
+      "status": "fixed",
+      "file": "core/npc/npc_combat_builder.gd",
+      "baseline_line": 3,
+      "current_line": 3,
+      "verification": "final_par_combat_runner: NPC level100; NPC/map runners"
+    },
+    {
+      "id": "F08",
+      "severity": "functional",
+      "title": "Off-hand могла вытеснить занятую двуручным оружием руку",
+      "cause": "CharacterState.equip не отсекал попытку OH при одном активном экземпляре в обеих руках.",
+      "fix": "Отказ до мутации; для замены явно снять двуручное оружие.",
+      "status": "fixed",
+      "file": "core/character/character_state.gd",
+      "baseline_line": 66,
+      "current_line": 66,
+      "verification": "final_par_combat_runner: two-handed OH refusal"
+    },
+    {
+      "id": "F09",
+      "severity": "functional",
+      "title": "UI показывал старые ключи и неверные единицы",
+      "cause": "Остались magic_hit_rating/magic_crit_rating/magic_damage_flat, armour_penetration_rating/block_penetration_rating. Не реализованные значения отображались как 0%, OH range оставался после снятия.",
+      "fix": "UI использует тот же snapshot; direct armour penetration/block crush правильных единиц, отсутствующее значение — тире, OH очищается. Визуальный дизайн сохранён.",
+      "status": "fixed",
+      "file": "ui/character/character_screen.gd",
+      "baseline_line": 49,
+      "current_line": 49,
+      "verification": "character_screen_runner; arena_open_smoke"
+    },
+    {
+      "id": "T01",
+      "severity": "obsolete_test_data",
+      "title": "Старая проверка плоского магического бонуса вне зелёных workflows",
+      "cause": "magic_abi_scaling ожидал 36/51 вместо процентных 30/42.5 и не запускался в трёх целевых workflows.",
+      "fix": "Ожидания приведены к утверждённому PAR150, тест включён в PAR/ABI workflows.",
+      "status": "fixed",
+      "file": "tests/combat/magic_abi_scaling_runner.gd",
+      "baseline_line": 17,
+      "current_line": 16,
+      "verification": "magic_abi_scaling_runner"
+    },
+    {
+      "id": "T02",
+      "severity": "obsolete_test_data",
+      "title": "Fixtures перезаписывали обязательные боевые snapshots",
+      "cause": "Прямые chance поля и замены целого combat_stats скрывали отсутствие PAR; weapon profile mutations не синхронизировали PAR057/ranges.",
+      "fix": "Явные complete canonical fixture inputs, explicit percent caches, helper для профилей. Production fallback не добавлялся.",
+      "status": "fixed",
+      "file": "core/data/test_fixture_loader.gd",
+      "baseline_line": 13,
+      "current_line": 69,
+      "verification": "78 standalone runners incl regression17 suites"
+    },
+    {
+      "id": "T03",
+      "severity": "obsolete_test_data",
+      "title": "Ошибочная чётность отрицательных строк в hex-тесте",
+      "cause": "%2 в GDScript даёт отрицательный остаток; сосед за границей имеет отрицательный y. Production использует &1.",
+      "fix": "Только тест: одинаковая проверка чётности &1. Карта не менялась.",
+      "status": "fixed",
+      "file": "tests/map/hex_offset_geometry_runner.gd",
+      "baseline_line": 12,
+      "current_line": 12,
+      "verification": "hex_offset_geometry_runner"
+    },
+    {
+      "id": "T04",
+      "severity": "obsolete_test_data",
+      "title": "Village smoke ожидал прежнее имя кнопки",
+      "cause": "Утверждённая сцена уже использует «Арена», тест ожидал «Тренировочное поле».",
+      "fix": "Изменено ожидание теста; UI не менялся.",
+      "status": "fixed",
+      "file": "tests/ui/starting_village_runner.gd",
+      "baseline_line": 24,
+      "current_line": 24,
+      "verification": "starting_village_runner"
+    },
+    {
+      "id": "T05",
+      "severity": "functional",
+      "title": "Godot process exit0 мог маскировать ошибки в CI",
+      "cause": "ABI/Combat workflow полагались на exit code, хотя Godot может вывести SCRIPT ERROR и выйти0; общие user saves загрязняли проверки.",
+      "fix": "tools/run_godot_check.sh: exit status + diagnostic scan + timeout + отдельный XDG_DATA_HOME. Импорт/scene/tests ABI и Combat используют wrapper. PAR сохраняет свои проверки логов.",
+      "status": "fixed",
+      "file": "tools/run_godot_check.sh",
+      "baseline_line": null,
+      "current_line": 22,
+      "verification": "fake Godot: SCRIPT ERROR + exit0 correctly rejected; full local logs"
+    },
+    {
+      "id": "T06",
+      "severity": "obsolete_test_data",
+      "title": "Отладочная боевая сцена создавала NPC без PAR",
+      "cause": "Debug scene использовала CombatantState.new и неполный weapon_profiles. Строгая валидация PAR073 выявила дефект при запуске реальной сцены после полного набора runners.",
+      "fix": "Отладочные враги строятся каноническим CharacterCombatBuilder; explicit zero primary fixtures сохраняют прежний урон7 blunt. Добавлен standalone interaction runner и шаг Combat workflow.",
+      "status": "fixed",
+      "file": "scenes/debug/debug_combat_viewer.gd",
+      "baseline_line": 41,
+      "current_line": 192,
+      "verification": "debug_combat_scene_runner: validate all actors, enemy attack and end round"
+    }
+  ],
+  "remaining": [
+    {
+      "id": "R01",
+      "priority": "P0",
+      "status": "requires_CI_execution",
+      "problem": "На новом HEAD три GitHub Actions ещё не запускались.",
+      "next_step": "Запустить PAR Migration Audit, затем ABI Branch Tests и Combat Tests на этой ветке; проверять head_sha. Connector не имеет dispatch, gh/credentials отсутствуют."
+    },
+    {
+      "id": "R02",
+      "priority": "P1",
+      "status": "requires_game_rule_decision",
+      "problem": "DIRECT/AREA/CHAIN создают DAMAGE после cast-level hit и не проходят ATTACK crit phase. MELEE/PROJECTILE/weapon ATTACK используют общий PAR033/PAR035.",
+      "next_step": "Утвердить, должны ли DIRECT/AREA/CHAIN (включая прямые physical и heal компоненты) критовать; затем добавить delivery-specific тесты. Не менять баланс на предположении."
+    },
+    {
+      "id": "R03",
+      "priority": "P1",
+      "status": "existing_architecture_debt",
+      "problem": "NpcInstance не имеет полного persistence-контракта; encounter бой строится из template, а не из изменяемого instance inventory/equipment.",
+      "next_step": "Согласовать владение состоянием NPC, сериализацию и влияние instance equipment на combat; не объявлять template rebuild проверкой NPC save roundtrip."
+    },
+    {
+      "id": "R04",
+      "priority": "P1",
+      "status": "requires_game_rule_decision",
+      "problem": "Tempo -1..-99: CPU scheduler и командный API не полностью одинаково принимают probabilistic action availability. Hard stun <=-100 исправлен.",
+      "next_step": "Утвердить единое правило частичного отрицательного Tempo до изменения расписания/очередей."
+    },
+    {
+      "id": "R05",
+      "priority": "P2",
+      "status": "declared_but_not_fully_implemented",
+      "problem": "Не все 108 записей реестра реализованы в runtime: например PAR076 не заменяет coefficient0.8; часть typed damage/penetration/regen параметров декларативна.",
+      "next_step": "Составить отдельные утверждённые формулы/контракты для неиспользуемых параметров; таблица reference evidence не равна доказательству реализации."
+    },
+    {
+      "id": "R06",
+      "priority": "P2",
+      "status": "registry_policy_metadata",
+      "problem": "NOTICE/policy требуют неизменности, но metadata фиксирует согласованное исключение для PAR035/PAR075/PAR150; отдельные provisional notes/status не отражают все новые реализации.",
+      "next_step": "Согласовать отдельный policy changelog/обновление метаданных; текущий locked registry не изменён."
+    },
+    {
+      "id": "R07",
+      "priority": "P2",
+      "status": "verification_limit",
+      "problem": "UI проверен headless construction/smoke, не выполнен ручной визуальный playthrough или visual_capture. Явная непустая balance-инъекция остаётся caller-owned для тестов.",
+      "next_step": "Ручной бой в Godot Editor: Character -> Inventory -> Arena, A–E, UI percentages, two-hand locks; production callers должны использовать default approved balance."
+    }
+  ],
+  "architecture": [
+    {
+      "owner": "CharacterProgression",
+      "contract": "base_stats/pending_stats PAR001..006, validation of restored primary keys"
+    },
+    {
+      "owner": "CharacterState / ItemRepository / EquipmentState",
+      "contract": "instance IDs, owner/inventory/equipment slots, canonical par_stats/par_bonuses/requirements; active durability filtering"
+    },
+    {
+      "owner": "ParCalculationService + PrimaryStatEffects.calculate",
+      "contract": "single PAR aggregate and coefficient implementation; canonical attack_ranges PAR050/051, PAR052/PAR057/PAR073"
+    },
+    {
+      "owner": "CharacterStatsService + RatingMatrix",
+      "contract": "registry source-key adapter, permanent raw rating sum, single level conversion plus direct overlays; same snapshot for UI and combat"
+    },
+    {
+      "owner": "CharacterCombatBuilder / NpcCombatBuilder",
+      "contract": "detached runtime snapshot, raw totals, percent caches, profiles identity and effects; NPC actual combat level"
+    },
+    {
+      "owner": "ParCombatContract / ParAttackContract",
+      "contract": "mandatory raw/cache validation and ABI001 count/profile/range validation before queue"
+    },
+    {
+      "owner": "CombatModifierService / CombatEngine",
+      "contract": "runtime EFF/TRA direct overlays, common hit and crit, magic percentage, physical mitigation and effects"
+    },
+    {
+      "owner": "RoundOrchestrator / ArenaCombatSession / UI",
+      "contract": "end-round death, stun-safe advancement; UI consumes same snapshot units; no visual redesign"
+    }
+  ],
+  "approved_decisions": [
+    "Locked registry unchanged byte-for-byte from verified base; 108 sparse IDs, maximum PAR231. Never infer IDs from row index.",
+    "Existing approved PAR035=crit_damage_rating; PAR075=counterattack_rating; PAR150=magic_damage_rating. Primary locked source_key metadata STR/DEX/... is not executable storage.",
+    "RatingMatrix v1: rating/100 * lerp(20,2.5,(level-1)/99), integer levels1..100. Sum primary+equipment rating before conversion, direct percentage points after. No new universal cap.",
+    "ABI001: A fists1, B MH1, C fist MH+OH2, D dual2, E two-hand1. Fist uses canonical PAR050 with configured2–4 blunt; PAR052 once per attack; instance identity controls on-hit. Latest request C explicitly supersedes earlier two-real-weapons-only wording.",
+    "Existing crit formula 1.5 + crit_damage_rating_percent/100 retained. PAR150 multiplies magic base damage and never creates a flat packet.",
+    "Existing physical hit table/armour curve wired to default engine without changing coefficients. Death finalization only end of round.",
+    "No main changes, merge, PR or new branch. Logical commits on existing feature branch."
+  ],
+  "changed_files": [
+    {
+      "file": "core/abilities/ability_scheduler.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/character/character_combat_builder.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/character/character_state.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/character/character_stats_service.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/character/primary_stat_effects.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/combat/combat_command_api.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/combat/combat_damage_payload.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/combat/combat_engine.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/combat/combat_modifier_service.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/combat/par_attack_contract.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/combat/par_combat_contract.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/map/map_encounter_combat_service.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/npc/npc_combat_builder.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/parameters/par_calculation_service.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "core/parameters/rating_matrix.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "data/character/primary_stat_effects.json",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "data/npc/starting_region_npcs.json",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "ui/arena/arena_combat_session.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "ui/arena/arena_screen.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": "ui/character/character_screen.gd",
+      "sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "role": "runtime/config/UI"
+    },
+    {
+      "file": ".github/workflows/abi-branch-tests.yml",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": ".github/workflows/combat-tests.yml",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": ".github/workflows/par-migration-audit.yml",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "core/data/test_fixture_loader.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "data/test/bot_equipment_templates.json",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "data/test/item_generator_eff001_template.json",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "data/test/item_generator_template.json",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "data/test/items.json",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/character/character_combat_builder_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/character/ten_player_stats_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/action_resolver_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/aoe_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/combat_api_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/combat_command_api_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/combat_modifier_service_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/combat_stress_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/delivery_defence_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/duel_smoke_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/effect_stacking_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/engagement_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/equipment_fixture_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/group_combat_ability_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/group_combat_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/group_combat_simulator_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/magic_abi_scaling_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/opportunity_action_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/physical_attack_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/resist_effect_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/round_orchestrator_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/combat/zone_combat_cases.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/items/combat_defeat_consequence_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/items/generated_eff001_combat_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/items/hundred_bot_durability_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/items/item_abi_combat_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/loot/combat_loot_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/loot/dagger_level_drop_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/loot/npc_worn_loot_chain_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/map/hex_map_group_encounter_e2e_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/map/hex_offset_geometry_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/map/map_encounter_combat_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/map/square_map_encounter_bridge_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/map/square_map_group_encounter_e2e_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/parameters/final_par_combat_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/parameters/par_migration_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/parameters/rating_matrix_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/ui/character_screen_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tests/ui/starting_village_runner.gd",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "tools/run_godot_check.sh",
+      "sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "role": "tests/fixtures/CI"
+    },
+    {
+      "file": "core/character/character_stats_service.gd",
+      "sha": "8975369d11a11d7aee30329e4da33fc740b2e529",
+      "role": "runtime balance/strict validation regression"
+    },
+    {
+      "file": "core/combat/combat_engine.gd",
+      "sha": "8975369d11a11d7aee30329e4da33fc740b2e529",
+      "role": "runtime balance/strict validation regression"
+    },
+    {
+      "file": "core/combat/combat_modifier_service.gd",
+      "sha": "8975369d11a11d7aee30329e4da33fc740b2e529",
+      "role": "runtime balance/strict validation regression"
+    },
+    {
+      "file": "core/combat/par_combat_contract.gd",
+      "sha": "8975369d11a11d7aee30329e4da33fc740b2e529",
+      "role": "runtime balance/strict validation regression"
+    },
+    {
+      "file": "tests/parameters/final_par_combat_runner.gd",
+      "sha": "8975369d11a11d7aee30329e4da33fc740b2e529",
+      "role": "runtime balance/strict validation regression"
+    },
+    {
+      "file": ".github/workflows/combat-tests.yml",
+      "sha": "106d5601ef2706bd10c72ec5cc7a852976633904",
+      "role": "canonical debug scene and interaction regression"
+    },
+    {
+      "file": "scenes/debug/debug_combat_viewer.gd",
+      "sha": "106d5601ef2706bd10c72ec5cc7a852976633904",
+      "role": "canonical debug scene and interaction regression"
+    },
+    {
+      "file": "tests/ui/debug_combat_scene_runner.gd",
+      "sha": "106d5601ef2706bd10c72ec5cc7a852976633904",
+      "role": "canonical debug scene and interaction regression"
+    }
+  ],
+  "commits": [
+    {
+      "local_sha": "b5d9101d4715815e4667c820c7fda12eea424bf4",
+      "github_sha": "6567008ccb496614a6be03d8c6e7101de2919ac1",
+      "tree": "c80c5746ab23cbb536fbcf2ea5881ddba7af3725",
+      "message": "fix(combat): unify canonical PAR ratings, magic attacks and weapon ownership"
+    },
+    {
+      "local_sha": "afb693db8573ee810f1d3ecc2c900126ab57324c",
+      "github_sha": "9a7623862432f7e8f83cf4b92aedacf7f01b0eff",
+      "tree": "12fa73df5afc64489bc55313e26bfa6cb540adaf",
+      "message": "test(combat): cover canonical PAR paths and reject false-green Godot checks"
+    },
+    {
+      "local_sha": "95e7968f9d90e6c61d0aaf3d35671596c87b1a5d",
+      "github_sha": "8975369d11a11d7aee30329e4da33fc740b2e529",
+      "tree": "a647e97a9763e27ecf359adcc285f843027eeebc",
+      "message": "fix(combat): enforce runtime balance, block capacity and numeric overlays"
+    },
+    {
+      "local_sha": "b2e0a2f88f9603efebd88ceefe2edb6e6fd4723e",
+      "github_sha": "106d5601ef2706bd10c72ec5cc7a852976633904",
+      "tree": "133ff442ef25146a7721e5cebaeccad2cf4aa30a",
+      "message": "fix(debug): construct combat scene enemies with canonical PAR inputs"
+    }
+  ],
+  "checks": {
+    "godot": "4.5.1.stable.official.f62fdbde1",
+    "baseline": {
+      "sha": "ae840220f5e7a45092680e1c6f92e3ca1d7f3cd6",
+      "total": 77,
+      "pass": 74,
+      "failures": [
+        {
+          "test": "tests/combat/magic_abi_scaling_runner.gd",
+          "status": "FAIL",
+          "exit_code": 1,
+          "log": "tests_combat_magic_abi_scaling_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_offset_geometry_runner.gd",
+          "status": "FAIL",
+          "exit_code": 1,
+          "log": "tests_map_hex_offset_geometry_runner.gd.log"
+        },
+        {
+          "test": "tests/ui/starting_village_runner.gd",
+          "status": "FAIL",
+          "exit_code": 1,
+          "log": "tests_ui_starting_village_runner.gd.log"
+        }
+      ]
+    },
+    "final": {
+      "code_head": "106d5601ef2706bd10c72ec5cc7a852976633904",
+      "method": "78-run suite on implementation commit 8975369d11a11d7aee30329e4da33fc740b2e529; followed by targeted debug scene/interaction test on debug-only follow-up 106d5601ef2706bd10c72ec5cc7a852976633904. No underlying runtime changes after suite.",
+      "total": 79,
+      "pass": 79,
+      "results": [
+        {
+          "test": "tests/arena_equipment_contract_test.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_arena_equipment_contract_test.gd.log"
+        },
+        {
+          "test": "tests/character/character_combat_builder_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_character_character_combat_builder_runner.gd.log"
+        },
+        {
+          "test": "tests/character/character_state_progression_smoke.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_character_character_state_progression_smoke.gd.log"
+        },
+        {
+          "test": "tests/character/persistence_smoke.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_character_persistence_smoke.gd.log"
+        },
+        {
+          "test": "tests/character/progression_smoke.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_character_progression_smoke.gd.log"
+        },
+        {
+          "test": "tests/character/ten_player_stats_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_character_ten_player_stats_runner.gd.log"
+        },
+        {
+          "test": "tests/combat/combat_regression_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_combat_combat_regression_runner.gd.log"
+        },
+        {
+          "test": "tests/combat/effect_stacking_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_combat_effect_stacking_runner.gd.log"
+        },
+        {
+          "test": "tests/combat/group_combat_ability_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_combat_group_combat_ability_runner.gd.log"
+        },
+        {
+          "test": "tests/combat/group_combat_simulator_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_combat_group_combat_simulator_runner.gd.log"
+        },
+        {
+          "test": "tests/combat/magic_abi_scaling_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_combat_magic_abi_scaling_runner.gd.log"
+        },
+        {
+          "test": "tests/combat/tournament_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_combat_tournament_runner.gd.log"
+        },
+        {
+          "test": "tests/items/character_ownership_chain_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_character_ownership_chain_runner.gd.log"
+        },
+        {
+          "test": "tests/items/combat_defeat_consequence_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_combat_defeat_consequence_runner.gd.log"
+        },
+        {
+          "test": "tests/items/defeat_equipment_wear_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_defeat_equipment_wear_runner.gd.log"
+        },
+        {
+          "test": "tests/items/generated_eff001_combat_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_generated_eff001_combat_runner.gd.log"
+        },
+        {
+          "test": "tests/items/generated_eff001_item_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_generated_eff001_item_runner.gd.log"
+        },
+        {
+          "test": "tests/items/generated_item_combat_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_generated_item_combat_runner.gd.log"
+        },
+        {
+          "test": "tests/items/hundred_bot_durability_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_hundred_bot_durability_runner.gd.log"
+        },
+        {
+          "test": "tests/items/inventory_exploit_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_inventory_exploit_runner.gd.log"
+        },
+        {
+          "test": "tests/items/item_abi_chain_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_item_abi_chain_runner.gd.log"
+        },
+        {
+          "test": "tests/items/item_abi_combat_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_item_abi_combat_runner.gd.log"
+        },
+        {
+          "test": "tests/items/item_durability_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_item_durability_runner.gd.log"
+        },
+        {
+          "test": "tests/items/item_generator_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_item_generator_runner.gd.log"
+        },
+        {
+          "test": "tests/items/item_initial_condition_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_items_item_initial_condition_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/chest_loot_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_chest_loot_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/combat_loot_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_combat_loot_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/dagger_level_drop_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_dagger_level_drop_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/loot_group_level_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_loot_group_level_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/loot_persistence_restart_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_loot_persistence_restart_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/loot_pipeline_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_loot_pipeline_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/npc_possession_loot_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_npc_possession_loot_runner.gd.log"
+        },
+        {
+          "test": "tests/loot/npc_worn_loot_chain_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_loot_npc_worn_loot_chain_runner.gd.log"
+        },
+        {
+          "test": "tests/map/debug_map_viewer_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_debug_map_viewer_runner.gd.log"
+        },
+        {
+          "test": "tests/map/expedition_foundation_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_expedition_foundation_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_encounter_chain_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_encounter_chain_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_encounter_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_encounter_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_encounter_world_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_encounter_world_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_exploration_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_exploration_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_group_pause_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_group_pause_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_loot_expiry_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_loot_expiry_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_map_group_encounter_e2e_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_map_group_encounter_e2e_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_npc_boundary_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_npc_boundary_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_npc_chase_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_npc_chase_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_npc_detection_join_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_npc_detection_join_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_npc_edge_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_npc_edge_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_npc_integration_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_npc_integration_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_npc_retry_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_npc_retry_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_offset_geometry_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_offset_geometry_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_pathfinding_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_pathfinding_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_pathfinding_stress_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_pathfinding_stress_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_patrol_chase_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_patrol_chase_runner.gd.log"
+        },
+        {
+          "test": "tests/map/hex_patrol_state_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_hex_patrol_state_runner.gd.log"
+        },
+        {
+          "test": "tests/map/location_generator_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_location_generator_runner.gd.log"
+        },
+        {
+          "test": "tests/map/map_areas_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_map_areas_runner.gd.log"
+        },
+        {
+          "test": "tests/map/map_combat_outcome_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_map_combat_outcome_runner.gd.log"
+        },
+        {
+          "test": "tests/map/map_encounter_combat_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_map_encounter_combat_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_active_opponent_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_active_opponent_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_encounter_bridge_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_encounter_bridge_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_entity_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_entity_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_group_combat_outcome_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_group_combat_outcome_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_group_combat_state_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_group_combat_state_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_group_encounter_e2e_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_group_encounter_e2e_runner.gd.log"
+        },
+        {
+          "test": "tests/map/square_map_movement_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_square_map_movement_runner.gd.log"
+        },
+        {
+          "test": "tests/map/tactical_map_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_tactical_map_runner.gd.log"
+        },
+        {
+          "test": "tests/map/world_object_interaction_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_world_object_interaction_runner.gd.log"
+        },
+        {
+          "test": "tests/map_generation_connectivity.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_map_generation_connectivity.gd.log"
+        },
+        {
+          "test": "tests/npc/npc_entity_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_npc_npc_entity_runner.gd.log"
+        },
+        {
+          "test": "tests/parameters/final_par_combat_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_parameters_final_par_combat_runner.gd.log"
+        },
+        {
+          "test": "tests/parameters/par_migration_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_parameters_par_migration_runner.gd.log"
+        },
+        {
+          "test": "tests/parameters/rating_matrix_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_parameters_rating_matrix_runner.gd.log"
+        },
+        {
+          "test": "tests/resources/resource_definition_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_resources_resource_definition_runner.gd.log"
+        },
+        {
+          "test": "tests/resources/resource_gathering_tool_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_resources_resource_gathering_tool_runner.gd.log"
+        },
+        {
+          "test": "tests/resources/resource_source_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_resources_resource_source_runner.gd.log"
+        },
+        {
+          "test": "tests/resources/resource_tool_interaction_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_resources_resource_tool_interaction_runner.gd.log"
+        },
+        {
+          "test": "tests/ui/arena_open_smoke.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_ui_arena_open_smoke.gd.log"
+        },
+        {
+          "test": "tests/ui/character_screen_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_ui_character_screen_runner.gd.log"
+        },
+        {
+          "test": "tests/ui/starting_village_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_ui_starting_village_runner.gd.log"
+        },
+        {
+          "test": "tests/ui/debug_combat_scene_runner.gd",
+          "status": "PASS",
+          "exit_code": 0,
+          "log": "tests_ui_debug_combat_scene_runner.gd.log",
+          "verification": "post-suite targeted run after debug-scene-only follow-up"
+        }
+      ]
+    },
+    "import": "PASS; /tmp/final-import.log",
+    "debug_scene": "PASS headless; /tmp/final-debug-scene.log",
+    "false_green_guard": "PASS: fake engine printed SCRIPT ERROR and exited0; helper exited1",
+    "json_parse": "PASS all tracked JSON",
+    "diff_check": "PASS",
+    "github_actions": {
+      "base_runs": [
+        {
+          "id": 38576852661,
+          "name": "Combat Tests",
+          "sha": "ae840220f5e7a45092680e1c6f92e3ca1d7f3cd6",
+          "conclusion": "success",
+          "url": "https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/38576852661"
+        },
+        {
+          "id": 38576323704,
+          "name": "ABI Branch Tests",
+          "sha": "ae840220f5e7a45092680e1c6f92e3ca1d7f3cd6",
+          "conclusion": "success",
+          "url": "https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/38576323704"
+        },
+        {
+          "id": 38576023787,
+          "name": "PAR Migration Audit",
+          "sha": "ae840220f5e7a45092680e1c6f92e3ca1d7f3cd6",
+          "conclusion": "success",
+          "url": "https://github.com/Archoniou1987/Battle-of-Artheon/actions/runs/38576023787"
+        }
+      ],
+      "new_code_head_status": "NOT_RUN",
+      "reason": "No dispatch capability; no gh CLI/auth credentials. Old success is not new-head PASS."
+    }
+  },
+  "legacy_matches": [
+    {
+      "file": "core/combat/par_combat_contract.gd",
+      "line": 15,
+      "text": "for legacy in [\"STR\",\"DEX\",\"END\",\"AGI\",\"STA\",\"INT\",\"WIS\",\"INTUITION\",\"magic_hit_rating\",\"magic_hit\",\"magic_crit_rating\",\"magic_damage_flat\",\"hit\",\"hit_modifier\"]:",
+      "classification": "explicit rejection of obsolete inputs"
+    },
+    {
+      "file": "core/items/item_template_service.gd",
+      "line": 64,
+      "text": "for field in [\"guaranteed_stats\", \"bonuses\", \"base_stats\", \"final_stats\"]:",
+      "classification": "explicit rejection of obsolete inputs"
+    },
+    {
+      "file": "data/parameters/par_registry.json",
+      "line": 17,
+      "text": "\"source_key\": \"STR\",",
+      "classification": "locked registry source metadata"
+    },
+    {
+      "file": "data/parameters/par_registry.json",
+      "line": 25,
+      "text": "\"source_key\": \"DEX\",",
+      "classification": "locked registry source metadata"
+    },
+    {
+      "file": "data/parameters/par_registry.json",
+      "line": 33,
+      "text": "\"source_key\": \"INTU\",",
+      "classification": "locked registry source metadata"
+    },
+    {
+      "file": "data/parameters/par_registry.json",
+      "line": 41,
+      "text": "\"source_key\": \"INT\",",
+      "classification": "locked registry source metadata"
+    },
+    {
+      "file": "data/parameters/par_registry.json",
+      "line": 49,
+      "text": "\"source_key\": \"WIS\",",
+      "classification": "locked registry source metadata"
+    },
+    {
+      "file": "data/parameters/par_registry.json",
+      "line": 57,
+      "text": "\"source_key\": \"END\",",
+      "classification": "locked registry source metadata"
+    },
+    {
+      "file": "ui/arena/arena_screen.gd",
+      "line": 228,
+      "text": "# Cosmetic END TURN skins; the first skin is the default.",
+      "classification": "END TURN cosmetic label/comment"
+    },
+    {
+      "file": "ui/arena/arena_screen.gd",
+      "line": 257,
+      "text": "round_button.text = \"\" # END TURN is baked into the atlas artwork.",
+      "classification": "END TURN cosmetic label/comment"
+    },
+    {
+      "file": "ui/arena/arena_screen.gd",
+      "line": 258,
+      "text": "round_button.tooltip_text = \"END TURN · скин %d\" % selected_id",
+      "classification": "END TURN cosmetic label/comment"
+    }
+  ],
+  "par_reference_matrix": [
+    {
+      "id": "PAR001",
+      "source_key": "STR",
+      "status": "ЗАКРЕПЛЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_progression.gd",
+          "line": 21
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 15
+        },
+        {
+          "file": "core/combat/round_orchestrator.gd",
+          "line": 115
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 71
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 4
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 90
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 152
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR002",
+      "source_key": "DEX",
+      "status": "ЗАКРЕПЛЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_progression.gd",
+          "line": 21
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 15
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 71
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 4
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 90
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 152
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR003",
+      "source_key": "INTU",
+      "status": "ЗАКРЕПЛЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_progression.gd",
+          "line": 21
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 71
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 4
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 90
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 152
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR004",
+      "source_key": "INT",
+      "status": "ЗАКРЕПЛЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_progression.gd",
+          "line": 21
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 15
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 71
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 4
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 90
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 153
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR005",
+      "source_key": "WIS",
+      "status": "ЗАКРЕПЛЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_progression.gd",
+          "line": 21
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 15
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 71
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 4
+        },
+        {
+          "file": "core/npc/npc_combat_builder.gd",
+          "line": 7
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 90
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 152
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR006",
+      "source_key": "END",
+      "status": "ЗАКРЕПЛЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_progression.gd",
+          "line": 21
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 15
+        },
+        {
+          "file": "core/combat/round_orchestrator.gd",
+          "line": 115
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 71
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 4
+        },
+        {
+          "file": "core/npc/npc_combat_builder.gd",
+          "line": 6
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 90
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 153
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR010",
+      "source_key": "max_hp_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 20
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 158
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR011",
+      "source_key": "max_mana_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 21
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 89
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 158
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR012",
+      "source_key": "hp_regen_out_combat",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR013",
+      "source_key": "mana_regen",
+      "status": "УТОЧНИТЬ",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_attack_pipeline.gd",
+          "line": 16
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 21
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 93
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR014",
+      "source_key": "max_ap",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 34
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 33
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR015",
+      "source_key": "mana_regen_round",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR016",
+      "source_key": "hp_regen_round",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR017",
+      "source_key": "hp_regen_out_combat_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR018",
+      "source_key": "mana_cost_reduction_pct",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR019",
+      "source_key": "tempo",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 33
+        },
+        {
+          "file": "core/combat/combat_api.gd",
+          "line": 43
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 137
+        },
+        {
+          "file": "core/combat/combat_movement_resolver.gd",
+          "line": 51
+        },
+        {
+          "file": "core/combat/round_orchestrator.gd",
+          "line": 63
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 20
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 52
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR020",
+      "source_key": "max_tempo",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR021",
+      "source_key": "tempo_regen",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR030",
+      "source_key": "hit_chance_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 549
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 44
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 156
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR031",
+      "source_key": "dodge_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 246
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 56
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 155
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR032",
+      "source_key": "anti_dodge_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 246
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 7
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 45
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 155
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR033",
+      "source_key": "crit_chance_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 273
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 8
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 46
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 154
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR034",
+      "source_key": "anti_crit_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 273
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 8
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 57
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 156
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR035",
+      "source_key": "crit_damage_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 279
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 8
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR050",
+      "source_key": "main_hand_damage",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 54
+        },
+        {
+          "file": "core/character/character_stats_service.gd",
+          "line": 51
+        },
+        {
+          "file": "core/combat/par_attack_contract.gd",
+          "line": 40
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 58
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 46
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 38
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR051",
+      "source_key": "off_hand_damage",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 71
+        },
+        {
+          "file": "core/character/character_stats_service.gd",
+          "line": 51
+        },
+        {
+          "file": "core/combat/par_attack_contract.gd",
+          "line": 40
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 58
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 46
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 41
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR052",
+      "source_key": "physical_damage_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 50
+        },
+        {
+          "file": "core/character/character_stats_service.gd",
+          "line": 49
+        },
+        {
+          "file": "core/combat/combat_command_api.gd",
+          "line": 268
+        },
+        {
+          "file": "core/combat/par_attack_contract.gd",
+          "line": 11
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 60
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 33
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR053",
+      "source_key": "physical_damage_piercing_pct",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR054",
+      "source_key": "physical_damage_slashing_pct",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR055",
+      "source_key": "physical_damage_chopping_pct",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR056",
+      "source_key": "physical_damage_blunt_pct",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR057",
+      "source_key": "attacks_per_round",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 46
+        },
+        {
+          "file": "core/combat/par_attack_contract.gd",
+          "line": 11
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 60
+        },
+        {
+          "file": "core/items/item_generator.gd",
+          "line": 26
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 81
+        },
+        {
+          "file": "ui/arena/arena_combat_session.gd",
+          "line": 17
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR070",
+      "source_key": "manual_block_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 58
+        },
+        {
+          "file": "ui/inventory/item_detail_dialog.gd",
+          "line": 157
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR071",
+      "source_key": "shield_auto_block",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_stats_service.gd",
+          "line": 28
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR072",
+      "source_key": "block_crush",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_attack_pipeline.gd",
+          "line": 96
+        },
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 254
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 73
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 79
+        },
+        {
+          "file": "ui/arena/arena_combat_session.gd",
+          "line": 69
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 51
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR073",
+      "source_key": "manual_block_zone_capacity",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 30
+        },
+        {
+          "file": "core/combat/combat_api.gd",
+          "line": 53
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 89
+        },
+        {
+          "file": "core/combat/par_attack_contract.gd",
+          "line": 11
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 21
+        },
+        {
+          "file": "core/data/test_fixture_loader.gd",
+          "line": 35
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 33
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR074",
+      "source_key": "block_crush_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR075",
+      "source_key": "counterattack_rating",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 426
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 9
+        },
+        {
+          "file": "ui/arena/arena_screen.gd",
+          "line": 88
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 54
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR076",
+      "source_key": "counterattack_damage_pct",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 55
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR100",
+      "source_key": "armour_head",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 92
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 92
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 62
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR101",
+      "source_key": "armour_chest",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 92
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 92
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 64
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR102",
+      "source_key": "armour_arms",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 92
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 92
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 63
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR103",
+      "source_key": "armour_waist",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 92
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 92
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 65
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR104",
+      "source_key": "armour_legs",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_combat_builder.gd",
+          "line": 92
+        },
+        {
+          "file": "core/parameters/par_calculation_service.gd",
+          "line": 92
+        },
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 66
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR105",
+      "source_key": "armour.head.piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR106",
+      "source_key": "armour.head.slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR107",
+      "source_key": "armour.head.chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR108",
+      "source_key": "armour.head.blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR109",
+      "source_key": "armour.chest.piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR110",
+      "source_key": "armour.chest.slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR111",
+      "source_key": "armour.chest.chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR112",
+      "source_key": "armour.chest.blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR113",
+      "source_key": "armour.arms.piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR114",
+      "source_key": "armour.arms.slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR115",
+      "source_key": "armour.arms.chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR116",
+      "source_key": "armour.arms.blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR117",
+      "source_key": "armour.waist.piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR118",
+      "source_key": "armour.waist.slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR119",
+      "source_key": "armour.waist.chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR120",
+      "source_key": "armour.waist.blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR121",
+      "source_key": "armour.legs.piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR122",
+      "source_key": "armour.legs.slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR123",
+      "source_key": "armour.legs.chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR124",
+      "source_key": "armour.legs.blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR125",
+      "source_key": "armour_pen_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_stats_service.gd",
+          "line": 26
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR126",
+      "source_key": "armour_pen_pct",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/character/character_stats_service.gd",
+          "line": 27
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR127",
+      "source_key": "physical_resist_piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR128",
+      "source_key": "physical_resist_slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR129",
+      "source_key": "physical_resist_chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR130",
+      "source_key": "physical_resist_blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR131",
+      "source_key": "armour_pen_piercing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR132",
+      "source_key": "armour_pen_slashing",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR133",
+      "source_key": "armour_pen_chopping",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR134",
+      "source_key": "armour_pen_blunt",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR135",
+      "source_key": "damage_reduction_pct",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR150",
+      "source_key": "magic_damage_rating",
+      "status": "УТОЧНЕНИЕ ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 193
+        },
+        {
+          "file": "core/combat/combat_modifier_service.gd",
+          "line": 151
+        },
+        {
+          "file": "core/combat/par_combat_contract.gd",
+          "line": 9
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR151",
+      "source_key": "magic_damage_all_pct",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR152",
+      "source_key": "magic_damage_fire",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR153",
+      "source_key": "magic_damage_water",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR154",
+      "source_key": "magic_damage_air",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR155",
+      "source_key": "magic_damage_earth",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR156",
+      "source_key": "magic_damage_dark",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR157",
+      "source_key": "magic_damage_light",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR158",
+      "source_key": "magic_damage_fire_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR159",
+      "source_key": "magic_damage_water_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR160",
+      "source_key": "magic_damage_air_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR161",
+      "source_key": "magic_damage_earth_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR162",
+      "source_key": "magic_damage_dark_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR163",
+      "source_key": "magic_damage_light_flat",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR164",
+      "source_key": "magic_pen_pct",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR165",
+      "source_key": "magic_pen_fire",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR166",
+      "source_key": "magic_pen_water",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR167",
+      "source_key": "magic_pen_air",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR168",
+      "source_key": "magic_pen_earth",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR169",
+      "source_key": "magic_pen_dark",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR170",
+      "source_key": "magic_pen_light",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR190",
+      "source_key": "magic_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "core/combat/combat_engine.gd",
+          "line": 317
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR191",
+      "source_key": "fire_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR192",
+      "source_key": "water_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR193",
+      "source_key": "air_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR194",
+      "source_key": "earth_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR195",
+      "source_key": "dark_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR196",
+      "source_key": "light_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR210",
+      "source_key": "stun_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR211",
+      "source_key": "bleed_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR212",
+      "source_key": "slow_resist",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR230",
+      "source_key": "vision_range",
+      "status": "ПРЕДЛОЖЕНО",
+      "reference_evidence": [
+        {
+          "file": "ui/character/character_screen.gd",
+          "line": 95
+        }
+      ],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    },
+    {
+      "id": "PAR231",
+      "source_key": "map_movement_speed_pct",
+      "status": "УТОЧНЕНО",
+      "reference_evidence": [],
+      "contract": "PAR ID aggregate -> source_key snapshot (primary IDs remain PAR only)",
+      "limitation": "Literal references are navigation evidence, not functional coverage; generic/dynamic adapters exist."
+    }
+  ],
+  "manual_ci_commands": [
+    "gh workflow run par-migration-audit.yml -R Archoniou1987/Battle-of-Artheon --ref feature/character-inventory-ui-v1",
+    "gh workflow run abi-branch-tests.yml -R Archoniou1987/Battle-of-Artheon --ref feature/character-inventory-ui-v1",
+    "gh workflow run combat-tests.yml -R Archoniou1987/Battle-of-Artheon --ref feature/character-inventory-ui-v1"
+  ]
+}

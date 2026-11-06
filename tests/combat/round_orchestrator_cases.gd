@@ -10,6 +10,7 @@ static func run(balance:Dictionary) -> bool:
 		"heal_rescue":_pending_death_can_be_healed(balance),
 		"heal_insufficient":_insufficient_heal_still_dies(balance),
 		"finalized_no_heal":_finalized_death_cannot_be_healed(balance),
+		"group_healer_survives":_group_healer_outlives_ally(balance),
 		"persistent_aoe":_persistent_aoe_ticks(balance),
 		"zone_aoe":_zone_aoe_follows_occupants_after_movement(balance),
 		"deferred_death":_deferred_damage_finalizes_death(balance),
@@ -28,8 +29,8 @@ static func run(balance:Dictionary) -> bool:
 
 static func _duel_state()->CombatState:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,10))
-	state.add_combatant(CombatantState.new("b","B",1,10))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,10))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,10))
 	return state
 
 static func _lethal(state:CombatState,source:String,target:String)->CombatEvent:
@@ -37,7 +38,7 @@ static func _lethal(state:CombatState,source:String,target:String)->CombatEvent:
 
 static func _locked_actions_finish(balance:Dictionary)->bool:
 	var state:=_duel_state()
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	var round:=orchestrator.begin_round()
 	round.lock_action(_lethal(state,"a","b"))
@@ -49,7 +50,7 @@ static func _locked_actions_finish(balance:Dictionary)->bool:
 
 static func _dead_source_keeps_deferred_until_death_phase(balance:Dictionary)->bool:
 	var state:=_duel_state()
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	var round:=orchestrator.begin_round()
 	var deferred:=state.create_event(CombatEvent.Kind.DAMAGE,"b","a",{"amount":3.0,"damage_type":"physical","source":"deferred"})
@@ -61,7 +62,7 @@ static func _dead_source_keeps_deferred_until_death_phase(balance:Dictionary)->b
 
 static func _living_source_resolves_deferred(balance:Dictionary)->bool:
 	var state:=_duel_state()
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	var deferred:=state.create_event(CombatEvent.Kind.DAMAGE,"a","b",{"amount":3.0,"damage_type":"physical","source":"deferred"})
@@ -71,11 +72,11 @@ static func _living_source_resolves_deferred(balance:Dictionary)->bool:
 
 static func _pending_death_can_be_healed(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",1,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",1,100)
 	hero.hp=20
 	state.add_combatant(hero)
-	state.add_combatant(CombatantState.new("ally","Ally",1,100))
-	var engine:=CombatEngine.new(state,balance)
+	state.add_combatant(TestFixtureLoader.new_combatant("ally","Ally",1,100))
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"ally","hero",{"amount":50.0,"damage_type":"physical"}))
@@ -86,10 +87,10 @@ static func _pending_death_can_be_healed(balance:Dictionary)->bool:
 
 static func _insufficient_heal_still_dies(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",1,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",1,100)
 	hero.hp=20
 	state.add_combatant(hero)
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"hero","hero",{"amount":50.0,"damage_type":"physical"}))
@@ -99,20 +100,51 @@ static func _insufficient_heal_still_dies(balance:Dictionary)->bool:
 
 static func _finalized_death_cannot_be_healed(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var hero:=CombatantState.new("hero","Hero",1,100)
+	var hero:=TestFixtureLoader.new_combatant("hero","Hero",1,100)
 	hero.hp=-5
 	state.add_combatant(hero)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance))
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance))
 	orchestrator.begin_round(); orchestrator.end_round()
 	var healed:=hero.restore_hp(100)
 	return healed==0 and hero.hp==-5 and hero.is_death_finalized()
 
+static func _group_healer_outlives_ally(balance:Dictionary)->bool:
+	var state:=CombatState.new()
+	var healer:=TestFixtureLoader.new_combatant("healer","Healer",1,100,50)
+	healer.hp=50
+	var friend:=TestFixtureLoader.new_combatant("friend","Friend",1,100,0)
+	var enemy:=TestFixtureLoader.new_combatant("enemy","Enemy",1,100,0)
+	state.add_combatant(healer)
+	state.add_combatant(friend)
+	state.add_combatant(enemy)
+	var groups:=GroupCombatState.new(state)
+	groups.add_member("players","healer")
+	groups.add_member("players","friend")
+	groups.add_member("enemies","enemy")
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
+	var orchestrator:=RoundOrchestrator.new(state,engine,groups)
+	orchestrator.begin_round()
+	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"enemy","friend",{"amount":120.0,"damage_type":"physical"}))
+	var summary:=orchestrator.end_round()
+	if not friend.is_death_finalized() or String(summary.get("battle_outcome",""))!="ongoing":
+		return false
+	# The healer remains able to act in subsequent rounds; a dead teammate
+	# does not imply defeat while both opposing teams have living members.
+	orchestrator.begin_round()
+	var heal:=state.create_event(CombatEvent.Kind.ACTION,"healer","healer",{
+		"target_team":"ALLY", "components":[{"kind":"heal","amount":10.0}]
+	})
+	engine.resolve_event(heal)
+	engine.resolve_pending_events()
+	var second:=orchestrator.end_round()
+	return String(heal.result.get("outcome",""))=="dispatched" and healer.hp==60 and String(second.get("battle_outcome",""))=="ongoing"
+
 static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("caster","Caster",1,100))
-	state.add_combatant(CombatantState.new("t0","T0",1,100))
-	state.add_combatant(CombatantState.new("t1","T1",1,100))
-	var engine:=CombatEngine.new(state,balance)
+	state.add_combatant(TestFixtureLoader.new_combatant("caster","Caster",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("t0","T0",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("t1","T1",1,100))
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	var initial:=AbilityRuntime.build_action_event(state,"caster","t0","ABI_DOT_AREA",{
 		"delivery_type":"AREA","target_scope":"ALL_ENEMIES","duration_rounds":3,
@@ -130,7 +162,7 @@ static func _persistent_aoe_ticks(balance:Dictionary)->bool:
 static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool:
 	var state:=CombatState.new()
 	for id in ["caster","leaver","enterer"]:
-		state.add_combatant(CombatantState.new(id,id,1,100))
+		state.add_combatant(TestFixtureLoader.new_combatant(id,id,1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","caster")
 	groups.add_member("B","leaver")
@@ -141,7 +173,7 @@ static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool
 	zones.set_zone("caster",CombatZoneState.ZONE_1)
 	zones.set_zone("leaver",CombatZoneState.ZONE_2)
 	zones.set_zone("enterer",CombatZoneState.ZONE_3)
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine,groups,zones)
 	orchestrator.begin_round()
 	orchestrator.register_zone_effect("caster",CombatZoneState.ZONE_2,{
@@ -165,7 +197,7 @@ static func _zone_aoe_follows_occupants_after_movement(balance:Dictionary)->bool
 
 static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
 	var state:=_duel_state()
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	var deferred:=state.create_event(CombatEvent.Kind.DAMAGE,"a","b",{"amount":20.0,"damage_type":"physical","source":"deferred"})
@@ -177,8 +209,8 @@ static func _deferred_damage_finalizes_death(balance:Dictionary)->bool:
 static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 	var state:=CombatState.new()
 	for id in ["a","b","victim"]:
-		state.add_combatant(CombatantState.new(id,id,1,100))
-	var engine:=CombatEngine.new(state,balance)
+		state.add_combatant(TestFixtureLoader.new_combatant(id,id,1,100))
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"a","victim",{"amount":60.0,"damage_type":"physical"}))
@@ -187,8 +219,8 @@ static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 	if summary.get("kill_attribution",{}).get("victim",[])!=["a"]: return false
 	var state2:=CombatState.new()
 	for id in ["a","b","victim"]:
-		state2.add_combatant(CombatantState.new(id,id,1,100))
-	var engine2:=CombatEngine.new(state2,balance)
+		state2.add_combatant(TestFixtureLoader.new_combatant(id,id,1,100))
+	var engine2:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state2),balance)
 	var orchestrator2:=RoundOrchestrator.new(state2,engine2)
 	orchestrator2.begin_round()
 	engine2.resolve_event(state2.create_event(CombatEvent.Kind.DAMAGE,"a","victim",{"amount":60.0,"damage_type":"physical"}))
@@ -199,14 +231,14 @@ static func _kill_attribution_uses_fatal_round_total(balance:Dictionary)->bool:
 
 static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":10.0}): return false
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":5.0}): return false
@@ -216,14 +248,14 @@ static func _combined_forced_movement_uses_one_step(balance:Dictionary)->bool:
 
 static func _opposing_forced_tie_stays_put(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_2); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":[],"flat_power":10.0}): return false
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_1,1,true,"forced",{"stats":[],"flat_power":10.0}): return false
@@ -234,30 +266,30 @@ static func _opposing_forced_tie_stays_put(balance:Dictionary)->bool:
 
 static func _forced_movement_uses_data_driven_contest(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var a:=CombatantState.new("a","A",1,100)
-	a.stats["STR"]=4.0
-	state.add_combatant(a); state.add_combatant(CombatantState.new("b","B",1,100))
+	var a:=TestFixtureLoader.new_combatant("a","A",1,100)
+	a.stats["PAR001"]=4.0
+	state.add_combatant(a); state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_2); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
-	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":["STR"],"flat_power":1.0,"multiplier":2.0}): return false
+	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":["PAR001"],"flat_power":1.0,"multiplier":2.0}): return false
 	var results:=orchestrator.resolve_movement_phase()
 	return results.size()==1 and bool(results[0].get("moved",false)) and float(results[0].get("contest_power",0.0))==10.0 and zones.zone_of("a")==CombatZoneState.ZONE_3
 
 
 static func _forced_movement_rejects_non_adjacent_effect(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100)); state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100)); state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"flat_power":99.0}): return false
 	var results:=orchestrator.resolve_movement_phase()
@@ -265,15 +297,15 @@ static func _forced_movement_rejects_non_adjacent_effect(balance:Dictionary)->bo
 
 static func _movement_edges_and_root(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	var a:=CombatantState.new("a","A",1,100)
-	var b:=CombatantState.new("b","B",1,100)
+	var a:=TestFixtureLoader.new_combatant("a","A",1,100)
+	var b:=TestFixtureLoader.new_combatant("b","B",1,100)
 	state.add_combatant(a); state.add_combatant(b)
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_1-1,1,true,"forced",{"flat_power":10.0}): return false
 	var edge:=orchestrator.resolve_movement_phase()
@@ -286,14 +318,14 @@ static func _movement_edges_and_root(balance:Dictionary)->bool:
 
 static func _forced_movement_overrides_navigation(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_1); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"navigation"): return false
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_2,1,true,"forced",{"stats":[],"flat_power":100.0}): return false
@@ -303,14 +335,14 @@ static func _forced_movement_overrides_navigation(balance:Dictionary)->bool:
 
 static func _opposing_forced_overrides_navigation(balance:Dictionary)->bool:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("a","A",1,100))
-	state.add_combatant(CombatantState.new("b","B",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("a","A",1,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("b","B",1,100))
 	var groups:=GroupCombatState.new(state)
 	groups.add_member("A","a"); groups.add_member("B","b")
 	var zones:=CombatZoneState.new(groups)
 	zones.set_team_flag("A",CombatZoneState.ZONE_1); zones.set_team_flag("B",CombatZoneState.ZONE_3)
 	zones.set_zone("a",CombatZoneState.ZONE_2); zones.set_zone("b",CombatZoneState.ZONE_3)
-	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(state,balance),groups,zones)
+	var orchestrator:=RoundOrchestrator.new(state,CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance),groups,zones)
 	orchestrator.begin_round()
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_1,1,true,"navigation"): return false
 	if not orchestrator.queue_movement_request("a",CombatZoneState.ZONE_3,1,true,"forced",{"stats":[],"flat_power":10.0}): return false

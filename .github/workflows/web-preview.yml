@@ -34,10 +34,46 @@ jobs:
       - name: Import Godot project
         run: timeout 180s godot --headless --editor --path . --quit
 
+      - name: Character progression smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/progression_smoke.gd
+
+      - name: CharacterState integration smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/character_state_progression_smoke.gd
+
+      - name: Diagnose ArenaScreen parser directly
+        run: timeout 30s godot --headless --path . --check-only --script res://ui/arena/arena_screen.gd
+
+      - name: Character and inventory persistence smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/character/persistence_smoke.gd
+
+      - name: Character UI smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
+
+      - name: Arena opening smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/arena_open_smoke.gd
+
+      - name: ABI Test Lab tabbed interface smoke test
+        run: timeout 120s godot --headless --path . --script res://tests/ui/abi_test_lab_open_runner.gd
+
+      - name: Install virtual display for visual previews
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+
+      - name: Capture Godot UI previews
+        run: timeout 120s xvfb-run -a godot --path . --rendering-method gl_compatibility --script res://tests/ui/inventory_visual_capture.gd
+
+      - name: Upload UI preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-ui-preview
+          path: visual-preview/*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Export browser build
         run: |
           mkdir -p build/web
-          godot --headless --path . --export-release "Web" build/web/index.html
+          timeout 180s godot --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html
           test -s build/web/index.wasm
           test -s build/web/index.pck

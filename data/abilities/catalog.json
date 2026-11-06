@@ -1,0 +1,653 @@
+{
+  "ABI301": {
+    "name": "Кровавый порез",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "sword_ability_mode": "single_mh",
+    "sword_mh_multiplier": 0,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "mh_flat_bonus": 15,
+    "eff": "EFF301",
+    "effect_level": 1
+  },
+  "ABI302": {
+    "name": "Круговой удар",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 2,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "sword_ability_mode": "aoe_3",
+    "sword_mh_multiplier": 0.5,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1
+  },
+  "ABI303": {
+    "name": "Калека",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "single",
+    "sword_mh_multiplier": 0.5,
+    "sword_eff_id": "EFF302",
+    "sword_eff_level": 1,
+    "eff": "EFF302",
+    "effect_level": 1
+  },
+  "ABI304": {
+    "name": "Медлительность",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "single",
+    "sword_mh_multiplier": 0.6,
+    "sword_eff_id": "EFF303",
+    "sword_eff_level": 1,
+    "eff": "EFF303",
+    "effect_level": 1
+  },
+  "ABI305": {
+    "name": "Потерянность",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "single",
+    "sword_mh_multiplier": 0.75,
+    "sword_eff_id": "EFF304",
+    "sword_eff_level": 1,
+    "eff": "EFF304",
+    "effect_level": 1
+  },
+  "ABI306": {
+    "name": "Броневой натиск",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "def_ultimate",
+    "sword_mh_multiplier": 0.5,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1,
+    "consume_all_ap": true,
+    "min_ap_cost": 1,
+    "armor_per_ap": 0.02
+  },
+  "ABI307": {
+    "name": "Танец клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "ALL_MELEE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "dodge_ultimate",
+    "sword_mh_multiplier": 0.25,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1,
+    "consume_all_ap": true,
+    "min_ap_cost": 1,
+    "max_targets": 5
+  },
+  "ABI308": {
+    "name": "Кровавый приговор",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "slashing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "sword_ability_mode": "crit_ultimate",
+    "sword_mh_multiplier": 1,
+    "sword_eff_id": "EFF301",
+    "sword_eff_level": 1,
+    "eff": "EFF301",
+    "effect_level": 1,
+    "consume_all_ap": true,
+    "min_ap_cost": 1,
+    "crit_pct_per_ap": 10,
+    "crit_damage_pct_per_ap": 25,
+    "bleed_ticks": 3
+  },
+  "ABI401": {
+    "name": "Быстрая атака",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF401",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "standard",
+    "dagger_ability_mode": "quick",
+    "ap_gain_on_hit": true
+  },
+  "ABI402": {
+    "name": "Отравленные клинки",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF402",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "instant",
+    "dagger_ability_mode": "poison_coating"
+  },
+  "ABI403": {
+    "name": "Веер клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "def_fan",
+    "trigger_previous_round": "dodge"
+  },
+  "ABI404": {
+    "name": "Смертельная комбинация",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "def_combo"
+  },
+  "ABI405": {
+    "name": "Сокрушительный выпад",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "attack_heavy"
+  },
+  "ABI406": {
+    "name": "Шквал клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "attack_flurry"
+  },
+  "ABI407": {
+    "name": "Глубокий прокол",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "pen_deep"
+  },
+  "ABI408": {
+    "name": "Абсолютное пробитие",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "dagger_ability_mode": "pen_absolute"
+  },
+  "ABI501": {
+    "name": "Ярость",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF501",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "standard",
+    "axe_ability_mode": "rage"
+  },
+  "ABI502": {
+    "name": "Рубящий удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 2,
+    "application_timing": "standard",
+    "axe_ability_mode": "unblockable",
+    "trigger_previous_round": "crit_or_block_crush"
+  },
+  "ABI503": {
+    "name": "Подсекающий удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "axe_ability_mode": "def_sweep"
+  },
+  "ABI504": {
+    "name": "Стойка возмездия",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF503",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 4,
+    "ap_gain": 0,
+    "application_timing": "instant",
+    "axe_ability_mode": "def_stance"
+  },
+  "ABI505": {
+    "name": "Разрушительный удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "axe_ability_mode": "attack_breaker"
+  },
+  "ABI506": {
+    "name": "Смертельный удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "axe_ability_mode": "attack_execute"
+  },
+  "ABI507": {
+    "name": "Крушитель",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF505",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "instant",
+    "axe_ability_mode": "crusher"
+  },
+  "ABI508": {
+    "name": "Удар щитолома",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "axe_ability_mode": "shieldbreaker"
+  },
+  "ABI601": {
+    "name": "Тяжёлый удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "standard",
+    "hammer_ability_mode": "mh_tempo"
+  },
+  "ABI602": {
+    "name": "Отражение",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF602",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "application_timing": "instant",
+    "hammer_ability_mode": "reflect"
+  },
+  "ABI603": {
+    "name": "Восстановление",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "heal",
+        "amount": 0
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "hammer_ability_mode": "heal"
+  },
+  "ABI604": {
+    "name": "Разрушающий удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "hammer_ability_mode": "armour_fracture"
+  },
+  "ABI605": {
+    "name": "Боевой прилив",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF604",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "application_timing": "instant",
+    "hammer_ability_mode": "damage_surge"
+  },
+  "ABI606": {
+    "name": "Сокрушение",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "hammer_ability_mode": "tempo_crush"
+  }
+}

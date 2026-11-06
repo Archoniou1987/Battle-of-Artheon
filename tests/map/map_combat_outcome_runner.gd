@@ -4,7 +4,7 @@ func _initialize()->void:
 	var npc_repo:=NpcRepository.new(); npc_repo.load_definitions(doc)
 	var npc:=NpcInstance.new("WORLD_BANDIT_001",npc_repo.get_npc("NPC003"))
 	var item_repo:=ItemRepository.new()
-	var item:Dictionary={"instance_id":"BANDIT_DAGGER_001","template_id":"TEST_DAGGER","quality":"common","durability":{"current":15,"max":20}}
+	var item:Dictionary={"instance_id":"BANDIT_DAGGER_001","generated_from_template":"TEST_DAGGER","quality":"common","durability":{"current":15,"max":20}}
 	item_repo.add_item(item)
 	var valid:=npc.receive_item("BANDIT_DAGGER_001",item_repo)
 	var map:=TacticalMapState.new(10,10); var bridge:=MapNpcBridge.new()
