@@ -13,6 +13,7 @@ func _check(ok: bool, label: String) -> void:
 func _initialize() -> void:
 	_sword_cripple_versus_axe_damage()
 	_dagger_breach_versus_hammer_armour()
+	_hammer_charge_magic_resist_versus_penetration()
 	_dagger_poison_versus_hammer_reflection()
 	_axe_counter_versus_dagger_dodge()
 	_hammer_tempo_versus_axe_immunity()
@@ -212,3 +213,31 @@ func _hammer_tempo_versus_axe_immunity() -> void:
 	CombatTempoService.end_round(state)
 	_check(axe.tempo_stun_round == 6,"hammer:accumulated_debt_stuns_after_immunity")
 	print("ABI_CROSS_WEAPON_CASE=CHECKED hammer_tempo_vs_axe_immunity")
+
+func _hammer_charge_magic_resist_versus_penetration() -> void:
+	var ctx := _pair("dagger","hammer")
+	var state: CombatState = ctx["state"]
+	var engine: CombatEngine = ctx["engine"]
+	var attacker := state.get_combatant("left")
+	var hammer := state.get_combatant("right")
+	var baseline := CombatModifierService.magic_resist(hammer,"fire",1,attacker)
+	HammerAbiCombatService.gain_charges(engine,hammer,80)
+	var fortified := CombatModifierService.magic_resist(hammer,"fire",1,attacker)
+	_check(HammerAbiCombatService.charges(hammer,1) == 80,"hammer:charge_cap_preserves_eighty")
+	_check(fortified > baseline,"hammer:charges_raise_magic_resist")
+	var first := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"fire","source":"ability"
+	})
+	engine.resolve_event(first)
+	_check(is_equal_approx(float(first.result.get("magic_resist",-1.0)),fortified),"hammer:fire_damage_uses_charge_resistance")
+	var totals: Dictionary = attacker.combat_stats["par_totals"]
+	totals["PAR164"] = 10000.0
+	attacker.combat_stats["par_totals"] = totals
+	var penetrated := CombatModifierService.magic_resist(hammer,"fire",1,attacker)
+	_check(penetrated < fortified,"dagger:magic_pen_rating_counters_hammer_resist")
+	var second := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"fire","source":"ability"
+	})
+	engine.resolve_event(second)
+	_check(int(second.result.get("final_damage",0)) > int(first.result.get("final_damage",0)),"dagger:penetration_increases_real_magic_damage")
+	print("ABI_CROSS_WEAPON_CASE=CHECKED hammer_magic_resist_vs_penetration")
