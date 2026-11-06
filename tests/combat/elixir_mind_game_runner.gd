@@ -134,29 +134,29 @@ func _test_abi_manual_timings() -> void:
 	var instant: Dictionary = {"name":"Ward ABI","application_timing":"instant","target_team":"ALLY","components":[{"kind":"effect","effect_id":"EFF006"}],"mana_cost":2}
 	var standard: Dictionary = {"name":"Healing ABI","application_timing":"standard","target_team":"ALLY","components":[{"kind":"heal","amount":30}],"mana_cost":2}
 	var dot: Dictionary = {"name":"Curse","application_timing":"instant","target_team":"ENEMY","components":[{"kind":"effect","effect_id":"EFF003"}]}
-	check(AbilityRuntime.validate_definition("ABI_TEST_INSTANT",instant).is_empty(),"hand_authored_instant_valid")
-	check(AbilityRuntime.validate_definition("ABI_TEST_HEAL",standard).is_empty(),"hand_authored_standard_heal_valid")
-	check(AbilityRuntime.validate_definition("ABI_TEST_DOT",dot).has("instant_periodic_damage_or_heal_requires_standard"),"instant_dot_rejected")
-	check(AbilityRuntime.validate_definition("ABI_TEST_HEAL",{"components":[{"kind":"heal","amount":1}],"application_timing":"instant"}).has("instant_damage_or_heal_requires_standard"),"instant_direct_heal_rejected")
-	session.ability_scheduler.definitions["ABI_TEST_INSTANT"]=instant
-	session.ability_scheduler.definitions["ABI_TEST_HEAL"]=standard
-	session.ability_scheduler.loadouts[session.player_id]=["ABI_TEST_INSTANT","ABI_TEST_HEAL"]
-	session.player_ability_slots = ["ABI_TEST_INSTANT","ABI_TEST_HEAL","","",""]
-	check(bool(session.activate_ability("ABI_TEST_INSTANT").get("ok",false)),"instant_abi_click_succeeds")
-	check(session.locked_ability_id=="ABI_TEST_INSTANT","instant_abi_committed")
+	check(AbilityRuntime.validate_definition("TEST_ABI_TEST_INSTANT",instant).is_empty(),"hand_authored_instant_valid")
+	check(AbilityRuntime.validate_definition("TEST_ABI_TEST_HEAL",standard).is_empty(),"hand_authored_standard_heal_valid")
+	check(AbilityRuntime.validate_definition("TEST_ABI_TEST_DOT",dot).has("instant_periodic_damage_or_heal_requires_standard"),"instant_dot_rejected")
+	check(AbilityRuntime.validate_definition("TEST_ABI_TEST_HEAL",{"components":[{"kind":"heal","amount":1}],"application_timing":"instant"}).has("instant_damage_or_heal_requires_standard"),"instant_direct_heal_rejected")
+	session.ability_scheduler.definitions["TEST_ABI_TEST_INSTANT"]=instant
+	session.ability_scheduler.definitions["TEST_ABI_TEST_HEAL"]=standard
+	session.ability_scheduler.loadouts[session.player_id]=["TEST_ABI_TEST_INSTANT","TEST_ABI_TEST_HEAL"]
+	session.player_ability_slots = ["TEST_ABI_TEST_INSTANT","TEST_ABI_TEST_HEAL","","",""]
+	check(bool(session.activate_ability("TEST_ABI_TEST_INSTANT").get("ok",false)),"instant_abi_click_succeeds")
+	check(session.locked_ability_id=="TEST_ABI_TEST_INSTANT","instant_abi_committed")
 	check(Array(session.effect_view(true).get("buffs",[])).is_empty(),"instant_abi_hidden")
 	check(CombatModifierService.damage_reduction(player,1)>0.0,"instant_abi_modifier_active")
-	check(not bool(session.activate_ability("ABI_TEST_HEAL").get("ok",true)),"second_abi_blocked")
+	check(not bool(session.activate_ability("TEST_ABI_TEST_HEAL").get("ok",true)),"second_abi_blocked")
 	var other := fixture()
 	var treatment: ArenaCombatSession = other["session"]
-	treatment.ability_scheduler.definitions["ABI_TEST_HEAL"]=standard
-	treatment.ability_scheduler.loadouts[treatment.player_id]=["ABI_TEST_HEAL"]
-	treatment.player_ability_slots=["ABI_TEST_HEAL","","","",""]
+	treatment.ability_scheduler.definitions["TEST_ABI_TEST_HEAL"]=standard
+	treatment.ability_scheduler.loadouts[treatment.player_id]=["TEST_ABI_TEST_HEAL"]
+	treatment.player_ability_slots=["TEST_ABI_TEST_HEAL","","","",""]
 	var subject := treatment.fighter(true)
 	subject.hp=subject.max_hp-40
 	subject.mana=100
 	var initial_hp := subject.hp
-	check(bool(treatment.activate_ability("ABI_TEST_HEAL").get("ok",false)),"standard_abi_commit_succeeds")
+	check(bool(treatment.activate_ability("TEST_ABI_TEST_HEAL").get("ok",false)),"standard_abi_commit_succeeds")
 	check(subject.hp==initial_hp,"standard_heal_not_applied_on_click")
 	check(treatment.active_round!=null and treatment.active_round.locked_actions.size()==1,"standard_action_sealed")
 	var required:=CombatModifierService.manual_block_zone_capacity(subject)
