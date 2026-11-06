@@ -167,6 +167,9 @@ func player_ability_options() -> Array[Dictionary]:
 		available = available and AbilityRuntime.validate_definition(ability_id,definition).is_empty()
 		var target_id:=_ability_target(player_id,definition)
 		available = available and commands.action_policy.valid_ability_targets(player_id,definition).has(target_id)
+		# Conditional axe ABI must not appear ready until the same cast guard passes.
+		if available and AxeAbiCombatService.is_axe_ability(ability_id):
+			available = AxeAbiCombatService.can_cast(state,player_id,target_id,ability_id)
 		var target_label:="Себя" if String(definition.get("target_team","")).to_upper()=="ALLY" else "Противник"
 		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":int(definition.get("mana_cost",0)),"cooldown_until":int(cooldowns.get(ability_id,0)),"cooldown_remaining":AbilityRuntime.remaining_cooldown(ability_id,cooldowns,ready_round),"defined":not definition.is_empty(),"target_id":target_id,"target_label":target_label})
 	return result
