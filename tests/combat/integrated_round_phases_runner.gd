@@ -28,11 +28,11 @@ func _test_timing_setting() -> bool:
 	]
 	for component in standard_only:
 		var standard: Dictionary = {"application_timing":"standard","target_team":"ENEMY","components":[component]}
-		if AbilityRuntime.application_timing(standard)!="standard" or not AbilityRuntime.validate_definition("ABI_TIMING_TEST",standard).is_empty():
+		if AbilityRuntime.application_timing(standard)!="standard" or not AbilityRuntime.validate_definition("TEST_ABI_TIMING_TEST",standard).is_empty():
 			return false
 		var instant: Dictionary = standard.duplicate(true)
 		instant["application_timing"]="instant"
-		if AbilityRuntime.validate_definition("ABI_TIMING_TEST",instant).is_empty():
+		if AbilityRuntime.validate_definition("TEST_ABI_TIMING_TEST",instant).is_empty():
 			return false
 	var instant_ok: Array[Dictionary] = [
 		{"kind":"effect","effect_id":"EFF_PREP_STUN"},
@@ -41,14 +41,14 @@ func _test_timing_setting() -> bool:
 	for component in instant_ok:
 		for timing in ["instant","standard"]:
 			var definition:Dictionary={"application_timing":timing,"target_team":"ENEMY","components":[component]}
-			if AbilityRuntime.application_timing(definition)!=timing or not AbilityRuntime.validate_definition("ABI_TIMING_TEST",definition).is_empty():
+			if AbilityRuntime.application_timing(definition)!=timing or not AbilityRuntime.validate_definition("TEST_ABI_TIMING_TEST",definition).is_empty():
 				return false
 	var mixed: Dictionary = {"application_timing":"instant","components":[standard_only[0],instant_ok[0]]}
-	if AbilityRuntime.application_timing(mixed)!="instant" or AbilityRuntime.validate_definition("ABI_MIXED",mixed).is_empty():
+	if AbilityRuntime.application_timing(mixed)!="instant" or AbilityRuntime.validate_definition("TEST_ABI_MIXED",mixed).is_empty():
 		return false
 	for invalid_timing in ["next_round","immediate","when_crit"]:
 		var invalid:Dictionary={"application_timing":invalid_timing,"components":[standard_only[0]]}
-		if not AbilityRuntime.validate_definition("ABI_INVALID_TIMING",invalid).has("invalid_application_timing"):
+		if not AbilityRuntime.validate_definition("TEST_ABI_INVALID_TIMING",invalid).has("invalid_application_timing"):
 			return false
 	return AbilityRuntime.application_timing({"components":[standard_only[0]]})=="standard"
 
@@ -76,7 +76,7 @@ func _run_defence_case(timing:String) -> int:
 	}
 	# Lock the attack FIRST; an instant defence must still resolve before it.
 	round.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"attacker","target",{"amount":40.0,"damage_type":"physical"}))
-	round.lock_action(AbilityRuntime.build_action_event(state,"target","target","ABI_DEFENCE",definition))
+	round.lock_action(AbilityRuntime.build_action_event(state,"target","target","TEST_ABI_DEFENCE",definition))
 	round.resolve(engine)
 	return target.hp
 
@@ -93,12 +93,12 @@ func _test_both_abi_same_round() -> bool:
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	var round:=orchestrator.begin_round()
 	var definitions:Dictionary={
-		"ABI_STANDARD_HIT":{"application_timing":"standard","components":[{"kind":"damage","amount":20,"damage_type":"physical"}],"mana_cost":10},
-		"ABI_STANDARD_HEAL":{"application_timing":"standard","target_team":"ALLY","components":[{"kind":"heal","amount":30}],"mana_cost":10}
+		"TEST_ABI_STANDARD_HIT":{"application_timing":"standard","components":[{"kind":"damage","amount":20,"damage_type":"physical"}],"mana_cost":10},
+		"TEST_ABI_STANDARD_HEAL":{"application_timing":"standard","target_team":"ALLY","components":[{"kind":"heal","amount":30}],"mana_cost":10}
 	}
-	var scheduler:=AbilityScheduler.new(definitions,{"actor":["ABI_STANDARD_HIT"],"target":["ABI_STANDARD_HEAL"]})
-	var hit:=scheduler.cast_event(state,"actor","target","ABI_STANDARD_HIT")
-	var heal:=scheduler.cast_event(state,"target","target","ABI_STANDARD_HEAL")
+	var scheduler:=AbilityScheduler.new(definitions,{"actor":["TEST_ABI_STANDARD_HIT"],"target":["TEST_ABI_STANDARD_HEAL"]})
+	var hit:=scheduler.cast_event(state,"actor","target","TEST_ABI_STANDARD_HIT")
+	var heal:=scheduler.cast_event(state,"target","target","TEST_ABI_STANDARD_HEAL")
 	if hit==null or heal==null or actor.mana!=40 or target.mana!=40:
 		return false
 	round.lock_action(hit)
@@ -110,7 +110,7 @@ func _test_both_abi_same_round() -> bool:
 	orchestrator.end_round()
 	var action_count:=0
 	for event in state.event_log:
-		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) in ["ABI_STANDARD_HIT","ABI_STANDARD_HEAL"]:
+		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id","")) in ["TEST_ABI_STANDARD_HIT","TEST_ABI_STANDARD_HEAL"]:
 			if int(event.payload.get("round",-1))!=1:
 				return false
 			action_count+=1
@@ -130,8 +130,8 @@ func _test_no_action_canceled_by_provisional_death() -> bool:
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	var round:=orchestrator.begin_round()
 	var standard:Dictionary={"application_timing":"standard","components":[{"kind":"damage","amount":20,"damage_type":"physical"}]}
-	round.lock_action(AbilityRuntime.build_action_event(state,"actor","victim","ABI_ACTOR",standard))
-	round.lock_action(AbilityRuntime.build_action_event(state,"victim","actor","ABI_VICTIM",standard))
+	round.lock_action(AbilityRuntime.build_action_event(state,"actor","victim","TEST_ABI_ACTOR",standard))
+	round.lock_action(AbilityRuntime.build_action_event(state,"victim","actor","TEST_ABI_VICTIM",standard))
 	orchestrator.resolve_locked_actions(round)
 	if actor.hp!=-10 or victim.hp!=-10 or actor.is_death_finalized() or victim.is_death_finalized():
 		return false
@@ -158,7 +158,7 @@ func _resolve_hp_case(heal_first: bool, overheal_only: bool, lethal_one_shot: bo
 	var engine := CombatEngine.new(state)
 	var orchestrator := RoundOrchestrator.new(state,engine)
 	var round := orchestrator.begin_round()
-	var heal := AbilityRuntime.build_action_event(state,"target","target","ABI_HEAL_TEST",{
+	var heal := AbilityRuntime.build_action_event(state,"target","target","TEST_ABI_HEAL_TEST",{
 		"target_team":"ALLY",
 		"components":[{"kind":"heal","amount":50.0}]
 	})
@@ -211,9 +211,9 @@ func _cleanse_case(enemy_buff: bool) -> bool:
 	var polarity := "BUFF" if enemy_buff else "DEBUFF"
 	var team := "ENEMY" if enemy_buff else "ALLY"
 	var ability_definition := {"application_timing":"instant","combat_role":"CLEANSE","target_team":team,"components":[{"kind":"cleanse","dispel_polarity":polarity,"max_effects":1}]}
-	if not AbilityRuntime.validate_definition("ABI_CLEANSE",ability_definition).is_empty():
+	if not AbilityRuntime.validate_definition("TEST_ABI_CLEANSE",ability_definition).is_empty():
 		return false
-	var cast := AbilityRuntime.build_action_event(state,"source",target.combatant_id,"ABI_CLEANSE",ability_definition)
+	var cast := AbilityRuntime.build_action_event(state,"source",target.combatant_id,"TEST_ABI_CLEANSE",ability_definition)
 	round.lock_action(cast)
 	if enemy_buff:
 		round.lock_action(state.create_event(CombatEvent.Kind.DAMAGE,"source","enemy",{"amount":40.0,"damage_type":"physical"}))
