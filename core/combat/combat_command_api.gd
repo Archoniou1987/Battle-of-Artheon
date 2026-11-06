@@ -147,8 +147,9 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 		var resource_ready:=combatant.mana>=mana_cost and ap_ready
 		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number)
 		var equipped := ability_scheduler == null or AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id)
+		var conditional_ready := not AxeAbiCombatService.is_axe_ability(ability_id) or AxeAbiCombatService.can_cast(state,source_id,String(targets[0]) if not targets.is_empty() else "",ability_id)
 		abilities[ability_id]={
-			"available":equipped and cooldown_ready and resource_ready and trigger_ready and round_budget_ready and not targets.is_empty(),
+			"available":equipped and cooldown_ready and resource_ready and trigger_ready and round_budget_ready and conditional_ready and not targets.is_empty(),
 			"equipped":equipped,
 			"targets":targets,
 			"cooldown_ready":cooldown_ready,
