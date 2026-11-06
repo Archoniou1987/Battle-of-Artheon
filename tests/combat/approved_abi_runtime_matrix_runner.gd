@@ -26,6 +26,10 @@ func _initialize() -> void:
 			_test_ability("ABI%d" % number)
 	_test_axe_preflight("ABI506")
 	_test_axe_preflight("ABI507")
+	_test_trigger_preflight("ABI403")
+	_test_trigger_preflight("ABI502")
+	_test_low_ap_preflight("ABI408")
+	_test_low_ap_preflight("ABI606")
 	print("APPROVED_ABI_RUNTIME_MATRIX_TEST=", "PASS" if failures.is_empty() else "FAIL",
 		" checked=",checked_count," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
@@ -190,6 +194,7 @@ func _test_ability(abi: String) -> void:
 	var ability_attacks := 0
 	var effect_events := 0
 	var final_outcome := ""
+	var abi_attack_ids: Dictionary = {}
 	for event in session.state.event_log:
 		if event.source_id != session.player_id or int(event.payload.get("round",-1)) != planned_round:
 			continue
@@ -207,16 +212,26 @@ func _test_ability(abi: String) -> void:
 					ordinary_oh += 1
 			elif String(event.payload.get("source_kind","")) == "ability":
 				ability_attacks += 1
+				abi_attack_ids[event.event_id] = true
 		elif event.kind == CombatEvent.Kind.EFFECT:
 			effect_events += 1
+	var abi_damage_events := 0
+	for event in session.state.event_log:
+		if event.kind == CombatEvent.Kind.DAMAGE and event.source_id == session.player_id and abi_attack_ids.has(event.parent_event_id):
+			abi_damage_events += 1
 	_check(action_count == 1,abi + ":exactly_one_action")
 	_check(not final_outcome.is_empty() and not INVALID_OUTCOMES.has(final_outcome),abi + ":dispatch_" + final_outcome)
 	_check(ordinary_mh == 1,abi + ":ordinary_mh_once")
 	_check(ordinary_oh == (1 if abi.begins_with("ABI4") else 0),abi + ":ordinary_oh_count")
 	if not LINKED_MH.has(abi) and not NON_ATTACK.has(abi):
 		_check(ability_attacks > 0,abi + ":ability_attacks_dispatched")
+		_check(abi_damage_events > 0,abi + ":damage_event_from_abi_attack")
 	if abi in ["ABI402","ABI501","ABI504","ABI507","ABI602","ABI603","ABI605"]:
 		_check(effect_events > 0,abi + ":effect_event_dispatched")
+	var next_options := session.player_ability_options()
+	var next_round := session.state.round_number + 1
+	var remaining := AbilityRuntime.remaining_cooldown(abi,session.ability_scheduler.cooldowns_by_combatant.get(session.player_id,{}),next_round)
+	_check(not next_options.is_empty() and int(next_options[0].get("cooldown_remaining",-1)) == remaining and remaining > 0 and not bool(next_options[0].get("available",true)),abi + ":cooldown_blocks_next_round")
 	print("APPROVED_ABI_RUNTIME_CASE=CHECKED ",abi," outcome=",final_outcome,
 		" MH=",ordinary_mh," OH=",ordinary_oh,
 		" ABI_hits=",ability_attacks," EFF=",effect_events)
@@ -235,3 +250,33 @@ func _test_axe_preflight(abi: String) -> void:
 		abi + ":atomic_preflight_rejection")
 	_check(session.state.round_number == round_number and session.state.next_event_id == event_id and session.fighter(true).action_points == ap,
 		abi + ":rejected_cast_does_not_mutate_round")
+
+func _test_trigger_preflight(abi: String) -> void:
+	var session := _fixture(abi)
+	if session == null:
+		return
+	var slots := session.player_ability_options()
+	_check(not slots.is_empty() and not bool(slots[0].get("available",true)),abi + ":previous_round_trigger_required")
+	var round_number := session.state.round_number
+	var event_id := session.state.next_event_id
+	var ap := session.fighter(true).action_points
+	var result := session.play_round(_attacks(session),_blocks(session),abi)
+	_check(not bool(result.get("ok",false)) and String(result.get("reason","")) == "abi_trigger_unavailable",
+		abi + ":trigger_rejected_before_turn")
+	_check(session.state.round_number == round_number and session.state.next_event_id == event_id and session.fighter(true).action_points == ap,
+		abi + ":missing_trigger_is_atomic")
+
+func _test_low_ap_preflight(abi: String) -> void:
+	var session := _fixture(abi)
+	if session == null:
+		return
+	session.fighter(true).action_points = 1
+	var slots := session.player_ability_options()
+	_check(not slots.is_empty() and not bool(slots[0].get("available",true)),abi + ":insufficient_ap_disables_button")
+	var round_number := session.state.round_number
+	var event_id := session.state.next_event_id
+	var result := session.play_round(_attacks(session),_blocks(session),abi)
+	_check(not bool(result.get("ok",false)) and String(result.get("reason","")) == "insufficient_ap",
+		abi + ":insufficient_ap_rejected")
+	_check(session.state.round_number == round_number and session.state.next_event_id == event_id and session.fighter(true).action_points == 1,
+		abi + ":insufficient_ap_atomic")
