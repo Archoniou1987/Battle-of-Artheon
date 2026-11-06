@@ -168,6 +168,7 @@ func _test_ability(abi: String) -> void:
 		_check(false,abi + ":not_available_with_prerequisites")
 		return
 	var actor := session.fighter(true)
+	var target_tempo_before := session.fighter(false).tempo
 	var initial_ap := actor.action_points
 	var initial_mana := actor.mana
 	var planned_round := session.state.round_number + 1
@@ -194,6 +195,7 @@ func _test_ability(abi: String) -> void:
 	var ability_attacks := 0
 	var effect_events := 0
 	var final_outcome := ""
+	var hammer_tempo_applied := 0.0
 	var final_action_result: Dictionary = {}
 	var abi_attack_ids: Dictionary = {}
 	for event in session.state.event_log:
@@ -204,6 +206,8 @@ func _test_ability(abi: String) -> void:
 			final_outcome = String(event.result.get("outcome",""))
 			final_action_result = event.result.duplicate(true)
 		elif event.kind == CombatEvent.Kind.ATTACK:
+			if String(event.payload.get("hammer_abi_id","")) == abi:
+				hammer_tempo_applied = float(event.result.get("tempo_control_applied",0.0))
 			if bool(event.payload.get("is_weapon_attack",false)):
 				if int(event.payload.get("weapon_index",-1)) == 0:
 					ordinary_mh += 1
@@ -234,6 +238,10 @@ func _test_ability(abi: String) -> void:
 		_check(ability_attacks == 6,abi + ":one_strike_per_consumed_poison")
 	if ["ABI301","ABI302","ABI401"].has(abi):
 		_check(actor.action_points == mini(actor.max_action_points,ap_after + int(definition.get("ap_gain",0))),abi + ":on_hit_ap_awarded")
+	if abi == "ABI601" or abi == "ABI606":
+		var expected_control := 25.0 if abi == "ABI601" else float(mini(200,2*int(final_action_result.get("charges_consumed",0))))
+		_check(is_equal_approx(hammer_tempo_applied,expected_control),abi + ":real_tempo_control_amount")
+		_check(session.fighter(false).tempo < target_tempo_before,abi + ":target_tempo_changed")
 	if abi == "ABI407":
 		_check(int(final_action_result.get("poison_stacks_consumed",-1)) == 6 and int(final_action_result.get("breach_stacks_to_apply",-1)) == 3,abi + ":poison_to_breach_ratio")
 	if abi in ["ABI603","ABI604","ABI605","ABI606"]:
