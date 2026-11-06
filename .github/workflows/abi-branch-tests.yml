@@ -16,6 +16,8 @@ jobs:
         run: bash tools/run_godot_check.sh --import
       - name: Verify exact production ABI catalog and legacy-test isolation
         run: bash tools/run_godot_check.sh tests/combat/approved_abi_catalog_runner.gd
+      - name: Exercise all approved sword dagger axe hammer ABI in live Arena runtime
+        run: bash tools/run_godot_check.sh tests/combat/approved_abi_runtime_matrix_runner.gd
       - name: Verify final PAR, RatingMatrix and magic contracts
         run: |
           bash tools/run_godot_check.sh tests/parameters/rating_matrix_runner.gd
