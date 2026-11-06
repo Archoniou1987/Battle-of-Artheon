@@ -156,10 +156,14 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 
 static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attacker: CombatantState) -> void:
 	var abi := String(attack.payload.get("hammer_abi_id",""))
-	if abi == HEAVY:
-		attack.set_result("tempo_control_placeholder",-25)
-	elif abi == CRUSH:
-		attack.set_result("tempo_control_placeholder",int(attack.payload.get("hammer_formal_tempo_delta",0)))
+	if abi == HEAVY or abi == CRUSH:
+		# A connected hammer hit applies real Tempo debt; no control on misses,
+		# dodges or blocks. CombatTempoService owns delayed stun and immunity.
+		var target := engine.state.get_combatant(attack.target_id)
+		var control := 25.0 if abi == HEAVY else float(-int(attack.payload.get("hammer_formal_tempo_delta",0)))
+		if target != null and control > 0.0:
+			CombatTempoService.apply_control(target,control)
+			attack.set_result("tempo_control_applied",control)
 	elif abi == FRACTURE:
 		var rounds := int(attack.payload.get("hammer_fracture_rounds",0))
 		if rounds > 0:
