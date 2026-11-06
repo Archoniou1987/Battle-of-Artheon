@@ -37,16 +37,16 @@ func _run() -> void:
 	check(int(repo.get_item("elixir_test_hp_v1").get("charges",0))==old_charges-1,"charge_used_once")
 	check(arena.player_elixir_slots[0].disabled and arena.player_elixir_slots[1].disabled,"all_elixirs_disabled_after_use")
 	var support := {"name":"Guard","application_timing":"instant","target_team":"ALLY","components":[{"kind":"effect","effect_id":"EFF006"}],"mana_cost":0}
-	arena.combat_session.ability_scheduler.definitions["ABI_PRESS_GUARD"]=support
-	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id]=["ABI_PRESS_GUARD"]
-	arena.combat_session.player_ability_slots=["ABI_PRESS_GUARD","","","","",""]
+	arena.combat_session.ability_scheduler.definitions["TEST_ABI_PRESS_GUARD"]=support
+	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id]=["TEST_ABI_PRESS_GUARD"]
+	arena.combat_session.player_ability_slots=["TEST_ABI_PRESS_GUARD","","","","",""]
 	arena._refresh_ability_buttons()
 	check(not arena.ability_buttons[0].disabled,"guard_button_ready")
 	arena.ability_buttons[0].emit_signal("pressed")
-	check(arena.pending_ability_id=="ABI_PRESS_GUARD" and arena.combat_session.locked_ability_id=="","preview_does_not_commit_abi")
+	check(arena.pending_ability_id=="TEST_ABI_PRESS_GUARD" and arena.combat_session.locked_ability_id=="","preview_does_not_commit_abi")
 	check(CombatModifierService.damage_reduction(player,1)==0.0,"preview_does_not_apply_effect")
 	arena._confirm_ability()
-	check(arena.combat_session.locked_ability_id=="ABI_PRESS_GUARD","button_committed_abi")
+	check(arena.combat_session.locked_ability_id=="TEST_ABI_PRESS_GUARD","button_committed_abi")
 	check(CombatModifierService.damage_reduction(player,1)>0.0,"guard_active_on_click")
 	check(arena.ability_buttons[0].disabled,"ability_buttons_locked")
 	check(Array(arena.combat_session.effect_view(true).get("buffs",[])).is_empty(),"guard_hidden_mid_round")
