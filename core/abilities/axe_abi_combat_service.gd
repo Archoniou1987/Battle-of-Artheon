@@ -55,13 +55,15 @@ static func _enemy(engine: CombatEngine, source_id: String, target_id: String) -
 	return true
 
 ## Checked by all manual/automatic Scheduler entry points BEFORE AP/CD spend.
-static func can_cast(state: CombatState, source_id: String, target_id: String, abi: String) -> bool:
+static func can_cast(state: CombatState, source_id: String, target_id: String, abi: String, planned_round: int = -1) -> bool:
 	if not is_axe_ability(abi):
 		return true
 	var source := state.get_combatant(source_id)
 	if source == null or _weapon(source).is_empty():
 		return false
-	var n := rage_stacks(source,state.round_number)
+	# UI preflight checks the upcoming round; committed casts use the live round.
+	var evaluating_round := state.round_number if planned_round < 0 else planned_round
+	var n := rage_stacks(source,evaluating_round)
 	if abi == CRUSHER:
 		return n == 5
 	if abi == EXECUTE:
