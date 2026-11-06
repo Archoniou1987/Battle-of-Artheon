@@ -307,7 +307,7 @@ func _validate_ability(source_id:String,ability_id:String,ready_round:int) -> Di
 	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round","")),ready_round):
 		return {"ok":false,"reason":"abi_trigger_unavailable"}
 	var target_id:=_ability_target(source_id,definition)
-	if AxeAbiCombatService.is_axe_ability(ability_id) and not AxeAbiCombatService.can_cast(state,source_id,target_id,ability_id):
+	if AxeAbiCombatService.is_axe_ability(ability_id) and not AxeAbiCombatService.can_cast(state,source_id,target_id,ability_id,ready_round):
 		return {"ok":false,"reason":"axe_condition_unavailable"}
 	if not commands.action_policy.valid_ability_targets(source_id,definition).has(target_id):
 		return {"ok":false,"reason":"ability_target_unavailable"}
