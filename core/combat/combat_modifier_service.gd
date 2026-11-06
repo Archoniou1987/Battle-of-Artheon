@@ -163,7 +163,7 @@ static func abilities(combatant: CombatantState) -> Array:
 	# snapshots, but never offer retired numbered game ABI to a scheduler.
 	var approved: Array = []
 	for raw_id in Array(combatant.combat_stats.get("abilities", [])):
-		if not AbilityCatalog.is_retired_numbered_abi(String(raw_id)):
+		if AbilityCatalog.is_executable_id(String(raw_id)):
 			approved.append(raw_id)
 	return approved
 
