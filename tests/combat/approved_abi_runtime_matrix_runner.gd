@@ -30,6 +30,8 @@ func _initialize() -> void:
 	_test_trigger_preflight("ABI502")
 	_test_low_ap_preflight("ABI408")
 	_test_low_ap_preflight("ABI606")
+	_test_shared_duration("ABI301","EFF301",false,1)
+	_test_shared_duration("ABI501","EFF501",true,2)
 	print("APPROVED_ABI_RUNTIME_MATRIX_TEST=", "PASS" if failures.is_empty() else "FAIL",
 		" checked=",checked_count," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
@@ -300,3 +302,62 @@ func _test_low_ap_preflight(abi: String) -> void:
 		abi + ":insufficient_ap_rejected")
 	_check(session.state.round_number == round_number and session.state.next_event_id == event_id and session.fighter(true).action_points == 1,
 		abi + ":insufficient_ap_atomic")
+
+## A realistic multi-round cadence, including casts at stack cap, must
+## leave ONE record with refreshed duration. Expiry must occur only after
+## five full unrefreshed effect rounds; no permanent hidden stale stack.
+func _test_shared_duration(abi: String, effect_id: String, on_player: bool, cooldown_rounds: int) -> void:
+	var session := _fixture(abi)
+	if session == null:
+		return
+	var target := session.fighter(on_player)
+	var casts := 0
+	var last_cast_round := 1 + 5 * (cooldown_rounds + 1)
+	for round_number in range(1,last_cast_round+1):
+		var selected := abi if (round_number-1) % (cooldown_rounds+1) == 0 else ""
+		var result := session.play_round(_attacks(session),_blocks(session),selected)
+		if not bool(result.get("ok",false)):
+			_check(false,abi + ":stack_round_" + str(round_number) + ":" + String(result.get("reason","unknown")))
+			return
+		if selected.is_empty():
+			continue
+		casts += 1
+		var records: Array[Dictionary] = []
+		for raw in target.active_effects:
+			var record: Dictionary = raw
+			if String(record.get("effect_id","")) == effect_id:
+				records.append(record)
+		_check(records.size() == 1,abi + ":one_shared_record_" + str(round_number))
+		if records.size()!=1:
+			return
+		var current: Dictionary = records[0]
+		_check(int(current.get("stacks",0)) == mini(5,casts),abi + ":stack_count_" + str(casts))
+		_check(int(current.get("remaining_rounds",0)) == 5,abi + ":refresh_five_rounds_" + str(casts))
+	_check(casts == 6,abi + ":six_cadenced_casts")
+	var expired_early := false
+	for elapsed in range(1,6):
+		var result := session.play_round(_attacks(session),_blocks(session))
+		if not bool(result.get("ok",false)):
+			_check(false,abi + ":expiry_round_" + str(elapsed))
+			return
+		var remaining := 0
+		var record_count := 0
+		for raw in target.active_effects:
+			var record: Dictionary = raw
+			if String(record.get("effect_id","")) == effect_id:
+				record_count += 1
+				remaining = int(record.get("remaining_rounds",0))
+		if elapsed < 5:
+			if record_count != 1 or remaining != 5-elapsed:
+				expired_early = true
+		else:
+			_check(record_count == 0,abi + ":expires_after_five_rounds")
+	_check(not expired_early,abi + ":no_early_expiry")
+	if abi == "ABI301":
+		var dot_count := 0
+		for event in session.state.event_log:
+			if event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("effect_id","")) == "EFF301" and String(event.payload.get("source","")) == "effect":
+				dot_count += 1
+				_check(not event.payload.has("crit"),abi + ":dot_never_crits")
+		_check(dot_count >= 5,abi + ":real_bleed_damage_ticks")
+	print("APPROVED_ABI_STACKING_CASE=CHECKED ",abi," casts=",casts," expiry=5")
