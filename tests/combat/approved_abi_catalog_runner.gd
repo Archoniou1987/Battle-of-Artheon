@@ -64,6 +64,11 @@ func _initialize() -> void:
 	state.round_number = 1
 	var fighter := TestFixtureLoader.new_combatant("CASTER","Tester",10,1000,100)
 	var target := TestFixtureLoader.new_combatant("TARGET","Target",10,1000,100)
+	# Legacy and malformed IDs must also disappear from combat stat readouts,
+	# without rewriting their original saved loadout.
+	fighter.combat_stats["abilities"] = ["ABI001","ABI0301","ABI301","TEST_ABI_FIREBALL"]
+	ok = ok and CombatModifierService.abilities(fighter) == ["ABI301","TEST_ABI_FIREBALL"]
+	ok = ok and Array(fighter.combat_stats["abilities"]).size() == 4
 	state.add_combatant(fighter)
 	state.add_combatant(target)
 	var old_only := AbilityScheduler.new(injected,{"CASTER":["ABI001","ABI0301"]})
