@@ -3,7 +3,7 @@ extends SceneTree
 ## Live Arena tests: a control ABI creates actual Tempo debt and scheduled
 ## stun, then the same Arena command path rejects all stunned NPC actions.
 ## A separate one-shot Arena duel validates terminal-state atomicity.
-const CONTROL_ABI := "ABI_TEST_ARENA_TEMPO_CONTROL"
+const CONTROL_ABI := "TEST_ABI_TEST_ARENA_TEMPO_CONTROL"
 const CONTROL_EFF := "EFF_TEST_ARENA_TEMPO_DEBT"
 var failures: Array[String] = []
 
