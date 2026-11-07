@@ -125,7 +125,7 @@ func round_regeneration() -> void:
 	check(fighter.is_death_finalized() and Array(outcome.get("dead_ids", [])).has(fighter.combatant_id), "death finalization unchanged")
 
 func npc_regeneration() -> void:
-	var totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR015":7.0,"PAR016":5.0}
+	var totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR015":7.0,"PAR016":5.0,"PAR150":0.0}
 	for par_id in ParCombatContract.RATINGS:
 		totals[par_id] = 0.0
 	var npc := NpcState.new({

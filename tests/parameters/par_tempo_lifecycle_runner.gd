@@ -136,7 +136,7 @@ func par_character_and_npc_adapters() -> void:
 		check(is_equal_approx(fighter.max_tempo, 120.0), "PAR020 is runtime positive cap")
 		check(is_equal_approx(fighter.tempo_regen, 10.0), "PAR021 is fixed per-round recovery")
 		check(is_equal_approx(fighter.tempo, 60.0), "starting current Tempo matches PAR019")
-	var npc_totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR019":35.0,"PAR020":140.0,"PAR021":7.0}
+	var npc_totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR019":35.0,"PAR020":140.0,"PAR021":7.0,"PAR150":0.0}
 	for par_id in ParCombatContract.RATINGS:
 		npc_totals[par_id] = 0.0
 	var npc := NpcState.new({

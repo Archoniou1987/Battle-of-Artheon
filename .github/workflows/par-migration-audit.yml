@@ -27,8 +27,9 @@ jobs:
       - name: Verify PAR ownership, persistence, items and combat
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           mkdir -p test-results/par-audit
+          status=0
           for script in \
             tests/parameters/final_par_combat_runner.gd \
             tests/parameters/physical_par_boundary_runner.gd \
@@ -49,9 +50,16 @@ jobs:
             tests/ui/character_screen_runner.gd \
             tests/ui/arena_open_smoke.gd; do
             log="test-results/par-audit/$(basename "$script").log"
-            XDG_DATA_HOME="$(mktemp -d)" timeout 45s godot --headless --path . --script "res://$script" 2>&1 | tee "$log"
-            ! grep -Eq 'SCRIPT ERROR|ERROR:|=FAIL|: FAIL' "$log"
+            if ! XDG_DATA_HOME="$(mktemp -d)" timeout 45s godot --headless --path . --script "res://$script" 2>&1 | tee "$log"; then
+              echo "::error title=PAR audit execution failed::$script"
+              status=1
+            fi
+            if grep -Eq 'SCRIPT ERROR|ERROR:|=FAIL|: FAIL' "$log"; then
+              echo "::error title=PAR audit test failure::$script"
+              status=1
+            fi
           done
+          exit "$status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
