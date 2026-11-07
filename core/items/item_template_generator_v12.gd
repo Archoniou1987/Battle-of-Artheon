@@ -522,8 +522,9 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 	var baseline := 0.0
 	match logical:
 		"hp":
-			# Project 25: 101.19 HP per reference PAR at Lv100 / white.
-			baseline = 101.19*l/100.0
+			# HP rebalance: 202.38 HP per reference PAR at Lv100 / white.
+			# Doubled from 101.19; slot, quality, DEF/ATK, and rolls unchanged.
+			baseline = 202.38*l/100.0
 		"mana":
 			# Project 25: 50.60 mana per reference PAR at Lv100 / white.
 			baseline = 50.60*l/100.0

@@ -491,12 +491,15 @@ func _verify() -> void:
 		problems.append("14 slot PAR weights no longer total 100 percent")
 	for level in [10,30,60,100]:
 		var slot_share := float(weights["Шлем"]) / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
-		var hp_expected := 101.19*float(level)/100.0*slot_share
+		var hp_expected := 202.38*float(level)/100.0*slot_share
 		var mana_expected := 50.60*float(level)/100.0*slot_share
 		if absf(generator.nominal_affix("hp",level,"Шлем",1.0)-hp_expected) > 0.001:
 			problems.append("HP white nominal mismatch at Lv" + str(level))
 		if absf(generator.nominal_affix("mana",level,"Шлем",1.0)-mana_expected) > 0.001:
 			problems.append("Mana white nominal mismatch at Lv" + str(level))
+		# HP x2 must not change Mana or rarity/line budgets.
+		if level == 100 and absf(generator.nominal_affix("hp",level,"Шлем",1.0)-2.0*101.19*slot_share) > 0.001:
+			problems.append("HP affix did not double independently at Lv100")
 		var current_white := generator.nominal_affix("hp",level,"Шлем",1.0)
 		var epic := generator.nominal_affix("hp",level,"Шлем",1.5)
 		if absf(epic-current_white*1.5) > 0.001:

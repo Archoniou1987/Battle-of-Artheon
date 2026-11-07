@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "notes": "v1.2: PAR150 keeps immutable source key magic_damage_rating, but is absolute Spell Power. ABI damage/heal with optional spell_power_scale K uses base + K*SP; no DR. Other ratings remain level-scaled, direct percentage overlays are separate.",
+  "notes": "v1.2: PAR150 keeps immutable source key magic_damage_rating, but is absolute Spell Power. ABI damage/heal with optional spell_power_scale K uses base + K*SP; no DR. Other ratings remain level-scaled, direct percentage overlays are separate. HP balance 2026-11-07: PAR006 (END) grants +40 max HP per point (previous runtime +20). Base 100 HP unchanged. Raising max does not auto-heal current HP.",
   "effects": {
     "PAR001": {
       "physical_damage_flat": 1
@@ -23,7 +23,7 @@
       "max_mana_flat": 10
     },
     "PAR006": {
-      "max_hp_flat": 20
+      "max_hp_flat": 40
     }
   },
   "categories": {

@@ -26,6 +26,23 @@ func _initialize() -> void:
 	var fist := CharacterCombatBuilder.build(hero, repo)
 	check(bool(ParAttackContract.validate(fist).ok), "unarmed mandatory combat contract")
 	check(WeaponAttackProfile.all(fist)[0].damage_min == 4, "unarmed bonus once")
+	# HP rebalance: END grants +40 maximum HP per point exactly once.
+	# Derived END and direct PAR010 aggregate; increasing the maximum
+	# must NOT refill the current HP pool.
+	var hp_hero := CharacterState.new("end_hp_test", "END HP Test", 1)
+	var hp_repo := ItemRepository.new()
+	var original_end := float(hp_hero.progression.base_stats["PAR006"])
+	var original_hp := hp_hero.current_hp
+	check(is_equal_approx(float(ParCalculationService.calculate(hp_hero,hp_repo).totals.PAR010),original_end*40.0),"END -> PAR010 grants +40 HP exactly once")
+	check(int(hp_hero.resource_snapshot(hp_repo).max_hp) == 100 + int(original_end*40.0),"base 100 HP remains unchanged")
+	check(hp_hero.allocate_stat("PAR006") and hp_hero.progression.save_pending_stats(),"allocate END for HP test")
+	var after_end := hp_hero.resource_snapshot(hp_repo)
+	check(int(after_end["max_hp"]) == 100 + int((original_end+1.0)*40.0),"one END adds exactly 40 max HP")
+	check(int(after_end["hp"]) == original_hp,"increasing max HP cannot heal current HP")
+	equip(hp_hero,hp_repo,"end_ring","ring1",{"par_bonuses":{"PAR006":2.0,"PAR010":50.0}})
+	var hp_snapshot := ParCalculationService.calculate(hp_hero,hp_repo)
+	check(is_equal_approx(float(hp_snapshot.totals.PAR010),(original_end+3.0)*40.0+50.0),"equipment END and PAR010 sum once")
+	check(int(hp_hero.resource_snapshot(hp_repo)["max_hp"]) == 100+int((original_end+3.0)*40.0+50.0),"canonical PAR010 sets max HP once")
 	# End-to-end PAR232: inventory + UI + canonical MH/OH attacks.
 	var ap_hero := CharacterState.new("attack_power_test", "Attack Power Test", 1)
 	var ap_repo := ItemRepository.new()
