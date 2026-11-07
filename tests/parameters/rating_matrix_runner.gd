@@ -9,6 +9,14 @@ func _initialize() -> void:
 	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 50), 20.0 - 16.0 * 49.0 / 99.0))
 	assert(is_equal_approx(RatingMatrix.to_percent(-100.0, 1), -20.0)) # No invented universal cap.
 	assert(RatingMatrix.to_percent(0, 100) == 0)
+	# Editing just the config values changes the calculation without code changes.
+	var adjusted: Dictionary = config.duplicate(true)
+	adjusted["percent_at_level_1"] = 30
+	adjusted["percent_at_level_100"] = 8
+	assert(is_equal_approx(RatingMatrix.evaluate(100.0,1,adjusted),30.0))
+	assert(is_equal_approx(RatingMatrix.evaluate(100.0,100,adjusted),8.0))
+	adjusted["reference_rating"] = 200
+	assert(is_equal_approx(RatingMatrix.evaluate(100.0,1,adjusted),15.0))
 	# Drift gate across five levels and varied ratings.
 	for level in [1,25,50,75,100]:
 		for rating in [0.0,1.0,100.0,250.0,1500.0]:
