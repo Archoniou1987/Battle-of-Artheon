@@ -52,7 +52,7 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 	var bonus := float(result["physical_damage_flat"])
 	var rating := float(primary.get("PAR232",0.0))
 	var mh_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
-	var two_handed := mh_id != null and character.equipment.get_equipped_instance_id("off_hand") == mh_id
+	var two_handed: bool = mh_id != null and character.equipment.get_equipped_instance_id("off_hand") == mh_id
 	for hand in ["main_hand", "off_hand"]:
 		var range_id := "PAR050" if hand == "main_hand" else "PAR051"
 		var damage: Dictionary = ranges[range_id]

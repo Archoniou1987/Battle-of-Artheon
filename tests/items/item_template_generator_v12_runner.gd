@@ -15,10 +15,10 @@ func _verify() -> void:
 		problems.append("Expected exactly six staff schools")
 	for raw in generator.archetypes():
 		var entry: Dictionary = raw
-		var sum := 0
+		var sum := 0.0
 		for key in entry["weights"]:
-			sum += int(entry["weights"][key])
-		if sum != 100:
+			sum += float(entry["weights"][key])
+		if absf(sum - 100.0) > 0.001:
 			problems.append(String(entry["id"]) + " total is not 100")
 	var medium: Dictionary = {}
 	for raw in generator.archetypes():
