@@ -156,7 +156,8 @@ func npc_cases() -> void:
 		"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,
 		"PAR100":11.0,"PAR105":7.0,"PAR127":3.0,
 		"PAR053":25.0,"PAR071":20.0,"PAR125":5.0,
-		"PAR126":1.0,"PAR135":10.0
+		"PAR126":1.0,"PAR135":10.0,
+		"PAR150":0.0 # Required absolute Spell Power; irrelevant to physical test.
 	}
 	for par_id in ParCombatContract.RATINGS:
 		totals[par_id] = 0.0
