@@ -504,8 +504,8 @@ func _verify() -> void:
 	# Target build anchors are normalized to 14 slots, two PAR lines, epic 1.5.
 	var ref_share := float(weights["Шлем"]) / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
 	for entry in [
-		{"stat":"attack","level":10,"target":0.5*100.0*100.0/(20.0-16.0*9.0/99.0)},
-		{"stat":"attack","level":100,"target":0.5*300.0*100.0/4.0},
+		{"stat":"attack","level":10,"target":(2.8+(30.0-2.8)*9.0/29.0)*2.0*10.0/0.7},
+		{"stat":"attack","level":100,"target":104.2*2.0*0.6*10.0/0.7},
 		{"stat":"spell","level":20,"target":200.0},
 		{"stat":"spell","level":100,"target":2000.0}
 	]:
