@@ -37,11 +37,11 @@ static func _counter_definition(hit_roll:int=1) -> Dictionary:
 static func _invalid_magic_counter() -> bool:
 	var bad:=_counter_definition()
 	bad["components"]=[{"kind":"damage","damage_type":"fire","amount":20.0}]
-	if not AbilityRuntime.validate_definition("ABI_TEST_COUNTER",bad).has("counter_abi_physical_damage_only"):
+	if not AbilityRuntime.validate_definition("TEST_COUNTER",bad).has("counter_abi_physical_damage_only"):
 		return false
 	bad=_counter_definition()
 	bad["delivery_type"]="DIRECT"
-	return AbilityRuntime.validate_definition("ABI_TEST_COUNTER",bad).has("counter_abi_requires_single_physical_melee")
+	return AbilityRuntime.validate_definition("TEST_COUNTER",bad).has("counter_abi_requires_single_physical_melee")
 
 static func _qualified_round(state:CombatState)->void:
 	var previous:=state.create_event(CombatEvent.Kind.ATTACK,"enemy","hero",{"zone":"chest","damage_type":"slashing"})
@@ -57,11 +57,11 @@ static func _requires_previous_round_trigger(balance:Dictionary)->bool:
 	enemy.combat_stats["dodge_rating_percent"]=100.0
 	enemy.combat_stats["manual_block_zones"]=["chest"]
 	var definition:=_counter_definition()
-	var scheduler:=AbilityScheduler.new({"ABI_TEST_COUNTER":definition},{"hero":["ABI_TEST_COUNTER"]})
-	if scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")!=null: return false
+	var scheduler:=AbilityScheduler.new({"TEST_COUNTER":definition},{"hero":["TEST_COUNTER"]})
+	if scheduler.cast_event(state,"hero","enemy","TEST_COUNTER")!=null: return false
 	if hero.action_points!=4: return false
 	_qualified_round(state)
-	var action:=scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")
+	var action:=scheduler.cast_event(state,"hero","enemy","TEST_COUNTER")
 	if action==null or hero.action_points!=1 or int(action.payload.get("ap_spent",-1))!=3: return false
 	# The MH zone is selected before the counter ABI is resolved.
 	var mh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
@@ -88,8 +88,8 @@ static func _mh_zone_head_oh_chest(balance:Dictionary)->bool:
 	hero.action_points=4
 	_qualified_round(state)
 	var definition:=_counter_definition()
-	var scheduler:=AbilityScheduler.new({"ABI_TEST_COUNTER":definition},{"hero":["ABI_TEST_COUNTER"]})
-	var action:=scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")
+	var scheduler:=AbilityScheduler.new({"TEST_COUNTER":definition},{"hero":["TEST_COUNTER"]})
+	var action:=scheduler.cast_event(state,"hero","enemy","TEST_COUNTER")
 	if action==null: return false
 	var oh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
 		"raw_damage":0.0,"zone":"chest","damage_type":"slashing","is_weapon_attack":true,
@@ -114,8 +114,8 @@ static func _counter_miss_consumes_ap(balance:Dictionary)->bool:
 	hero.action_points=4
 	_qualified_round(state)
 	var definition:=_counter_definition(100)
-	var scheduler:=AbilityScheduler.new({"ABI_TEST_COUNTER":definition},{"hero":["ABI_TEST_COUNTER"]})
-	var action:=scheduler.cast_event(state,"hero","enemy","ABI_TEST_COUNTER")
+	var scheduler:=AbilityScheduler.new({"TEST_COUNTER":definition},{"hero":["TEST_COUNTER"]})
+	var action:=scheduler.cast_event(state,"hero","enemy","TEST_COUNTER")
 	if action==null: return false
 	# The MH zone is selected before the counter ABI is resolved.
 	var mh:=state.create_event(CombatEvent.Kind.ATTACK,"hero","enemy",{
@@ -137,8 +137,8 @@ static func _abi_generator_earns_ap(balance:Dictionary)->bool:
 		"delivery_type":"MELEE","target_scope":"SINGLE","ap_gain":1,
 		"rolls":{"hit":100},"components":[{"kind":"damage","damage_type":"slashing","amount":10.0}]
 	}
-	var scheduler:=AbilityScheduler.new({"ABI_GEN":generator},{"hero":["ABI_GEN"]})
-	var action:=scheduler.cast_event(state,"hero","enemy","ABI_GEN")
+	var scheduler:=AbilityScheduler.new({"TEST_AP_GENERATOR":generator},{"hero":["TEST_AP_GENERATOR"]})
+	var action:=scheduler.cast_event(state,"hero","enemy","TEST_AP_GENERATOR")
 	if action==null or hero.action_points!=1 or int(action.payload.get("ap_gained",0))!=1:
 		return false
 	state.queue_event(action)

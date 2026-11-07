@@ -92,7 +92,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			elif Dictionary(item.get("par_stats", {})).has("PAR057") or Dictionary(item.get("par_bonuses", {})).has("PAR057"):
 				push_error("Non-weapon cannot contribute PAR057: " + String(instance_id))
 				return {}
-			var is_off_hand_weapon := declared_weapon and str(character.equipment.get_equipped_instance_id("off_hand")) == String(instance_id)
+			var is_off_hand_weapon := declared_weapon and str(character.equipment.get_equipped_instance_id("off_hand")) == String(instance_id) and str(character.equipment.get_equipped_instance_id("main_hand")) != String(instance_id)
 			var item_par_stats: Dictionary = Dictionary(item.get("par_stats",{})).duplicate(true)
 			var item_par_bonuses: Dictionary = Dictionary(item.get("par_bonuses",{})).duplicate(true)
 			# Old v1.2 inventory items hold 10:1 rating in pending bonuses.
