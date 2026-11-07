@@ -51,6 +51,8 @@ func _initialize() -> void:
 	var two_snapshot := ParCalculationService.calculate(two_hero,two_repo)
 	var two_fighter := CharacterCombatBuilder.build(two_hero,two_repo)
 	var two_attacks := WeaponAttackProfile.all(two_fighter)
+	check(is_equal_approx(float(two_snapshot.attack_ranges.PAR050.min),10.0), "2H raw damage never gets OH x0.75")
+	check(is_equal_approx(float(two_snapshot.totals.PAR232),250.0), "2H PAR232 never gets OH x0.75")
 	check(two_attacks.size()==1 and is_equal_approx(float(two_attacks[0].damage_min),10.0+float(two_snapshot.totals.PAR052)+50.0),"2H Attack Power x1.0 once")
 	# Older v1.2 saves retain pending 10:1 ratings; migrate read-only to 5:1.
 	var old_hero := CharacterState.new("attack_old_test","Legacy AP",1)
@@ -143,8 +145,8 @@ func _initialize() -> void:
 	check(not generated.has("template_id") and generated.par_stats.PAR057 == 1, "generator provenance and attack count")
 	var broken_hero := CharacterState.new("broken_metadata", "Broken")
 	var broken_repo := ItemRepository.new()
+	Engine.print_error_messages = false # The invalid equip path is intentional; suppress its diagnostic output.
 	equip(broken_hero, broken_repo, "invalid_weapon", "main_hand", {"type":"weapon"})
-	Engine.print_error_messages = false
 	check(ParCalculationService.calculate(broken_hero, broken_repo).is_empty(), "declared weapon cannot become unarmed when damage is missing")
 	Engine.print_error_messages = previous_print_errors
 	for error in failures:

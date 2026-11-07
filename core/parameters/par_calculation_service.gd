@@ -82,7 +82,7 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 					push_error("Invalid mandatory weapon range: " + target_par)
 					return {}
 				var effective_damage: Dictionary = damage.duplicate(true)
-				if in_off:
+				if in_off and not in_main:
 					effective_damage["min"] = float(damage["min"]) * WeaponHandPolicy.OFF_HAND_MULTIPLIER
 					effective_damage["max"] = float(damage["max"]) * WeaponHandPolicy.OFF_HAND_MULTIPLIER
 				attack_ranges[target_par] = effective_damage
