@@ -387,7 +387,7 @@ func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_f
 	if family == "staff":
 		# Staff physical base damage has not been approved yet.
 		return []
-	var base := lerpf(2.8,30.0,float(level-1)/29.0) if level <= 30 else lerpf(30.0,104.2,float(level-30)/70.0)
+	var base := reference_weapon_damage(level)
 	var avg := base*float(WEAPON_FACTOR.get(family,1.0))*damage_quality_factor
 	if slot == "2H":
 		avg *= 1.65
@@ -499,6 +499,22 @@ func _resolve_par(logical: String,choice: Dictionary) -> String:
 const REFERENCE_SLOT_BUDGET := 100.0 / 14.0
 const FULL_BUILD_REFERENCE_LINES := 14.0 * 2.0 * 1.5
 
+## One doubled reference damage curve feeds weapon values and PAR232 budgets.
+## All physical weapon-specific multipliers and rarity factors apply afterwards.
+func reference_weapon_damage(level: int) -> float:
+	var l := float(clampi(level,1,100))
+	var original: float = lerpf(2.8,30.0,(l-1.0)/29.0) if l <= 30.0 else lerpf(30.0,104.2,(l-30.0)/70.0)
+	return original * float(Dictionary(rules["attack_power_balance"])["base_damage_multiplier"])
+
+## A theoretical fully specialised 14-item, two-PAR232-epic-slot budget.
+## It does NOT promise this bonus to any actual level-10 character.
+func attack_target_percent(level: int) -> float:
+	var cfg: Dictionary = rules["attack_power_balance"]
+	var low := float(cfg["start_level"])
+	var high := float(cfg["end_level"])
+	var blend := clampf((float(level)-low)/(high-low),0.0,1.0)
+	return lerpf(float(cfg["start_percent"]),float(cfg["end_percent"]),blend)
+
 func nominal_affix(logical: String, level: int, slot: String, quality: float) -> float:
 	var slot_weight := float(Dictionary(rules.get("slot_budgets",{})).get(slot,7.5))
 	var share := slot_weight / REFERENCE_SLOT_BUDGET
@@ -512,14 +528,16 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			# Project 25: 50.60 mana per reference PAR at Lv100 / white.
 			baseline = 50.60*l/100.0
 		"attack":
-			# Project 25 build targets: +50% at Lv10, +150% at Lv100.
-			# Intermediate interpolation is a LAB calibration, not a combat rule.
-			var build_target := lerpf(50.0,150.0,clampf((l-10.0)/90.0,0.0,1.0))
-			if l < 10.0:
-				build_target *= l/10.0
-			# Historical v1.2 budget with the rating halved to preserve 10:1 -> 5:1 power.
-			# Build target interpolation is retained only as provisional quantity calibration.
-			baseline = 0.5*(build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
+			# All 14 reference slot budgets total 100%. Two purple PAR232 lines
+			# per slot at ideal attack allocation reproduce the theoretical
+			# +100% on Lv10 -> +60% on Lv75 (held at 60% through Lv100).
+			# The real build is limited by rarities, probability and DEF/ATK.
+			var cfg: Dictionary = rules["attack_power_balance"]
+			var epic_factor := float(Dictionary(rules["rarities"]["purple"])["factor"])
+			var reference_lines := float(cfg["reference_par_lines_per_slot"])
+			var target_damage := reference_weapon_damage(int(l)) * attack_target_percent(int(l)) / 100.0
+			baseline = target_damage * AttackPowerService.RATING_PER_DAMAGE / AttackPowerService.MAIN_HAND_MULTIPLIER
+			baseline *= REFERENCE_SLOT_BUDGET / (100.0 * reference_lines * epic_factor)
 		"mana_regen":
 			# Provisional fixed units of mana per combat round, for a
 			# white 7.5%-weight reference line, before quality scaling.
@@ -553,7 +571,9 @@ func calibration_status(logical: String) -> String:
 		return "PROVISIONAL_MANA_PER_ROUND_ANCHORS"
 	if ["hp","mana"].has(logical):
 		return "PROJECT25_ANCHOR"
-	if ["attack","spell"].has(logical):
+	if logical == "attack":
+		return "PROJECT25_DAMAGE_CURVE_100_TO_60"
+	if logical == "spell":
 		return "PROJECT25_TARGET_INTERPOLATED"
 	return "PROVISIONAL_EXTREMUM"
 

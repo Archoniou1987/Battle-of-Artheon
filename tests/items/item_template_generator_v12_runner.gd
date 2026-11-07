@@ -68,10 +68,35 @@ func _verify() -> void:
 		var again := generator.generate(single_config)
 		if JSON.stringify(single.get("rows",[])) != JSON.stringify(again.get("rows",[])):
 			problems.append("Single template seed is not deterministic: "+String(test["id"]))
-	# Attack Power is a 5:1 flat-damage rating and does not use DR.
+	# Attack Power is a 10:1 flat-damage rating and does not use DR.
 	var low_attack := generator._affix_amount("attack",30,"Нагрудник",1.25,1,{"defence_pct":80,"attack_pct":20})
-	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or not is_equal_approx(generator.attack_rating_to_damage(250.0),50.0):
-		problems.append("Attack Power must store 5:1 flat-damage rating")
+	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or not is_equal_approx(generator.attack_rating_to_damage(250.0),25.0):
+		problems.append("Attack Power must store 10:1 flat-damage rating")
+
+	# 100->60 is a THEORETICAL full-epic reference, not a per-character promise.
+	# Use deterministic nominal values to isolate quantity from +/-5% rolls.
+	if not is_equal_approx(generator.reference_weapon_damage(1),5.6) or not is_equal_approx(generator.reference_weapon_damage(30),60.0) or not is_equal_approx(generator.reference_weapon_damage(75),155.4):
+		problems.append("Approved weapon base damage must be doubled")
+	for level in [10,15,30,50,75,100]:
+		var expected_pct := 100.0 - 40.0 * clampf((float(level)-10.0)/65.0,0.0,1.0)
+		if absf(generator.attack_target_percent(level)-expected_pct)>0.0001:
+			problems.append("Incorrect PAR232 percentage reference at Lv"+str(level))
+		var source_damage := generator.reference_weapon_damage(level)
+		var reference_slots := {"MH":1,"OH":1,"Шлем":1,"Плечи":1,"Нагрудник":1,"Перчатки":1,"Наручи":1,"Пояс":1,"Штаны":1,"Ботинки":1,"Плащ":1,"Кулон":1,"Кольцо":2}
+		var combined_rating := 0.0
+		for slot_name in reference_slots:
+			combined_rating += generator.nominal_affix("attack",level,String(slot_name),1.5) * float(reference_slots[slot_name]) * 2.0
+		var theoretical_pct := combined_rating / AttackPowerService.RATING_PER_DAMAGE * AttackPowerService.MAIN_HAND_MULTIPLIER / source_damage * 100.0
+		if absf(theoretical_pct-expected_pct)>0.002:
+			problems.append("Full 28-slot reference deviates at Lv"+str(level))
+	# Two or three lucky Lv10 green items can approach 10-15%.
+	var three_green_rating := roundf(generator.nominal_affix("attack",10,"MH",1.1)) + 2.0*roundf(generator.nominal_affix("attack",10,"Кольцо",1.1))
+	var three_green_pct := three_green_rating / 10.0 * 0.7 / generator.reference_weapon_damage(10) * 100.0
+	if three_green_pct < 9.5 or three_green_pct > 15.0:
+		problems.append("Three lucky green items should approach the Lv10 ~10-15% reference")
+	var green_chest: float = generator.nominal_affix("attack",10,"Нагрудник",1.1) * ItemTemplateGeneratorV12.armour_par_multiplier("attack",{"defence_pct":45,"attack_pct":55})
+	if green_chest < 5.0 or green_chest > 9.0:
+		problems.append("Green Lv10 chest should use slot weight and attack share once")
 	if generator.rules["stat_par"]["attack"] != "PAR232" or CombatRatingCurves.DR_RULES.has("attack"):
 		problems.append("Attack Power must use canonical PAR232 without DR")
 	for case in [{"id":"SWORD_DODGE","weight":5.0},{"id":"DAGGER_PEN","weight":10.0},{"id":"AXE_DEF","weight":5.0},{"id":"HEAVY_DEF","weight":5.0}]:

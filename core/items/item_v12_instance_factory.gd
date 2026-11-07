@@ -59,8 +59,8 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		if known.has(par_id):
 			canonical_bonuses[par_id] = rating
 		elif par_id == "V12_ATTACK_POWER":
-			# Historical lab rows use the old 10:1 units; migrate to PAR232 (5:1).
-			canonical_bonuses["PAR232"] = float(canonical_bonuses.get("PAR232",0.0)) + rating*0.5
+			# Historical lab rows already use 10:1 units; preserve the same damage.
+			canonical_bonuses["PAR232"] = float(canonical_bonuses.get("PAR232",0.0)) + rating
 		else:
 			return {}
 	var requirements: Dictionary = variant.get("requirements", {})
@@ -82,6 +82,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"quality": quality,
 		"rarity": quality,
 		"origin": "v12_game_generator",
+		"attack_power_balance_version": 2, # Canonical 10:1 ratings, not old 5:1 PAR232.
 		"slot": "main_hand",
 		"equip_slots": allowed_slots,
 		"slot_usage": [],

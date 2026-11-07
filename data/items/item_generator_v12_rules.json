@@ -1,6 +1,6 @@
 {
   "version": "core-balance-v1.2",
-  "note": "Isolated generator workbench; no live inventory writes. Attack power is virtual V12_ATTACK_POWER until a canonical PAR is approved.",
+  "note": "Canonical Project 25 Generator v1.2; PAR232 reference +100% Lv10 -> +60% Lv75, doubled weapon base scale, 10:1 physical conversion.",
   "damage_quality_factors": {
     "white": 1,
     "green": 1.05,
@@ -991,5 +991,13 @@
         "PAR006"
       ]
     }
-  ]
+  ],
+  "attack_power_balance": {
+    "base_damage_multiplier": 2,
+    "start_level": 10,
+    "end_level": 75,
+    "start_percent": 100,
+    "end_percent": 60,
+    "reference_par_lines_per_slot": 2
+  }
 }
