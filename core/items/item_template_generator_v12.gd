@@ -14,7 +14,7 @@ const PAR_LABELS := {
 	"PAR135":"Снижение урона", "PAR150":"Сила заклинаний",
 	"PAR190":"Магическое сопротивление", "PAR013":"Регенерация маны вне боя (ед./10 сек)",
 	"PAR015":"Регенерация маны в бою (за раунд)",
-	"PAR164":"Общее пробитие магии", "V12_ATTACK_POWER":"Сила атаки"
+	"PAR164":"Общее пробитие магии", "PAR232":"Сила атаки"
 }
 const ARMOUR_ZONES := {
 	# Approved Project 25 matrix V2: each zone sums to 80% without a shield.
@@ -379,8 +379,8 @@ func primary_stat_amount(level: int, slot: String, quality_factor: float) -> flo
 	var slot_weight := float(Dictionary(rules["slot_budgets"]).get(slot,3.8))
 	return float(maxi(1,roundi(full_stat_pool*0.25*slot_weight/37.7*quality_factor)))
 
-func attack_rating_to_pct(rating: float, level: int) -> float:
-	return rating_to_pct(rating,level)
+func attack_rating_to_damage(rating: float) -> float:
+	return AttackPowerService.raw_damage(rating)
 
 func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_factor: float = 1.0) -> Array:
 	var family := String(spec.get("family","staff"))
@@ -517,9 +517,9 @@ func nominal_affix(logical: String, level: int, slot: String, quality: float) ->
 			var build_target := lerpf(50.0,150.0,clampf((l-10.0)/90.0,0.0,1.0))
 			if l < 10.0:
 				build_target *= l/10.0
-			# Convert planned build percentage into an additive rating.
-			# Raw rating is displayed; percentage is computed after aggregation.
-			baseline = (build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
+			# Historical v1.2 budget with the rating halved to preserve 10:1 -> 5:1 power.
+			# Build target interpolation is retained only as provisional quantity calibration.
+			baseline = 0.5*(build_target * 2.0 / FULL_BUILD_REFERENCE_LINES) * 100.0 / (20.0 - 16.0*(l-1.0)/99.0)
 		"mana_regen":
 			# Provisional fixed units of mana per combat round, for a
 			# white 7.5%-weight reference line, before quality scaling.

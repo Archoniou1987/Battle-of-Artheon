@@ -50,6 +50,9 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 		result[key] = float(result.get(key, 0.0)) + float(direct_effects[key])
 	var ranges: Dictionary = par_snapshot["attack_ranges"]
 	var bonus := float(result["physical_damage_flat"])
+	var rating := float(primary.get("PAR232",0.0))
+	var mh_id: Variant = character.equipment.get_equipped_instance_id("main_hand")
+	var two_handed := mh_id != null and character.equipment.get_equipped_instance_id("off_hand") == mh_id
 	for hand in ["main_hand", "off_hand"]:
 		var range_id := "PAR050" if hand == "main_hand" else "PAR051"
 		var damage: Dictionary = ranges[range_id]
@@ -57,6 +60,8 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 			result.erase(hand + "_damage")
 			continue
 		var hand_bonus := bonus * (WeaponHandPolicy.OFF_HAND_MULTIPLIER if hand == "off_hand" else 1.0)
+		if CombatDamagePayload.is_physical_damage_type(String(damage["type"])):
+			hand_bonus += AttackPowerService.damage_bonus(rating,hand,two_handed)
 		result[hand + "_min_damage"] = float(damage["min"]) + hand_bonus
 		result[hand + "_max_damage"] = float(damage["max"]) + hand_bonus
 		result[hand + "_damage_type"] = String(damage["type"])

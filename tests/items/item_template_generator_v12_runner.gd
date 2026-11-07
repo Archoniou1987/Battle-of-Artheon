@@ -68,10 +68,16 @@ func _verify() -> void:
 		var again := generator.generate(single_config)
 		if JSON.stringify(single.get("rows",[])) != JSON.stringify(again.get("rows",[])):
 			problems.append("Single template seed is not deterministic: "+String(test["id"]))
-	# Attack power is an integer rating; convert to percent by item level.
+	# Attack Power is a 5:1 flat-damage rating and does not use DR.
 	var low_attack := generator._affix_amount("attack",30,"Нагрудник",1.25,1,{"defence_pct":80,"attack_pct":20})
-	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or generator.attack_rating_to_pct(low_attack,30) <= 0.0:
-		problems.append("Attack power must store additive rating, not a raw percentage")
+	if low_attack < 1.0 or absf(low_attack-roundf(low_attack)) > 0.00001 or not is_equal_approx(generator.attack_rating_to_damage(250.0),50.0):
+		problems.append("Attack Power must store 5:1 flat-damage rating")
+	if generator.rules["stat_par"]["attack"] != "PAR232" or CombatRatingCurves.DR_RULES.has("attack"):
+		problems.append("Attack Power must use canonical PAR232 without DR")
+	for case in [{"id":"SWORD_DODGE","weight":5.0},{"id":"DAGGER_PEN","weight":10.0},{"id":"AXE_DEF","weight":5.0},{"id":"HEAVY_DEF","weight":5.0}]:
+		var spec: Dictionary = generator.archetypes().filter(func(a): return String(a.get("id","")) == String(case["id"]))[0]
+		if not is_equal_approx(float(Dictionary(spec["weights"]).get("attack",0)),float(case["weight"])):
+			problems.append("Wrong approved Attack Power share: "+String(case["id"]))
 	# Primary stats use one normal bonus slot, never a sixth PAR cell.
 	var stat_pieces := ["Перчатки","Наручи","Пояс","Плащ"]
 	for piece in stat_pieces:
@@ -473,15 +479,13 @@ func _verify() -> void:
 	# Target build anchors are normalized to 14 slots, two PAR lines, epic 1.5.
 	var ref_share := float(weights["Шлем"]) / ItemTemplateGeneratorV12.REFERENCE_SLOT_BUDGET
 	for entry in [
-		{"stat":"attack","level":10,"target":100.0},
-		{"stat":"attack","level":100,"target":300.0},
+		{"stat":"attack","level":10,"target":0.5*100.0*100.0/(20.0-16.0*9.0/99.0)},
+		{"stat":"attack","level":100,"target":0.5*300.0*100.0/4.0},
 		{"stat":"spell","level":20,"target":200.0},
 		{"stat":"spell","level":100,"target":2000.0}
 	]:
 		var per_line := generator.nominal_affix(String(entry["stat"]),int(entry["level"]),"Шлем",1.0)
 		var projected := per_line / ref_share * ItemTemplateGeneratorV12.FULL_BUILD_REFERENCE_LINES
-		if String(entry["stat"]) == "attack":
-			projected = generator.attack_rating_to_pct(projected,int(entry["level"]))
 		if absf(projected-float(entry["target"])) > 0.001:
 			problems.append("v1.2 target mismatch for " + String(entry["stat"]) + " Lv" + str(entry["level"]))
 	# A baseline white CORE value is independent of the number of unlocked

@@ -9,7 +9,7 @@
     "migration": "Use exact IDs from this registry; do not infer ID from row index; legacy keys are aliases only",
     "runtime": "No formula or numeric value is defined here unless explicitly specified; never invent defaults"
   },
-  "parameter_count": 108,
+  "parameter_count": 109,
   "parameters": [
     {
       "id": "PAR001",
@@ -874,6 +874,14 @@
       "group": "Мир / Перемещение",
       "status": "УТОЧНЕНО",
       "notes": "Модификатор скорости передвижения по карте; базовое время перехода задаётся типом местности и правилами движения. Не влияет на боевой Tempo. | Прежний ID: PAR108"
+    },
+    {
+      "id": "PAR232",
+      "name": "Сила атаки",
+      "source_key": "attack_power_rating",
+      "group": "Физический урон / Оружие",
+      "status": "УТВЕРЖДЕНО",
+      "notes": "5 рейтинга = +1 плоского физического урона; MH x0.7, OH x0.5, 2H x1.0. Без DR и капа. Отдельно от PAR052."
     }
   ]
 }

@@ -60,6 +60,9 @@ static func resolve(combatant: CombatantState, profile: Dictionary) -> Dictionar
 	var bonus := float(combatant.combat_stats["par_totals"]["PAR052"])
 	if id == "PAR051":
 		bonus *= WeaponHandPolicy.OFF_HAND_MULTIPLIER
+	# PAR232 applies only to ordinary physical strikes, never to ABI magnitudes.
+	if CombatDamagePayload.is_physical_damage_type(String(damage["type"])):
+		bonus += AttackPowerService.damage_bonus(float(combatant.combat_stats["par_totals"].get("PAR232",0.0)),String(weapons[index]["slot"]),bool(weapons[index].get("two_handed",false)))
 	var result := profile.duplicate(true)
 	result["damage_min"] = float(damage["min"]) + bonus
 	result["damage_max"] = float(damage["max"]) + bonus

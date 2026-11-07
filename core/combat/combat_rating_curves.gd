@@ -11,8 +11,7 @@ const DR_RULES := {
 	"crit_damage":{"threshold":50.0,"cap":250.0,"smooth":1.0},
 	"reduce":{"threshold":5.0,"cap":35.0,"smooth":1.0},
 	"magic_res":{"threshold":30.0,"cap":85.1,"smooth":1.5},
-	"block":{"threshold":20.0,"cap":75.0,"smooth":1.5},
-	"attack":{"threshold":75.0,"cap":250.0,"smooth":1.0}
+	"block":{"threshold":20.0,"cap":75.0,"smooth":1.5}
 }
 
 static func diminishing(raw_pct: float, category: String) -> float:

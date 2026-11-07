@@ -117,7 +117,8 @@ func _run() -> void:
 		assert(rendered.contains("%"))
 
 	assert(screen.detail_values.size() == ParCalculationService.registry().size())
-	assert(screen.detail_values.size() == 108)
+	assert(screen.detail_values.size() == 109)
+	assert(screen.detail_values.has("PAR232"))
 	assert((screen.detail_values["PAR052"] as Label).text != "—")
 
 	for tab_index in range(4):

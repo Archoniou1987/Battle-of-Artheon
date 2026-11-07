@@ -59,9 +59,8 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		if known.has(par_id):
 			canonical_bonuses[par_id] = rating
 		elif par_id == "V12_ATTACK_POWER":
-			# v1.2 approved this LAB rating, but a live PAR ID is not assigned.
-			# Keep the exact value for future migration, never silently mis-map it.
-			pending_bonuses[par_id] = rating
+			# Historical lab rows use the old 10:1 units; migrate to PAR232 (5:1).
+			canonical_bonuses["PAR232"] = float(canonical_bonuses.get("PAR232",0.0)) + rating*0.5
 		else:
 			return {}
 	var requirements: Dictionary = variant.get("requirements", {})

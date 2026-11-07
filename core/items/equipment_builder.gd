@@ -18,6 +18,7 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 			"instance_id":String(item.get("instance_id",item.get("id",""))),
 			"slot":String(item.get("slot","")),
 			"weapon_class":String(item.get("weapon_class","")),
+			"two_handed":bool(item.get("two_handed",false)) or (Array(item.get("slot_usage",[])).has("main_hand") and Array(item.get("slot_usage",[])).has("off_hand")),
 			"item_level":maxi(1,int(item.get("item_level",item.get("level",1)))),
 			"requires_off_hand_type":String(item.get("requires_off_hand_type","")),
 			"damage_min":float(damage.get("min",0.0)),

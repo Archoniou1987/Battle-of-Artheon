@@ -95,6 +95,16 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 			var is_off_hand_weapon := declared_weapon and str(character.equipment.get_equipped_instance_id("off_hand")) == String(instance_id)
 			var item_par_stats: Dictionary = Dictionary(item.get("par_stats",{})).duplicate(true)
 			var item_par_bonuses: Dictionary = Dictionary(item.get("par_bonuses",{})).duplicate(true)
+			# Old v1.2 inventory items hold 10:1 rating in pending bonuses.
+			# Read-only migration avoids mutating saves or counting the power twice.
+			if String(item.get("origin","")) == "v12_game_generator" and not item_par_bonuses.has("PAR232"):
+				var pending: Dictionary = Dictionary(item.get("v12_pending_bonuses",{}))
+				if pending.has("V12_ATTACK_POWER"):
+					var legacy_rating: Variant = pending["V12_ATTACK_POWER"]
+					if not (legacy_rating is int or legacy_rating is float) or not is_finite(float(legacy_rating)):
+						push_error("Invalid legacy v1.2 attack rating")
+						return {}
+					item_par_bonuses["PAR232"] = float(legacy_rating)*0.5
 			if is_off_hand_weapon:
 				for item_par_id in item_par_stats:
 					item_par_stats[item_par_id] = float(item_par_stats[item_par_id]) * WeaponHandPolicy.par_multiplier(String(item_par_id),true)
