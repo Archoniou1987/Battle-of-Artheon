@@ -155,7 +155,8 @@ func _run_long_battle() -> void:
 		_check(String(result.get("outcome", "")) == "ongoing", "round_%d_still_fighting" % round_number)
 		_check(not player.is_death_finalized() and not npc.is_death_finalized(), "round_%d_both_alive" % round_number)
 		_check(player.mana >= 0 and player.mana <= player.max_mana and npc.mana >= 0 and npc.mana <= npc.max_mana, "round_%d_resource_bounds" % round_number)
-		_check(player.mana == mana_before - (10 if selected_abi == "TEST_LAB_HEAL" else 0), "round_%d_player_mana_debit" % round_number)
+		var player_after_regen := mini(player.max_mana, mana_before + 5) # unified base PAR015: +5/round
+	_check(player.mana == player_after_regen - (10 if selected_abi == "TEST_LAB_HEAL" else 0), "round_%d_player_mana_debit" % round_number)
 		var audit: Dictionary = CombatDiagnostics.round_trace(session.state, round_number)
 		_check(bool(audit.get("valid_event_lineage", false)), "lineage_round_%d" % round_number)
 		_check(int(audit.get("event_count", 0)) > 0, "events_round_%d" % round_number)
@@ -166,7 +167,8 @@ func _run_long_battle() -> void:
 		_check(int(casts.get(session.player_id, 0)) == (0 if selected_abi.is_empty() else 1), "one_or_zero_player_abi_round_%d" % round_number)
 		var round_npc_casts := int(casts.get(ArenaCombatSession.ENEMY_ID, 0))
 		_check(round_npc_casts <= 1, "npc_one_abi_max_round_%d" % round_number)
-		_check(npc.mana == npc_mana_before - 10 * round_npc_casts, "npc_abi_mana_debit_round_%d" % round_number)
+		var npc_after_regen := mini(npc.max_mana, npc_mana_before + 5)
+	_check(npc.mana == npc_after_regen - 10 * round_npc_casts, "npc_abi_mana_debit_round_%d" % round_number)
 		npc_heals += round_npc_casts
 		if selected_abi == "ABI301":
 			sword_casts += 1
