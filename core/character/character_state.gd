@@ -14,6 +14,16 @@ var elixir_slots: Array[String] = ["", "", "", ""]
 
 ## Persistent current resources: maximums are derived afresh from PAR010/011.
 ## Equipping +max HP never heals current HP; removing gear only clamps it.
+## All character resource reads and resets use this single max-value formula.
+const BASE_MAX_HP := 100
+const BASE_MAX_MANA := 30
+
+static func maximum_resources(totals: Dictionary) -> Dictionary:
+	return {
+		"max_hp": maxi(0, BASE_MAX_HP + int(totals["PAR010"])),
+		"max_mana": maxi(0, BASE_MAX_MANA + int(totals["PAR011"]))
+	}
+
 var current_hp: int = 0
 var current_mana: int = 0
 ## Accumulated sub-point regeneration remains stable across ticks and restarts.
@@ -63,8 +73,9 @@ func _init(id: String, name: String, character_level: int = 1) -> void:
 		push_error("Character initial resources require canonical PAR010/PAR011")
 	else:
 		var totals: Dictionary = initial_par["totals"]
-		current_hp = maxi(0, 100 + int(totals["PAR010"]))
-		current_mana = maxi(0, 30 + int(totals["PAR011"]))
+		var maximums := maximum_resources(totals)
+		current_hp = int(maximums["max_hp"])
+		current_mana = int(maximums["max_mana"])
 
 ## The only character-side current/max resource read model.
 ## Its optional canonical PAR snapshot avoids repeating calculations in the builder.
@@ -73,8 +84,9 @@ func resource_snapshot(repository: ItemRepository, par_snapshot: Dictionary = {}
 	if snapshot.is_empty():
 		return {}
 	var totals: Dictionary = snapshot["totals"]
-	var maximum_hp := maxi(0, 100 + int(totals["PAR010"]))
-	var maximum_mana := maxi(0, 30 + int(totals["PAR011"]))
+	var maximums := maximum_resources(totals)
+	var maximum_hp := int(maximums["max_hp"])
+	var maximum_mana := int(maximums["max_mana"])
 	current_hp = clampi(current_hp, 0, maximum_hp)
 	current_mana = clampi(current_mana, 0, maximum_mana)
 	return {"hp":current_hp, "max_hp":maximum_hp, "mana":current_mana, "max_mana":maximum_mana}
@@ -123,8 +135,9 @@ func reset_resources_to_full(repository: ItemRepository) -> bool:
 	if snapshot.is_empty():
 		return false
 	var totals: Dictionary = snapshot["totals"]
-	current_hp = maxi(0, 100 + int(totals["PAR010"]))
-	current_mana = maxi(0, 30 + int(totals["PAR011"]))
+	var maximums := maximum_resources(totals)
+	current_hp = int(maximums["max_hp"])
+	current_mana = int(maximums["max_mana"])
 	out_combat_hp_fraction = 0.0
 	out_combat_mana_fraction = 0.0
 	return true

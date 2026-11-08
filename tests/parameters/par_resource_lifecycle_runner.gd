@@ -102,6 +102,7 @@ func round_regeneration() -> void:
 	fighter.hp = fighter.max_hp - 1
 	fighter.mana = fighter.max_mana - 1
 	orchestrator.begin_round()
+	check(fighter.hp == fighter.max_hp and fighter.mana == fighter.max_mana, "opening-round regeneration clamps HP and mana immediately")
 	orchestrator.end_round()
 	check(fighter.hp == fighter.max_hp and fighter.mana == fighter.max_mana, "regeneration never exceeds maximum")
 	fighter.hp = 90

@@ -23,7 +23,7 @@ static func apply_round_regeneration(state: CombatState) -> void:
 			push_error("Invalid configured combat mana regeneration")
 			continue
 		if hp_points > 0:
-			combatant.restore_hp(hp_points)
+			combatant.restore_hp(mini(hp_points,maxi(0,combatant.max_hp-combatant.hp)))
 		if combatant.mana >= combatant.max_mana:
 			combatant.mana_regen_fraction = 0.0
 			continue
