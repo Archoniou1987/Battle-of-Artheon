@@ -7,6 +7,7 @@ func check(ok: bool, reason: String) -> void:
 		failures.append(reason)
 
 func _initialize() -> void:
+	check_unified_defaults()
 	check_rates_and_fractional_carry()
 	check_exclusions_and_clamping()
 	check_offline_equivalence()
@@ -26,6 +27,19 @@ func fixture(hp_percent: float, mana_flat: float, hp_flat: float) -> Dictionary:
 	ItemDurabilityService.initialize_item(ring, 100)
 	check(repository.add_item(ring) and hero.receive_item("regen_ring", repository) and hero.equip("ring1", "regen_ring", repository), "equip PAR012/PAR013/PAR017")
 	return {"hero":hero,"repository":repository}
+
+func check_unified_defaults() -> void:
+	var setup := fixture(0.0, 0.0, 0.0)
+	var hero: CharacterState = setup["hero"]
+	var repo: ItemRepository = setup["repository"]
+	var max_hp := int(hero.resource_snapshot(repo)["max_hp"])
+	hero.current_hp = 50
+	hero.current_mana = 0
+	OutOfCombatRegenerationService.advance(hero, repo, 10.0)
+	check(hero.current_hp == 50 + int(floor(float(max_hp) * 0.10 / 6.0)), "base HP = 10 percent of max per minute")
+	check(hero.current_mana == 5, "base mana = 5 per ten seconds, with no item bonus")
+	var snapshot := ParCalculationService.calculate(hero, repo)
+	check(is_equal_approx(float(snapshot["totals"].get("PAR015", -1)), 0.0), "legacy PAR013 zero value does not add to PAR015")
 
 func check_rates_and_fractional_carry() -> void:
 	var setup := fixture(2.0, 3.0, 1.0)

@@ -32,7 +32,7 @@ static func advance(character: CharacterState, repository: ItemRepository, elaps
 	var before_mana := character.current_mana
 	var before_hp_fraction := character.out_combat_hp_fraction
 	var before_mana_fraction := character.out_combat_mana_fraction
-	var cycles := elapsed_seconds / ResourceRegenerationRules.INTERVAL_SECONDS
+	var cycles := elapsed_seconds / ResourceRegenerationRules.interval_seconds()
 	if character.current_hp < max_hp:
 		var hp_gain := hp_rate * cycles + character.out_combat_hp_fraction
 		if hp_gain >= float(max_hp - character.current_hp):
