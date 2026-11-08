@@ -2,7 +2,8 @@ class_name CombatResourceService
 extends RefCounted
 
 ## Single combat-round regeneration boundary for PAR015/016.
-## PAR013 is kept separate (non-round regeneration) by design.
+## PAR015 uses the same flat mana bonus as out-of-combat /10sec;
+## any legacy PAR013 bonus was normalized during equipment aggregation.
 ## Called once at the opening of each round, before actions are locked and
 ## before the start-of-round snapshot. Dead combatants cannot regenerate.
 ## Regeneration is passive resource renewal, not healing/resurrection.
@@ -17,7 +18,7 @@ static func apply_round_regeneration(state: CombatState) -> void:
 			push_error("Invalid combat-round HP/mana regeneration")
 			continue
 		var hp_points := maxi(0, int(floor(hp_per_round)))
-		var mana_points := maxi(0, int(floor(mana_per_round)))
+		var mana_points := maxi(0, int(floor(ResourceRegenerationRules.mana_per_interval(mana_per_round))))
 		if hp_points > 0:
 			combatant.restore_hp(hp_points)
 		if mana_points > 0:

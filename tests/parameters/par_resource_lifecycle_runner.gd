@@ -75,7 +75,7 @@ func equipment_and_persistence() -> void:
 func regen_fighter(id: String, hp_regen: float, mana_regen: float) -> CombatantState:
 	var hero := CharacterState.new(id, id)
 	var repo := ItemRepository.new()
-	check(equip_ring(hero, repo, id + "_ring", {"PAR013":99.0, "PAR015":mana_regen, "PAR016":hp_regen}), "equip regen ring " + id)
+	check(equip_ring(hero, repo, id + "_ring", {"PAR015":mana_regen, "PAR016":hp_regen}), "equip regen ring " + id)
 	return CharacterCombatBuilder.build(hero, repo)
 
 func round_regeneration() -> void:
@@ -84,20 +84,20 @@ func round_regeneration() -> void:
 	if fighter == null:
 		return
 	check(is_equal_approx(float(fighter.combat_stats.get("hp_regen_round", -1)), 5.0), "PAR016 maps to round HP rate")
-	check(is_equal_approx(float(fighter.combat_stats.get("mana_regen_round", -1)), 7.0), "PAR015 maps to round mana rate")
+	check(is_equal_approx(float(fighter.combat_stats.get("mana_regen_round", -1)), 7.0), "PAR015 maps to round mana BONUS; shared base +5 applies in resource service")
 	fighter.hp = 90
 	fighter.mana = 2
 	var state := CombatState.new()
 	state.add_combatant(fighter)
 	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state))
 	orchestrator.begin_round()
-	check(fighter.hp == 95 and fighter.mana == 9, "start-round PAR015/016 before actions, PAR013 excluded")
+	check(fighter.hp == 95 and fighter.mana == 14, "start-round base mana +5 and PAR015 +7 exactly once")
 	orchestrator.end_round()
-	check(fighter.hp == 95 and fighter.mana == 9, "end-round must not regenerate a second time")
+	check(fighter.hp == 95 and fighter.mana == 14, "end-round must not regenerate a second time")
 	orchestrator.begin_round()
-	check(fighter.hp == 100 and fighter.mana == 16, "second-round regen already applied at opening")
+	check(fighter.hp == 100 and fighter.mana == 26, "second-round regen already applied at opening")
 	orchestrator.end_round()
-	check(fighter.hp == 100 and fighter.mana == 16, "no extra regeneration at second-round close")
+	check(fighter.hp == 100 and fighter.mana == 26, "no extra regeneration at second-round close")
 	fighter.hp = fighter.max_hp - 1
 	fighter.mana = fighter.max_mana - 1
 	orchestrator.begin_round()
@@ -110,12 +110,12 @@ func round_regeneration() -> void:
 		"start_round":state.round_number + 1,"remaining_rounds":1
 	})
 	orchestrator.begin_round()
-	check(fighter.hp == 98 and fighter.mana == 11, "runtime EFF regenerates at start of active round")
+	check(fighter.hp == 98 and fighter.mana == 16, "runtime EFF regenerates at start of active round")
 	orchestrator.end_round()
-	check(fighter.hp == 98 and fighter.mana == 11, "runtime EFF does not regenerate on round close")
+	check(fighter.hp == 98 and fighter.mana == 16, "runtime EFF does not regenerate on round close")
 	orchestrator.begin_round()
 	orchestrator.end_round()
-	check(fighter.hp == 103 and fighter.mana == 18, "expired regen effect does not persist")
+	check(fighter.hp == 103 and fighter.mana == 12, "expired regen effect does not persist")
 	fighter.hp = -10
 	fighter.mana = 0
 	orchestrator.begin_round()
@@ -150,7 +150,7 @@ func npc_regeneration() -> void:
 	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state))
 	orchestrator.begin_round()
 	orchestrator.end_round()
-	check(actor.hp == 55 and actor.mana == 7, "NPC restores HP/mana once per opening round")
+	check(actor.hp == 55 and actor.mana == 12, "NPC restores HP/mana once per opening round")
 
 func arena_regeneration() -> void:
 	var hero := CharacterState.new("arena_resource_player", "Arena resources")
@@ -165,7 +165,7 @@ func arena_regeneration() -> void:
 	enemy.tempo_stun_round = 1
 	var result := arena.play_round(["chest"], ["chest", "arms"])
 	check(bool(result.get("ok", false)), "stunned arena round completes")
-	check(player.hp == 76 and player.mana == 4, "Arena applies PAR015/016 once despite stun")
+	check(player.hp == 76 and player.mana == 9, "Arena applies PAR015/016 once despite stun")
 
 func duel_regeneration() -> void:
 	var one := regen_fighter("duel_regen_one", 3.0, 4.0)
@@ -185,8 +185,8 @@ func duel_regeneration() -> void:
 	simulator.max_rounds = 1
 	simulator.run_duel(one.combatant_id, two.combatant_id)
 	check(state.round_number == 1, "duel exactly one round")
-	check(one.hp == 63 and one.mana == 4, "duel PAR015/016 once for first actor")
-	check(two.hp == 57 and two.mana == 5, "duel PAR015/016 once for second actor")
+	check(one.hp == 63 and one.mana == 9, "duel PAR015/016 once for first actor")
+	check(two.hp == 57 and two.mana == 10, "duel PAR015/016 once for second actor")
 
 func group_regeneration() -> void:
 	var one := regen_fighter("group_regen_one", 3.0, 4.0)
@@ -208,5 +208,5 @@ func group_regeneration() -> void:
 	var simulator := GroupCombatSimulator.new(state, groups)
 	var result := simulator.run_round()
 	check(bool(result.get("ok", false)), "group round resolved")
-	check(one.hp == 63 and one.mana == 4, "group PAR015/016 once for first actor")
-	check(two.hp == 57 and two.mana == 5, "group PAR015/016 once for second actor")
+	check(one.hp == 63 and one.mana == 9, "group PAR015/016 once for first actor")
+	check(two.hp == 57 and two.mana == 10, "group PAR015/016 once for second actor")

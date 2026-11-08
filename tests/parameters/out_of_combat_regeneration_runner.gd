@@ -35,7 +35,7 @@ func check_rates_and_fractional_carry() -> void:
 	var maximum := int(resources["max_hp"])
 	hero.current_hp = 50
 	hero.current_mana = 0
-	var hp_per_ten := float(maximum) * 0.02 + 1.0
+	var hp_per_ten := float(maximum) * 0.12 / 6.0 + 1.0
 	var changed := OutOfCombatRegenerationService.advance(hero, repository, 1.0)
 	check(changed, "one-second sub-point progress is kept")
 	check(hero.current_hp == 50 + int(floor(hp_per_ten / 10.0)), "one-second HP calculation")
@@ -43,7 +43,7 @@ func check_rates_and_fractional_carry() -> void:
 	for i in range(9):
 		OutOfCombatRegenerationService.advance(hero, repository, 1.0)
 	check(hero.current_hp == 50 + int(floor(hp_per_ten)), "ten one-second ticks match /10sec HP")
-	check(hero.current_mana == 3, "ten one-second ticks match /10sec mana")
+	check(hero.current_mana == 8, "ten seconds: base 5 + legacy PAR013 3")
 	check(is_equal_approx(hero.out_combat_hp_fraction, hp_per_ten - floor(hp_per_ten)), "HP fractional carry preserved")
 	var saved := hero.resources_to_dict()
 	var restored := CharacterState.new("regen_hero", "Restored")

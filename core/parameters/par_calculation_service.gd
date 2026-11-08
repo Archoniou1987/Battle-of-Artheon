@@ -113,6 +113,11 @@ static func calculate(character: CharacterState, repository: ItemRepository, tal
 							push_error("Invalid legacy v1.2 attack rating")
 							return {}
 						item_par_bonuses["PAR232"] = float(legacy_rating)
+			# Legacy PAR013 is converted once to PAR015, without changing the saved item.
+			for source in [item_par_stats,item_par_bonuses]:
+				if source.has("PAR013"):
+					source["PAR015"] = float(source.get("PAR015",0.0)) + float(source["PAR013"])
+					source.erase("PAR013")
 			if is_off_hand_weapon:
 				for item_par_id in item_par_stats:
 					item_par_stats[item_par_id] = float(item_par_stats[item_par_id]) * WeaponHandPolicy.par_multiplier(String(item_par_id),true)
