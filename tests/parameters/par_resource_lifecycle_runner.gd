@@ -11,6 +11,7 @@ func check(condition: bool, description: String) -> void:
 func _initialize() -> void:
 	equipment_and_persistence()
 	round_regeneration()
+	fractional_round_mana_regeneration()
 	npc_regeneration()
 	arena_regeneration()
 	duel_regeneration()
@@ -115,7 +116,7 @@ func round_regeneration() -> void:
 	check(fighter.hp == 98 and fighter.mana == 16, "runtime EFF does not regenerate on round close")
 	orchestrator.begin_round()
 	orchestrator.end_round()
-	check(fighter.hp == 103 and fighter.mana == 12, "expired regen effect does not persist")
+	check(fighter.hp == 103 and fighter.mana == 28, "expired regen effect does not persist; mana carries previous rounds")
 	fighter.hp = -10
 	fighter.mana = 0
 	orchestrator.begin_round()
@@ -123,6 +124,30 @@ func round_regeneration() -> void:
 	var outcome := orchestrator.end_round()
 	check(fighter.hp == -10 and fighter.mana == 0, "passive regen cannot rescue lethal HP")
 	check(fighter.is_death_finalized() and Array(outcome.get("dead_ids", [])).has(fighter.combatant_id), "death finalization unchanged")
+
+func fractional_round_mana_regeneration() -> void:
+	var fighter := regen_fighter("fractional_round_mana", 0.0, 0.5)
+	check(fighter != null, "fractional mana fixture")
+	if fighter == null:
+		return
+	fighter.mana = 0
+	var state := CombatState.new()
+	state.add_combatant(fighter)
+	var orchestrator := RoundOrchestrator.new(state, CombatEngine.new(state))
+	orchestrator.begin_round()
+	check(fighter.mana == 5 and is_equal_approx(fighter.mana_regen_fraction,0.5), "round one: five mana plus half-point carry")
+	orchestrator.end_round()
+	var snapshot := GroupCombatCheckpointService._fighter_to_dict(fighter)
+	var restored := GroupCombatCheckpointService._fighter_from_dict(snapshot)
+	check(is_equal_approx(restored.mana_regen_fraction,0.5), "checkpoint preserves fractional mana carry")
+	fighter.mana_regen_fraction = restored.mana_regen_fraction
+	orchestrator.begin_round()
+	check(fighter.mana == 11 and is_zero_approx(fighter.mana_regen_fraction), "two rounds of 5.5 regenerate exactly 11 mana")
+	orchestrator.end_round()
+	fighter.mana = fighter.max_mana - 1
+	orchestrator.begin_round()
+	check(fighter.mana == fighter.max_mana and is_zero_approx(fighter.mana_regen_fraction), "reaching mana cap clears carry")
+	orchestrator.end_round()
 
 func npc_regeneration() -> void:
 	var totals := {"PAR052":0.0,"PAR057":1.0,"PAR073":1.0,"PAR015":7.0,"PAR016":5.0,"PAR150":0.0}

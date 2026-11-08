@@ -216,6 +216,7 @@ static func _fighter_to_dict(c: CombatantState) -> Dictionary:
 		"id":c.combatant_id,"name":c.display_name,"level":c.level,
 		"max_hp":c.max_hp,"hp":c.hp,"death_finalized":c.death_finalized,
 		"one_shot_kill":c.one_shot_kill,"max_mana":c.max_mana,"mana":c.mana,
+		"mana_regen_fraction":c.mana_regen_fraction,
 		"action_points":c.action_points,"max_action_points":c.max_action_points,
 		"tempo":c.tempo,"base_tempo":c.base_tempo,"max_tempo":c.max_tempo,
 		"tempo_regen":c.tempo_regen,"tempo_stun_round":c.tempo_stun_round,
@@ -235,6 +236,8 @@ static func _fighter_from_dict(d: Dictionary) -> CombatantState:
 	c.death_finalized = bool(d["death_finalized"])
 	c.one_shot_kill = bool(d["one_shot_kill"])
 	c.mana = int(d["mana"])
+	# Older V1 checkpoints lack this optional field; they default to no carry.
+	c.mana_regen_fraction = float(d.get("mana_regen_fraction",0.0))
 	c.action_points = int(d["action_points"])
 	c.max_action_points = int(d["max_action_points"])
 	c.tempo = float(d["tempo"])
@@ -356,6 +359,9 @@ static func _validate_payload(p: Dictionary, expected_key: String, expected_fing
 				return "checkpoint_invalid_combatant_counter_" + key
 		if int(c["mana"]) < 0 or int(c["mana"]) > int(c["max_mana"]) or int(c["action_points"]) < 0 or int(c["action_points"]) > int(c["max_action_points"]):
 			return "checkpoint_invalid_combatant_resource_bounds"
+		var mana_fraction: Variant = c.get("mana_regen_fraction",0.0)
+		if not _finite(mana_fraction) or float(mana_fraction) < 0.0 or float(mana_fraction) >= 1.0:
+			return "checkpoint_invalid_mana_regen_fraction"
 		for key in ["tempo","base_tempo","max_tempo","tempo_regen"]:
 			if not _finite(c.get(key,null)):
 				return "checkpoint_invalid_tempo"

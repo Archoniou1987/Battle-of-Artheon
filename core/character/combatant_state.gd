@@ -13,6 +13,8 @@ var death_finalized: bool = false
 var one_shot_kill: bool = false
 var max_mana: int
 var mana: int
+## Carry fractional combat mana recovery across rounds; never discard 0.x points.
+var mana_regen_fraction: float = 0.0
 var action_points: int = 0
 var max_action_points: int = 5
 ## Current accumulated Tempo; negative control debt has no artificial floor.

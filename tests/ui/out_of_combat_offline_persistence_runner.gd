@@ -71,9 +71,9 @@ func _run() -> void:
 	var loaded := second.get("player_character") as CharacterState
 	var loaded_repo := second.get("item_repository") as ItemRepository
 	var max_hp := int(loaded.resource_snapshot(loaded_repo)["max_hp"])
-	var gain := 4.0 * (0.01 * float(max_hp) + 1.0)
-	verify(loaded.current_hp == mini(max_hp, 25 + int(floor(gain))), "offline HP uses PAR012% plus PAR017 flat /10 sec")
-	verify(loaded.current_mana == 8, "offline mana uses PAR013 /10 sec")
+	var gain := 4.0 * (0.11 * float(max_hp) / 6.0 + 1.0)
+	verify(loaded.current_hp == mini(max_hp, 25 + int(floor(gain))), "offline HP uses base 10% plus PAR012 1% MaxHP/min, with legacy PAR017 flat")
+	verify(loaded.current_mana == 28, "offline mana: base 5 + legacy PAR013 2, for 4 intervals")
 	verify(loaded.equipment.get_equipped_instance_id("ring1") == "offline_regen_ring", "equipment restored before catch-up")
 	second.call("_open_panel", "Арена")
 	await process_frame

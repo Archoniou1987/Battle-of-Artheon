@@ -9,6 +9,7 @@ func check(ok: bool, reason: String) -> void:
 func _initialize() -> void:
 	check_unified_defaults()
 	check_rates_and_fractional_carry()
+	check_legacy_mana_combination()
 	check_exclusions_and_clamping()
 	check_offline_equivalence()
 	for failure in failures:
@@ -64,6 +65,26 @@ func check_rates_and_fractional_carry() -> void:
 	check(restored.restore_resources(saved), "restore fractional resource state")
 	check(is_equal_approx(restored.out_combat_hp_fraction, hero.out_combat_hp_fraction), "HP fractional carry survived save")
 	check(is_equal_approx(restored.out_combat_mana_fraction, hero.out_combat_mana_fraction), "mana fractional carry survived save")
+
+func check_legacy_mana_combination() -> void:
+	var setup := fixture(0.0,2.0,0.0)
+	var hero: CharacterState = setup["hero"]
+	var repo: ItemRepository = setup["repository"]
+	var second := {"instance_id":"mana_regen_second_ring","equip_slots":["ring2"],"slot_usage":["ring2"],"par_stats":{"PAR015":3.0}}
+	ItemDurabilityService.initialize_item(second,100)
+	check(repo.add_item(second) and hero.receive_item("mana_regen_second_ring",repo) and hero.equip("ring2","mana_regen_second_ring",repo), "equip canonical mana ring")
+	var par := ParCalculationService.calculate(hero,repo)
+	check(is_equal_approx(float(par["totals"]["PAR015"]),5.0), "legacy PAR013=2 and PAR015=3 summed exactly once")
+	check(is_zero_approx(float(par["totals"]["PAR013"])), "legacy PAR013 not retained as another live mana source")
+	check(is_equal_approx(float(Dictionary(repo.get_item("regen_ring")["par_stats"])["PAR013"]),2.0), "legacy saved item left unchanged")
+	hero.current_hp = 50
+	hero.current_mana = 0
+	OutOfCombatRegenerationService.advance(hero,repo,10.0)
+	check(hero.current_mana == 10, "out of combat: base 5 + PAR015 total 5")
+	var fighter := CharacterCombatBuilder.build(hero,repo)
+	check(fighter != null, "unified combat mana snapshot exists")
+	if fighter != null:
+		check(is_equal_approx(float(fighter.combat_stats["mana_regen_round"]),5.0), "combat snapshot receives same PAR015 bonus")
 
 func check_exclusions_and_clamping() -> void:
 	var setup := fixture(10.0, 20.0, 8.0)
