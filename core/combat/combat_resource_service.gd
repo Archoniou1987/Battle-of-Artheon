@@ -27,7 +27,7 @@ static func apply_round_regeneration(state: CombatState) -> void:
 		if combatant.mana >= combatant.max_mana:
 			combatant.mana_regen_fraction = 0.0
 			continue
-		var accumulated := mana_gain + combatant.mana_regen_fraction
+		var accumulated: float = mana_gain + combatant.mana_regen_fraction
 		var mana_points := maxi(0, int(floor(accumulated + 0.000000001)))
 		combatant.mana = mini(combatant.max_mana, combatant.mana + mana_points)
 		combatant.mana_regen_fraction = 0.0 if combatant.mana >= combatant.max_mana else maxf(0.0, accumulated - float(mana_points))
