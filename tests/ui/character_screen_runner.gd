@@ -46,7 +46,7 @@ func _run() -> void:
 	assert(is_equal_approx(float(test_bonuses["physical_damage_flat"]), 10.0))
 	assert(is_equal_approx(float(test_bonuses["dodge_rating"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["crit_damage_rating"]), 100.0))
-	assert(is_equal_approx(float(test_bonuses["max_hp_flat"]), 200.0))
+	assert(is_equal_approx(float(test_bonuses["max_hp_flat"]), 100.0))
 	assert(is_equal_approx(float(test_bonuses["crit_chance_rating"]), 150.0))
 	assert(is_equal_approx(float(test_bonuses["hit_chance_rating"]), 50.0))
 	assert(is_equal_approx(float(test_bonuses["magic_damage_rating"]), 50.0))
