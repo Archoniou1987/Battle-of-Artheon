@@ -42,9 +42,11 @@ func _run() -> void:
 	var player := arena.combat_session.fighter(true)
 	var opponent := arena.combat_session.fighter(false)
 	var expected_hp := maxi(1, player.max_hp - 12)
-	var expected_mana := maxi(0, player.max_mana - 9)
+	var initial_mana := maxi(0, player.max_mana - 9)
+	# The new unified PAR015 restores +5 mana once at the start of this round.
+	var expected_mana := mini(player.max_mana, initial_mana + 5)
 	player.hp = expected_hp
-	player.mana = expected_mana
+	player.mana = initial_mana
 	player.tempo_stun_round = 1
 	opponent.tempo_stun_round = 1
 	var attacks: Array[String] = ["chest"]
