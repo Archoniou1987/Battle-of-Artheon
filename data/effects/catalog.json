@@ -148,7 +148,15 @@
     "tags": [
       "DAGGER_DEF_COMBO"
     ],
-    "dodge_direct_pct": 0
+    "dodge_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "dagger_breach_stacks",
+      "legacy_value_field": "dagger_dodge_pct",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": ["dodge_direct_pct"]
+    }
   },
   "EFF405": {
     "id": "EFF405",
@@ -200,7 +208,15 @@
       "AXE_COUNTER_STANCE"
     ],
     "dodge_direct_pct": 0,
-    "counterattack_cap": 5
+    "counterattack_cap": 5,
+    "contextual_modifier": {
+      "input_field": "axe_rage_stacks",
+      "legacy_value_field": "axe_stance_dodge_pct",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": ["dodge_direct_pct"]
+    }
   },
   "EFF504": {
     "id": "EFF504",
@@ -286,6 +302,14 @@
     ],
     "physical_damage_outgoing_direct_pct": 0,
     "magic_damage_direct_pct": 0,
-    "damage_lifesteal_pct": 20
+    "damage_lifesteal_pct": 20,
+    "contextual_modifier": {
+      "input_field": "hammer_surge_spent_charges",
+      "legacy_value_field": "hammer_surge_pct",
+      "per_unit": 1,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": ["physical_damage_outgoing_direct_pct", "magic_damage_direct_pct"]
+    }
   }
 }
