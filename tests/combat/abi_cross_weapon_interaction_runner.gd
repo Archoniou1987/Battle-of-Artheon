@@ -15,6 +15,7 @@ func _initialize() -> void:
 	_abi_target_limits_from_catalog()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
+	_dynamic_effects_from_catalog()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
 	_axe_rage_value_comes_from_eff()
@@ -193,6 +194,67 @@ func _sword_effect_strength_from_catalog() -> void:
 	_check(is_equal_approx(CombatModifierService.modifier(target,"physical_damage_outgoing_direct_pct",state.round_number),-21.0),"sword:cripple_strength_from_eff")
 	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_dodge_direct_pct",state.round_number),-30.0),"sword:slow_strength_from_eff_and_level_cap")
 	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_crit_direct_pct",state.round_number),-45.0),"sword:lost_strength_from_eff_and_level_cap")
+
+## Real ABI paths must pass raw counts; EFF decides the % and its cap.
+## Per-unit and max values are changed in fixture only, leaving balance intact.
+func _dynamic_effects_from_catalog() -> void:
+	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+
+	var dagger_ctx := _pair("dagger","axe")
+	var dagger_state: CombatState = dagger_ctx["state"]
+	var dagger_engine: CombatEngine = dagger_ctx["engine"]
+	dagger_engine.canonical_effects["EFF404"]["contextual_modifier"]["per_unit"] = 7
+	dagger_engine.canonical_effects["EFF404"]["contextual_modifier"]["maximum"] = 18
+	_effect(dagger_ctx,"left","right","EFF401",{"sword_stacks_to_apply":3},true)
+	var combo_action := AbilityRuntime.build_action_event(dagger_state,"left","right","ABI404",abilities["ABI404"])
+	DaggerAbiCombatService.prepare_action(dagger_engine,combo_action)
+	dagger_engine.resolve_pending_events()
+	var dagger_buff := _active_effect(dagger_state.get_combatant("left"),"EFF404")
+	_check(not dagger_buff.is_empty(),"dagger:contextual_dodge_applied")
+	_check(is_equal_approx(float(Dictionary(dagger_buff.get("definition",{})).get("dodge_direct_pct",-1)),18.0),"dagger:contextual_dodge_per_stack_and_cap")
+
+	var axe_ctx := _pair("axe","hammer")
+	var axe_state: CombatState = axe_ctx["state"]
+	var axe_engine: CombatEngine = axe_ctx["engine"]
+	axe_engine.canonical_effects["EFF503"]["contextual_modifier"]["per_unit"] = 8
+	axe_engine.canonical_effects["EFF503"]["contextual_modifier"]["maximum"] = 22
+	_effect(axe_ctx,"left","left","EFF501",{"sword_stacks_to_apply":3},true)
+	var stance_action := AbilityRuntime.build_action_event(axe_state,"left","left","ABI504",abilities["ABI504"])
+	AxeAbiCombatService.dispatch(axe_engine,stance_action)
+	axe_engine.resolve_pending_events()
+	var stance := _active_effect(axe_state.get_combatant("left"),"EFF503")
+	_check(is_equal_approx(float(Dictionary(stance.get("definition",{})).get("dodge_direct_pct",-1)),22.0),"axe:contextual_dodge_per_rage_and_cap")
+	_check(int(Dictionary(stance.get("definition",{})).get("counterattack_cap",-1))==5,"axe:counter_cap_unmodified")
+
+	var hammer_ctx := _pair("hammer","axe")
+	var hammer_state: CombatState = hammer_ctx["state"]
+	var hammer_engine: CombatEngine = hammer_ctx["engine"]
+	hammer_engine.canonical_effects["EFF604"]["contextual_modifier"]["per_unit"] = 1.5
+	hammer_engine.canonical_effects["EFF604"]["contextual_modifier"]["maximum"] = 24
+	HammerAbiCombatService.gain_charges(hammer_engine,hammer_state.get_combatant("left"),80)
+	var surge_action := AbilityRuntime.build_action_event(hammer_state,"left","left","ABI605",abilities["ABI605"])
+	HammerAbiCombatService.dispatch(hammer_engine,surge_action)
+	hammer_engine.resolve_pending_events()
+	var surge := _active_effect(hammer_state.get_combatant("left"),"EFF604")
+	var surge_definition: Dictionary = surge.get("definition",{})
+	_check(is_equal_approx(float(surge_definition.get("physical_damage_outgoing_direct_pct",-1)),24.0),"hammer:contextual_physical_surge_and_cap")
+	_check(is_equal_approx(float(surge_definition.get("magic_damage_direct_pct",-1)),24.0),"hammer:contextual_magic_surge_and_cap")
+	_check(is_equal_approx(float(surge_definition.get("damage_lifesteal_pct",-1)),20.0),"hammer:lifesteal_unchanged")
+
+	# A queued pre-migration event keeps its already-computed application value.
+	var old_event := _effect(hammer_ctx,"left","left","EFF604",{"hammer_surge_pct":11.0},true)
+	_check(bool(old_event.result.get("resolved",false)),"hammer:legacy_event_resolved")
+	var old_surge := _active_effect(hammer_state.get_combatant("left"),"EFF604")
+	_check(is_equal_approx(float(Dictionary(old_surge.get("definition",{})).get("physical_damage_outgoing_direct_pct",-1)),11.0),"hammer:legacy_event_kept_value")
+
+
+func _active_effect(fighter: CombatantState, effect_id: String) -> Dictionary:
+	for raw in fighter.active_effects:
+		var record: Dictionary = raw
+		if String(record.get("effect_id","")) == effect_id:
+			return record
+	return {}
+
 
 func _dagger_breach_versus_hammer_armour() -> void:
 	var ctx := _pair("dagger","hammer")
