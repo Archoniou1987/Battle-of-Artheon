@@ -151,10 +151,12 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		if hit > 0: ids.append(hit)
 	elif id == DEF_FAN:
 		for enemy_id in _targets(engine,action,maxi(1,int(action.payload.get("max_targets",1)))):
-			var fan_hit := _queue_attack(engine,action,enemy_id,mh,mh_average+oh_average)
+			var fan_hit := _queue_attack(engine,action,enemy_id,mh,(mh_average+oh_average)*AbilityCatalog.number(DEF_FAN,"damage_multiplier",action.payload))
 			if fan_hit > 0: ids.append(fan_hit)
 	elif id == DEF_COMBO or id == ATTACK_HEAVY:
 		var multiplier := 1.0 + AbilityCatalog.number(DEF_COMBO,"poison_damage_bonus_per_stack",action.payload) * float(poison_stacks) if id == DEF_COMBO else 1.0
+		if id == ATTACK_HEAVY:
+			multiplier = AbilityCatalog.number(ATTACK_HEAVY,"damage_multiplier",action.payload)
 		var mh_hit := _queue_attack(engine,action,action.target_id,mh,mh_average*multiplier)
 		if mh_hit > 0: ids.append(mh_hit)
 		var oh_hit := _queue_attack(engine,action,action.target_id,oh,oh_average*multiplier)
