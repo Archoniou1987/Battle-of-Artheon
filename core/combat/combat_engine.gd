@@ -468,15 +468,25 @@ func _resolve_damage(event: CombatEvent) -> void:
 		return
 	var amount := float(event.payload.get("amount", 0.0))
 	var damage_type := String(event.payload.get("damage_type", ""))
-	if String(event.payload.get("effect_id","")) == SwordAbiCombatService.BLEED and String(event.payload.get("source","")) == "effect":
-		# Bleeding ticks (including the ABI308 burst) ignore hit/dodge/crit,
-		# but still pass the victim's physical protection once.
-		var bleed_armour := _armour_for(target,"chest","slashing") + CombatModifierService.global_physical_armour(target,"slashing",state.round_number)
-		var bleed_armor_pct := RatingMatrix.to_percent(maxf(0.0,bleed_armour)*10.0,target.level)
-		amount *= maxf(0.0,1.0-clampf(bleed_armor_pct/100.0,0.0,1.0))
-		var bleed_source := state.get_combatant(event.source_id)
-		if bleed_source != null:
-			amount *= maxf(0.0,1.0+CombatModifierService.modifier(bleed_source,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
+	# EFF-owned DoT policy selects the zone/type; COMBAT still owns the
+	# existing physical armour formula and applies it exactly once.
+	var periodic_armour: Dictionary = {}
+	if String(event.payload.get("source","")) == "effect":
+		if event.payload.get("periodic_armour",null) is Dictionary:
+			periodic_armour = Dictionary(event.payload["periodic_armour"])
+		else:
+			# Pre-migration queued DAMAGE events have no policy snapshot.
+			periodic_armour = Dictionary(_effect_definition(String(event.payload.get("effect_id",""))).get("periodic_armour",{}))
+	if not periodic_armour.is_empty():
+		var armour_zone := String(periodic_armour.get("zone","chest"))
+		var armour_type := String(periodic_armour.get("damage_type","slashing"))
+		var dot_armour := _armour_for(target,armour_zone,armour_type) + CombatModifierService.global_physical_armour(target,armour_type,state.round_number)
+		var dot_armour_pct := RatingMatrix.to_percent(maxf(0.0,dot_armour)*10.0,target.level)
+		amount *= maxf(0.0,1.0-clampf(dot_armour_pct/100.0,0.0,1.0))
+		if bool(periodic_armour.get("apply_source_physical_outgoing",false)):
+			var dot_source := state.get_combatant(event.source_id)
+			if dot_source != null:
+				amount *= maxf(0.0,1.0+CombatModifierService.modifier(dot_source,"physical_damage_outgoing_direct_pct",state.round_number)/100.0)
 	var magic_attacker := state.get_combatant(event.source_id)
 	var magic_resist := CombatModifierService.magic_resist(target, damage_type, state.round_number, magic_attacker)
 	if CombatDamagePayload.is_magic_damage_type(damage_type):
