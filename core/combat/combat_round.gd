@@ -54,7 +54,7 @@ func resolve(engine: CombatEngine) -> void:
 			if not bool(mh.payload.get("is_weapon_attack",false)) or int(mh.payload.get("weapon_index",-1)) != 0 or int(mh.payload.get("hit_index",0)) != 0:
 				continue
 			mh.payload["axe_abi_id"] = AxeAbiCombatService.RAGE_ABI
-			mh.payload["axe_mh_damage_bonus_pct"] = 20.0
+			mh.payload["axe_mh_damage_bonus_pct"] = float(abi_action.payload.get("mh_damage_bonus_pct",0.0))
 			break
 	# Hammer ABI601 similarly buffs the FIRST ordinary MH attack rather
 	# than producing a second hit.
@@ -67,7 +67,7 @@ func resolve(engine: CombatEngine) -> void:
 			if not bool(mh.payload.get("is_weapon_attack",false)) or int(mh.payload.get("weapon_index",-1)) != 0 or int(mh.payload.get("hit_index",0)) != 0:
 				continue
 			mh.payload["hammer_abi_id"] = HammerAbiCombatService.HEAVY
-			mh.payload["hammer_mh_damage_bonus_pct"] = 20.0
+			mh.payload["hammer_mh_damage_bonus_pct"] = float(abi_action.payload.get("mh_damage_bonus_pct",0.0))
 			break
 	# Counter ABI inherits the FIRST ordinary MH strike zone in the sealed round.
 	# The OH zone is never a fallback. No implicit chest target is permitted.
