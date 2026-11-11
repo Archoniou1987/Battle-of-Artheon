@@ -132,6 +132,8 @@
     "duration_rounds": 1,
     "stacking": "shared_duration",
     "max_stacks": 10,
+    "ap_gain_on_apply": 1,
+    "ap_gain_on_apply_chance_pct": 5,
     "polarity": "DEBUFF",
     "tags": [
       "POISON",
