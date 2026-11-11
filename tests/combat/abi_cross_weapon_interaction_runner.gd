@@ -12,6 +12,7 @@ func _check(ok: bool, label: String) -> void:
 
 func _initialize() -> void:
 	_abi_to_eff_references()
+	_char_npc_par_projection_contract()
 	_abi_mh_bonus_ownership()
 	_dagger_abi_coefficients_from_catalog()
 	_dagger_legacy_action_uses_canonical_bonus()
@@ -37,6 +38,50 @@ func _initialize() -> void:
 	_hammer_tempo_versus_axe_immunity()
 	print("ABI_CROSS_WEAPON_INTERACTION_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=",failures)
 	quit(0 if failures.is_empty() else 1)
+
+## NPC keeps its explicitly authored PAR totals (no guessed primary
+## derivation), but uses CHAR's same PAR source_key projection and RatingMatrix.
+## Test-only values are deliberately different from production NPC data.
+func _char_npc_par_projection_contract() -> void:
+	var document: Dictionary = TestFixtureLoader.load_json("res://data/npc/starting_region_npcs.json")
+	var npc_fixture: Dictionary = Dictionary(Array(document.get("npcs",[]))[2]).duplicate(true)
+	var base: Dictionary = npc_fixture["base"]
+	var totals: Dictionary = base["par_totals"]
+	totals["PAR015"] = 2.0
+	totals["PAR053"] = 6.0
+	totals["PAR071"] = 4.0
+	totals["PAR125"] = 11.0
+	totals["PAR126"] = 0.12
+	totals["PAR135"] = 7.0
+	base["combat_stats"]["shield_auto_block_direct_pct"] = 2.0
+	var npc := NpcState.new(npc_fixture)
+	var fighter := NpcCombatBuilder.build(npc)
+	_check(fighter != null,"A07:NPC_explicit_PAR_build_valid")
+	if fighter != null:
+		_check(fighter.max_hp==75 and fighter.max_mana==0,"A07:explicit_NPC_resource_pools_unchanged")
+		_check(is_equal_approx(float(fighter.combat_stats.get("mana_regen_round",-1)),2.0),"A07:NPC_PAR015_source_key")
+		_check(is_equal_approx(float(fighter.combat_stats.get("physical_damage_piercing_pct",-1)),6.0),"A07:NPC_PAR053_source_key")
+		_check(is_equal_approx(float(fighter.combat_stats.get("damage_reduction_pct",-1)),7.0),"A07:NPC_PAR135_source_key")
+		_check(is_equal_approx(float(fighter.combat_stats.get("shield_auto_block_direct_pct",-1)),6.0),"A07:NPC_PAR071_plus_existing_overlay")
+		_check(is_equal_approx(float(fighter.combat_stats.get("armour_penetration_flat",-1)),11.0),"A07:NPC_PAR125_alias_unchanged")
+		_check(is_equal_approx(float(fighter.combat_stats.get("armour_penetration_percent",-1)),0.12),"A07:NPC_PAR126_alias_unchanged")
+		_check(is_equal_approx(float(fighter.combat_stats.get("hit_chance_rating",-1)),0.0),"A07:NPC_no_unapproved_primary_derived_rating")
+		_check(is_equal_approx(float(fighter.combat_stats.get("hit_chance_rating_percent",-1)),RatingMatrix.to_percent(0.0,npc.level)),"A07:NPC_uses_existing_RatingMatrix")
+	var expected_source_keys := CharacterStatsService.par_source_fields(totals,[
+		"PAR015","PAR016","PAR053","PAR054","PAR055","PAR056","PAR071","PAR072","PAR135"
+	])
+	_check(is_equal_approx(float(expected_source_keys.get("shield_auto_block",-1)),4.0),"A07:source_key_projection_uses_registry")
+	_check(is_equal_approx(float(expected_source_keys.get("mana_regen_round",-1)),2.0),"A07:source_key_projection_keeps_PAR015")
+
+	var hero := CharacterState.new("a07_projection_character","Projection Test",5)
+	var repo := ItemRepository.new()
+	var par := ParCalculationService.calculate(hero,repo)
+	var hero_snapshot := CharacterStatsService.snapshot(hero,repo,{},par)
+	_check(not hero_snapshot.is_empty(),"A07:CHAR_snapshot_available")
+	var char_fields := CharacterStatsService.par_source_fields(Dictionary(par.get("totals",{})))
+	for key in char_fields:
+		_check(hero_snapshot.has(key) and hero_snapshot[key]==char_fields[key],"A07:CHAR_projection_"+String(key))
+
 
 func _abi_to_eff_references() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
