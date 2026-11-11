@@ -17,6 +17,7 @@ func _initialize() -> void:
 	_dagger_legacy_action_uses_canonical_bonus()
 	_dagger_poison_proc_from_eff()
 	_abi_target_limits_from_catalog()
+	_legacy_abi_target_cap_fallback()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
 	_sword_hit_ap_and_critical_numbers_from_catalog()
@@ -83,6 +84,34 @@ func _abi_target_limits_from_catalog() -> void:
 		else:
 			AxeAbiCombatService.dispatch(engine,limited)
 		_check(Array(limited.result.get("child_event_ids",[])).size() == 2,id+":target_cap_dispatch")
+
+## Queued combat ACTIONs from before the max_targets field existed
+## must retain the authored AoE size, not silently fall back to one target.
+func _legacy_abi_target_cap_fallback() -> void:
+	for spec in [
+		{"abi":"ABI302","class":"sword","mode":"aoe_3","count":3},
+		{"abi":"ABI307","class":"sword","mode":"dodge_ultimate","count":5},
+		{"abi":"ABI403","class":"dagger","mode":"","count":5},
+		{"abi":"ABI508","class":"axe","mode":"","count":3}
+	]:
+		var ctx := _pair(String(spec["class"]),"hammer")
+		var state: CombatState = ctx["state"]
+		var engine: CombatEngine = ctx["engine"]
+		for i in range(4):
+			state.add_combatant(_fighter("legacy_extra_"+str(i),"hammer"))
+		var id := String(spec["abi"])
+		var action := state.create_event(CombatEvent.Kind.ACTION,"left","right",{
+			"ability_id":id,"source_kind":"ability","zone":"chest",
+			"sword_ability_mode":String(spec["mode"]),"ap_spent":1
+		})
+		if String(spec["class"]) == "sword":
+			SwordAbiCombatService.dispatch(engine,action)
+		elif String(spec["class"]) == "dagger":
+			DaggerAbiCombatService.dispatch(engine,action)
+		else:
+			AxeAbiCombatService.dispatch(engine,action)
+		_check(Array(action.result.get("child_event_ids",[])).size()==int(spec["count"]),id+":legacy_target_cap_from_catalog")
+
 
 ## Changed test-only ABI501/ABI601 bonuses must reach the first ordinary
 ## MH attack and real CombatEngine damage without any repeated +20 constant.
