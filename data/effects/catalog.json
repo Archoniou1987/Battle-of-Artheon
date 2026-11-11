@@ -339,6 +339,9 @@
       "fields": [
         "armour_reduction_pct"
       ]
+    },
+    "application_context_fields": {
+      "armour_zone": "hammer_fracture_zone"
     }
   },
   "EFF604": {
