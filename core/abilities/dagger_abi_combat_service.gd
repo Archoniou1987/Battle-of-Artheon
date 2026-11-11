@@ -108,6 +108,8 @@ static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: 
 	var payload := CombatDamagePayload.ability_attack_payload(action,component,damage,1.0)
 	payload["rolls"] = engine.complete_attack_rolls(Dictionary(action.payload.get("rolls",{})))
 	payload["dagger_abi_id"] = String(action.payload.get("ability_id",""))
+	if String(action.payload.get("ability_id","")) == QUICK:
+		payload["dagger_ap_gain_on_hit"] = int(AbilityCatalog.number(QUICK,"ap_gain",action.payload))
 	for key in extras:
 		payload[key] = extras[key]
 	var attack := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,target_id,payload,action.event_id)
@@ -144,7 +146,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("poison_stacks_consumed",poison_stacks)
 	var ids: Array[int] = []
 	if id == QUICK:
-		var damage := CombatMath.roll_damage(float(mh.get("damage_min",0.0)),float(mh.get("damage_max",0.0)),engine.combat_rng.randf()) * 0.20
+		var damage := CombatMath.roll_damage(float(mh.get("damage_min",0.0)),float(mh.get("damage_max",0.0)),engine.combat_rng.randf()) * AbilityCatalog.number(QUICK,"damage_multiplier",action.payload)
 		var hit := _queue_attack(engine,action,action.target_id,mh,damage)
 		if hit > 0: ids.append(hit)
 	elif id == DEF_FAN:
@@ -152,7 +154,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			var fan_hit := _queue_attack(engine,action,enemy_id,mh,mh_average+oh_average)
 			if fan_hit > 0: ids.append(fan_hit)
 	elif id == DEF_COMBO or id == ATTACK_HEAVY:
-		var multiplier := 1.0 + 0.10 * float(poison_stacks) if id == DEF_COMBO else 1.0
+		var multiplier := 1.0 + AbilityCatalog.number(DEF_COMBO,"poison_damage_bonus_per_stack",action.payload) * float(poison_stacks) if id == DEF_COMBO else 1.0
 		var mh_hit := _queue_attack(engine,action,action.target_id,mh,mh_average*multiplier)
 		if mh_hit > 0: ids.append(mh_hit)
 		var oh_hit := _queue_attack(engine,action,action.target_id,oh,oh_average*multiplier)
@@ -160,16 +162,16 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	elif id == ATTACK_FLURRY:
 		for i in range(poison_stacks):
 			var current := mh if i % 2 == 0 else oh
-			var strike := _queue_attack(engine,action,action.target_id,current,_average(current)*0.60,{"dagger_strike_index":i})
+			var strike := _queue_attack(engine,action,action.target_id,current,_average(current)*AbilityCatalog.number(ATTACK_FLURRY,"strike_damage_multiplier",action.payload),{"dagger_strike_index":i})
 			if strike > 0: ids.append(strike)
 	elif id == PEN_DEEP:
 		# Existing breach stacks determine damage; converted poison adds breach only on hit.
-		var converted_breach := mini(_effect_stack_cap(target,AbilityCatalog.effect_id(PEN_DEEP,"on_hit"),engine.state.round_number),poison_stacks / 2)
+		var converted_breach := mini(_effect_stack_cap(target,AbilityCatalog.effect_id(PEN_DEEP,"on_hit"),engine.state.round_number),poison_stacks / maxi(1,int(AbilityCatalog.number(PEN_DEEP,"poison_stacks_per_breach",action.payload))))
 		action.set_result("breach_stacks_to_apply",converted_breach)
-		var pierce := _queue_attack(engine,action,action.target_id,mh,mh_average*0.50*float(breach_stacks),{"dagger_breach_on_hit":converted_breach})
+		var pierce := _queue_attack(engine,action,action.target_id,mh,mh_average*AbilityCatalog.number(PEN_DEEP,"breach_damage_multiplier",action.payload)*float(breach_stacks),{"dagger_breach_on_hit":converted_breach})
 		if pierce > 0: ids.append(pierce)
 	elif id == PEN_ABSOLUTE:
-		var extras := {"dagger_armour_bypass_pct":20.0*float(breach_stacks)}
+		var extras := {"dagger_armour_bypass_pct":AbilityCatalog.number(PEN_ABSOLUTE,"armour_bypass_pct_per_breach_stack",action.payload)*float(breach_stacks)}
 		var mh_pierce := _queue_attack(engine,action,action.target_id,mh,mh_average,extras)
 		if mh_pierce > 0: ids.append(mh_pierce)
 		var oh_pierce := _queue_attack(engine,action,action.target_id,oh,oh_average,extras)
@@ -180,7 +182,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attacker: CombatantState) -> void:
 	var abi := String(attack.payload.get("dagger_abi_id",""))
 	if abi == QUICK:
-		attacker.gain_action_points(1)
+		attacker.gain_action_points(int(attack.payload.get("dagger_ap_gain_on_hit",AbilityCatalog.number(QUICK,"ap_gain"))))
 		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(QUICK))
 		return
 	if abi == PEN_DEEP:
@@ -213,5 +215,6 @@ static func on_effect_applied(engine: CombatEngine, event: CombatEvent) -> void:
 	if String(event.payload.get("effect_id","")) != AbilityCatalog.effect_id(COATING,"on_weapon_hit") or not bool(event.result.get("resolved",false)):
 		return
 	var source := engine.state.get_combatant(event.source_id)
-	if source != null and engine.combat_rng.randf() < 0.05:
-		source.gain_action_points(1)
+	var definition := EffectCatalog.definition(engine.canonical_effects,AbilityCatalog.effect_id(COATING,"on_weapon_hit"))
+	if source != null and engine.combat_rng.randf() < float(definition.get("ap_gain_on_apply_chance_pct",0.0))/100.0:
+		source.gain_action_points(int(definition.get("ap_gain_on_apply",0)))
