@@ -183,7 +183,10 @@ static func on_dodge(engine: CombatEngine, incoming: CombatEvent, defender: Comb
 		if String(record.get("effect_id","")) == STANCE_EFF:
 			stance = record
 			break
-	if stance.is_empty() or int(stance.get("axe_counter_count",0)) >= 5:
+	if stance.is_empty():
+		return
+	var counter_cap := maxi(0,int(Dictionary(stance.get("definition",{})).get("counterattack_cap",0)))
+	if int(stance.get("axe_counter_count",0)) >= counter_cap:
 		return
 	var profile := _weapon(defender)
 	if profile.is_empty() or not _enemy(engine,defender.combatant_id,incoming.source_id):
