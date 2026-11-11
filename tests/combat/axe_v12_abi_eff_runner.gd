@@ -186,5 +186,15 @@ func _run() -> void:
 			_check(_attacks(shield,"ABI508").size()==1,"shieldbreaker_single_target")
 			_check(_effect(shield.fighter(true),"EFF501").is_empty(),"shieldbreaker_spends_rage")
 
+
+	# A saved EFF snapshot must control stacks independently of ABI507 needs.
+	if shield != null:
+		_give_rage(shield.fighter(true),8)
+		var rage_record := _effect(shield.fighter(true),"EFF501")
+		var capped_rage: Dictionary = Dictionary(rage_record.get("definition",{})).duplicate(true)
+		capped_rage["max_stacks"] = 3
+		rage_record["definition"] = capped_rage
+		_check(AxeAbiCombatService.rage_stacks(shield.fighter(true),shield.state.round_number)==3,"rage_stack_cap_from_eff_snapshot")
+
 	print("AXE_V12_ABI_EFF=",("PASS" if problems.is_empty() else "FAIL")," problems=",problems)
 	quit(0 if problems.is_empty() else 1)
