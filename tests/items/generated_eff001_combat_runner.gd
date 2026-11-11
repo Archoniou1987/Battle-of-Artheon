@@ -34,14 +34,16 @@ func _init() -> void:
 	var bleed_ticks := 0
 	var bleed_damage := 0
 	var source_ok := true
+	var target_ok := true
 	for event in state.event_log:
 		if event.kind == CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id", "")) == "EFF001":
 			effect_events += 1
+			target_ok = target_ok and event.target_id == "EFF_ENEMY"
 		if event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("effect_id", "")) == "EFF001":
 			bleed_ticks += 1
 			bleed_damage += int(event.result.get("hp_removed", 0))
 			source_ok = source_ok and event.source_id == "EFF_HERO"
-	var ok: bool = equipped and effect_events > 0 and bleed_ticks > 0 and bleed_damage > 0 and source_ok
+	var ok: bool = equipped and effect_events > 0 and bleed_ticks > 0 and bleed_damage > 0 and source_ok and target_ok
 	print("GENERATED_EFF001_COMBAT effects=", effect_events, " bleed_ticks=", bleed_ticks, " bleed_damage=", bleed_damage, " source_ok=", source_ok, " rounds=", result.get("rounds", 0))
 	print("GENERATED_EFF001_COMBAT_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
