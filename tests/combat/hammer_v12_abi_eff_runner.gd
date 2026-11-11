@@ -176,5 +176,18 @@ func _run() -> void:
 				_check(int(crush_attacks[0].payload.get("hammer_formal_tempo_delta",0))==-200,"tempo_delta_formal_only")
 			_check(HammerAbiCombatService.charges(attack.fighter(true),attack.state.round_number)<=5,"crush_consumes_all")
 
+
+	# The applied EFF601 snapshot controls both charge reads and new gains.
+	if attack != null:
+		_give_charges(attack,100)
+		var charge_record := _effect(attack.fighter(true),"EFF601")
+		var capped_charge_definition: Dictionary = Dictionary(charge_record.get("definition",{})).duplicate(true)
+		capped_charge_definition["max_stacks"] = 7
+		charge_record["definition"] = capped_charge_definition
+		_check(HammerAbiCombatService.charges(attack.fighter(true),attack.state.round_number)==7,"charge_stack_cap_from_eff_snapshot")
+		charge_record["stacks"] = 6
+		HammerAbiCombatService.gain_charges(attack.engine,attack.fighter(true),10)
+		_check(int(charge_record.get("stacks",0))==7,"charge_gain_respects_eff_snapshot_cap")
+
 	print("HAMMER_V12_ABI_EFF=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
