@@ -17,6 +17,17 @@ static func definition(effects: Dictionary, effect_id: String) -> Dictionary:
 	var value: Variant = effects.get(effect_id, {})
 	return value if value is Dictionary else {}
 
+## Stack caps belong to EFF; applied snapshots take precedence.
+static var _canonical_stack_definitions: Dictionary = {}
+
+static func stack_cap(effect_id: String, applied_definition: Dictionary = {}) -> int:
+	var source: Dictionary = applied_definition
+	if not source.has("max_stacks"):
+		if _canonical_stack_definitions.is_empty():
+			_canonical_stack_definitions = load_json()
+		source = definition(_canonical_stack_definitions,effect_id)
+	return maxi(1,int(source.get("max_stacks",1)))
+
 ## EFF owns duration rules; ABI only provides application context.
 static func application_duration_rounds(definition: Dictionary, context: Dictionary = {}) -> int:
 	var policy: Variant = definition.get("duration_from_charges", null)
