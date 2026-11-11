@@ -24,6 +24,8 @@ func _initialize() -> void:
 	_hammer_charge_magic_resist_versus_penetration()
 	_axe_rage_value_comes_from_eff()
 	_axe_abi_coefficients_from_catalog()
+	_hammer_abi_coefficients_from_catalog()
+	_hammer_eff601_charge_generation()
 	_dagger_poison_versus_hammer_reflection()
 	_axe_counter_versus_dagger_dodge()
 	_hammer_tempo_versus_axe_immunity()
@@ -266,6 +268,133 @@ func _axe_abi_coefficients_from_catalog() -> void:
 	AxeAbiCombatService.dispatch(crusher_engine,crusher_action)
 	_check(String(crusher_action.result.get("outcome",""))=="crusher_applied","ABI507:custom_requirement_from_abi")
 	_check(AxeAbiCombatService.rage_stacks(crusher_actor,crusher_state.round_number)==0,"ABI507:consumes_rage_on_activation")
+
+## Production hammer dispatch must honor changed test-only ABI coefficients.
+## EFF601 stacks, EFF603 duration and EFF604 magnitude stay in their catalogs.
+func _hammer_abi_coefficients_from_catalog() -> void:
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var heavy_ctx := _pair("hammer","axe")
+	var heavy_state: CombatState = heavy_ctx["state"]
+	var heavy_engine: CombatEngine = heavy_ctx["engine"]
+	var heavy_actor := heavy_state.get_combatant("left")
+	var heavy_profile: Dictionary = WeaponAttackProfile.all(heavy_actor)[0]
+	var rolls := {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
+	var mh := heavy_state.create_event(CombatEvent.Kind.ATTACK,"left","right",WeaponAttackProfile.attack_payload(heavy_profile,rolls,"chest"))
+	var heavy_def: Dictionary = Dictionary(defs["ABI601"]).duplicate(true)
+	heavy_def["tempo_control_on_hit"] = 39
+	var heavy_action := AbilityRuntime.build_action_event(heavy_state,"left","right","ABI601",heavy_def)
+	var heavy_round := CombatRound.new(heavy_state.round_number)
+	heavy_round.lock_action(mh)
+	heavy_round.lock_action(heavy_action)
+	heavy_round.resolve(heavy_engine)
+	_check(is_equal_approx(float(mh.payload.get("hammer_tempo_control_on_hit",-1.0)),39.0),"ABI601:tempo_value_from_action_snapshot")
+	_check(String(mh.result.get("outcome",""))=="connected","ABI601:tempo_fixture_hit_connected")
+	_check(is_equal_approx(float(mh.result.get("tempo_control_applied",-1.0)),39.0),"ABI601:tempo_39_on_hit")
+
+	var heal_ctx := _pair("hammer","axe")
+	var heal_state: CombatState = heal_ctx["state"]
+	var heal_engine: CombatEngine = heal_ctx["engine"]
+	var healer := heal_state.get_combatant("left")
+	HammerAbiCombatService.gain_charges(heal_engine,healer,80)
+	healer.hp = 6000
+	var heal_def: Dictionary = Dictionary(defs["ABI603"]).duplicate(true)
+	heal_def["charge_spend_fraction"] = 0.30
+	heal_def["heal_hp_pct_per_spent_charge"] = 0.70
+	var heal_action := AbilityRuntime.build_action_event(heal_state,"left","left","ABI603",heal_def)
+	HammerAbiCombatService.dispatch(heal_engine,heal_action)
+	heal_engine.resolve_pending_events()
+	_check(int(heal_action.result.get("charges_consumed",-1))==24,"ABI603:custom_charge_spend")
+	_check(healer.hp==7680,"ABI603:custom_heal_per_spent_charge")
+	_check(HammerAbiCombatService.charges(healer,heal_state.round_number)==56,"ABI603:spent_only_24_charges")
+
+	var surge_ctx := _pair("hammer","axe")
+	var surge_state: CombatState = surge_ctx["state"]
+	var surge_engine: CombatEngine = surge_ctx["engine"]
+	var surger := surge_state.get_combatant("left")
+	HammerAbiCombatService.gain_charges(surge_engine,surger,80)
+	var surge_def: Dictionary = Dictionary(defs["ABI605"]).duplicate(true)
+	surge_def["charge_spend_fraction"] = 0.40
+	var surge_action := AbilityRuntime.build_action_event(surge_state,"left","left","ABI605",surge_def)
+	HammerAbiCombatService.dispatch(surge_engine,surge_action)
+	surge_engine.resolve_pending_events()
+	_check(int(surge_action.result.get("charges_consumed",-1))==32,"ABI605:custom_charge_spend")
+	_check(HammerAbiCombatService.charges(surger,surge_state.round_number)==48,"ABI605:spent_32_charges")
+	var surge_record := _active_effect(surger,"EFF604")
+	var surge_effect: Dictionary = surge_record.get("definition",{})
+	_check(is_equal_approx(float(surge_effect.get("physical_damage_outgoing_direct_pct",-1.0)),25.0),"EFF604:surge_strength_cap_independent_from_abi_spend")
+	_check(is_equal_approx(float(surge_effect.get("damage_lifesteal_pct",-1.0)),20.0),"EFF604:lifesteal_unchanged")
+
+	var fracture_ctx := _pair("hammer","axe")
+	var fracture_state: CombatState = fracture_ctx["state"]
+	var fracture_engine: CombatEngine = fracture_ctx["engine"]
+	var fracturer := fracture_state.get_combatant("left")
+	HammerAbiCombatService.gain_charges(fracture_engine,fracturer,40)
+	var fracture_def: Dictionary = Dictionary(defs["ABI604"]).duplicate(true)
+	fracture_def["damage_multiplier"] = 1.8
+	var fracture_action := AbilityRuntime.build_action_event(fracture_state,"left","right","ABI604",fracture_def)
+	HammerAbiCombatService.dispatch(fracture_engine,fracture_action)
+	var fracture_attacks: Array[CombatEvent] = []
+	for pending in fracture_state.pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("hammer_abi_id",""))=="ABI604":
+			fracture_attacks.append(pending)
+	_check(fracture_attacks.size()==1,"ABI604:one_fracture_attack")
+	if not fracture_attacks.is_empty():
+		_check(is_equal_approx(float(fracture_attacks[0].payload.get("raw_damage",-1.0)),180.0),"ABI604:custom_multiplier_from_abi")
+		_check(int(fracture_attacks[0].payload.get("hammer_fracture_charges",-1))==40,"ABI604:charge_count_sent_to_eff")
+	_check(HammerAbiCombatService.charges(fracturer,fracture_state.round_number)==0,"ABI604:all_charges_consumed")
+
+	var crush_ctx := _pair("hammer","axe")
+	var crush_state: CombatState = crush_ctx["state"]
+	var crush_engine: CombatEngine = crush_ctx["engine"]
+	var crusher := crush_state.get_combatant("left")
+	HammerAbiCombatService.gain_charges(crush_engine,crusher,80)
+	var crush_def: Dictionary = Dictionary(defs["ABI606"]).duplicate(true)
+	crush_def["damage_multiplier_per_charge"] = 0.04
+	crush_def["max_damage_multiplier"] = 2.2
+	crush_def["tempo_control_per_charge"] = 3
+	crush_def["max_tempo_control"] = 160
+	var crush_action := AbilityRuntime.build_action_event(crush_state,"left","right","ABI606",crush_def)
+	HammerAbiCombatService.dispatch(crush_engine,crush_action)
+	var crush_attacks: Array[CombatEvent] = []
+	for pending in crush_state.pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("hammer_abi_id",""))=="ABI606":
+			crush_attacks.append(pending)
+	_check(crush_attacks.size()==1,"ABI606:one_crush_attack")
+	if not crush_attacks.is_empty():
+		_check(is_equal_approx(float(crush_attacks[0].payload.get("raw_damage",-1.0)),220.0),"ABI606:custom_damage_multiplier_and_cap")
+		_check(int(crush_attacks[0].payload.get("hammer_formal_tempo_delta",0))==-160,"ABI606:custom_tempo_per_charge_and_cap")
+	_check(HammerAbiCombatService.charges(crusher,crush_state.round_number)==0,"ABI606:all_charges_consumed")
+
+
+## EFF601, not ABI, owns passive generation numbers and active snapshots.
+func _hammer_eff601_charge_generation() -> void:
+	var ctx := _pair("hammer","axe")
+	var engine: CombatEngine = ctx["engine"]
+	var state: CombatState = ctx["state"]
+	var hammer := state.get_combatant("left")
+	engine.canonical_effects["EFF601"]["charges_per_ordinary_mh_hit"] = 7
+	engine.canonical_effects["EFF601"]["charges_per_positive_damage_event_taken"] = 4
+	var first := _attack(ctx,"left","right")
+	_check(String(first.result.get("outcome",""))=="connected","EFF601:ordinary_mh_connected")
+	_check(HammerAbiCombatService.charges(hammer,state.round_number)==7,"EFF601:initial_charges_from_catalog")
+	var charge_record := _active_effect(hammer,"EFF601")
+	_check(not charge_record.is_empty(),"EFF601:charge_record_created")
+	if charge_record.is_empty():
+		return
+	var existing: Dictionary = Dictionary(charge_record.get("definition",{})).duplicate(true)
+	existing["charges_per_ordinary_mh_hit"] = 2
+	existing["charges_per_positive_damage_event_taken"] = 4
+	charge_record["definition"] = existing
+	var second := _attack(ctx,"left","right")
+	_check(String(second.result.get("outcome",""))=="connected","EFF601:second_mh_connected")
+	_check(HammerAbiCombatService.charges(hammer,state.round_number)==9,"EFF601:active_snapshot_controls_next_hit")
+	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE,"right","left",{
+		"amount":1000.0,"damage_type":"physical","source":"charge_generation_test"
+	})
+	engine.resolve_event(damage_event)
+	_check(int(damage_event.result.get("final_damage",0))>0,"EFF601:positive_incoming_damage_fixture")
+	_check(HammerAbiCombatService.charges(hammer,state.round_number)==13,"EFF601:active_snapshot_controls_damage_taken")
+
 
 func _damage_type(weapon_class: String) -> String:
 	match weapon_class:
