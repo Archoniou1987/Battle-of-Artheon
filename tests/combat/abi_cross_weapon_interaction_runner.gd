@@ -241,6 +241,16 @@ func _dynamic_effects_from_catalog() -> void:
 	_check(is_equal_approx(float(surge_definition.get("magic_damage_direct_pct",-1)),24.0),"hammer:contextual_magic_surge_and_cap")
 	_check(is_equal_approx(float(surge_definition.get("damage_lifesteal_pct",-1)),20.0),"hammer:lifesteal_unchanged")
 
+	# Fracture's magnitude and bounds belong to EFF603 as well.
+	hammer_engine.canonical_effects["EFF603"]["contextual_modifier"]["per_unit"] = 0.5
+	hammer_engine.canonical_effects["EFF603"]["contextual_modifier"]["maximum"] = 40
+	_effect(hammer_ctx,"left","right","EFF603",{"hammer_fracture_charges":100,"hammer_fracture_zone":"legs"},true)
+	var fracture := _active_effect(hammer_state.get_combatant("right"),"EFF603")
+	var fracture_definition: Dictionary = fracture.get("definition",{})
+	_check(is_equal_approx(float(fracture_definition.get("armour_reduction_pct",-1)),40.0),"hammer:fracture_magnitude_from_eff_and_cap")
+	_check(int(fracture_definition.get("duration_rounds",-1))==10,"hammer:fracture_duration_unchanged")
+	_check(String(fracture_definition.get("armour_zone",""))=="legs","hammer:fracture_zone_unchanged")
+
 	# A queued pre-migration event keeps its already-computed application value.
 	var old_event := _effect(hammer_ctx,"left","left","EFF604",{"hammer_surge_pct":11.0},true)
 	_check(bool(old_event.result.get("resolved",false)),"hammer:legacy_event_resolved")
