@@ -99,7 +99,7 @@ static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 	else:
 		var target := engine.state.get_combatant(action.target_id)
 		var breach := _active_stacks(target,AbilityCatalog.effect_id(DEF_COMBO,"read_breach"),engine.state.round_number)
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_COMBO,"pre_attack"),true,{"dagger_dodge_pct":5.0 * float(breach)})
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_COMBO,"pre_attack"),true,{"dagger_breach_stacks":breach})
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
 	if profile.is_empty() or damage < 0.0:
