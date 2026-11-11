@@ -20,6 +20,7 @@ func _initialize() -> void:
 	_legacy_abi_target_cap_fallback()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
+	_eff_sword_scaling_ownership()
 	_sword_hit_ap_and_critical_numbers_from_catalog()
 	_dynamic_effects_from_catalog()
 	_dagger_breach_versus_hammer_armour()
@@ -630,6 +631,43 @@ func _sword_effect_strength_from_catalog() -> void:
 	_check(is_equal_approx(CombatModifierService.modifier(target,"physical_damage_outgoing_direct_pct",state.round_number),-21.0),"sword:cripple_strength_from_eff")
 	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_dodge_direct_pct",state.round_number),-30.0),"sword:slow_strength_from_eff_and_level_cap")
 	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_crit_direct_pct",state.round_number),-45.0),"sword:lost_strength_from_eff_and_level_cap")
+
+## Test-only EFF changes prove COMBAT does not own level formulas or
+## which source effect is sampled at cast time. All runtime EFF snapshots
+## still store their resolved strength, not a duplicate balance catalog.
+func _eff_sword_scaling_ownership() -> void:
+	var ctx := _pair("sword","axe")
+	var engine: CombatEngine = ctx["engine"]
+	var state: CombatState = ctx["state"]
+	var target := state.get_combatant("right")
+	engine.canonical_effects["EFF301"]["damage"] = 4.0
+	engine.canonical_effects["EFF301"]["max_effect_level"] = 3
+	_effect(ctx,"left","right","EFF301",{"sword_stacks_to_apply":4,"sword_eff_level":20})
+	var bleed := _active_effect(target,"EFF301")
+	_check(is_equal_approx(float(Dictionary(bleed.get("definition",{})).get("damage",-1)),12.0),"EFF301:level_cap_and_damage_from_EFF")
+
+	_effect(ctx,"left","right","EFF401",{"sword_stacks_to_apply":2})
+	# EFF302 deliberately samples a DIFFERENT active effect in this fixture.
+	# An embedded EFF301 switch in Combat would yield -20 instead of -10.
+	engine.canonical_effects["EFF302"]["snapshot_from"] = "EFF401"
+	engine.canonical_effects["EFF302"]["physical_damage_outgoing_direct_pct"] = -5.0
+	var cripple := _effect(ctx,"left","right","EFF302",{"sword_eff_level":20})
+	var cripple_def: Dictionary = _active_effect(target,"EFF302").get("definition",{})
+	_check(int(cripple.result.get("sword_bleed_snapshot",-1))==2,"EFF302:snapshot_source_from_catalog")
+	_check(is_equal_approx(float(cripple_def.get("physical_damage_outgoing_direct_pct",0.0)),-10.0),"EFF302:snapshot_strength_from_catalog")
+
+	engine.canonical_effects["EFF303"]["anti_dodge_direct_pct"] = -3.0
+	engine.canonical_effects["EFF303"]["application_scaling"]["use_level"] = false
+	var slow := _effect(ctx,"left","right","EFF303",{"sword_eff_level":20})
+	var slow_def: Dictionary = _active_effect(target,"EFF303").get("definition",{})
+	_check(int(slow.result.get("sword_bleed_snapshot",-1))==4,"EFF303:bleeding_snapshot_four")
+	_check(is_equal_approx(float(slow_def.get("anti_dodge_direct_pct",0.0)),-12.0),"EFF303:level_scaling_disabled_in_EFF")
+
+	engine.canonical_effects["EFF304"]["anti_crit_direct_pct"] = -2.0
+	engine.canonical_effects["EFF304"]["max_effect_level"] = 2
+	_effect(ctx,"left","right","EFF304",{"sword_eff_level":20})
+	var lost_def: Dictionary = _active_effect(target,"EFF304").get("definition",{})
+	_check(is_equal_approx(float(lost_def.get("anti_crit_direct_pct",0.0)),-16.0),"EFF304:level_cap_and_stacks_owned_by_EFF")
 
 ## Real ABI paths must pass raw counts; EFF decides the % and its cap.
 ## Per-unit and max values are changed in fixture only, leaving balance intact.
