@@ -425,7 +425,8 @@
     "ap_gain": 2,
     "application_timing": "standard",
     "axe_ability_mode": "unblockable",
-    "trigger_previous_round": "crit_or_block_crush"
+    "trigger_previous_round": "crit_or_block_crush",
+    "attack_damage_pct": 120
   },
   "ABI503": {
     "name": "Подсекающий удар",
@@ -448,7 +449,8 @@
     "axe_ability_mode": "def_sweep",
     "effect_refs": {
       "on_hit": "EFF502"
-    }
+    },
+    "attack_damage_pct": 120
   },
   "ABI504": {
     "name": "Стойка возмездия",
@@ -491,7 +493,8 @@
     "axe_ability_mode": "attack_breaker",
     "effect_refs": {
       "pre_attack": "EFF504"
-    }
+    },
+    "attack_damage_pct": 120
   },
   "ABI506": {
     "name": "Смертельный удар",
@@ -511,7 +514,10 @@
     "ap_cost": 5,
     "ap_gain": 0,
     "application_timing": "standard",
-    "axe_ability_mode": "attack_execute"
+    "axe_ability_mode": "attack_execute",
+    "execute_hp_threshold_fraction": 0.2,
+    "min_rage_stacks": 1,
+    "damage_pct_per_rage_stack": 75
   },
   "ABI507": {
     "name": "Крушитель",
@@ -531,7 +537,8 @@
     "ap_cost": 3,
     "ap_gain": 0,
     "application_timing": "instant",
-    "axe_ability_mode": "crusher"
+    "axe_ability_mode": "crusher",
+    "required_rage_stacks": 5
   },
   "ABI508": {
     "name": "Удар щитолома",
@@ -552,7 +559,10 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "axe_ability_mode": "shieldbreaker",
-    "max_targets": 3
+    "max_targets": 3,
+    "single_target_damage_pct": 150,
+    "multi_target_damage_pct": 50,
+    "damage_pct_per_rage_stack": 20
   },
   "ABI601": {
     "name": "Тяжёлый удар",
