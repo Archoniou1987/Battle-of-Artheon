@@ -28,27 +28,56 @@ static func stack_cap(effect_id: String, applied_definition: Dictionary = {}) ->
 		source = definition(_canonical_stack_definitions,effect_id)
 	return maxi(1,int(source.get("max_stacks",1)))
 
-## Apply only EFF-defined numeric rules. ABI passes counts/spent charges,
-## while old queued events may still provide their already-computed value.
+## EFF-defined contextual magnitudes and level/snapshot scaling.
+## COMBAT supplies the application context and target's active records;
+## it never owns the magnitude formulas for any individual EFF.
 static func application_modifiers(definition: Dictionary, context: Dictionary = {}) -> Dictionary:
-	var raw: Variant = definition.get("contextual_modifier", null)
-	if not raw is Dictionary:
-		return definition
-	var rule: Dictionary = raw
-	var input_field := String(rule.get("input_field",""))
-	var legacy_field := String(rule.get("legacy_value_field",""))
-	var value := 0.0
-	if context.has(input_field):
-		value = float(context[input_field]) * float(rule.get("per_unit",1.0))
-	elif context.has(legacy_field):
-		value = float(context[legacy_field])
-	var lower := float(rule.get("minimum",0.0))
-	var upper := maxf(lower,float(rule.get("maximum",100.0)))
-	value = clampf(value,lower,upper)
-	var resolved := definition.duplicate(true)
-	for field in Array(rule.get("fields",[])):
-		resolved[String(field)] = value
+	var resolved := definition
+	var raw: Variant = definition.get("contextual_modifier",null)
+	if raw is Dictionary:
+		var rule: Dictionary = raw
+		var input_field := String(rule.get("input_field",""))
+		var legacy_field := String(rule.get("legacy_value_field",""))
+		var value := 0.0
+		if context.has(input_field):
+			value = float(context[input_field]) * float(rule.get("per_unit",1.0))
+		elif context.has(legacy_field):
+			value = float(context[legacy_field])
+		var lower := float(rule.get("minimum",0.0))
+		var upper := maxf(lower,float(rule.get("maximum",100.0)))
+		value = clampf(value,lower,upper)
+		resolved = resolved.duplicate(true)
+		for field in Array(rule.get("fields",[])):
+			resolved[String(field)] = value
+	var scaling: Variant = definition.get("application_scaling",null)
+	if scaling is Dictionary:
+		var rule: Dictionary = scaling
+		var factor := 1.0
+		if bool(rule.get("use_level",false)):
+			var level_field := String(rule.get("level_field","effect_level"))
+			var ceiling := maxi(1,int(definition.get("max_effect_level",1)))
+			factor *= float(clampi(int(context.get(level_field,1)),1,ceiling))
+		if bool(rule.get("use_snapshot_stacks",false)):
+			factor *= float(maxi(0,int(context.get("effect_snapshot_stacks",0))))
+		resolved = resolved.duplicate(true)
+		for field in Array(rule.get("fields",[])):
+			var key := String(field)
+			resolved[key] = float(definition.get(key,0.0))*factor
 	return resolved
+
+## The named source is EFF-owned (snapshot_from), never embedded in COMBAT.
+## Match the first still-present active record, preserving historical casts.
+static func application_snapshot_stacks(definition: Dictionary, active_effects: Array) -> int:
+	var source_id := String(definition.get("snapshot_from",""))
+	if source_id.is_empty():
+		return 0
+	for raw in active_effects:
+		if not raw is Dictionary:
+			continue
+		var record: Dictionary = raw
+		if String(record.get("effect_id","")) == source_id and int(record.get("remaining_rounds",0))>0:
+			return int(record.get("stacks",0))
+	return 0
 
 ## EFF owns duration rules; ABI only provides application context.
 static func application_duration_rounds(definition: Dictionary, context: Dictionary = {}) -> int:
