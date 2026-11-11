@@ -13,6 +13,8 @@ func _check(ok: bool, label: String) -> void:
 func _initialize() -> void:
 	_abi_to_eff_references()
 	_abi_mh_bonus_ownership()
+	_dagger_abi_coefficients_from_catalog()
+	_dagger_poison_proc_from_eff()
 	_abi_target_limits_from_catalog()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
@@ -105,6 +107,69 @@ func _abi_mh_bonus_ownership() -> void:
 		_check(is_equal_approx(float(mh.payload.get(payload_key,-1.0)),float(case["bonus"])),id+":MH_bonus_attached_from_ABI")
 		_check(String(mh.result.get("outcome","")) == "connected",id+":MH_hit_connected")
 		_check(is_equal_approx(float(mh.result.get("raw_damage",-1.0)),100.0*(1.0+float(case["bonus"])/100.0)),id+":MH_damage_follows_ABI_bonus")
+
+## The production dagger dispatch must obey changed test-only ABI values,
+## including old events which did not yet carry their ABI numeric fields.
+func _dagger_abi_coefficients_from_catalog() -> void:
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	for scenario in [
+		{"abi":"ABI401","overrides":{"damage_multiplier":0.37,"ap_gain":3},"poison":0,"breach":0,"expected_damage":[37.0]},
+		{"abi":"ABI404","overrides":{"poison_damage_bonus_per_stack":0.27},"poison":2,"breach":0,"expected_damage":[154.0,115.5]},
+		{"abi":"ABI406","overrides":{"strike_damage_multiplier":0.42},"poison":3,"breach":0,"expected_damage":[42.0,31.5,42.0]},
+		{"abi":"ABI407","overrides":{"breach_damage_multiplier":0.80,"poison_stacks_per_breach":3},"poison":5,"breach":2,"expected_damage":[160.0]},
+		{"abi":"ABI408","overrides":{"armour_bypass_pct_per_breach_stack":11.0},"poison":0,"breach":3,"expected_damage":[100.0,75.0]}
+	]:
+		var id := String(scenario["abi"])
+		var ctx := _pair("dagger","axe")
+		var state: CombatState = ctx["state"]
+		var engine: CombatEngine = ctx["engine"]
+		var defender := state.get_combatant("right")
+		for spec in [
+			{"eff":"EFF403","count":int(scenario["poison"])},
+			{"eff":"EFF401","count":int(scenario["breach"])}
+		]:
+			if int(spec["count"]) <= 0:
+				continue
+			var eff_id := String(spec["eff"])
+			defender.active_effects.append({
+				"effect_id":eff_id,"definition":EffectCatalog.definition(engine.canonical_effects,eff_id).duplicate(true),
+				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":int(spec["count"])
+			})
+		var definition: Dictionary = Dictionary(defs[id]).duplicate(true)
+		for field in Dictionary(scenario["overrides"]):
+			definition[field] = scenario["overrides"][field]
+		definition["rolls"] = {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
+		var action := AbilityRuntime.build_action_event(state,"left","right",id,definition)
+		DaggerAbiCombatService.dispatch(engine,action)
+		var attack_events: Array[CombatEvent] = []
+		for pending in state.pending_events:
+			if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("dagger_abi_id","")) == id:
+				attack_events.append(pending)
+		var expected: Array = scenario["expected_damage"]
+		_check(attack_events.size()==expected.size(),id+":custom_attack_count")
+		for i in range(mini(attack_events.size(),expected.size())):
+			_check(is_equal_approx(float(attack_events[i].payload.get("raw_damage",-1.0)),float(expected[i])),id+":custom_damage_"+str(i))
+		if id == "ABI401" and not attack_events.is_empty():
+			_check(int(attack_events[0].payload.get("dagger_ap_gain_on_hit",-1))==3,"ABI401:custom_AP_in_attack_snapshot")
+		if id == "ABI407":
+			_check(int(action.result.get("breach_stacks_to_apply",-1))==1,"ABI407:poison_conversion_ratio_from_abi")
+		if id == "ABI408" and not attack_events.is_empty():
+			_check(is_equal_approx(float(attack_events[0].payload.get("dagger_armour_bypass_pct",-1.0)),33.0),"ABI408:armour_bypass_from_abi")
+
+func _dagger_poison_proc_from_eff() -> void:
+	var ctx := _pair("dagger","axe")
+	var state: CombatState = ctx["state"]
+	var engine: CombatEngine = ctx["engine"]
+	var source := state.get_combatant("left")
+	source.action_points = 0
+	engine.canonical_effects["EFF403"]["ap_gain_on_apply_chance_pct"] = 100.0
+	engine.canonical_effects["EFF403"]["ap_gain_on_apply"] = 2
+	_effect(ctx,"left","right","EFF403")
+	_check(source.action_points==2,"EFF403:poison_AP_proc_uses_effect_chance_and_amount")
+	source.action_points = 0
+	engine.canonical_effects["EFF403"]["ap_gain_on_apply_chance_pct"] = 0.0
+	_effect(ctx,"left","right","EFF403")
+	_check(source.action_points==0,"EFF403:zero_proc_chance_prevents_AP")
 
 func _damage_type(weapon_class: String) -> String:
 	match weapon_class:
