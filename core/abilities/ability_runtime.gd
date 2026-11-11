@@ -146,6 +146,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"application_timing": normalized["application_timing"],
 		"delivery_type": normalized["delivery_type"],
 		"target_scope": normalized["target_scope"],
+		"max_targets": maxi(1,int(definition.get("max_targets",1))),
 		"duration_rounds": normalized["duration_rounds"],
 		"min_zone_distance": normalized["min_zone_distance"],
 		"max_zone_distance": normalized["max_zone_distance"],
@@ -168,7 +169,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 	})
 	if not String(definition.get("sword_ability_mode","")).is_empty():
 		for field in ["sword_ability_mode","sword_mh_multiplier","sword_eff_id","sword_eff_level",
-			"mh_flat_bonus","armor_per_ap","max_targets","crit_pct_per_ap","crit_damage_pct_per_ap","bleed_ticks"]:
+			"mh_flat_bonus","armor_per_ap","crit_pct_per_ap","crit_damage_pct_per_ap","bleed_ticks"]:
 			if definition.has(field):
 				event.payload[field] = definition[field]
 	return event
