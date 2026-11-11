@@ -20,6 +20,7 @@ func _initialize() -> void:
 	_legacy_abi_target_cap_fallback()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
+	_eff_periodic_armour_policy_ownership()
 	_eff_sword_scaling_ownership()
 	_sword_hit_ap_and_critical_numbers_from_catalog()
 	_dynamic_effects_from_catalog()
@@ -581,6 +582,102 @@ func _item_weapon_on_hit_target_ownership() -> void:
 	_check(String(override_hit.result.get("outcome",""))=="connected","item:on_hit_override_fixture_connected")
 	_check(not _active_effect(override_state.get_combatant("right"),"EFF005").is_empty(),"item:on_hit_trigger_explicit_enemy_target")
 	_check(_active_effect(override_actor,"EFF005").is_empty(),"item:on_hit_trigger_override_not_self")
+
+
+## The physical DoT armour calculation remains COMBAT's original
+## calculation. Which EFF invokes it, with which zone/type, belongs to EFF.
+func _eff_periodic_armour_policy_ownership() -> void:
+	var ctx := _pair("sword","axe")
+	var state: CombatState = ctx["state"]
+	var engine: CombatEngine = ctx["engine"]
+	var source := state.get_combatant("left")
+	var victim := state.get_combatant("right")
+	victim.armour["chest"] = {"slashing":0.0}
+	victim.armour["head"] = {"slashing":300.0}
+	var base_damage := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"physical","source":"effect","effect_id":"EFF003"
+	})
+	engine.resolve_event(base_damage)
+	var baseline := int(base_damage.result.get("final_damage",0))
+	_check(baseline > 0,"EFF:baseline_physical_dot_positive")
+	# An EFF301 event from a saved, pre-migration queue has no policy field.
+	# It must still use the legacy chest/slashing rule from the EFF catalog.
+	var legacy := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"physical","source":"effect","effect_id":"EFF301"
+	})
+	engine.resolve_event(legacy)
+	_check(int(legacy.result.get("final_damage",-1))==baseline,"EFF301:legacy_no_policy_uses_canonical_chest")
+	# Explicit event snapshots beat the current catalog, and a different
+	# named EFF can use the same ordinary COMBAT formula.
+	var policy := {"zone":"head","damage_type":"slashing","apply_source_physical_outgoing":true}
+	var another_eff := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"physical","source":"effect","effect_id":"EFF003","periodic_armour":policy
+	})
+	engine.resolve_event(another_eff)
+	_check(int(another_eff.result.get("final_damage",-1)) < baseline,"EFF003:policy_applies_without_EFF301_ID")
+	var snapshot := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"physical","source":"effect","effect_id":"EFF301","periodic_armour":policy
+	})
+	engine.resolve_event(snapshot)
+	_check(int(snapshot.result.get("final_damage",-1))==int(another_eff.result.get("final_damage",-2)),"EFF301:event_snapshot_overrides_catalog")
+	# Test-only physical outgoing bonus applies ONLY when requested by EFF.
+	source.active_effects.append({
+		"effect_id":"TEST_OUTGOING_BONUS","definition":{"physical_damage_outgoing_direct_pct":50.0},
+		"source_id":"left","start_round":1,"remaining_rounds":2
+	})
+	var boosted := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"physical","source":"effect","effect_id":"EFF301","periodic_armour":{}
+	})
+	engine.resolve_event(boosted)
+	_check(int(boosted.result.get("final_damage",-1))==baseline,"EFF301:empty_snapshot_disables_periodic_armour_policy")
+	var outgoing := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
+		"amount":100.0,"damage_type":"physical","source":"effect","effect_id":"EFF301","periodic_armour":{"zone":"chest","damage_type":"slashing","apply_source_physical_outgoing":true}
+	})
+	engine.resolve_event(outgoing)
+	_check(int(outgoing.result.get("final_damage",-1)) > baseline,"EFF301:source_outgoing_modifier_follows_policy")
+
+	# The real periodic phase must copy the *applied* EFF snapshot to DAMAGE
+	# rather than rereading new values from the catalog.
+	var timed_ctx := _pair("sword","axe")
+	var timed_state: CombatState = timed_ctx["state"]
+	var timed_engine: CombatEngine = timed_ctx["engine"]
+	var timed_victim := timed_state.get_combatant("right")
+	var timed_def: Dictionary = EffectCatalog.definition(timed_engine.canonical_effects,"EFF301").duplicate(true)
+	timed_def["periodic_armour"]["zone"] = "head"
+	timed_victim.active_effects.append({
+		"effect_id":"EFF301","definition":timed_def,"source_id":"left",
+		"start_round":1,"remaining_rounds":5,"stacks":2,"active_stacks":2
+	})
+	var orchestrator := RoundOrchestrator.new(timed_state,timed_engine)
+	orchestrator.resolve_active_timed_effects()
+	var saw_tick := false
+	for event in timed_state.event_log:
+		if event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("effect_id","")) == "EFF301" and String(event.payload.get("source","")) == "effect":
+			saw_tick = true
+			_check(String(Dictionary(event.payload.get("periodic_armour",{})).get("zone",""))=="head","EFF301:timed_tick_uses_applied_EFF_snapshot")
+	_check(saw_tick,"EFF301:timed_tick_generated")
+
+	# ABI308's immediate burst uses the same EFF snapshot as timed ticks.
+	var burst_ctx := _pair("sword","axe")
+	var burst_state: CombatState = burst_ctx["state"]
+	var burst_engine: CombatEngine = burst_ctx["engine"]
+	var burst_target := burst_state.get_combatant("right")
+	var burst_def: Dictionary = EffectCatalog.definition(burst_engine.canonical_effects,"EFF301").duplicate(true)
+	burst_def["periodic_armour"]["zone"] = "head"
+	burst_target.active_effects.append({
+		"effect_id":"EFF301","definition":burst_def,"source_id":"left",
+		"start_round":1,"remaining_rounds":5,"stacks":2,"active_stacks":2
+	})
+	var connected := burst_state.create_event(CombatEvent.Kind.ATTACK,"left","right",{
+		"sword_abi_id":"ABI308","sword_bleed_ticks":3
+	})
+	SwordAbiCombatService.on_connected_attack(burst_engine,connected,burst_state.get_combatant("left"),burst_target)
+	var bursts := 0
+	for pending in burst_state.pending_events:
+		if pending.kind == CombatEvent.Kind.DAMAGE and bool(pending.payload.get("sword_burst_tick",false)):
+			bursts += 1
+			_check(String(Dictionary(pending.payload.get("periodic_armour",{})).get("zone",""))=="head","ABI308:burst_uses_applied_EFF_snapshot")
+	_check(bursts==3,"ABI308:three_bursts_keep_mitigation_snapshot")
 
 
 func _damage_type(weapon_class: String) -> String:
