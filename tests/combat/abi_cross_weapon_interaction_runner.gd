@@ -182,7 +182,8 @@ func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
 	_check(aoe_actor.action_points==4,"ABI302:AP_awarded_once")
 
 	var legacy_ctx := _pair("sword","axe")
-	var legacy_actor := legacy_ctx["state"].get_combatant("left")
+	var legacy_state: CombatState = legacy_ctx["state"]
+	var legacy_actor := legacy_state.get_combatant("left")
 	legacy_actor.action_points = 0
 	var legacy_hit := _attack(legacy_ctx,"left","right",0,{"sword_abi_id":"ABI301"})
 	_check(String(legacy_hit.result.get("outcome",""))=="connected","ABI301:legacy_MH_connected")
