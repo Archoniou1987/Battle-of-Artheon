@@ -89,6 +89,10 @@ func _run() -> void:
 	for eff in ["EFF601","EFF602","EFF603","EFF604"]:
 		_check(effects.has(eff),"eff_catalog_"+eff)
 	_check(bool(effects.get("EFF601",{}).get("permanent",false)),"charge_never_expires")
+	var fracture_definition: Dictionary = effects.get("EFF603",{})
+	for boundary in [[0,0],[4,0],[5,1],[14,1],[15,2],[100,10],[120,10]]:
+		var actual := EffectCatalog.application_duration_rounds(fracture_definition,{"hammer_fracture_charges":boundary[0]})
+		_check(actual == boundary[1],"fracture_duration_%d" % boundary[0])
 	_check(int(catalog.get("ABI606",{}).get("ap_cost",-1))==5,"crush_ap_five")
 
 	var defence := _make_session("HAMMER_DEF",202611091)

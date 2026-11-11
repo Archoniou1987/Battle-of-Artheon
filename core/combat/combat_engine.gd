@@ -525,7 +525,12 @@ func _resolve_effect(event: CombatEvent) -> void:
 		definition["dodge_direct_pct"] = clampf(float(event.payload.get("axe_stance_dodge_pct",0.0)),0.0,25.0)
 	if effect_id == HammerAbiCombatService.FRACTURE_EFF:
 		definition = definition.duplicate(true)
-		definition["duration_rounds"] = clampi(int(event.payload.get("hammer_fracture_rounds",0)),1,10)
+		definition["duration_rounds"] = EffectCatalog.application_duration_rounds(definition,event.payload)
+		if int(definition["duration_rounds"]) <= 0:
+			event.set_result("effect_id", effect_id)
+			event.set_result("resolved", false)
+			event.set_result("outcome", "no_effect_duration")
+			return
 		definition["armour_reduction_pct"] = clampf(float(event.payload.get("hammer_fracture_pct",0.0)),0.0,100.0)
 		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
 	if effect_id == HammerAbiCombatService.SURGE_EFF:

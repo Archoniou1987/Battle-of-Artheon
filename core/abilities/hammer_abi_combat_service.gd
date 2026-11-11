@@ -138,9 +138,8 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		return
 	if id == FRACTURE:
 		_consume(source,n)
-		var rounds := roundi(float(n)/10.0)
 		_queue_attack(engine,action,profile,2.0,{
-			"hammer_fracture_charges":n,"hammer_fracture_rounds":rounds,
+			"hammer_fracture_charges":n,
 			"hammer_fracture_zone":String(action.payload.get("zone","chest"))
 		})
 		# Charges are spent even if attack fails or produces no armour debuff.
@@ -165,11 +164,13 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 			CombatTempoService.apply_control(target,control)
 			attack.set_result("tempo_control_applied",control)
 	elif abi == FRACTURE:
-		var rounds := int(attack.payload.get("hammer_fracture_rounds",0))
-		if rounds > 0:
-			_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(FRACTURE,"on_hit"),false,{
-				"hammer_fracture_rounds":rounds,
-				"hammer_fracture_pct":int(attack.payload.get("hammer_fracture_charges",0)),
+		var effect_id := AbilityCatalog.effect_id(FRACTURE,"on_hit")
+		var spent := int(attack.payload.get("hammer_fracture_charges",0))
+		var context := {"hammer_fracture_charges":spent}
+		if EffectCatalog.application_duration_rounds(EffectCatalog.definition(engine.canonical_effects,effect_id),context) > 0:
+			_effect(engine,attack.source_id,attack.target_id,attack.event_id,effect_id,false,{
+				"hammer_fracture_charges":spent,
+				"hammer_fracture_pct":spent,
 				"hammer_fracture_zone":String(attack.payload.get("hammer_fracture_zone","chest"))
 			})
 	# Ordinary MH autoattack is a source of charges, regardless of which ABI

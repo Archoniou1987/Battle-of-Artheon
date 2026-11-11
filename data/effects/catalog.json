@@ -258,6 +258,12 @@
     "kind": "debuff",
     "stacking": "unique",
     "duration_rounds": 1,
+    "duration_from_charges": {
+      "charge_field": "hammer_fracture_charges",
+      "charges_per_round": 10,
+      "minimum_rounds": 0,
+      "maximum_rounds": 10
+    },
     "polarity": "DEBUFF",
     "tags": [
       "HAMMER_ZONE_ARMOUR_FRACTURE"
