@@ -19,6 +19,7 @@ func _initialize() -> void:
 	_abi_target_limits_from_catalog()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
+	_sword_hit_ap_and_critical_numbers_from_catalog()
 	_dynamic_effects_from_catalog()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
@@ -114,6 +115,76 @@ func _abi_mh_bonus_ownership() -> void:
 
 ## The production dagger dispatch must obey changed test-only ABI values,
 ## including old events which did not yet carry their ABI numeric fields.
+## Sword ABI301 links to the ordinary MH; ABI302 grants AP only once
+## after an actual connected AoE hit. Neither value belongs to Combat.
+func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var ctx := _pair("sword","axe")
+	var state: CombatState = ctx["state"]
+	var engine: CombatEngine = ctx["engine"]
+	var actor := state.get_combatant("left")
+	actor.action_points = 0
+	var profile: Dictionary = WeaponAttackProfile.all(actor)[0]
+	var rolls := {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
+	var mh := state.create_event(CombatEvent.Kind.ATTACK,"left","right",WeaponAttackProfile.attack_payload(profile,rolls,"chest"))
+	var definition: Dictionary = Dictionary(defs["ABI301"]).duplicate(true)
+	definition["ap_gain"] = 3
+	var action := AbilityRuntime.build_action_event(state,"left","right","ABI301",definition)
+	var round := CombatRound.new(state.round_number)
+	round.lock_action(mh)
+	round.lock_action(action)
+	round.resolve(engine)
+	_check(String(mh.result.get("outcome",""))=="connected","ABI301:MH_hit_connected")
+	_check(int(mh.payload.get("sword_ap_gain_on_hit",-1))==3,"ABI301:action_AP_snapshot_attached")
+	_check(actor.action_points==3,"ABI301:AP_from_authored_snapshot")
+
+	var aoe_ctx := _pair("sword","axe")
+	var aoe_state: CombatState = aoe_ctx["state"]
+	var aoe_engine: CombatEngine = aoe_ctx["engine"]
+	var aoe_actor := aoe_state.get_combatant("left")
+	aoe_actor.action_points = 0
+	var aoe_def: Dictionary = Dictionary(defs["ABI302"]).duplicate(true)
+	aoe_def["ap_gain"] = 4
+	aoe_def["rolls"] = rolls
+	var aoe_action := AbilityRuntime.build_action_event(aoe_state,"left","right","ABI302",aoe_def)
+	aoe_state.queue_event(aoe_action)
+	aoe_engine.resolve_pending_events()
+	_check(int(aoe_action.result.get("ap_gained_on_hit",-1))==4,"ABI302:AP_from_authored_snapshot")
+	_check(aoe_actor.action_points==4,"ABI302:AP_awarded_once")
+
+	var legacy_ctx := _pair("sword","axe")
+	var legacy_actor := legacy_ctx["state"].get_combatant("left")
+	legacy_actor.action_points = 0
+	var legacy_hit := _attack(legacy_ctx,"left","right",0,{"sword_abi_id":"ABI301"})
+	_check(String(legacy_hit.result.get("outcome",""))=="connected","ABI301:legacy_MH_connected")
+	_check(legacy_actor.action_points==1,"ABI301:legacy_hit_uses_canonical_AP")
+
+	var crit_ctx := _pair("sword","axe")
+	var crit_state: CombatState = crit_ctx["state"]
+	var crit_engine: CombatEngine = crit_ctx["engine"]
+	var crit_def: Dictionary = Dictionary(defs["ABI308"]).duplicate(true)
+	crit_def["crit_pct_per_ap"] = 17
+	crit_def["crit_damage_pct_per_ap"] = 31
+	var crit_action := AbilityRuntime.build_action_event(crit_state,"left","right","ABI308",crit_def)
+	crit_action.payload["ap_spent"] = 2
+	SwordAbiCombatService.dispatch(crit_engine,crit_action)
+	for pending in crit_state.pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI308":
+			_check(is_equal_approx(float(pending.payload.get("sword_crit_chance_pct",-1.0)),34.0),"ABI308:crit_chance_from_authored_snapshot")
+			_check(is_equal_approx(float(pending.payload.get("sword_crit_damage_pct",-1.0)),62.0),"ABI308:crit_damage_from_authored_snapshot")
+	var old_crit_ctx := _pair("sword","axe")
+	var old_crit_state: CombatState = old_crit_ctx["state"]
+	var old_crit_engine: CombatEngine = old_crit_ctx["engine"]
+	var old_crit_action := old_crit_state.create_event(CombatEvent.Kind.ACTION,"left","right",{
+		"ability_id":"ABI308","sword_ability_mode":"crit_ultimate","ap_spent":2,"source_kind":"ability"
+	})
+	SwordAbiCombatService.dispatch(old_crit_engine,old_crit_action)
+	for pending in old_crit_state.pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI308":
+			_check(is_equal_approx(float(pending.payload.get("sword_crit_chance_pct",-1.0)),20.0),"ABI308:legacy_crit_chance_from_catalog")
+			_check(is_equal_approx(float(pending.payload.get("sword_crit_damage_pct",-1.0)),50.0),"ABI308:legacy_crit_damage_from_catalog")
+
+
 func _dagger_abi_coefficients_from_catalog() -> void:
 	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	for scenario in [
