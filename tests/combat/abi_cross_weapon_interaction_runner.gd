@@ -23,6 +23,8 @@ func _initialize() -> void:
 	_eff_sword_scaling_ownership()
 	_sword_hit_ap_and_critical_numbers_from_catalog()
 	_dynamic_effects_from_catalog()
+	_dynamic_fracture_policy_from_eff()
+	_item_weapon_on_hit_target_ownership()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
 	_axe_rage_value_comes_from_eff()
@@ -511,6 +513,74 @@ func _hammer_eff601_charge_generation() -> void:
 	critical_hit.set_result("critical",true)
 	HammerAbiCombatService.on_connected_attack(engine,critical_hit,hammer)
 	_check(HammerAbiCombatService.charges(hammer,state.round_number)==18,"EFF601:active_snapshot_controls_critical_charge_bonus")
+
+
+## Different field names and duration divisors in a test-only EFF603
+## must work unchanged. The old hardcoded hammer zone/duration branches
+## would fail when the EFF policy no longer uses the historical names.
+func _dynamic_fracture_policy_from_eff() -> void:
+	var ctx := _pair("hammer","axe")
+	var engine: CombatEngine = ctx["engine"]
+	var state: CombatState = ctx["state"]
+	var fracture_definition: Dictionary = engine.canonical_effects["EFF603"]
+	fracture_definition["duration_from_charges"]["charge_field"] = "custom_fracture_charge_count"
+	fracture_definition["duration_from_charges"]["charges_per_round"] = 20
+	fracture_definition["contextual_modifier"]["input_field"] = "custom_fracture_charge_count"
+	fracture_definition["contextual_modifier"]["maximum"] = 45
+	fracture_definition["application_context_fields"]["armour_zone"] = "custom_selected_zone"
+	var applied := _effect(ctx,"left","right","EFF603",{
+		"custom_fracture_charge_count":70,
+		"custom_selected_zone":"arms",
+		"hammer_fracture_charges":0,
+		"hammer_fracture_zone":"legs"
+	},true)
+	var record := _active_effect(state.get_combatant("right"),"EFF603")
+	var snapshot: Dictionary = record.get("definition",{})
+	_check(bool(applied.result.get("resolved",false)),"EFF603:alternate_application_fields_resolved")
+	_check(int(snapshot.get("duration_rounds",-1))==4,"EFF603:duration_policy_from_catalog_only")
+	_check(String(snapshot.get("armour_zone",""))=="arms","EFF603:selected_zone_from_catalog_only")
+	_check(is_equal_approx(float(snapshot.get("armour_reduction_pct",-1.0)),45.0),"EFF603:magnitude_from_context_and_catalog_cap")
+	# A no-duration application is still rejected even without any EFF603
+	# branching in the Combat Engine.
+	var empty_ctx := _pair("hammer","axe")
+	var empty_engine: CombatEngine = empty_ctx["engine"]
+	var empty_state: CombatState = empty_ctx["state"]
+	var no_duration := empty_state.create_event(CombatEvent.Kind.EFFECT,"left","right",{
+		"effect_id":"EFF603","source_type":"ability","base_chance":100.0,
+		"effect_roll":1,"hammer_fracture_charges":0
+	})
+	empty_engine.resolve_event(no_duration)
+	_check(not bool(no_duration.result.get("resolved",true)) and String(no_duration.result.get("outcome",""))=="no_effect_duration","EFF603:zero_duration_rejected_without_id_branch")
+	_check(_active_effect(empty_state.get_combatant("right"),"EFF603").is_empty(),"EFF603:no_zero_duration_snapshot")
+
+## Item/on-hit trigger targeting must not depend on the literal EFF001 ID.
+## Both a different EFF and an explicit trigger target are real attack paths.
+func _item_weapon_on_hit_target_ownership() -> void:
+	var ctx := _pair("sword","axe")
+	var state: CombatState = ctx["state"]
+	var engine: CombatEngine = ctx["engine"]
+	var actor := state.get_combatant("left")
+	var defender := state.get_combatant("right")
+	engine.canonical_effects["EFF003"]["on_hit_target"] = "enemy"
+	actor.combat_stats["weapon_on_hit_effects"] = [
+		{"effect_id":"EFF003","chance":100.0,"weapon_index":0},
+		{"effect_id":"EFF005","chance":100.0,"weapon_index":0}
+	]
+	var hit := _attack(ctx,"left","right")
+	_check(String(hit.result.get("outcome",""))=="connected","item:on_hit_fixture_connected")
+	_check(not _active_effect(defender,"EFF003").is_empty(),"item:on_hit_enemy_from_EFF_definition")
+	_check(_active_effect(actor,"EFF003").is_empty(),"item:enemy_dot_never_on_self")
+	_check(not _active_effect(actor,"EFF005").is_empty(),"item:on_hit_default_self_target")
+	var override_ctx := _pair("sword","axe")
+	var override_state: CombatState = override_ctx["state"]
+	var override_actor := override_state.get_combatant("left")
+	override_actor.combat_stats["weapon_on_hit_effects"] = [
+		{"effect_id":"EFF005","chance":100.0,"weapon_index":0,"target":"enemy"}
+	]
+	var override_hit := _attack(override_ctx,"left","right")
+	_check(String(override_hit.result.get("outcome",""))=="connected","item:on_hit_override_fixture_connected")
+	_check(not _active_effect(override_state.get_combatant("right"),"EFF005").is_empty(),"item:on_hit_trigger_explicit_enemy_target")
+	_check(_active_effect(override_actor,"EFF005").is_empty(),"item:on_hit_trigger_override_not_self")
 
 
 func _damage_type(weapon_class: String) -> String:
