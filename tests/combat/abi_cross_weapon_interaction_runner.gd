@@ -12,6 +12,7 @@ func _check(ok: bool, label: String) -> void:
 
 func _initialize() -> void:
 	_abi_to_eff_references()
+	_abi_mh_bonus_ownership()
 	_abi_target_limits_from_catalog()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
@@ -75,6 +76,35 @@ func _abi_target_limits_from_catalog() -> void:
 		else:
 			AxeAbiCombatService.dispatch(engine,limited)
 		_check(Array(limited.result.get("child_event_ids",[])).size() == 2,id+":target_cap_dispatch")
+
+## Changed test-only ABI501/ABI601 bonuses must reach the first ordinary
+## MH attack and real CombatEngine damage without any repeated +20 constant.
+func _abi_mh_bonus_ownership() -> void:
+	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	for case in [
+		{"ability_id":"ABI501","weapon_class":"axe","bonus":37.0,"payload_key":"axe_mh_damage_bonus_pct"},
+		{"ability_id":"ABI601","weapon_class":"hammer","bonus":43.0,"payload_key":"hammer_mh_damage_bonus_pct"}
+	]:
+		var id := String(case["ability_id"])
+		var abi_definition: Dictionary = Dictionary(abilities[id]).duplicate(true)
+		_check(is_equal_approx(float(abi_definition.get("mh_damage_bonus_pct",-1.0)),20.0),id+":catalog_ordinary_mh_bonus")
+		abi_definition["mh_damage_bonus_pct"] = float(case["bonus"])
+		var ctx := _pair(String(case["weapon_class"]),"dagger")
+		var state: CombatState = ctx["state"]
+		var engine: CombatEngine = ctx["engine"]
+		var source := state.get_combatant("left")
+		var profile: Dictionary = WeaponAttackProfile.all(source)[0]
+		var rolls := {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
+		var mh := state.create_event(CombatEvent.Kind.ATTACK,"left","right",WeaponAttackProfile.attack_payload(profile,rolls,"chest"))
+		var ability_action := AbilityRuntime.build_action_event(state,"left","right",id,abi_definition)
+		var round := CombatRound.new(state.round_number)
+		round.lock_action(mh)
+		round.lock_action(ability_action)
+		round.resolve(engine)
+		var payload_key := String(case["payload_key"])
+		_check(is_equal_approx(float(mh.payload.get(payload_key,-1.0)),float(case["bonus"])),id+":MH_bonus_attached_from_ABI")
+		_check(String(mh.result.get("outcome","")) == "connected",id+":MH_hit_connected")
+		_check(is_equal_approx(float(mh.result.get("raw_damage",-1.0)),100.0*(1.0+float(case["bonus"])/100.0)),id+":MH_damage_follows_ABI_bonus")
 
 func _damage_type(weapon_class: String) -> String:
 	match weapon_class:
