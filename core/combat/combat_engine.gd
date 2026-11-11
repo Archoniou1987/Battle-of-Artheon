@@ -535,7 +535,7 @@ func _resolve_effect(event: CombatEvent) -> void:
 		if not result_field.is_empty():
 			event.set_result(result_field,stack_snapshot)
 	definition = EffectCatalog.application_modifiers(definition,effect_context)
-	if effect_id == HammerAbiCombatService.FRACTURE_EFF:
+	if definition.has("duration_from_charges"):
 		definition = definition.duplicate(true)
 		definition["duration_rounds"] = EffectCatalog.application_duration_rounds(definition,effect_context)
 		if int(definition["duration_rounds"]) <= 0:
@@ -543,7 +543,6 @@ func _resolve_effect(event: CombatEvent) -> void:
 			event.set_result("resolved", false)
 			event.set_result("outcome", "no_effect_duration")
 			return
-		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
 	var effect_kind := String(definition.get("kind", ""))
 	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
 		event.set_result("effect_id", effect_id)
@@ -646,7 +645,13 @@ func _trigger_weapon_on_hit(parent: CombatEvent, attacker: CombatantState, defen
 		if not CombatMath.roll_success(float(trigger.get("chance",0.0)),roll):
 			continue
 		var payload:={"effect_id":String(trigger.get("effect_id","")),"source_type":String(trigger.get("source_type","item")),"source_instance_id":String(trigger.get("source_instance_id",""))}
-		state.queue_event(state.create_event(CombatEvent.Kind.EFFECT,attacker.combatant_id,defender.combatant_id if String(trigger.get("effect_id"))=="EFF001" else attacker.combatant_id,payload,parent.event_id))
+		# On-hit targeting is authored by the effect/trigger, not by an EFF ID.
+		# Test-injected effects use the same _effect_definition override path.
+		var triggered_effect_id := String(trigger.get("effect_id",""))
+		var default_target := String(_effect_definition(triggered_effect_id).get("on_hit_target","self"))
+		var target_role := String(trigger.get("target",default_target))
+		var triggered_target_id := defender.combatant_id if target_role == "enemy" else attacker.combatant_id
+		state.queue_event(state.create_event(CombatEvent.Kind.EFFECT,attacker.combatant_id,triggered_target_id,payload,parent.event_id))
 
 func _trigger_manual_block_effects(parent: CombatEvent, defender: CombatantState, rolls: Dictionary) -> void:
 	var triggers: Array = CombatModifierService.manual_block_effects(defender)
