@@ -14,6 +14,7 @@ func _initialize() -> void:
 	_abi_to_eff_references()
 	_abi_mh_bonus_ownership()
 	_dagger_abi_coefficients_from_catalog()
+	_dagger_legacy_action_uses_canonical_bonus()
 	_dagger_poison_proc_from_eff()
 	_abi_target_limits_from_catalog()
 	_sword_cripple_versus_axe_damage()
@@ -151,10 +152,28 @@ func _dagger_abi_coefficients_from_catalog() -> void:
 			_check(is_equal_approx(float(attack_events[i].payload.get("raw_damage",-1.0)),float(expected[i])),id+":custom_damage_"+str(i))
 		if id == "ABI401" and not attack_events.is_empty():
 			_check(int(attack_events[0].payload.get("dagger_ap_gain_on_hit",-1))==3,"ABI401:custom_AP_in_attack_snapshot")
+			var attacker := state.get_combatant("left")
+			attacker.action_points = 0
+			engine.resolve_pending_events()
+			_check(attacker.action_points==3,"ABI401:custom_AP_awarded_after_hit")
 		if id == "ABI407":
 			_check(int(action.result.get("breach_stacks_to_apply",-1))==1,"ABI407:poison_conversion_ratio_from_abi")
 		if id == "ABI408" and not attack_events.is_empty():
 			_check(is_equal_approx(float(attack_events[0].payload.get("dagger_armour_bypass_pct",-1.0)),33.0),"ABI408:armour_bypass_from_abi")
+
+## Older ACTION events never carried the new numeric fields.
+func _dagger_legacy_action_uses_canonical_bonus() -> void:
+	var ctx := _pair("dagger","axe")
+	var state: CombatState = ctx["state"]
+	var engine: CombatEngine = ctx["engine"]
+	var legacy := state.create_event(CombatEvent.Kind.ACTION,"left","right",{"ability_id":"ABI401","source_kind":"ability","zone":"chest"})
+	DaggerAbiCombatService.dispatch(engine,legacy)
+	for event in state.pending_events:
+		if event.kind == CombatEvent.Kind.ATTACK and String(event.payload.get("dagger_abi_id","")) == "ABI401":
+			_check(is_equal_approx(float(event.payload.get("raw_damage",-1.0)),20.0),"ABI401:legacy_action_uses_canonical_multiplier")
+			_check(int(event.payload.get("dagger_ap_gain_on_hit",-1))==1,"ABI401:legacy_action_uses_canonical_AP")
+			return
+	_check(false,"ABI401:legacy_action_queued_attack")
 
 func _dagger_poison_proc_from_eff() -> void:
 	var ctx := _pair("dagger","axe")
