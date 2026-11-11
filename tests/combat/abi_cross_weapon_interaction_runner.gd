@@ -13,6 +13,7 @@ func _check(ok: bool, label: String) -> void:
 func _initialize() -> void:
 	_abi_to_eff_references()
 	_sword_cripple_versus_axe_damage()
+	_sword_effect_strength_from_catalog()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
 	_axe_rage_value_comes_from_eff()
@@ -137,6 +138,28 @@ func _sword_cripple_versus_axe_damage() -> void:
 	_check(is_equal_approx(float(hit.result.get("raw_damage",-1.0)),80.0),"sword:cripple_applies_to_real_axe_attack")
 	print("ABI_CROSS_WEAPON_CASE=CHECKED sword_bleed_cripple_vs_axe")
 
+## Test-only changed EFF definitions prove COMBAT never keeps base numbers.
+func _sword_effect_strength_from_catalog() -> void:
+	var ctx := _pair("sword","axe")
+	var engine: CombatEngine = ctx["engine"]
+	var state: CombatState = ctx["state"]
+	engine.canonical_effects["EFF301"]["damage"] = 2.0
+	engine.canonical_effects["EFF302"]["physical_damage_outgoing_direct_pct"] = -7.0
+	engine.canonical_effects["EFF303"]["anti_dodge_direct_pct"] = -2.0
+	engine.canonical_effects["EFF304"]["anti_crit_direct_pct"] = -3.0
+	_effect(ctx,"left","right","EFF301",{"sword_stacks_to_apply":3,"sword_eff_level":20})
+	var target := state.get_combatant("right")
+	for record in target.active_effects:
+		if String(record.get("effect_id","")) == "EFF301":
+			_check(is_equal_approx(float(Dictionary(record.get("definition",{})).get("damage",-1.0)),20.0),"sword:bleed_strength_from_eff_and_level_cap")
+	_effect(ctx,"left","right","EFF302",{"sword_eff_level":20})
+	_effect(ctx,"left","right","EFF303",{"sword_eff_level":20})
+	_effect(ctx,"left","right","EFF304",{"sword_eff_level":20})
+	state.begin_round()
+	_check(is_equal_approx(CombatModifierService.modifier(target,"physical_damage_outgoing_direct_pct",state.round_number),-21.0),"sword:cripple_strength_from_eff")
+	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_dodge_direct_pct",state.round_number),-30.0),"sword:slow_strength_from_eff_and_level_cap")
+	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_crit_direct_pct",state.round_number),-45.0),"sword:lost_strength_from_eff_and_level_cap")
+
 func _dagger_breach_versus_hammer_armour() -> void:
 	var ctx := _pair("dagger","hammer")
 	var state: CombatState = ctx["state"]
@@ -226,6 +249,25 @@ func _axe_counter_versus_dagger_dodge() -> void:
 			_check(String(event.result.get("outcome","")) == "connected","axe:counterattack_connected")
 	_check(dodges == 6,"axe:all_six_incoming_attacks_dodged")
 	_check(counters == 5,"axe:retaliation_capped_at_five")
+	# Changing only the EFF snapshot cap must change the number of counters.
+	var limited := _pair("dagger","axe")
+	var limited_state: CombatState = limited["state"]
+	var limited_axe := limited_state.get_combatant("right")
+	limited_axe.combat_stats["dodge_rating_percent"] = 100.0
+	_effect(limited,"right","right","EFF503",{"axe_stance_dodge_pct":0.0},true)
+	for record in limited_axe.active_effects:
+		if String(record.get("effect_id","")) == "EFF503":
+			var changed: Dictionary = Dictionary(record.get("definition",{})).duplicate(true)
+			changed["counterattack_cap"] = 2
+			record["definition"] = changed
+	for i in range(4):
+		_attack(limited,"left","right",i%2,{},1,1)
+	var limited_counters := 0
+	for event in limited_state.event_log:
+		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == "right" and bool(event.payload.get("is_counterattack_abi",false)):
+			limited_counters += 1
+	_check(limited_counters == 2,"axe:counter_limit_from_eff503_snapshot")
+
 	print("ABI_CROSS_WEAPON_CASE=CHECKED axe_retaliation_vs_dagger_dodge")
 
 func _hammer_tempo_versus_axe_immunity() -> void:
