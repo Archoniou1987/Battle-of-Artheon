@@ -57,8 +57,11 @@ func _test_mana_and_ownership() -> void:
 	var repo: ItemRepository = setup["repository"]
 	var hero := session.fighter(true)
 	hero.mana = 0
+	# Using an elixir opens the round first: configured passive regeneration
+	# applies once before the immediate +30 mana from the test elixir.
+	var expected_after_elixir := mini(hero.max_mana,int(ResourceRegenerationRules.mana_per_interval(0.0))+30)
 	check(bool(session.use_elixir(1).get("ok",false)),"mana_click_succeeds")
-	check(hero.mana==mini(hero.max_mana,30),"mana_restored_immediately")
+	check(hero.mana==expected_after_elixir,"mana_restored_immediately")
 	check(not bool(session.use_elixir(1).get("ok",true)),"cannot_reuse_mana_same_round")
 	check(int(repo.get_item("elixir_test_mana_v1").get("charges",-1))==2,"mana_charge_persisted")
 	check(not bool(session.use_elixir(3).get("ok",true)),"other_slot_limited")
@@ -78,7 +81,7 @@ func _test_mana_and_ownership() -> void:
 	session.ability_scheduler.loadouts[session.player_id]=[TEST_MANA_ID]
 	session.player_ability_slots=[TEST_MANA_ID,"","","","",""]
 	check(bool(session.activate_ability(TEST_MANA_ID).get("ok",false)),"mana_potion_enables_standard_abi")
-	check(hero.mana==mini(hero.max_mana,30)-10,"standard_abi_mana_cost_after_potion")
+	check(hero.mana==expected_after_elixir-10,"standard_abi_mana_cost_after_potion")
 
 
 func _test_fire_ward_and_surprise() -> void:
