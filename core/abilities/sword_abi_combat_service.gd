@@ -44,7 +44,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 				# One physical defence value per hit zone. A shield's armour
 				# is already incorporated in each zone, NOT counted separately.
 				armour_total += float(Dictionary(source.armour.get(zone,{})).get("slashing",0.0))
-			base_damage = 0.5 * base_damage + 0.02 * armour_total * float(ap_spent)
+			base_damage = multiplier * base_damage + float(action.payload.get("armor_per_ap",0.0)) * armour_total * float(ap_spent)
 		elif mode == "dodge_ultimate":
 			base_damage *= multiplier * float(ap_spent)
 		else:
@@ -59,6 +59,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		if mode == "crit_ultimate":
 			payload["sword_crit_chance_pct"] = float(action.payload.get("crit_pct_per_ap",10)) * ap_spent
 			payload["sword_crit_damage_pct"] = float(action.payload.get("crit_damage_pct_per_ap",25)) * ap_spent
+			payload["sword_bleed_ticks"] = maxi(0,int(action.payload.get("bleed_ticks",0)))
 		var attack := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,target_id,payload,action.event_id)
 		engine.state.queue_event(attack)
 		child_ids.append(attack.event_id)
@@ -105,13 +106,19 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, sourc
 	elif ability_id == "ABI306":
 		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),1,eff_level)
 	elif ability_id == "ABI307":
-		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),mini(5,maxi(1,int(attack.payload.get("sword_ap_spent",1)))),eff_level)
+		var bleed_id := AbilityCatalog.effect_id(ability_id)
+		var bleed_cap := EffectCatalog.stack_cap(bleed_id,EffectCatalog.definition(engine.canonical_effects,bleed_id))
+		_apply_effect(engine,attack,bleed_id,mini(bleed_cap,maxi(1,int(attack.payload.get("sword_ap_spent",1)))),eff_level)
 	elif ability_id == "ABI308":
 		var effect := active_bleeding(target)
 		if effect.is_empty():
 			return
 		var tick_amount := float(Dictionary(effect.get("definition",{})).get("damage",1.0)) * float(effect.get("stacks",1))
-		for _tick in range(3):
+		var ticks := int(attack.payload.get("sword_bleed_ticks",-1))
+		if ticks < 0:
+			# Old queued attack snapshots did not carry this ABI parameter.
+			ticks = int(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),ability_id).get("bleed_ticks",0))
+		for _tick in range(maxi(0,ticks)):
 			var tick := engine.state.create_event(CombatEvent.Kind.DAMAGE,attack.source_id,target.combatant_id,{
 				"amount":tick_amount,"damage_type":"physical","source":"effect",
 				"effect_id":BLEED,"sword_burst_tick":true
