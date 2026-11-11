@@ -120,6 +120,7 @@
   "weapon_archetypes": [
     {
       "id": "SWORD_DEF",
+      "abilities": ["ABI301","ABI302","ABI303","ABI306"],
       "name": "Меч · защитный",
       "kind": "weapon",
       "family": "sword",
@@ -135,6 +136,7 @@
     },
     {
       "id": "SWORD_DODGE",
+      "abilities": ["ABI301","ABI302","ABI304","ABI307"],
       "name": "Меч · уклонение",
       "kind": "weapon",
       "family": "sword",
@@ -152,6 +154,7 @@
     },
     {
       "id": "SWORD_CRIT",
+      "abilities": ["ABI301","ABI302","ABI305","ABI308"],
       "name": "Меч · критический",
       "kind": "weapon",
       "family": "sword",
@@ -185,6 +188,7 @@
     },
     {
       "id": "DAGGER_DEF",
+      "abilities": ["ABI401","ABI402","ABI403","ABI404"],
       "name": "Кинжал · защитный",
       "kind": "weapon",
       "family": "dagger",
@@ -201,6 +205,7 @@
     },
     {
       "id": "DAGGER_ATTACK",
+      "abilities": ["ABI401","ABI402","ABI405","ABI406"],
       "name": "Кинжал · атакующий",
       "kind": "weapon",
       "family": "dagger",
@@ -235,6 +240,7 @@
     },
     {
       "id": "DAGGER_PEN",
+      "abilities": ["ABI401","ABI402","ABI407","ABI408"],
       "name": "Кинжал · пробивающий",
       "kind": "weapon",
       "family": "dagger",
@@ -252,6 +258,7 @@
     },
     {
       "id": "AXE_DEF",
+      "abilities": ["ABI501","ABI502","ABI503","ABI504"],
       "name": "Топор · защитный",
       "kind": "weapon",
       "family": "axe",
@@ -271,6 +278,7 @@
     },
     {
       "id": "AXE_ATTACK",
+      "abilities": ["ABI501","ABI502","ABI505","ABI506"],
       "name": "Топор · атакующий",
       "kind": "weapon",
       "family": "axe",
@@ -289,6 +297,7 @@
     },
     {
       "id": "AXE_SHIELD",
+      "abilities": ["ABI501","ABI502","ABI507","ABI508"],
       "name": "Топор · щитолом",
       "kind": "weapon",
       "family": "axe",
@@ -307,6 +316,7 @@
     },
     {
       "id": "HAMMER_DEF",
+      "abilities": ["ABI601","ABI602","ABI603","ABI604"],
       "name": "Молот · защитный",
       "kind": "weapon",
       "family": "hammer",
@@ -323,6 +333,7 @@
     },
     {
       "id": "HAMMER_ATTACK",
+      "abilities": ["ABI601","ABI602","ABI605","ABI606"],
       "name": "Молот · атакующий",
       "kind": "weapon",
       "family": "hammer",

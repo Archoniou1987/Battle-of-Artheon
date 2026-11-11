@@ -69,6 +69,10 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 			return {}
 	var family := _weapon_family(archetype_id)
 	var allowed_slots := WeaponHandPolicy.allowed_slots(archetype_id)
+	var abi_ids := _physical_weapon_abilities(archetype_id)
+	if abi_ids.size() != 4:
+		push_error("Missing canonical ITEM -> ABI references: " + archetype_id)
+		return {}
 	var template_id := "V12_%s_L%03d" % [archetype_id, level]
 	var result := {
 		"id": template_id,
@@ -98,7 +102,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"v12_core_rolls": (variant.get("core_rolls", []) as Array).duplicate(true),
 		"v12_rarity_rolls": (variant.get("rolls", []) as Array).duplicate(true),
 		# ABI positions are genuine canonical IDs and survive normal save/restore.
-		"abilities": _physical_weapon_abilities(archetype_id, "MH"),
+		"abilities": abi_ids,
 		"v12_seed": seed_value
 	}
 	ItemDurabilityService.initialize_item(result, 100)
@@ -149,26 +153,30 @@ static func grant_generated_row(character: CharacterState, repository: ItemRepos
 		return {}
 	return item
 
-static func _physical_weapon_abilities(archetype_id: String, hand: String) -> Array[String]:
-	# Item carries ABI; EquipmentAbilityLoadout activates them only in MH.
-	if SWORD_ARCHETYPES.has(archetype_id):
-		return _physical_sword_abilities(archetype_id)
-	match archetype_id:
-		"DAGGER_DEF": return ["ABI401","ABI402","ABI403","ABI404"]
-		"DAGGER_ATTACK": return ["ABI401","ABI402","ABI405","ABI406"]
-		"DAGGER_PEN": return ["ABI401","ABI402","ABI407","ABI408"]
-		"AXE_DEF": return ["ABI501","ABI502","ABI503","ABI504"]
-		"AXE_ATTACK": return ["ABI501","ABI502","ABI505","ABI506"]
-		"AXE_SHIELD": return ["ABI501","ABI502","ABI507","ABI508"]
-		"HAMMER_DEF": return ["ABI601","ABI602","ABI603","ABI604"]
-		"HAMMER_ATTACK": return ["ABI601","ABI602","ABI605","ABI606"]
-	return [] # Magic archetypes remain gated until separate integration.
-
-static func _physical_sword_abilities(archetype_id: String) -> Array[String]:
-	match archetype_id:
-		"SWORD_DEF": return ["ABI301","ABI302","ABI303","ABI306"]
-		"SWORD_DODGE": return ["ABI301","ABI302","ABI304","ABI307"]
-		"SWORD_CRIT": return ["ABI301","ABI302","ABI305","ABI308"]
+## The item archetype is the only owner of its ABI references.
+## OH retains these IDs; EquipmentAbilityLoadout activates only MH.
+static func _physical_weapon_abilities(archetype_id: String) -> Array[String]:
+	if not FileAccess.file_exists(ItemTemplateGeneratorV12.RULE_PATH):
+		return []
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(ItemTemplateGeneratorV12.RULE_PATH))
+	if not parsed is Dictionary:
+		return []
+	for raw in parsed.get("weapon_archetypes", []):
+		if not raw is Dictionary:
+			continue
+		var archetype: Dictionary = raw
+		if String(archetype.get("id", "")) != archetype_id:
+			continue
+		var assigned: Variant = archetype.get("abilities", [])
+		if not assigned is Array:
+			return []
+		var result: Array[String] = []
+		for raw_id in assigned:
+			var ability_id := String(raw_id)
+			if not AbilityCatalog.is_executable_id(ability_id) or result.has(ability_id):
+				return []
+			result.append(ability_id)
+		return result
 	return []
 
 static func _weapon_family(archetype_id: String) -> String:

@@ -22,6 +22,8 @@ func _run() -> void:
 	]
 	var families := {"SWORD_":"sword","DAGGER_":"dagger","AXE_":"axe","HAMMER_":"hammer"}
 	var seed_value := 20261104
+	var rules: Dictionary = ItemTemplateGeneratorV12.new().rules
+	var abilities: Dictionary = AbilityCatalog.load_json("res://data/abilities/catalog.json")
 	for archetype_id in archetypes:
 		var item := ItemV12InstanceFactory.generate_weapon(archetype_id,40,"purple",seed_value)
 		_check(not item.is_empty(),archetype_id+"_generated")
@@ -30,7 +32,14 @@ func _run() -> void:
 		_check(String(item.get("instance_id","")).begins_with("ITEMID"),archetype_id+"_id")
 		_check(String(item.get("slot",""))=="main_hand",archetype_id+"_slot")
 		_check(item.get("equip_slots",[]) == WeaponHandPolicy.allowed_slots(archetype_id),archetype_id+"_hand_compatibility")
-		_check(Array(item.get("abilities",[])).size()==(4 if archetype_id.begins_with("SWORD_") or archetype_id.begins_with("DAGGER_") or archetype_id.begins_with("AXE_") or archetype_id.begins_with("HAMMER_") else 0),archetype_id+"_runtime_abi_gate")
+		_check(Array(item.get("abilities",[])).size()==4,archetype_id+"_runtime_abi_gate")
+		for rule in Array(rules.get("weapon_archetypes", [])):
+			var definition: Dictionary = rule
+			if String(definition.get("id","")) == archetype_id:
+				_check(Array(item["abilities"]) == Array(definition.get("abilities",[])),archetype_id+"_abi_refs_from_item_rules")
+				for ability_id in item["abilities"]:
+					_check(abilities.has(String(ability_id)),archetype_id+"_abi_exists_"+String(ability_id))
+				break
 		for prefix in families:
 			if archetype_id.begins_with(String(prefix)):
 				_check(String(item.get("weapon_class",""))==String(families[prefix]),archetype_id+"_family")
