@@ -61,7 +61,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		if mode == "crit_ultimate":
 			payload["sword_crit_chance_pct"] = AbilityCatalog.number("ABI308","crit_pct_per_ap",action.payload) * ap_spent
 			payload["sword_crit_damage_pct"] = AbilityCatalog.number("ABI308","crit_damage_pct_per_ap",action.payload) * ap_spent
-			payload["sword_bleed_ticks"] = maxi(0,int(action.payload.get("bleed_ticks",0)))
+			payload["sword_bleed_ticks"] = maxi(0,int(action.payload.get("bleed_ticks",AbilityCatalog.number("ABI308","bleed_ticks"))))
 		var attack := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,target_id,payload,action.event_id)
 		engine.state.queue_event(attack)
 		child_ids.append(attack.event_id)
