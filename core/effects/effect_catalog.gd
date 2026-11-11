@@ -28,6 +28,28 @@ static func stack_cap(effect_id: String, applied_definition: Dictionary = {}) ->
 		source = definition(_canonical_stack_definitions,effect_id)
 	return maxi(1,int(source.get("max_stacks",1)))
 
+## Apply only EFF-defined numeric rules. ABI passes counts/spent charges,
+## while old queued events may still provide their already-computed value.
+static func application_modifiers(definition: Dictionary, context: Dictionary = {}) -> Dictionary:
+	var raw: Variant = definition.get("contextual_modifier", null)
+	if not raw is Dictionary:
+		return definition
+	var rule: Dictionary = raw
+	var input_field := String(rule.get("input_field",""))
+	var legacy_field := String(rule.get("legacy_value_field",""))
+	var value := 0.0
+	if context.has(input_field):
+		value = float(context[input_field]) * float(rule.get("per_unit",1.0))
+	elif context.has(legacy_field):
+		value = float(context[legacy_field])
+	var lower := float(rule.get("minimum",0.0))
+	var upper := maxf(lower,float(rule.get("maximum",100.0)))
+	value = clampf(value,lower,upper)
+	var resolved := definition.duplicate(true)
+	for field in Array(rule.get("fields",[])):
+		resolved[String(field)] = value
+	return resolved
+
 ## EFF owns duration rules; ABI only provides application context.
 static func application_duration_rounds(definition: Dictionary, context: Dictionary = {}) -> int:
 	var policy: Variant = definition.get("duration_from_charges", null)
