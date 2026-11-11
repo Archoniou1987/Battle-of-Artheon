@@ -544,16 +544,16 @@ func _resolve_effect(event: CombatEvent) -> void:
 		definition = definition.duplicate(true)
 		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
 		if effect_id == "EFF301":
-			definition["damage"] = float(clampi(eff_level,1,10))
+			definition["damage"] = float(definition.get("damage",0.0)) * float(clampi(eff_level,1,maxi(1,int(definition.get("max_effect_level",1)))))
 		else:
 			var blood := SwordAbiCombatService.active_bleeding(target)
 			var stack_snapshot := int(blood.get("stacks",0))
 			if effect_id == "EFF302":
-				definition["physical_damage_outgoing_direct_pct"] = -5.0 * stack_snapshot
+				definition["physical_damage_outgoing_direct_pct"] = float(definition.get("physical_damage_outgoing_direct_pct",0.0)) * stack_snapshot
 			elif effect_id == "EFF303":
-				definition["anti_dodge_direct_pct"] = -float(clampi(eff_level,1,5)) * stack_snapshot
+				definition["anti_dodge_direct_pct"] = float(definition.get("anti_dodge_direct_pct",0.0)) * float(clampi(eff_level,1,maxi(1,int(definition.get("max_effect_level",1))))) * stack_snapshot
 			else:
-				definition["anti_crit_direct_pct"] = -float(clampi(eff_level,1,5)) * stack_snapshot
+				definition["anti_crit_direct_pct"] = float(definition.get("anti_crit_direct_pct",0.0)) * float(clampi(eff_level,1,maxi(1,int(definition.get("max_effect_level",1))))) * stack_snapshot
 			event.set_result("sword_bleed_snapshot",stack_snapshot)
 	var effect_kind := String(definition.get("kind", ""))
 	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
