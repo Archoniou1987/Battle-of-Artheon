@@ -159,7 +159,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		if victim != null and victim.max_hp>0 and float(victim.hp)<0.20*float(victim.max_hp) and rage>=1:
 			ids.append(_queue_attack(engine,action,action.target_id,profile,75.0*float(rage)))
 	elif id == SHIELD_BREAK:
-		var targets := _targets(engine,action,3)
+		var targets := _targets(engine,action,maxi(1,int(action.payload.get("max_targets",1))))
 		var base := 150.0 if targets.size() == 1 else 50.0
 		for target_id in targets:
 			ids.append(_queue_attack(engine,action,target_id,profile,base+20.0*float(rage),{"skip_dodge_block":true}))
