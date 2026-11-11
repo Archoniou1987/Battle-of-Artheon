@@ -414,10 +414,12 @@ func _resolve_attack(event: CombatEvent) -> void:
 	# Dagger EFF401 reduces the raw percentage before diminishing.
 	# Never change underlying item PAR or the armour rating matrix.
 	var dagger_breach_stacks := 0
+	var dagger_breach_cap := 0
 	for breach in CombatModifierService.active_effects(defender,state.round_number):
 		if String(breach.get("effect_id","")) == DaggerAbiCombatService.BREACH:
+			dagger_breach_cap = EffectCatalog.stack_cap(DaggerAbiCombatService.BREACH,Dictionary(breach.get("definition",{})))
 			dagger_breach_stacks += int(breach.get("stacks",1))
-	dagger_breach_stacks = mini(5,dagger_breach_stacks)
+	dagger_breach_stacks = mini(dagger_breach_cap,dagger_breach_stacks)
 	# Flat penetration was already applied to the armour RATING above.
 	# EFF401 is a percentage-point reduction, before v1.2 diminishing.
 	# EFF401 penetration and hammer armour bonuses enter the raw percentage
