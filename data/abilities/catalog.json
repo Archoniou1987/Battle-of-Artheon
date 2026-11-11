@@ -44,7 +44,8 @@
     "sword_ability_mode": "aoe_3",
     "sword_mh_multiplier": 0.5,
     "sword_eff_id": "EFF301",
-    "sword_eff_level": 1
+    "sword_eff_level": 1,
+    "max_targets": 3
   },
   "ABI303": {
     "name": "Калека",
@@ -232,7 +233,9 @@
     "ap_gain": 1,
     "application_timing": "instant",
     "dagger_ability_mode": "poison_coating",
-    "effect_refs": {"on_weapon_hit":"EFF403"}
+    "effect_refs": {
+      "on_weapon_hit": "EFF403"
+    }
   },
   "ABI403": {
     "name": "Веер клинков",
@@ -253,7 +256,8 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "dagger_ability_mode": "def_fan",
-    "trigger_previous_round": "dodge"
+    "trigger_previous_round": "dodge",
+    "max_targets": 5
   },
   "ABI404": {
     "name": "Смертельная комбинация",
@@ -299,7 +303,9 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "dagger_ability_mode": "attack_heavy",
-    "effect_refs": {"pre_attack":"EFF405"}
+    "effect_refs": {
+      "pre_attack": "EFF405"
+    }
   },
   "ABI406": {
     "name": "Шквал клинков",
@@ -433,7 +439,9 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "axe_ability_mode": "def_sweep",
-    "effect_refs": {"on_hit":"EFF502"}
+    "effect_refs": {
+      "on_hit": "EFF502"
+    }
   },
   "ABI504": {
     "name": "Стойка возмездия",
@@ -474,7 +482,9 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "axe_ability_mode": "attack_breaker",
-    "effect_refs": {"pre_attack":"EFF504"}
+    "effect_refs": {
+      "pre_attack": "EFF504"
+    }
   },
   "ABI506": {
     "name": "Смертельный удар",
@@ -534,7 +544,8 @@
     "ap_cost": 5,
     "ap_gain": 0,
     "application_timing": "standard",
-    "axe_ability_mode": "shieldbreaker"
+    "axe_ability_mode": "shieldbreaker",
+    "max_targets": 3
   },
   "ABI601": {
     "name": "Тяжёлый удар",
@@ -614,7 +625,9 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "hammer_ability_mode": "armour_fracture",
-    "effect_refs": {"on_hit":"EFF603"}
+    "effect_refs": {
+      "on_hit": "EFF603"
+    }
   },
   "ABI605": {
     "name": "Боевой прилив",
