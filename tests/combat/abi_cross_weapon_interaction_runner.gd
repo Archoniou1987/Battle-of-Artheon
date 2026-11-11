@@ -12,6 +12,7 @@ func _check(ok: bool, label: String) -> void:
 
 func _initialize() -> void:
 	_abi_to_eff_references()
+	_abi_target_limits_from_catalog()
 	_sword_cripple_versus_axe_damage()
 	_sword_effect_strength_from_catalog()
 	_dagger_breach_versus_hammer_armour()
@@ -40,6 +41,39 @@ func _abi_to_eff_references() -> void:
 		for role in roles:
 			var expected := String(roles[role])
 			_check(AbilityCatalog.effect_id(String(abi_id),String(role)) == expected and effects.has(expected), String(abi_id) + ":" + String(role) + "_eff_reference")
+
+## ABI owns target caps, including unscheduled/custom action snapshots.
+func _abi_target_limits_from_catalog() -> void:
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	for spec in [
+		{"abi":"ABI302","class":"sword","expected":3},
+		{"abi":"ABI307","class":"sword","expected":5},
+		{"abi":"ABI403","class":"dagger","expected":5},
+		{"abi":"ABI508","class":"axe","expected":3}
+	]:
+		var id := String(spec["abi"])
+		var authored: Dictionary = defs.get(id,{})
+		_check(int(authored.get("max_targets",-1)) == int(spec["expected"]),id+":canonical_target_cap")
+		var ctx := _pair(String(spec["class"]),"hammer")
+		var state: CombatState = ctx["state"]
+		var action_definition: Dictionary = authored.duplicate(true)
+		var intent := AbilityRuntime.build_action_event(state,"left","right",id,action_definition)
+		_check(int(intent.payload.get("max_targets",-1)) == int(spec["expected"]),id+":target_cap_in_event")
+		if id == "ABI307":
+			continue
+		# Lower cap in a test-only event, with more than two valid enemies.
+		action_definition["max_targets"] = 2
+		state.add_combatant(_fighter("extra_1","hammer"))
+		state.add_combatant(_fighter("extra_2","hammer"))
+		var limited := AbilityRuntime.build_action_event(state,"left","right",id,action_definition)
+		var engine: CombatEngine = ctx["engine"]
+		if id == "ABI302":
+			SwordAbiCombatService.dispatch(engine,limited)
+		elif id == "ABI403":
+			DaggerAbiCombatService.dispatch(engine,limited)
+		else:
+			AxeAbiCombatService.dispatch(engine,limited)
+		_check(Array(limited.result.get("child_event_ids",[])).size() == 2,id+":target_cap_dispatch")
 
 func _damage_type(weapon_class: String) -> String:
 	match weapon_class:
