@@ -519,12 +519,8 @@ func _resolve_effect(event: CombatEvent) -> void:
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if definition.is_empty(): event.set_result("resolved", false); return
-	if effect_id == DaggerAbiCombatService.DODGE_BUFF:
-		definition = definition.duplicate(true)
-		definition["dodge_direct_pct"] = clampf(float(event.payload.get("dagger_dodge_pct",0.0)),0.0,25.0)
-	if effect_id == AxeAbiCombatService.STANCE_EFF:
-		definition = definition.duplicate(true)
-		definition["dodge_direct_pct"] = clampf(float(event.payload.get("axe_stance_dodge_pct",0.0)),0.0,25.0)
+	# EFF catalog defines contextual magnitude and bounds for dynamic buffs.
+	definition = EffectCatalog.application_modifiers(definition,event.payload)
 	if effect_id == HammerAbiCombatService.FRACTURE_EFF:
 		definition = definition.duplicate(true)
 		definition["duration_rounds"] = EffectCatalog.application_duration_rounds(definition,event.payload)
@@ -535,11 +531,6 @@ func _resolve_effect(event: CombatEvent) -> void:
 			return
 		definition["armour_reduction_pct"] = clampf(float(event.payload.get("hammer_fracture_pct",0.0)),0.0,100.0)
 		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
-	if effect_id == HammerAbiCombatService.SURGE_EFF:
-		definition = definition.duplicate(true)
-		var surge := clampf(float(event.payload.get("hammer_surge_pct",0.0)),0.0,25.0)
-		definition["physical_damage_outgoing_direct_pct"] = surge
-		definition["magic_damage_direct_pct"] = surge
 	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
 		definition = definition.duplicate(true)
 		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
