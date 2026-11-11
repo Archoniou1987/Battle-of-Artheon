@@ -174,7 +174,6 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 		if EffectCatalog.application_duration_rounds(EffectCatalog.definition(engine.canonical_effects,effect_id),context) > 0:
 			_effect(engine,attack.source_id,attack.target_id,attack.event_id,effect_id,false,{
 				"hammer_fracture_charges":spent,
-				"hammer_fracture_pct":spent,
 				"hammer_fracture_zone":String(attack.payload.get("hammer_fracture_zone","chest"))
 			})
 	# Ordinary MH autoattack is a source of charges, regardless of which ABI
