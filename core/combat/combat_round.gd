@@ -68,6 +68,7 @@ func resolve(engine: CombatEngine) -> void:
 				continue
 			mh.payload["hammer_abi_id"] = HammerAbiCombatService.HEAVY
 			mh.payload["hammer_mh_damage_bonus_pct"] = float(abi_action.payload.get("mh_damage_bonus_pct",0.0))
+			mh.payload["hammer_tempo_control_on_hit"] = float(abi_action.payload.get("tempo_control_on_hit",AbilityCatalog.number(HammerAbiCombatService.HEAVY,"tempo_control_on_hit")))
 			break
 	# Counter ABI inherits the FIRST ordinary MH strike zone in the sealed round.
 	# The OH zone is never a fallback. No implicit chest target is permitted.
