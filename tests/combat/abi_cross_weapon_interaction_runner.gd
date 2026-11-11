@@ -213,6 +213,7 @@ func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
 		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI308":
 			_check(is_equal_approx(float(pending.payload.get("sword_crit_chance_pct",-1.0)),20.0),"ABI308:legacy_crit_chance_from_catalog")
 			_check(is_equal_approx(float(pending.payload.get("sword_crit_damage_pct",-1.0)),50.0),"ABI308:legacy_crit_damage_from_catalog")
+			_check(int(pending.payload.get("sword_bleed_ticks",-1))==3,"ABI308:legacy_bleed_ticks_from_catalog")
 
 
 func _dagger_abi_coefficients_from_catalog() -> void:
