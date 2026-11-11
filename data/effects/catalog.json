@@ -288,7 +288,15 @@
       "HAMMER_ZONE_ARMOUR_FRACTURE"
     ],
     "armour_zone": "chest",
-    "armour_reduction_pct": 0
+    "armour_reduction_pct": 0,
+    "contextual_modifier": {
+      "input_field": "hammer_fracture_charges",
+      "legacy_value_field": "hammer_fracture_pct",
+      "per_unit": 1,
+      "minimum": 0,
+      "maximum": 100,
+      "fields": ["armour_reduction_pct"]
+    }
   },
   "EFF604": {
     "id": "EFF604",
