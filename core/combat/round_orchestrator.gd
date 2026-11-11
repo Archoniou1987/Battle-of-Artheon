@@ -211,6 +211,11 @@ func resolve_active_timed_effects() -> Array[int]:
 				"source_instance_id":String(active.get("source_instance_id","")),
 				"stack_id":String(active.get("stack_id",""))
 			})
+			# Preserve the applied EFF rule for saved encounters. For older
+			# records without this field, omit it so COMBAT can use its
+			# canonical fallback for pre-migration DAMAGE events.
+			if not is_hot and definition.has("periodic_armour"):
+				event.payload["periodic_armour"] = Dictionary(definition.get("periodic_armour",{})).duplicate(true)
 			state.queue_event(event)
 			event_ids.append(event.event_id)
 	engine.resolve_pending_events()
