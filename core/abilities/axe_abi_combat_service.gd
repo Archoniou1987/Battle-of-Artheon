@@ -33,10 +33,13 @@ static func _average(profile: Dictionary) -> float:
 
 static func rage_stacks(source: CombatantState, round_number: int) -> int:
 	var total := 0
+	var cap := 0
+	var effect_id := AbilityCatalog.effect_id(RAGE_ABI)
 	for record in CombatModifierService.active_effects(source,round_number):
-		if String(record.get("effect_id","")) == AbilityCatalog.effect_id(RAGE_ABI):
+		if String(record.get("effect_id","")) == effect_id:
+			cap = EffectCatalog.stack_cap(effect_id,Dictionary(record.get("definition",{})))
 			total += int(record.get("stacks",1))
-	return mini(5,total)
+	return mini(cap,total)
 
 static func _consume_rage(source: CombatantState) -> void:
 	for record in source.active_effects.duplicate():
