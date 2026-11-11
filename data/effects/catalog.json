@@ -56,7 +56,14 @@
       "BLEEDING",
       "DOT"
     ],
-    "polarity": "DEBUFF"
+    "polarity": "DEBUFF",
+    "application_scaling": {
+      "fields": [
+        "damage"
+      ],
+      "level_field": "sword_eff_level",
+      "use_level": true
+    }
   },
   "EFF302": {
     "id": "EFF302",
@@ -69,7 +76,14 @@
     "tags": [
       "CRIPPLE"
     ],
-    "snapshot_from": "EFF301"
+    "snapshot_from": "EFF301",
+    "application_scaling": {
+      "fields": [
+        "physical_damage_outgoing_direct_pct"
+      ],
+      "use_snapshot_stacks": true
+    },
+    "snapshot_result_key": "sword_bleed_snapshot"
   },
   "EFF303": {
     "id": "EFF303",
@@ -83,7 +97,16 @@
     "tags": [
       "SLOWNESS"
     ],
-    "snapshot_from": "EFF301"
+    "snapshot_from": "EFF301",
+    "application_scaling": {
+      "fields": [
+        "anti_dodge_direct_pct"
+      ],
+      "level_field": "sword_eff_level",
+      "use_level": true,
+      "use_snapshot_stacks": true
+    },
+    "snapshot_result_key": "sword_bleed_snapshot"
   },
   "EFF304": {
     "id": "EFF304",
@@ -97,7 +120,16 @@
     "tags": [
       "LOST"
     ],
-    "snapshot_from": "EFF301"
+    "snapshot_from": "EFF301",
+    "application_scaling": {
+      "fields": [
+        "anti_crit_direct_pct"
+      ],
+      "level_field": "sword_eff_level",
+      "use_level": true,
+      "use_snapshot_stacks": true
+    },
+    "snapshot_result_key": "sword_bleed_snapshot"
   },
   "EFF401": {
     "id": "EFF401",
@@ -157,7 +189,9 @@
       "per_unit": 5,
       "minimum": 0,
       "maximum": 25,
-      "fields": ["dodge_direct_pct"]
+      "fields": [
+        "dodge_direct_pct"
+      ]
     }
   },
   "EFF405": {
@@ -217,7 +251,9 @@
       "per_unit": 5,
       "minimum": 0,
       "maximum": 25,
-      "fields": ["dodge_direct_pct"]
+      "fields": [
+        "dodge_direct_pct"
+      ]
     }
   },
   "EFF504": {
@@ -300,7 +336,9 @@
       "per_unit": 1,
       "minimum": 0,
       "maximum": 100,
-      "fields": ["armour_reduction_pct"]
+      "fields": [
+        "armour_reduction_pct"
+      ]
     }
   },
   "EFF604": {
@@ -322,7 +360,10 @@
       "per_unit": 1,
       "minimum": 0,
       "maximum": 25,
-      "fields": ["physical_damage_outgoing_direct_pct", "magic_damage_direct_pct"]
+      "fields": [
+        "physical_damage_outgoing_direct_pct",
+        "magic_damage_direct_pct"
+      ]
     }
   }
 }
