@@ -123,7 +123,7 @@ func _dagger_breach_versus_hammer_armour() -> void:
 	var state: CombatState = ctx["state"]
 	var hammer := state.get_combatant("right")
 	hammer.armour["chest"] = {"piercing":150.0}
-	var charge_definition := EffectCatalog.definition(EffectCatalog.load_json(),"EFF601").duplicate(true)
+	var charge_definition: Dictionary = EffectCatalog.definition(EffectCatalog.load_json(),"EFF601").duplicate(true)
 	# Change the test-only EFF value; Combat must never keep a hardcoded 0.25.
 	charge_definition["armour_and_resistance_direct_pct_per_stack"] = 0.5
 	hammer.active_effects.append({
@@ -140,7 +140,8 @@ func _dagger_breach_versus_hammer_armour() -> void:
 	# Change only the active EFF snapshot, not CombatEngine: 5 stacks x 4 p.p.
 	for record in hammer.active_effects:
 		if String(record.get("effect_id","")) == "EFF401":
-			Dictionary(record["definition"])["armour_reduction_pct_per_stack"] = 4.0
+			var active_definition: Dictionary = record["definition"]
+			active_definition["armour_reduction_pct_per_stack"] = 4.0
 	state.begin_round()
 	var breached_hit := _attack(ctx,"left","right")
 	var breached_reduction := float(breached_hit.result.get("armour_reduction",-1.0))
@@ -155,7 +156,7 @@ func _axe_rage_value_comes_from_eff() -> void:
 	var ctx := _pair("axe","dagger")
 	var state: CombatState = ctx["state"]
 	var axe := state.get_combatant("left")
-	var rage_definition := EffectCatalog.definition(EffectCatalog.load_json(),"EFF501").duplicate(true)
+	var rage_definition: Dictionary = EffectCatalog.definition(EffectCatalog.load_json(),"EFF501").duplicate(true)
 	rage_definition["block_crush_per_stack"] = 3.5
 	axe.active_effects.append({
 		"effect_id":"EFF501", "definition":rage_definition, "source_id":"left",
