@@ -63,6 +63,16 @@ static func application_modifiers(definition: Dictionary, context: Dictionary = 
 		for field in Array(rule.get("fields",[])):
 			var key := String(field)
 			resolved[key] = float(definition.get(key,0.0))*factor
+	# EFF may map a contextual field (e.g. selected armour zone) into
+	# its applied snapshot. Missing context leaves the EFF default unchanged.
+	var raw_fields: Variant = definition.get("application_context_fields",null)
+	if raw_fields is Dictionary:
+		for raw_output in raw_fields:
+			var output_field := String(raw_output)
+			var source_field := String(raw_fields[raw_output])
+			if context.has(source_field):
+				resolved = resolved.duplicate(true)
+				resolved[output_field] = context[source_field]
 	return resolved
 
 ## The named source is EFF-owned (snapshot_from), never embedded in COMBAT.
