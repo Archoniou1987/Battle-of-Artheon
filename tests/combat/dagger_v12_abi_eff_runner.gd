@@ -185,6 +185,13 @@ func _run() -> void:
 			var add_poison := consume_attack.state.create_event(CombatEvent.Kind.EFFECT,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"effect_id":"EFF403","base_chance":100.0,"effect_roll":1,"preparation_effect":true})
 			consume_attack.engine.resolve_event(add_poison)
 		_check(int(_active(attack_target,"EFF403").get("stacks",0))==4,"flurry_consume_poison_setup")
+		var poison_record := _active(attack_target,"EFF403")
+		var original_poison_definition: Dictionary = poison_record.get("definition",{})
+		var capped_poison_definition: Dictionary = original_poison_definition.duplicate(true)
+		capped_poison_definition["max_stacks"] = 2
+		poison_record["definition"] = capped_poison_definition
+		_check(DaggerAbiCombatService._active_stacks(attack_target,"EFF403",consume_attack.state.round_number)==2,"poison_stack_cap_from_eff_snapshot")
+		poison_record["definition"] = original_poison_definition
 		var flurry_cast := consume_attack.state.create_event(CombatEvent.Kind.ACTION,consume_attack.player_id,ArenaCombatSession.ENEMY_ID,{"source_kind":"ability","ability_id":"ABI406","zone":"chest"})
 		DaggerAbiCombatService.dispatch(consume_attack.engine,flurry_cast)
 		_check(int(flurry_cast.result.get("poison_stacks_consumed",0))==4,"flurry_consumed_count")
