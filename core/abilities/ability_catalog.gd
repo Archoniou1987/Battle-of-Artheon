@@ -19,6 +19,16 @@ static func effect_id(ability_id: String, role: String = "primary") -> String:
 	return String(refs.get(role, "")) if refs is Dictionary else ""
 
 
+## ABI owns ability-specific values. The committed action snapshot wins;
+## old/test actions without a field fall back to the canonical ABI entry.
+static func number(ability_id: String, field: String, snapshot: Dictionary = {}) -> float:
+	if snapshot.has(field):
+		return float(snapshot[field])
+	if _canonical_definitions.is_empty():
+		_canonical_definitions = load_json(CANONICAL_PATH)
+	return float(definition(_canonical_definitions,ability_id).get(field,0.0))
+
+
 static func load_json(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path): return {}
 	var file := FileAccess.open(path, FileAccess.READ)
