@@ -182,6 +182,12 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 			"multi_target_damage_pct","execute_hp_threshold_fraction","min_rage_stacks","required_rage_stacks"]:
 			if definition.has(field):
 				event.payload[field] = definition[field]
+	if not String(definition.get("hammer_ability_mode","")).is_empty():
+		for field in ["tempo_control_on_hit","charge_spend_fraction","heal_hp_pct_per_spent_charge",
+			"damage_multiplier","damage_multiplier_per_charge","max_damage_multiplier",
+			"tempo_control_per_charge","max_tempo_control"]:
+			if definition.has(field):
+				event.payload[field] = definition[field]
 	if definition.has("mh_damage_bonus_pct"):
 		event.payload["mh_damage_bonus_pct"] = float(definition["mh_damage_bonus_pct"])
 	return event
