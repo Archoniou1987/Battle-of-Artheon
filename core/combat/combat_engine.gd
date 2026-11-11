@@ -368,9 +368,15 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0)) + float(event.payload.get("sword_mh_bonus_flat",0.0))
 	if String(event.payload.get("axe_abi_id","")) == AxeAbiCombatService.RAGE_ABI:
-		raw_damage *= 1.0 + float(event.payload.get("axe_mh_damage_bonus_pct",20.0))/100.0
+		var axe_bonus := float(event.payload.get("axe_mh_damage_bonus_pct",0.0))
+		if not event.payload.has("axe_mh_damage_bonus_pct"):
+			axe_bonus = float(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),AxeAbiCombatService.RAGE_ABI).get("mh_damage_bonus_pct",0.0))
+		raw_damage *= 1.0 + axe_bonus/100.0
 	if String(event.payload.get("hammer_abi_id","")) == HammerAbiCombatService.HEAVY:
-		raw_damage *= 1.0 + float(event.payload.get("hammer_mh_damage_bonus_pct",20.0))/100.0
+		var hammer_bonus := float(event.payload.get("hammer_mh_damage_bonus_pct",0.0))
+		if not event.payload.has("hammer_mh_damage_bonus_pct"):
+			hammer_bonus = float(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),HammerAbiCombatService.HEAVY).get("mh_damage_bonus_pct",0.0))
+		raw_damage *= 1.0 + hammer_bonus/100.0
 	# PAR053–056: physical damage bonus applies only to the matching damage type.
 	# Percent values are stored as percentages (e.g. 30 means +30%).
 	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
