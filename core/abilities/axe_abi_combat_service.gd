@@ -68,10 +68,10 @@ static func can_cast(state: CombatState, source_id: String, target_id: String, a
 	var evaluating_round := state.round_number if planned_round < 0 else planned_round
 	var n := rage_stacks(source,evaluating_round)
 	if abi == CRUSHER:
-		return n == 5
+		return n == int(AbilityCatalog.number(CRUSHER,"required_rage_stacks"))
 	if abi == EXECUTE:
 		var target := state.get_combatant(target_id)
-		return target != null and target.max_hp > 0 and float(target.hp) < 0.20 * float(target.max_hp) and n >= 1
+		return target != null and target.max_hp > 0 and float(target.hp) < AbilityCatalog.number(EXECUTE,"execute_hp_threshold_fraction") * float(target.max_hp) and n >= int(AbilityCatalog.number(EXECUTE,"min_rage_stacks"))
 	return true
 
 static func _effect(engine: CombatEngine, source_id: String, target_id: String, parent_id: int, effect_id: String, pre: bool = false, extras: Dictionary = {}) -> void:
@@ -138,7 +138,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("outcome","retaliation_stance")
 		return
 	if id == CRUSHER:
-		if rage_stacks(source,engine.state.round_number) != 5:
+		if rage_stacks(source,engine.state.round_number) != int(AbilityCatalog.number(CRUSHER,"required_rage_stacks",action.payload)):
 			action.set_result("outcome","needs_five_rage")
 			return
 		_consume_rage(source)
@@ -151,18 +151,18 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var rage := rage_stacks(source,engine.state.round_number)
 	var ids: Array[int] = []
 	if id == CUT_ABI:
-		ids.append(_queue_attack(engine,action,action.target_id,profile,120.0,{"skip_dodge_block":true}))
+		ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(id,"attack_damage_pct",action.payload),{"skip_dodge_block":true}))
 	elif id == DEF_SWEEP or id == ATTACK_BREAKER:
-		ids.append(_queue_attack(engine,action,action.target_id,profile,120.0))
+		ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(id,"attack_damage_pct",action.payload)))
 	elif id == EXECUTE:
 		var victim := engine.state.get_combatant(action.target_id)
-		if victim != null and victim.max_hp>0 and float(victim.hp)<0.20*float(victim.max_hp) and rage>=1:
-			ids.append(_queue_attack(engine,action,action.target_id,profile,75.0*float(rage)))
+		if victim != null and victim.max_hp>0 and float(victim.hp)<AbilityCatalog.number(EXECUTE,"execute_hp_threshold_fraction",action.payload)*float(victim.max_hp) and rage>=int(AbilityCatalog.number(EXECUTE,"min_rage_stacks",action.payload)):
+			ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(EXECUTE,"damage_pct_per_rage_stack",action.payload)*float(rage)))
 	elif id == SHIELD_BREAK:
 		var targets := _targets(engine,action,maxi(1,int(action.payload.get("max_targets",1))))
-		var base := 150.0 if targets.size() == 1 else 50.0
+		var base := AbilityCatalog.number(SHIELD_BREAK,"single_target_damage_pct",action.payload) if targets.size() == 1 else AbilityCatalog.number(SHIELD_BREAK,"multi_target_damage_pct",action.payload)
 		for target_id in targets:
-			ids.append(_queue_attack(engine,action,target_id,profile,base+20.0*float(rage),{"skip_dodge_block":true}))
+			ids.append(_queue_attack(engine,action,target_id,profile,base+AbilityCatalog.number(SHIELD_BREAK,"damage_pct_per_rage_stack",action.payload)*float(rage),{"skip_dodge_block":true}))
 	action.set_result("outcome","dispatched" if not ids.is_empty() else "unavailable")
 	action.set_result("child_event_ids",ids)
 
