@@ -125,6 +125,9 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, sourc
 				"amount":tick_amount,"damage_type":"physical","source":"effect",
 				"effect_id":BLEED,"sword_burst_tick":true
 			},attack.event_id)
+			var bleed_definition: Dictionary = effect.get("definition",{})
+			if bleed_definition.has("periodic_armour"):
+				tick.payload["periodic_armour"] = Dictionary(bleed_definition.get("periodic_armour",{})).duplicate(true)
 			engine.state.queue_event(tick)
 
 static func _award_hit_ap(engine: CombatEngine, attack: CombatEvent, source: CombatantState, amount: int) -> void:
