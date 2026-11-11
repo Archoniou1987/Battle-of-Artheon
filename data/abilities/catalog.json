@@ -397,7 +397,8 @@
     "ap_cost": 0,
     "ap_gain": 1,
     "application_timing": "standard",
-    "axe_ability_mode": "rage"
+    "axe_ability_mode": "rage",
+    "mh_damage_bonus_pct": 20
   },
   "ABI502": {
     "name": "Рубящий удар",
@@ -565,7 +566,8 @@
     "ap_cost": 0,
     "ap_gain": 1,
     "application_timing": "standard",
-    "hammer_ability_mode": "mh_tempo"
+    "hammer_ability_mode": "mh_tempo",
+    "mh_damage_bonus_pct": 20
   },
   "ABI602": {
     "name": "Отражение",
