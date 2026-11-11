@@ -63,6 +63,11 @@
       ],
       "level_field": "sword_eff_level",
       "use_level": true
+    },
+    "periodic_armour": {
+      "zone": "chest",
+      "damage_type": "slashing",
+      "apply_source_physical_outgoing": true
     }
   },
   "EFF302": {
