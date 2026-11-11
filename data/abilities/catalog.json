@@ -212,7 +212,8 @@
     "ap_gain": 1,
     "application_timing": "standard",
     "dagger_ability_mode": "quick",
-    "ap_gain_on_hit": true
+    "ap_gain_on_hit": true,
+    "damage_multiplier": 0.2
   },
   "ABI402": {
     "name": "Отравленные клинки",
@@ -282,7 +283,8 @@
       "pre_attack": "EFF404",
       "consume": "EFF403",
       "read_breach": "EFF401"
-    }
+    },
+    "poison_damage_bonus_per_stack": 0.1
   },
   "ABI405": {
     "name": "Сокрушительный выпад",
@@ -328,7 +330,8 @@
     "dagger_ability_mode": "attack_flurry",
     "effect_refs": {
       "consume": "EFF403"
-    }
+    },
+    "strike_damage_multiplier": 0.6
   },
   "ABI407": {
     "name": "Глубокий прокол",
@@ -353,7 +356,9 @@
       "on_hit": "EFF401",
       "consume": "EFF403",
       "read_breach": "EFF401"
-    }
+    },
+    "breach_damage_multiplier": 0.5,
+    "poison_stacks_per_breach": 2
   },
   "ABI408": {
     "name": "Абсолютное пробитие",
@@ -377,7 +382,8 @@
     "effect_refs": {
       "consume": "EFF401",
       "read_breach": "EFF401"
-    }
+    },
+    "armour_bypass_pct_per_breach_stack": 20
   },
   "ABI501": {
     "name": "Ярость",
