@@ -43,6 +43,7 @@ func resolve(engine: CombatEngine) -> void:
 			mh.payload["sword_abi_id"] = "ABI301"
 			mh.payload["sword_eff_level"] = int(abi_action.payload.get("sword_eff_level",1))
 			mh.payload["sword_mh_bonus_flat"] = float(abi_action.payload.get("mh_flat_bonus",0.0))
+			mh.payload["sword_ap_gain_on_hit"] = int(abi_action.payload.get("ap_gain",AbilityCatalog.number("ABI301","ap_gain")))
 			break
 	# Axe ABI501 enhances ONE existing ordinary MH attack, never adds a hit.
 	for abi_action in locked_actions:
