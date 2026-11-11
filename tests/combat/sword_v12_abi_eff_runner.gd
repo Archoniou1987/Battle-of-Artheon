@@ -163,6 +163,7 @@ func _verify() -> void:
 			_check(ult_attack,"def_ult_uses_all_5_zone_armour")
 		print("SWORD_V12_ARCHETYPE=",archetype," final_bleed=",_eff(target,"EFF301").get("stacks",0)," ap=",player.action_points)
 	_test_aoe_and_hit_gates()
+	_test_burst_ticks_from_abi()
 	print("SWORD_V12_ABI_EFF=",("PASS" if problems.is_empty() else "FAIL")," problems=",problems)
 	quit(0 if problems.is_empty() else 1)
 
@@ -255,3 +256,27 @@ func _test_aoe_and_hit_gates() -> void:
 	for enemy in all_targets:
 		_check(int(_eff(enemy,"EFF301").get("stacks",0))==5,"abi04_dodge_5stacks_"+enemy.combatant_id)
 	print("SWORD_V12_AOE_TEST=",("PASS" if problems.is_empty() else "FAIL"))
+
+## Changing ABI308 in a test-only definition must change its real burst ticks.
+func _test_burst_ticks_from_abi() -> void:
+	var session := _test_session("SWORD_CRIT",202611043)
+	if session == null:
+		return
+	var bleed_event := session.state.create_event(CombatEvent.Kind.EFFECT,session.player_id,ArenaCombatSession.ENEMY_ID,{
+		"effect_id":"EFF301","source_type":"ability","base_chance":100.0,
+		"effect_roll":1,"preparation_effect":true
+	})
+	session.engine.resolve_event(bleed_event)
+	_check(bool(bleed_event.result.get("resolved",false)),"burst_test_bleed_initialized")
+	var ability: Dictionary = session.ability_scheduler.definitions["ABI308"]
+	ability["bleed_ticks"] = 2
+	ability["rolls"] = {"hit":1,"dodge":100,"auto_block":100,"crit":100,"block_crush":100}
+	session.fighter(true).action_points = 5
+	var result := session.play_round(["chest"],["head","arms"],"ABI308")
+	_check(bool(result.get("ok",false)),"burst_test_custom_abi_cast")
+	var bursts := 0
+	for event in _events(session,CombatEvent.Kind.DAMAGE,"","EFF301"):
+		if bool(event.payload.get("sword_burst_tick",false)):
+			bursts += 1
+	_check(bursts == 2,"burst_tick_count_owned_by_abi")
+
