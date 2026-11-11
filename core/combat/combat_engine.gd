@@ -525,32 +525,25 @@ func _resolve_effect(event: CombatEvent) -> void:
 	var effect_id := String(event.payload.get("effect_id", ""))
 	var definition := _effect_definition(effect_id)
 	if definition.is_empty(): event.set_result("resolved", false); return
-	# EFF catalog defines contextual magnitude and bounds for dynamic buffs.
-	definition = EffectCatalog.application_modifiers(definition,event.payload)
+	# EFF owns dynamic magnitudes and (where declared) the snapshot source.
+	# COMBAT only supplies current application data and applies the resolved EFF.
+	var effect_context: Dictionary = event.payload.duplicate(true)
+	if definition.has("snapshot_from"):
+		var stack_snapshot := EffectCatalog.application_snapshot_stacks(definition,target.active_effects)
+		effect_context["effect_snapshot_stacks"] = stack_snapshot
+		var result_field := String(definition.get("snapshot_result_key",""))
+		if not result_field.is_empty():
+			event.set_result(result_field,stack_snapshot)
+	definition = EffectCatalog.application_modifiers(definition,effect_context)
 	if effect_id == HammerAbiCombatService.FRACTURE_EFF:
 		definition = definition.duplicate(true)
-		definition["duration_rounds"] = EffectCatalog.application_duration_rounds(definition,event.payload)
+		definition["duration_rounds"] = EffectCatalog.application_duration_rounds(definition,effect_context)
 		if int(definition["duration_rounds"]) <= 0:
 			event.set_result("effect_id", effect_id)
 			event.set_result("resolved", false)
 			event.set_result("outcome", "no_effect_duration")
 			return
 		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
-	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
-		definition = definition.duplicate(true)
-		var eff_level := maxi(1,int(event.payload.get("sword_eff_level",1)))
-		if effect_id == "EFF301":
-			definition["damage"] = float(definition.get("damage",0.0)) * float(clampi(eff_level,1,maxi(1,int(definition.get("max_effect_level",1)))))
-		else:
-			var blood := SwordAbiCombatService.active_bleeding(target)
-			var stack_snapshot := int(blood.get("stacks",0))
-			if effect_id == "EFF302":
-				definition["physical_damage_outgoing_direct_pct"] = float(definition.get("physical_damage_outgoing_direct_pct",0.0)) * stack_snapshot
-			elif effect_id == "EFF303":
-				definition["anti_dodge_direct_pct"] = float(definition.get("anti_dodge_direct_pct",0.0)) * float(clampi(eff_level,1,maxi(1,int(definition.get("max_effect_level",1))))) * stack_snapshot
-			else:
-				definition["anti_crit_direct_pct"] = float(definition.get("anti_crit_direct_pct",0.0)) * float(clampi(eff_level,1,maxi(1,int(definition.get("max_effect_level",1))))) * stack_snapshot
-			event.set_result("sword_bleed_snapshot",stack_snapshot)
 	var effect_kind := String(definition.get("kind", ""))
 	if target.effect_immunities.has(effect_id) or target.effect_immunities.has(effect_kind):
 		event.set_result("effect_id", effect_id)
