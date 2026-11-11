@@ -148,7 +148,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		var hit := _queue_attack(engine,action,action.target_id,mh,damage)
 		if hit > 0: ids.append(hit)
 	elif id == DEF_FAN:
-		for enemy_id in _targets(engine,action,5):
+		for enemy_id in _targets(engine,action,maxi(1,int(action.payload.get("max_targets",1)))):
 			var fan_hit := _queue_attack(engine,action,enemy_id,mh,mh_average+oh_average)
 			if fan_hit > 0: ids.append(fan_hit)
 	elif id == DEF_COMBO or id == ATTACK_HEAVY:
