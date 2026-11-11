@@ -30,7 +30,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	if mh_profile.is_empty():
 		action.set_result("outcome","sword_mh_required")
 		return
-	var max_targets := maxi(1,int(action.payload.get("max_targets",1)))
+	var max_targets := maxi(1,int(action.payload.get("max_targets",AbilityCatalog.number(String(action.payload.get("ability_id","")),"max_targets"))))
 	var targets := _targets(engine, action, max_targets)
 	var child_ids: Array[int] = []
 	var ap_spent := int(action.payload.get("ap_spent",0))
