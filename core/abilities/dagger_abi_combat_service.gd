@@ -33,12 +33,18 @@ static func _average(profile: Dictionary) -> float:
 		return 0.0
 	return (float(profile.get("damage_min",0.0)) + float(profile.get("damage_max",0.0))) * 0.5
 
-static func _active_stacks(target: CombatantState, effect_id: String, round_number: int, cap: int) -> int:
+static func _effect_stack_cap(target: CombatantState, effect_id: String, round_number: int) -> int:
+	for record in CombatModifierService.active_effects(target,round_number):
+		if String(record.get("effect_id","")) == effect_id:
+			return EffectCatalog.stack_cap(effect_id,Dictionary(record.get("definition",{})))
+	return EffectCatalog.stack_cap(effect_id)
+
+static func _active_stacks(target: CombatantState, effect_id: String, round_number: int) -> int:
 	var total := 0
-	for record in CombatModifierService.active_effects(target, round_number):
+	for record in CombatModifierService.active_effects(target,round_number):
 		if String(record.get("effect_id","")) == effect_id:
 			total += int(record.get("stacks",1))
-	return mini(cap, total)
+	return mini(_effect_stack_cap(target,effect_id,round_number),total)
 
 static func _remove_effect(target: CombatantState, effect_id: String) -> void:
 	for record in target.active_effects.duplicate():
@@ -92,7 +98,7 @@ static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 		_effect(engine,action.source_id,action.target_id,action.event_id,AbilityCatalog.effect_id(ATTACK_HEAVY,"pre_attack"),true)
 	else:
 		var target := engine.state.get_combatant(action.target_id)
-		var breach := _active_stacks(target,AbilityCatalog.effect_id(DEF_COMBO,"read_breach"),engine.state.round_number,5)
+		var breach := _active_stacks(target,AbilityCatalog.effect_id(DEF_COMBO,"read_breach"),engine.state.round_number)
 		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_COMBO,"pre_attack"),true,{"dagger_dodge_pct":5.0 * float(breach)})
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
@@ -129,8 +135,8 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var oh := _weapon(source,1)
 	var mh_average := _average(mh)
 	var oh_average := _average(oh)
-	var poison_stacks := _active_stacks(target,AbilityCatalog.effect_id(COATING,"on_weapon_hit"),engine.state.round_number,10)
-	var breach_stacks := _active_stacks(target,AbilityCatalog.effect_id(id,"read_breach") if id in [DEF_COMBO,PEN_DEEP,PEN_ABSOLUTE] else AbilityCatalog.effect_id(QUICK),engine.state.round_number,5)
+	var poison_stacks := _active_stacks(target,AbilityCatalog.effect_id(COATING,"on_weapon_hit"),engine.state.round_number)
+	var breach_stacks := _active_stacks(target,AbilityCatalog.effect_id(id,"read_breach") if id in [DEF_COMBO,PEN_DEEP,PEN_ABSOLUTE] else AbilityCatalog.effect_id(QUICK),engine.state.round_number)
 	# Consume at cast time AFTER snapshotting bonuses and strike count.
 	# Miss/dodge/block cannot refund spent poison. Breach stays for DEF_COMBO.
 	if id in [DEF_COMBO, ATTACK_FLURRY, PEN_DEEP]:
@@ -158,7 +164,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			if strike > 0: ids.append(strike)
 	elif id == PEN_DEEP:
 		# Existing breach stacks determine damage; converted poison adds breach only on hit.
-		var converted_breach := mini(5,poison_stacks / 2)
+		var converted_breach := mini(_effect_stack_cap(target,AbilityCatalog.effect_id(PEN_DEEP,"on_hit"),engine.state.round_number),poison_stacks / 2)
 		action.set_result("breach_stacks_to_apply",converted_breach)
 		var pierce := _queue_attack(engine,action,action.target_id,mh,mh_average*0.50*float(breach_stacks),{"dagger_breach_on_hit":converted_breach})
 		if pierce > 0: ids.append(pierce)
