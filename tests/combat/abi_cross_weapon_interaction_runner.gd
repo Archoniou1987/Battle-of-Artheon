@@ -80,7 +80,17 @@ func _char_npc_par_projection_contract() -> void:
 	_check(not hero_snapshot.is_empty(),"A07:CHAR_snapshot_available")
 	var char_fields := CharacterStatsService.par_source_fields(Dictionary(par.get("totals",{})))
 	for key in char_fields:
-		_check(hero_snapshot.has(key) and hero_snapshot[key]==char_fields[key],"A07:CHAR_projection_"+String(key))
+		# PAR050/PAR051 are attack-range owners; their UI snapshot keys
+		# intentionally become [min,max] arrays (or are absent without OH).
+		# Compare only scalar PAR source fields here, never Array == float.
+		if key == "main_hand_damage" or key == "off_hand_damage":
+			continue
+		var mapped: Variant = hero_snapshot.get(key,null)
+		var raw: Variant = char_fields[key]
+		_check(RatingMatrix._number(mapped) and RatingMatrix._number(raw) and is_equal_approx(float(mapped),float(raw)),"A07:CHAR_scalar_projection_"+String(key))
+	var main_damage: Variant = hero_snapshot.get("main_hand_damage",null)
+	_check(main_damage is Array and Array(main_damage).size()==2,"A07:CHAR_main_hand_range_is_array")
+	_check(not hero_snapshot.has("off_hand_damage"),"A07:CHAR_absent_off_hand_has_no_range")
 
 
 func _abi_to_eff_references() -> void:
