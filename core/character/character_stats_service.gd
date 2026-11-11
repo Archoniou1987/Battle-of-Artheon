@@ -4,6 +4,26 @@ extends RefCounted
 ## Authoritative character-stat snapshot for UI and gameplay consumers.
 ## Combat target-specific rolls and damage mitigation are not character stats.
 
+## Shared PAR-ID -> runtime source_key adapter for CHAR and NPC.
+## NPC templates can author explicit PAR totals and select only previously
+## supported fields. This is a projection, NOT a second PAR derivation.
+static func par_source_fields(totals: Dictionary, selected_ids: Array = []) -> Dictionary:
+	var fields := {}
+	var definitions := ParCalculationService.registry()
+	for par_id in totals:
+		if ParCalculationService.PRIMARY_IDS.has(par_id):
+			continue
+		if not selected_ids.is_empty() and not selected_ids.has(par_id):
+			continue
+		var definition: Dictionary = definitions.get(par_id,{})
+		# Retired PAR remains reserved, never promoted into combat fields.
+		if String(definition.get("status","")).begins_with("ВЫВОДИТСЯ"):
+			continue
+		var source_key := String(definition.get("source_key",""))
+		if not source_key.is_empty():
+			fields[source_key] = totals[par_id]
+	return fields
+
 static func snapshot(character: CharacterState, repository: ItemRepository = null, direct_effects: Dictionary = {}, par_snapshot: Dictionary = {}) -> Dictionary:
 	if character == null:
 		return {}
@@ -14,17 +34,9 @@ static func snapshot(character: CharacterState, repository: ItemRepository = nul
 		return {}
 	var primary: Dictionary = par_snapshot.get("totals", {})
 	var result: Dictionary = par_snapshot.get("unmapped_derived", {}).duplicate(true)
-	var definitions := ParCalculationService.registry()
-	for par_id in primary:
-		if ParCalculationService.PRIMARY_IDS.has(par_id):
-			continue
-		var definition: Dictionary = definitions.get(par_id, {})
-		# Keep retired PAR IDs reserved in the registry, but never expose them as live stats.
-		if String(definition.get("status","")).begins_with("ВЫВОДИТСЯ"):
-			continue
-		var source_key := String(definition.get("source_key", ""))
-		if not source_key.is_empty():
-			result[source_key] = primary[par_id]
+	var projected := par_source_fields(primary)
+	for source_key in projected:
+		result[source_key] = projected[source_key]
 	# These names have identical units/meaning; no rating-to-percentage conversion is guessed.
 	result["armour_penetration_flat"] = primary["PAR125"]
 	result["armour_penetration_percent"] = primary["PAR126"]
