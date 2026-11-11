@@ -394,6 +394,16 @@ func _hammer_eff601_charge_generation() -> void:
 	engine.resolve_event(damage_event)
 	_check(int(damage_event.result.get("final_damage",0))>0,"EFF601:positive_incoming_damage_fixture")
 	_check(HammerAbiCombatService.charges(hammer,state.round_number)==13,"EFF601:active_snapshot_controls_damage_taken")
+	# Direct service callback exercises the critical branch deterministically,
+	# without relying on the fixture's PAR-derived critical chance.
+	existing["bonus_charges_on_ordinary_mh_crit"] = 3
+	charge_record["definition"] = existing
+	var critical_hit := state.create_event(CombatEvent.Kind.ATTACK,"left","right",{
+		"is_weapon_attack":true,"weapon_index":0,"source_kind":"weapon"
+	})
+	critical_hit.set_result("critical",true)
+	HammerAbiCombatService.on_connected_attack(engine,critical_hit,hammer)
+	_check(HammerAbiCombatService.charges(hammer,state.round_number)==18,"EFF601:active_snapshot_controls_critical_charge_bonus")
 
 
 func _damage_type(weapon_class: String) -> String:
