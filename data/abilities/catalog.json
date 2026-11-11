@@ -583,7 +583,8 @@
     "ap_gain": 1,
     "application_timing": "standard",
     "hammer_ability_mode": "mh_tempo",
-    "mh_damage_bonus_pct": 20
+    "mh_damage_bonus_pct": 20,
+    "tempo_control_on_hit": 25
   },
   "ABI602": {
     "name": "Отражение",
@@ -622,7 +623,9 @@
     "ap_cost": 3,
     "ap_gain": 0,
     "application_timing": "standard",
-    "hammer_ability_mode": "heal"
+    "hammer_ability_mode": "heal",
+    "charge_spend_fraction": 0.5,
+    "heal_hp_pct_per_spent_charge": 0.5
   },
   "ABI604": {
     "name": "Разрушающий удар",
@@ -645,7 +648,8 @@
     "hammer_ability_mode": "armour_fracture",
     "effect_refs": {
       "on_hit": "EFF603"
-    }
+    },
+    "damage_multiplier": 2
   },
   "ABI605": {
     "name": "Боевой прилив",
@@ -665,7 +669,8 @@
     "ap_cost": 3,
     "ap_gain": 0,
     "application_timing": "instant",
-    "hammer_ability_mode": "damage_surge"
+    "hammer_ability_mode": "damage_surge",
+    "charge_spend_fraction": 0.25
   },
   "ABI606": {
     "name": "Сокрушение",
@@ -685,6 +690,10 @@
     "ap_cost": 5,
     "ap_gain": 0,
     "application_timing": "standard",
-    "hammer_ability_mode": "tempo_crush"
+    "hammer_ability_mode": "tempo_crush",
+    "damage_multiplier_per_charge": 0.03,
+    "max_damage_multiplier": 3,
+    "tempo_control_per_charge": 2,
+    "max_tempo_control": 200
   }
 }
