@@ -85,7 +85,7 @@ static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 	var source := engine.state.get_combatant(action.source_id)
 	if source == null or _weapon(source).is_empty() or not _enemy(engine,action.source_id,action.target_id):
 		return
-	_effect(engine,action.source_id,action.target_id,action.event_id,BREAK_EFF,true)
+	_effect(engine,action.source_id,action.target_id,action.event_id,AbilityCatalog.effect_id(ATTACK_BREAKER,"pre_attack"),true)
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, percent: float, extras: Dictionary = {}) -> int:
 	var component := {"damage_type":String(profile.get("damage_type","chopping")),"zone":String(action.payload.get("zone","chest"))}
@@ -126,12 +126,12 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("outcome","axe_mh_required")
 		return
 	if id == RAGE_ABI:
-		_effect(engine,action.source_id,action.source_id,action.event_id,RAGE)
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(RAGE_ABI))
 		action.set_result("outcome","rage_added")
 		return
 	if id == DEF_STANCE:
 		var dodge := 5.0 * float(rage_stacks(source,engine.state.round_number))
-		_effect(engine,action.source_id,action.source_id,action.event_id,STANCE_EFF,true,{"axe_stance_dodge_pct":dodge})
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_STANCE),true,{"axe_stance_dodge_pct":dodge})
 		action.set_result("outcome","retaliation_stance")
 		return
 	if id == CRUSHER:
@@ -139,7 +139,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			action.set_result("outcome","needs_five_rage")
 			return
 		_consume_rage(source)
-		_effect(engine,action.source_id,action.source_id,action.event_id,CRUSHER_EFF,true)
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(CRUSHER),true)
 		action.set_result("outcome","crusher_applied")
 		return
 	if not _enemy(engine,action.source_id,action.target_id):
@@ -166,7 +166,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 static func on_connected_attack(engine: CombatEngine, attack: CombatEvent) -> void:
 	var abi := String(attack.payload.get("axe_abi_id",""))
 	if abi == DEF_SWEEP:
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,SWEEP_EFF)
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(DEF_SWEEP,"on_hit"))
 	elif abi == EXECUTE or abi == SHIELD_BREAK:
 		# Miss/dodge/block never consume rage; any connected strike does.
 		var source := engine.state.get_combatant(attack.source_id)

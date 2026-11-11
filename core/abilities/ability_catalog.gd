@@ -1,6 +1,24 @@
 class_name AbilityCatalog
 extends RefCounted
 
+const CANONICAL_PATH := "res://data/abilities/catalog.json"
+static var _canonical_definitions: Dictionary = {}
+
+## The ABI catalog owns its references to EFF. Existing effect components
+## already provide primary links; effect_refs names supplementary roles.
+static func effect_id(ability_id: String, role: String = "primary") -> String:
+	if _canonical_definitions.is_empty():
+		_canonical_definitions = load_json(CANONICAL_PATH)
+	var ability := definition(_canonical_definitions, ability_id)
+	if role == "primary":
+		for raw in ability.get("components", []):
+			if raw is Dictionary and String(raw.get("kind", "")) == "effect":
+				return String(raw.get("effect_id", ""))
+		return String(ability.get("sword_eff_id", ""))
+	var refs: Variant = ability.get("effect_refs", {})
+	return String(refs.get(role, "")) if refs is Dictionary else ""
+
+
 static func load_json(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path): return {}
 	var file := FileAccess.open(path, FileAccess.READ)

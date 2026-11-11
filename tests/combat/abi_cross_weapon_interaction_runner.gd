@@ -11,6 +11,7 @@ func _check(ok: bool, label: String) -> void:
 		print("ABI_CROSS_WEAPON_CASE=FAIL ",label)
 
 func _initialize() -> void:
+	_abi_to_eff_references()
 	_sword_cripple_versus_axe_damage()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
@@ -20,6 +21,23 @@ func _initialize() -> void:
 	_hammer_tempo_versus_axe_immunity()
 	print("ABI_CROSS_WEAPON_INTERACTION_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=",failures)
 	quit(0 if failures.is_empty() else 1)
+
+func _abi_to_eff_references() -> void:
+	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var effects := EffectCatalog.load_json()
+	for abi_id in abilities:
+		var abi: Dictionary = abilities[abi_id]
+		var primary := AbilityCatalog.effect_id(String(abi_id))
+		for raw in abi.get("components", []):
+			if raw is Dictionary and String(raw.get("kind", "")) == "effect":
+				var expected := String(raw.get("effect_id", ""))
+				_check(primary == expected and effects.has(expected), String(abi_id) + ":primary_eff_reference")
+		if abi.has("sword_eff_id"):
+			_check(primary == String(abi["sword_eff_id"]) and effects.has(primary), String(abi_id) + ":sword_eff_reference")
+		var roles: Dictionary = abi.get("effect_refs", {})
+		for role in roles:
+			var expected := String(roles[role])
+			_check(AbilityCatalog.effect_id(String(abi_id),String(role)) == expected and effects.has(expected), String(abi_id) + ":" + String(role) + "_eff_reference")
 
 func _damage_type(weapon_class: String) -> String:
 	match weapon_class:

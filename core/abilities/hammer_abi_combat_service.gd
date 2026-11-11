@@ -104,7 +104,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("outcome","linked_to_existing_mh")
 		return
 	if id == REFLECT_ABI:
-		_effect(engine,action.source_id,action.source_id,action.event_id,REFLECT_EFF,true)
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(REFLECT_ABI),true)
 		action.set_result("outcome","reflect_active")
 		return
 	var n := charges(source,engine.state.round_number)
@@ -122,7 +122,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	if id == SURGE:
 		var spent := roundi(float(n)*0.25)
 		_consume(source,spent)
-		_effect(engine,action.source_id,action.source_id,action.event_id,SURGE_EFF,true,{"hammer_surge_pct":float(spent)})
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(SURGE),true,{"hammer_surge_pct":float(spent)})
 		action.set_result("charges_consumed",spent)
 		action.set_result("outcome","surge_active")
 		return
@@ -167,7 +167,7 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 	elif abi == FRACTURE:
 		var rounds := int(attack.payload.get("hammer_fracture_rounds",0))
 		if rounds > 0:
-			_effect(engine,attack.source_id,attack.target_id,attack.event_id,FRACTURE_EFF,false,{
+			_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(FRACTURE,"on_hit"),false,{
 				"hammer_fracture_rounds":rounds,
 				"hammer_fracture_pct":int(attack.payload.get("hammer_fracture_charges",0)),
 				"hammer_fracture_zone":String(attack.payload.get("hammer_fracture_zone","chest"))

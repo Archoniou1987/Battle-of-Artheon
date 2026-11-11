@@ -5,7 +5,6 @@ extends RefCounted
 ## events. No parallel damage pipeline, no direct HP writes, and no DoT crit.
 const ABILITIES := ["ABI301","ABI302","ABI303","ABI304","ABI305","ABI306","ABI307","ABI308"]
 const BLEED := "EFF301"
-const DEBUFFS := {"ABI303":"EFF302","ABI304":"EFF303","ABI305":"EFF304"}
 
 static func is_sword_ability(ability_id: String) -> bool:
 	return ABILITIES.has(ability_id)
@@ -104,13 +103,13 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, sourc
 	var eff_level := maxi(1,int(attack.payload.get("sword_eff_level",1)))
 	if ability_id in ["ABI301","ABI302"]:
 		_award_hit_ap(engine,attack,source,1 if ability_id=="ABI301" else 2)
-		_apply_effect(engine,attack,BLEED,1,eff_level)
-	elif DEBUFFS.has(ability_id):
-		_apply_effect(engine,attack,String(DEBUFFS[ability_id]),1,eff_level)
+		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),1,eff_level)
+	elif ability_id in ["ABI303","ABI304","ABI305"]:
+		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),1,eff_level)
 	elif ability_id == "ABI306":
-		_apply_effect(engine,attack,BLEED,1,eff_level)
+		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),1,eff_level)
 	elif ability_id == "ABI307":
-		_apply_effect(engine,attack,BLEED,mini(5,maxi(1,int(attack.payload.get("sword_ap_spent",1)))),eff_level)
+		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),mini(5,maxi(1,int(attack.payload.get("sword_ap_spent",1)))),eff_level)
 	elif ability_id == "ABI308":
 		var effect := active_bleeding(target)
 		if effect.is_empty():

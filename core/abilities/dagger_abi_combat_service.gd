@@ -89,11 +89,11 @@ static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 	if source == null or _weapon(source,0).is_empty() or not _valid_enemy(engine,action.source_id,action.target_id):
 		return
 	if ability_id == ATTACK_HEAVY:
-		_effect(engine,action.source_id,action.target_id,action.event_id,OPEN_GUARD,true)
+		_effect(engine,action.source_id,action.target_id,action.event_id,AbilityCatalog.effect_id(ATTACK_HEAVY,"pre_attack"),true)
 	else:
 		var target := engine.state.get_combatant(action.target_id)
 		var breach := _active_stacks(target,BREACH,engine.state.round_number,5)
-		_effect(engine,action.source_id,action.source_id,action.event_id,DODGE_BUFF,true,{"dagger_dodge_pct":5.0 * float(breach)})
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_COMBO,"pre_attack"),true,{"dagger_dodge_pct":5.0 * float(breach)})
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
 	if profile.is_empty() or damage < 0.0:
@@ -119,7 +119,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("outcome","dagger_mh_required")
 		return
 	if id == COATING:
-		_effect(engine,action.source_id,action.source_id,action.event_id,COATING_EFF,true)
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(COATING),true)
 		action.set_result("outcome","coating_applied")
 		return
 	if not _valid_enemy(engine,action.source_id,action.target_id):
@@ -175,13 +175,13 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 	var abi := String(attack.payload.get("dagger_abi_id",""))
 	if abi == QUICK:
 		attacker.gain_action_points(1)
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,BREACH)
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(QUICK))
 		return
 	if abi == PEN_DEEP:
 		# All poison was consumed at cast time. Only connected hits convert it.
 		# The shared-duration EFF401 record caps the total at five stacks.
 		for i in range(int(attack.payload.get("dagger_breach_on_hit",0))):
-			_effect(engine,attack.source_id,attack.target_id,attack.event_id,BREACH)
+			_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(PEN_DEEP,"on_hit"))
 		return
 	if abi == PEN_ABSOLUTE:
 		# All hits read one cast-time snapshot; consume only after at least one
@@ -197,14 +197,14 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 		return
 	var coating_active := false
 	for record in CombatModifierService.active_effects(attacker,engine.state.round_number):
-		if String(record.get("effect_id","")) == COATING_EFF:
+		if String(record.get("effect_id","")) == AbilityCatalog.effect_id(COATING):
 			coating_active = true
 			break
 	if coating_active:
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,POISON)
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(COATING,"on_weapon_hit"))
 
 static func on_effect_applied(engine: CombatEngine, event: CombatEvent) -> void:
-	if String(event.payload.get("effect_id","")) != POISON or not bool(event.result.get("resolved",false)):
+	if String(event.payload.get("effect_id","")) != AbilityCatalog.effect_id(COATING,"on_weapon_hit") or not bool(event.result.get("resolved",false)):
 		return
 	var source := engine.state.get_combatant(event.source_id)
 	if source != null and engine.combat_rng.randf() < 0.05:

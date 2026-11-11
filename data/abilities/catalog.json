@@ -247,7 +247,8 @@
     "ap_cost": 0,
     "ap_gain": 1,
     "application_timing": "instant",
-    "dagger_ability_mode": "poison_coating"
+    "dagger_ability_mode": "poison_coating",
+    "effect_refs": {"on_weapon_hit":"EFF403"}
   },
   "ABI403": {
     "name": "Веер клинков",
@@ -288,7 +289,8 @@
     "ap_cost": 5,
     "ap_gain": 0,
     "application_timing": "standard",
-    "dagger_ability_mode": "def_combo"
+    "dagger_ability_mode": "def_combo",
+    "effect_refs": {"pre_attack":"EFF404"}
   },
   "ABI405": {
     "name": "Сокрушительный выпад",
@@ -308,7 +310,8 @@
     "ap_cost": 2,
     "ap_gain": 0,
     "application_timing": "standard",
-    "dagger_ability_mode": "attack_heavy"
+    "dagger_ability_mode": "attack_heavy",
+    "effect_refs": {"pre_attack":"EFF405"}
   },
   "ABI406": {
     "name": "Шквал клинков",
@@ -348,7 +351,8 @@
     "ap_cost": 2,
     "ap_gain": 0,
     "application_timing": "standard",
-    "dagger_ability_mode": "pen_deep"
+    "dagger_ability_mode": "pen_deep",
+    "effect_refs": {"on_hit":"EFF401"}
   },
   "ABI408": {
     "name": "Абсолютное пробитие",
@@ -429,7 +433,8 @@
     "ap_cost": 2,
     "ap_gain": 0,
     "application_timing": "standard",
-    "axe_ability_mode": "def_sweep"
+    "axe_ability_mode": "def_sweep",
+    "effect_refs": {"on_hit":"EFF502"}
   },
   "ABI504": {
     "name": "Стойка возмездия",
@@ -469,7 +474,8 @@
     "ap_cost": 2,
     "ap_gain": 0,
     "application_timing": "standard",
-    "axe_ability_mode": "attack_breaker"
+    "axe_ability_mode": "attack_breaker",
+    "effect_refs": {"pre_attack":"EFF504"}
   },
   "ABI506": {
     "name": "Смертельный удар",
@@ -608,7 +614,8 @@
     "ap_cost": 5,
     "ap_gain": 0,
     "application_timing": "standard",
-    "hammer_ability_mode": "armour_fracture"
+    "hammer_ability_mode": "armour_fracture",
+    "effect_refs": {"on_hit":"EFF603"}
   },
   "ABI605": {
     "name": "Боевой прилив",
