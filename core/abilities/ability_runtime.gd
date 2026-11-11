@@ -177,6 +177,11 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 			"breach_damage_multiplier","poison_stacks_per_breach","armour_bypass_pct_per_breach_stack"]:
 			if definition.has(field):
 				event.payload[field] = definition[field]
+	if not String(definition.get("axe_ability_mode","")).is_empty():
+		for field in ["attack_damage_pct","damage_pct_per_rage_stack","single_target_damage_pct",
+			"multi_target_damage_pct","execute_hp_threshold_fraction","min_rage_stacks","required_rage_stacks"]:
+			if definition.has(field):
+				event.payload[field] = definition[field]
 	if definition.has("mh_damage_bonus_pct"):
 		event.payload["mh_damage_bonus_pct"] = float(definition["mh_damage_bonus_pct"])
 	return event
