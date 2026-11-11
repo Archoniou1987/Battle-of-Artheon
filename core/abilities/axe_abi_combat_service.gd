@@ -133,8 +133,8 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("outcome","rage_added")
 		return
 	if id == DEF_STANCE:
-		var dodge := 5.0 * float(rage_stacks(source,engine.state.round_number))
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_STANCE),true,{"axe_stance_dodge_pct":dodge})
+		var rage_count := rage_stacks(source,engine.state.round_number)
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_STANCE),true,{"axe_rage_stacks":rage_count})
 		action.set_result("outcome","retaliation_stance")
 		return
 	if id == CRUSHER:
