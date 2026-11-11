@@ -30,10 +30,12 @@ static func _average(profile: Dictionary) -> float:
 
 static func charges(source: CombatantState, round_number: int) -> int:
 	var n := 0
+	var cap := 0
 	for record in CombatModifierService.active_effects(source,round_number):
 		if String(record.get("effect_id","")) == CHARGE:
+			cap = EffectCatalog.stack_cap(CHARGE,Dictionary(record.get("definition",{})))
 			n += int(record.get("stacks",0))
-	return mini(100,n)
+	return mini(cap,n)
 
 static func _charge_record(source: CombatantState) -> Dictionary:
 	for raw in source.active_effects:
@@ -46,19 +48,21 @@ static func gain_charges(engine: CombatEngine, source: CombatantState, n: int) -
 	if n <= 0 or source == null or source.is_death_finalized() or _weapon(source).is_empty():
 		return
 	var record := _charge_record(source)
+	var current_definition: Dictionary = Dictionary(engine.canonical_effects.get(CHARGE,{})) if record.is_empty() else Dictionary(record.get("definition",{}))
+	var cap := EffectCatalog.stack_cap(CHARGE,current_definition)
 	if record.is_empty():
 		source.active_effects.append({
 			"effect_id":CHARGE,
-			"definition":Dictionary(engine.canonical_effects.get(CHARGE,{})).duplicate(true),
+			"definition":current_definition.duplicate(true),
 			"source_id":source.combatant_id,
 			"source_type":"hammer_passive",
 			"start_round":engine.state.round_number,
 			"remaining_rounds":1,
-			"stacks":mini(n,100),
+			"stacks":mini(n,cap),
 			"revealed":true
 		})
 	else:
-		record["stacks"] = mini(100,int(record.get("stacks",0))+n)
+		record["stacks"] = mini(cap,int(record.get("stacks",0))+n)
 
 static func _consume(source: CombatantState, n: int) -> void:
 	if source == null or n <= 0:
