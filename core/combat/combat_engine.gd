@@ -529,7 +529,6 @@ func _resolve_effect(event: CombatEvent) -> void:
 			event.set_result("resolved", false)
 			event.set_result("outcome", "no_effect_duration")
 			return
-		definition["armour_reduction_pct"] = clampf(float(event.payload.get("hammer_fracture_pct",0.0)),0.0,100.0)
 		definition["armour_zone"] = String(event.payload.get("hammer_fracture_zone","chest"))
 	if effect_id in ["EFF301","EFF302","EFF303","EFF304"]:
 		definition = definition.duplicate(true)
