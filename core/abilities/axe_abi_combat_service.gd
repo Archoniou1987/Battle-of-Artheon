@@ -159,7 +159,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		if victim != null and victim.max_hp>0 and float(victim.hp)<AbilityCatalog.number(EXECUTE,"execute_hp_threshold_fraction",action.payload)*float(victim.max_hp) and rage>=int(AbilityCatalog.number(EXECUTE,"min_rage_stacks",action.payload)):
 			ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(EXECUTE,"damage_pct_per_rage_stack",action.payload)*float(rage)))
 	elif id == SHIELD_BREAK:
-		var targets := _targets(engine,action,maxi(1,int(action.payload.get("max_targets",1))))
+		var targets := _targets(engine,action,maxi(1,int(action.payload.get("max_targets",AbilityCatalog.number(SHIELD_BREAK,"max_targets")))))
 		var base := AbilityCatalog.number(SHIELD_BREAK,"single_target_damage_pct",action.payload) if targets.size() == 1 else AbilityCatalog.number(SHIELD_BREAK,"multi_target_damage_pct",action.payload)
 		for target_id in targets:
 			ids.append(_queue_attack(engine,action,target_id,profile,base+AbilityCatalog.number(SHIELD_BREAK,"damage_pct_per_rage_stack",action.payload)*float(rage),{"skip_dodge_block":true}))
