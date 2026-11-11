@@ -55,10 +55,12 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		payload["sword_abi_id"] = String(action.payload.get("ability_id",""))
 		payload["sword_eff_level"] = maxi(1,int(action.payload.get("sword_eff_level",1)))
 		payload["sword_ap_spent"] = ap_spent
+		if bool(action.payload.get("ap_gain_on_hit",false)) or String(action.payload.get("ability_id","")) == "ABI302":
+			payload["sword_ap_gain_on_hit"] = int(action.payload.get("ap_gain",AbilityCatalog.number(String(action.payload.get("ability_id","")),"ap_gain")))
 		payload["sword_eff_id"] = String(action.payload.get("sword_eff_id",""))
 		if mode == "crit_ultimate":
-			payload["sword_crit_chance_pct"] = float(action.payload.get("crit_pct_per_ap",10)) * ap_spent
-			payload["sword_crit_damage_pct"] = float(action.payload.get("crit_damage_pct_per_ap",25)) * ap_spent
+			payload["sword_crit_chance_pct"] = AbilityCatalog.number("ABI308","crit_pct_per_ap",action.payload) * ap_spent
+			payload["sword_crit_damage_pct"] = AbilityCatalog.number("ABI308","crit_damage_pct_per_ap",action.payload) * ap_spent
 			payload["sword_bleed_ticks"] = maxi(0,int(action.payload.get("bleed_ticks",0)))
 		var attack := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,target_id,payload,action.event_id)
 		engine.state.queue_event(attack)
@@ -99,7 +101,7 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, sourc
 		return
 	var eff_level := maxi(1,int(attack.payload.get("sword_eff_level",1)))
 	if ability_id in ["ABI301","ABI302"]:
-		_award_hit_ap(engine,attack,source,1 if ability_id=="ABI301" else 2)
+		_award_hit_ap(engine,attack,source,int(attack.payload.get("sword_ap_gain_on_hit",AbilityCatalog.number(ability_id,"ap_gain"))))
 		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),1,eff_level)
 	elif ability_id in ["ABI303","ABI304","ABI305"]:
 		_apply_effect(engine,attack,AbilityCatalog.effect_id(ability_id),1,eff_level)
