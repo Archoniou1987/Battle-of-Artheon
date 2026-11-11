@@ -258,7 +258,8 @@
     "application_timing": "standard",
     "dagger_ability_mode": "def_fan",
     "trigger_previous_round": "dodge",
-    "max_targets": 5
+    "max_targets": 5,
+    "damage_multiplier": 1
   },
   "ABI404": {
     "name": "Смертельная комбинация",
@@ -307,7 +308,8 @@
     "dagger_ability_mode": "attack_heavy",
     "effect_refs": {
       "pre_attack": "EFF405"
-    }
+    },
+    "damage_multiplier": 1
   },
   "ABI406": {
     "name": "Шквал клинков",
