@@ -259,6 +259,9 @@
       "HAMMER_CHARGE"
     ],
     "armour_and_resistance_direct_pct_per_stack": 0.25,
+    "charges_per_ordinary_mh_hit": 5,
+    "bonus_charges_on_ordinary_mh_crit": 5,
+    "charges_per_positive_damage_event_taken": 1,
     "undispellable": true
   },
   "EFF602": {
