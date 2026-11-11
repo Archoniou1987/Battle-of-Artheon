@@ -126,7 +126,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	if id == SURGE:
 		var spent := roundi(float(n)*0.25)
 		_consume(source,spent)
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(SURGE),true,{"hammer_surge_pct":float(spent)})
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(SURGE),true,{"hammer_surge_spent_charges":spent})
 		action.set_result("charges_consumed",spent)
 		action.set_result("outcome","surge_active")
 		return
