@@ -172,6 +172,8 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 			"mh_flat_bonus","armor_per_ap","crit_pct_per_ap","crit_damage_pct_per_ap","bleed_ticks"]:
 			if definition.has(field):
 				event.payload[field] = definition[field]
+	if definition.has("mh_damage_bonus_pct"):
+		event.payload["mh_damage_bonus_pct"] = float(definition["mh_damage_bonus_pct"])
 	return event
 
 
