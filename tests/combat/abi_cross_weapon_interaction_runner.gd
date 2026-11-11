@@ -14,6 +14,7 @@ func _initialize() -> void:
 	_sword_cripple_versus_axe_damage()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
+	_axe_rage_value_comes_from_eff()
 	_dagger_poison_versus_hammer_reflection()
 	_axe_counter_versus_dagger_dodge()
 	_hammer_tempo_versus_axe_immunity()
@@ -122,7 +123,9 @@ func _dagger_breach_versus_hammer_armour() -> void:
 	var state: CombatState = ctx["state"]
 	var hammer := state.get_combatant("right")
 	hammer.armour["chest"] = {"piercing":150.0}
-	var charge_definition := EffectCatalog.definition(EffectCatalog.load_json(),"EFF601")
+	var charge_definition := EffectCatalog.definition(EffectCatalog.load_json(),"EFF601").duplicate(true)
+	# Change the test-only EFF value; Combat must never keep a hardcoded 0.25.
+	charge_definition["armour_and_resistance_direct_pct_per_stack"] = 0.5
 	hammer.active_effects.append({
 		"effect_id":"EFF601","definition":charge_definition,"source_id":"right",
 		"start_round":1,"remaining_rounds":1,"stacks":40
@@ -130,17 +133,35 @@ func _dagger_breach_versus_hammer_armour() -> void:
 	var base_hit := _attack(ctx,"left","right")
 	_check(String(base_hit.result.get("outcome","")) == "connected","dagger:baseline_hit_connected")
 	var base_reduction := float(base_hit.result.get("armour_reduction",-1.0))
+	_check(is_equal_approx(float(base_hit.result.get("armour_before_dr_percent",-1.0)),float(base_hit.result.get("armour_raw_percent",-1.0))+20.0),"hammer:armour_reads_test_only_eff601_rate")
 	for i in range(5):
 		_effect(ctx,"left","right","EFF401")
 	_check(_effects_count(hammer,"EFF401") == 1 and _effect_stacks(hammer,"EFF401") == 5,"dagger:five_breach_stacks_in_one_record")
+	# Change only the active EFF snapshot, not CombatEngine: 5 stacks x 4 p.p.
+	for record in hammer.active_effects:
+		if String(record.get("effect_id","")) == "EFF401":
+			Dictionary(record["definition"])["armour_reduction_pct_per_stack"] = 4.0
 	state.begin_round()
 	var breached_hit := _attack(ctx,"left","right")
 	var breached_reduction := float(breached_hit.result.get("armour_reduction",-1.0))
 	_check(String(breached_hit.result.get("outcome","")) == "connected","dagger:breached_hit_connected")
 	_check(int(breached_hit.result.get("dagger_breach_stacks",-1)) == 5,"dagger:five_stacks_visible_to_damage")
+	_check(is_equal_approx(float(breached_hit.result.get("armour_after_breach_percent",-1)),maxf(0.0,float(breached_hit.result.get("armour_raw_percent",-1))-20.0)),"dagger:armour_reads_test_only_eff401_rate")
 	_check(base_reduction > 0.0 and breached_reduction < base_reduction,"dagger:breach_counters_hammer_charge_armour")
 	_check(HammerAbiCombatService.charges(hammer,state.round_number) >= 40,"hammer:charges_survive_armour_breach")
 	print("ABI_CROSS_WEAPON_CASE=CHECKED dagger_breach_vs_hammer_armour")
+
+func _axe_rage_value_comes_from_eff() -> void:
+	var ctx := _pair("axe","dagger")
+	var state: CombatState = ctx["state"]
+	var axe := state.get_combatant("left")
+	var rage_definition := EffectCatalog.definition(EffectCatalog.load_json(),"EFF501").duplicate(true)
+	rage_definition["block_crush_per_stack"] = 3.5
+	axe.active_effects.append({
+		"effect_id":"EFF501", "definition":rage_definition, "source_id":"left",
+		"start_round":1, "remaining_rounds":5, "stacks":3
+	})
+	_check(is_equal_approx(CombatModifierService.block_crush_chance(axe,1),10.5),"axe:rage_reads_test_only_eff501_rate")
 
 func _dagger_poison_versus_hammer_reflection() -> void:
 	var ctx := _pair("dagger","hammer")

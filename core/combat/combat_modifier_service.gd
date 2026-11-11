@@ -30,6 +30,21 @@ static func flat_bonus(combatant: CombatantState, key: String, round_number: int
 static func modifier(combatant: CombatantState, key: String, round_number: int) -> float:
 	return float(trait_modifiers(combatant).get(key, 0.0)) + flat_bonus(combatant, key, round_number)
 
+## EFF owns per-stack values and stack limits. Combat/ABI only reference its ID.
+## Read the applied record so the same EFF definition governs saved encounters.
+static func effect_stack_bonus(combatant: CombatantState, effect_id: String, field: String, round_number: int) -> float:
+	var total := 0.0
+	var counted_stacks := 0
+	for record in active_effects(combatant, round_number):
+		if String(record.get("effect_id", "")) != effect_id:
+			continue
+		var definition: Dictionary = record.get("definition", {})
+		var max_stacks := maxi(0, int(definition.get("max_stacks", 2147483647)))
+		var stacks := mini(maxi(0, int(record.get("stacks", 1))), maxi(0, max_stacks - counted_stacks))
+		counted_stacks += stacks
+		total += float(definition.get(field, 0.0)) * float(stacks)
+	return total
+
 static func flag(combatant: CombatantState, key: String, round_number: int) -> bool:
 	if bool(trait_modifiers(combatant).get(key, false)):
 		return true
@@ -91,9 +106,8 @@ static func block_chance(combatant: CombatantState, round_number: int) -> float:
 	return clampf(CombatRatingCurves.diminishing(raw_chance,"block"),0.0,100.0)
 
 static func block_crush_chance(combatant: CombatantState, round_number: int) -> float:
-	# RAGE: each stack adds +2 percentage points vs ALL manual/auto blocks.
-	# CRUSHER adds +20 via its ordinary EFF block_crush overlay.
-	return value(combatant, "block_crush", round_number) + 2.0*float(AxeAbiCombatService.rage_stacks(combatant,round_number))
+	# RAGE's per-stack modifier belongs to EFF501; CRUSHER is a regular EFF overlay.
+	return value(combatant, "block_crush", round_number) + effect_stack_bonus(combatant, AxeAbiCombatService.RAGE, "block_crush_per_stack", round_number)
 
 static func armour_penetration_flat(combatant: CombatantState, round_number: int) -> float:
 	return value(combatant, "armour_penetration_flat", round_number)
@@ -223,10 +237,9 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	if not is_finite(general_raw) or not is_finite(school_raw):
 		push_error("Invalid magic resistance rating")
 		return 0.0
-	# EFF is a percentage-point overlay for this school; hammer charges
-	# contribute +0.25 p.p. per charge to the same raw school layer.
+	# EFF601 defines the charge bonus; the result enters raw school defence before DR.
 	var school_bonus := modifier(combatant,key+"_resist_direct_pct",round_number)
-	var charge_bonus := 0.25*float(HammerAbiCombatService.charges(combatant,round_number))
+	var charge_bonus := effect_stack_bonus(combatant, HammerAbiCombatService.CHARGE, "armour_and_resistance_direct_pct_per_stack", round_number)
 	var general_fraction := clampf(general_raw/100.0,0.0,1.0)
 	var school_fraction := clampf((school_raw+school_bonus+charge_bonus)/100.0,0.0,1.0)
 	var sequential_raw_pct := 100.0*(1.0-(1.0-general_fraction)*(1.0-school_fraction))

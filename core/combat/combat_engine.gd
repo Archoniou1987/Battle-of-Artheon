@@ -422,8 +422,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 	# EFF401 is a percentage-point reduction, before v1.2 diminishing.
 	# EFF401 penetration and hammer armour bonuses enter the raw percentage
 	# before DR. Post-DR additions could recreate 100% physical immunity.
-	var after_breach_pct := maxf(0.0,raw_armour_pct-3.0*float(dagger_breach_stacks))
-	var armour_before_dr := after_breach_pct+0.25*float(HammerAbiCombatService.charges(defender,state.round_number))
+	var after_breach_pct := maxf(0.0,raw_armour_pct-CombatModifierService.effect_stack_bonus(defender,DaggerAbiCombatService.BREACH,"armour_reduction_pct_per_stack",state.round_number))
+	var armour_before_dr := after_breach_pct+CombatModifierService.effect_stack_bonus(defender,HammerAbiCombatService.CHARGE,"armour_and_resistance_direct_pct_per_stack",state.round_number)
 	var armour_percent := CombatRatingCurves.diminishing(armour_before_dr,"armour")
 	# Active zone fracture only reduces its named physical zone.
 	for fracture in CombatModifierService.active_effects(defender,state.round_number):
