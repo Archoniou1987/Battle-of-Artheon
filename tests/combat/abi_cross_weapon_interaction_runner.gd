@@ -118,7 +118,9 @@ func _dagger_abi_coefficients_from_catalog() -> void:
 	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	for scenario in [
 		{"abi":"ABI401","overrides":{"damage_multiplier":0.37,"ap_gain":3},"poison":0,"breach":0,"expected_damage":[37.0]},
+		{"abi":"ABI403","overrides":{"damage_multiplier":0.80},"poison":0,"breach":0,"expected_damage":[140.0]},
 		{"abi":"ABI404","overrides":{"poison_damage_bonus_per_stack":0.27},"poison":2,"breach":0,"expected_damage":[154.0,115.5]},
+		{"abi":"ABI405","overrides":{"damage_multiplier":1.25},"poison":0,"breach":0,"expected_damage":[125.0,93.75]},
 		{"abi":"ABI406","overrides":{"strike_damage_multiplier":0.42},"poison":3,"breach":0,"expected_damage":[42.0,31.5,42.0]},
 		{"abi":"ABI407","overrides":{"breach_damage_multiplier":0.80,"poison_stacks_per_breach":3},"poison":5,"breach":2,"expected_damage":[160.0]},
 		{"abi":"ABI408","overrides":{"armour_bypass_pct_per_breach_stack":11.0},"poison":0,"breach":3,"expected_damage":[100.0,75.0]}
@@ -140,6 +142,8 @@ func _dagger_abi_coefficients_from_catalog() -> void:
 				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":int(spec["count"])
 			})
 		var definition: Dictionary = Dictionary(defs[id]).duplicate(true)
+		if id == "ABI403" or id == "ABI405":
+			_check(is_equal_approx(float(definition.get("damage_multiplier",-1.0)),1.0),id+":authored_base_multiplier")
 		for field in Dictionary(scenario["overrides"]):
 			definition[field] = scenario["overrides"][field]
 		definition["rolls"] = {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
