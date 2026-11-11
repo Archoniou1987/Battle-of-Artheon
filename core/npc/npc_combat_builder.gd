@@ -10,15 +10,14 @@ static func build(npc:NpcState, combat_level:int=-1)->CombatantState:
 	combatant.combat_stats=(npc.base.get("combat_stats",{}) as Dictionary).duplicate(true)
 	combatant.combat_stats["par_totals"] = (npc.base.get("par_totals", {}) as Dictionary).duplicate(true)
 	combatant.combat_stats["par_attack_ranges"] = (npc.base.get("par_attack_ranges", {}) as Dictionary).duplicate(true)
-	# Match the character adapter for implemented physical PAR values.
-	# NPC templates are authored directly, without CharacterStatsService.snapshot.
-	var definitions := ParCalculationService.registry()
-	for par_id in ["PAR015", "PAR016", "PAR053", "PAR054", "PAR055", "PAR056", "PAR071", "PAR072", "PAR135"]:
-		if not combatant.combat_stats["par_totals"].has(par_id):
-			continue
-		var source_key := String(Dictionary(definitions.get(par_id, {})).get("source_key", ""))
-		if not source_key.is_empty():
-			combatant.combat_stats[source_key] = float(combatant.combat_stats["par_totals"][par_id])
+	# NPC par_totals remain explicitly authored. CHAR owns the only
+	# PAR source_key projection; these are the NPC's previously supported IDs.
+	var projected := CharacterStatsService.par_source_fields(
+		combatant.combat_stats["par_totals"],
+		["PAR015", "PAR016", "PAR053", "PAR054", "PAR055", "PAR056", "PAR071", "PAR072", "PAR135"]
+	)
+	for source_key in projected:
+		combatant.combat_stats[source_key] = float(projected[source_key])
 	combatant.combat_stats["armour_penetration_flat"] = float(combatant.combat_stats["par_totals"].get("PAR125", 0.0))
 	combatant.combat_stats["armour_penetration_percent"] = float(combatant.combat_stats["par_totals"].get("PAR126", 0.0))
 	combatant.combat_stats["shield_auto_block_direct_pct"] = (
