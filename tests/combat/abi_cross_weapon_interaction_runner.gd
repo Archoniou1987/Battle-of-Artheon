@@ -23,6 +23,7 @@ func _initialize() -> void:
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
 	_axe_rage_value_comes_from_eff()
+	_axe_abi_coefficients_from_catalog()
 	_dagger_poison_versus_hammer_reflection()
 	_axe_counter_versus_dagger_dodge()
 	_hammer_tempo_versus_axe_immunity()
@@ -189,6 +190,82 @@ func _dagger_poison_proc_from_eff() -> void:
 	engine.canonical_effects["EFF403"]["ap_gain_on_apply_chance_pct"] = 0.0
 	_effect(ctx,"left","right","EFF403")
 	_check(source.action_points==0,"EFF403:zero_proc_chance_prevents_AP")
+
+## The canonical EFF rage cap and ABI requirements are independent.
+## All changed values are test-only and must survive action snapshots.
+func _axe_abi_coefficients_from_catalog() -> void:
+	var definitions := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	for scenario in [
+		{"abi":"ABI502","overrides":{"attack_damage_pct":135.0},"rage":0,"expected":135.0},
+		{"abi":"ABI503","overrides":{"attack_damage_pct":137.0},"rage":0,"expected":137.0},
+		{"abi":"ABI505","overrides":{"attack_damage_pct":139.0},"rage":0,"expected":139.0},
+		{"abi":"ABI506","overrides":{"execute_hp_threshold_fraction":0.35,"min_rage_stacks":2,"damage_pct_per_rage_stack":91.0},"rage":4,"expected":364.0},
+		{"abi":"ABI508","overrides":{"single_target_damage_pct":170.0,"multi_target_damage_pct":65.0,"damage_pct_per_rage_stack":13.0},"rage":2,"expected":196.0}
+	]:
+		var id := String(scenario["abi"])
+		var ctx := _pair("axe","dagger")
+		var state: CombatState = ctx["state"]
+		var engine: CombatEngine = ctx["engine"]
+		var actor := state.get_combatant("left")
+		var target := state.get_combatant("right")
+		var rage_count := int(scenario["rage"])
+		if rage_count > 0:
+			actor.active_effects.append({
+				"effect_id":"EFF501","definition":EffectCatalog.definition(engine.canonical_effects,"EFF501").duplicate(true),
+				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":rage_count
+			})
+		if id == "ABI506":
+			target.hp = 3000
+			_check(not AxeAbiCombatService.can_cast(state,"left","right",id),"axe:canonical_execute_threshold_remains_20pct")
+		var definition: Dictionary = Dictionary(definitions[id]).duplicate(true)
+		for raw_field in Dictionary(scenario["overrides"]):
+			definition[raw_field] = scenario["overrides"][raw_field]
+		definition["rolls"] = {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
+		var action := AbilityRuntime.build_action_event(state,"left","right",id,definition)
+		AxeAbiCombatService.dispatch(engine,action)
+		var attacks: Array[CombatEvent] = []
+		for pending in state.pending_events:
+			if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("axe_abi_id","")) == id:
+				attacks.append(pending)
+		_check(attacks.size()==1,id+":single_attack_created")
+		if not attacks.is_empty():
+			_check(is_equal_approx(float(attacks[0].payload.get("raw_damage",-1.0)),float(scenario["expected"])),id+":custom_damage_from_abi")
+		if id == "ABI508":
+			var group_ctx := _pair("axe","dagger")
+			var group_state: CombatState = group_ctx["state"]
+			var group_engine: CombatEngine = group_ctx["engine"]
+			var group_actor := group_state.get_combatant("left")
+			group_actor.active_effects.append({
+				"effect_id":"EFF501","definition":EffectCatalog.definition(group_engine.canonical_effects,"EFF501").duplicate(true),
+				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":rage_count
+			})
+			group_state.add_combatant(_fighter("extra_axe1","dagger"))
+			group_state.add_combatant(_fighter("extra_axe2","dagger"))
+			var group_action := AbilityRuntime.build_action_event(group_state,"left","right",id,definition)
+			AxeAbiCombatService.dispatch(group_engine,group_action)
+			var group_attacks: Array[CombatEvent] = []
+			for pending in group_state.pending_events:
+				if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("axe_abi_id","")) == id:
+					group_attacks.append(pending)
+			_check(group_attacks.size()==3,"ABI508:group_three_targets")
+			for attack in group_attacks:
+				_check(is_equal_approx(float(attack.payload.get("raw_damage",-1.0)),91.0),"ABI508:group_damage_from_abi")
+	# An ABI requirement is not the EFF stack cap, even when tuned to four.
+	var crusher_ctx := _pair("axe","dagger")
+	var crusher_state: CombatState = crusher_ctx["state"]
+	var crusher_engine: CombatEngine = crusher_ctx["engine"]
+	var crusher_actor := crusher_state.get_combatant("left")
+	crusher_actor.active_effects.append({
+		"effect_id":"EFF501","definition":EffectCatalog.definition(crusher_engine.canonical_effects,"EFF501").duplicate(true),
+		"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":4
+	})
+	_check(not AxeAbiCombatService.can_cast(crusher_state,"left","right","ABI507"),"ABI507:canonical_requires_five_rage")
+	var crusher_def: Dictionary = Dictionary(definitions["ABI507"]).duplicate(true)
+	crusher_def["required_rage_stacks"] = 4
+	var crusher_action := AbilityRuntime.build_action_event(crusher_state,"left","left","ABI507",crusher_def)
+	AxeAbiCombatService.dispatch(crusher_engine,crusher_action)
+	_check(String(crusher_action.result.get("outcome",""))=="crusher_applied","ABI507:custom_requirement_from_abi")
+	_check(AxeAbiCombatService.rage_stacks(crusher_actor,crusher_state.round_number)==0,"ABI507:consumes_rage_on_activation")
 
 func _damage_type(weapon_class: String) -> String:
 	match weapon_class:
