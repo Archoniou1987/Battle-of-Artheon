@@ -34,13 +34,13 @@ static func _average(profile: Dictionary) -> float:
 static func rage_stacks(source: CombatantState, round_number: int) -> int:
 	var total := 0
 	for record in CombatModifierService.active_effects(source,round_number):
-		if String(record.get("effect_id","")) == RAGE:
+		if String(record.get("effect_id","")) == AbilityCatalog.effect_id(RAGE_ABI):
 			total += int(record.get("stacks",1))
 	return mini(5,total)
 
 static func _consume_rage(source: CombatantState) -> void:
 	for record in source.active_effects.duplicate():
-		if String(record.get("effect_id","")) == RAGE:
+		if String(record.get("effect_id","")) == AbilityCatalog.effect_id(RAGE_ABI):
 			source.active_effects.erase(record)
 
 static func _enemy(engine: CombatEngine, source_id: String, target_id: String) -> bool:

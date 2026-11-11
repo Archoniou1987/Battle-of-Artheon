@@ -27,6 +27,7 @@ func _abi_to_eff_references() -> void:
 	var effects := EffectCatalog.load_json()
 	for abi_id in abilities:
 		var abi: Dictionary = abilities[abi_id]
+		_check(not abi.has("eff") and not abi.has("effect_level"),String(abi_id)+":no_duplicate_eff_aliases")
 		var primary := AbilityCatalog.effect_id(String(abi_id))
 		for raw in abi.get("components", []):
 			if raw is Dictionary and String(raw.get("kind", "")) == "effect":

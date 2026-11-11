@@ -32,7 +32,7 @@ func _initialize() -> void:
 		elif String(id).begins_with("ABI6"):
 			family_field = "hammer_ability_mode"
 		ok = ok and not String(approved.get(family_field,"")).is_empty()
-		for effect_field in ["effect_id","sword_eff_id","eff"]:
+		for effect_field in ["effect_id","sword_eff_id"]:
 			var effect_id := String(approved.get(effect_field,""))
 			if not effect_id.is_empty():
 				ok = ok and not EffectCatalog.definition(effect_defs,effect_id).is_empty()

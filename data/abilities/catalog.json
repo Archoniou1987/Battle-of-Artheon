@@ -21,9 +21,7 @@
     "sword_mh_multiplier": 0,
     "sword_eff_id": "EFF301",
     "sword_eff_level": 1,
-    "mh_flat_bonus": 15,
-    "eff": "EFF301",
-    "effect_level": 1
+    "mh_flat_bonus": 15
   },
   "ABI302": {
     "name": "Круговой удар",
@@ -46,9 +44,7 @@
     "sword_ability_mode": "aoe_3",
     "sword_mh_multiplier": 0.5,
     "sword_eff_id": "EFF301",
-    "sword_eff_level": 1,
-    "eff": "EFF301",
-    "effect_level": 1
+    "sword_eff_level": 1
   },
   "ABI303": {
     "name": "Калека",
@@ -71,9 +67,7 @@
     "sword_ability_mode": "single",
     "sword_mh_multiplier": 0.5,
     "sword_eff_id": "EFF302",
-    "sword_eff_level": 1,
-    "eff": "EFF302",
-    "effect_level": 1
+    "sword_eff_level": 1
   },
   "ABI304": {
     "name": "Медлительность",
@@ -96,9 +90,7 @@
     "sword_ability_mode": "single",
     "sword_mh_multiplier": 0.6,
     "sword_eff_id": "EFF303",
-    "sword_eff_level": 1,
-    "eff": "EFF303",
-    "effect_level": 1
+    "sword_eff_level": 1
   },
   "ABI305": {
     "name": "Потерянность",
@@ -121,9 +113,7 @@
     "sword_ability_mode": "single",
     "sword_mh_multiplier": 0.75,
     "sword_eff_id": "EFF304",
-    "sword_eff_level": 1,
-    "eff": "EFF304",
-    "effect_level": 1
+    "sword_eff_level": 1
   },
   "ABI306": {
     "name": "Броневой натиск",
@@ -146,8 +136,6 @@
     "sword_mh_multiplier": 0.5,
     "sword_eff_id": "EFF301",
     "sword_eff_level": 1,
-    "eff": "EFF301",
-    "effect_level": 1,
     "consume_all_ap": true,
     "min_ap_cost": 1,
     "armor_per_ap": 0.02
@@ -173,8 +161,6 @@
     "sword_mh_multiplier": 0.25,
     "sword_eff_id": "EFF301",
     "sword_eff_level": 1,
-    "eff": "EFF301",
-    "effect_level": 1,
     "consume_all_ap": true,
     "min_ap_cost": 1,
     "max_targets": 5
@@ -200,8 +186,6 @@
     "sword_mh_multiplier": 1,
     "sword_eff_id": "EFF301",
     "sword_eff_level": 1,
-    "eff": "EFF301",
-    "effect_level": 1,
     "consume_all_ap": true,
     "min_ap_cost": 1,
     "crit_pct_per_ap": 10,
@@ -290,7 +274,11 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "dagger_ability_mode": "def_combo",
-    "effect_refs": {"pre_attack":"EFF404"}
+    "effect_refs": {
+      "pre_attack": "EFF404",
+      "consume": "EFF403",
+      "read_breach": "EFF401"
+    }
   },
   "ABI405": {
     "name": "Сокрушительный выпад",
@@ -331,7 +319,10 @@
     "ap_cost": 3,
     "ap_gain": 0,
     "application_timing": "standard",
-    "dagger_ability_mode": "attack_flurry"
+    "dagger_ability_mode": "attack_flurry",
+    "effect_refs": {
+      "consume": "EFF403"
+    }
   },
   "ABI407": {
     "name": "Глубокий прокол",
@@ -352,7 +343,11 @@
     "ap_gain": 0,
     "application_timing": "standard",
     "dagger_ability_mode": "pen_deep",
-    "effect_refs": {"on_hit":"EFF401"}
+    "effect_refs": {
+      "on_hit": "EFF401",
+      "consume": "EFF403",
+      "read_breach": "EFF401"
+    }
   },
   "ABI408": {
     "name": "Абсолютное пробитие",
@@ -372,7 +367,11 @@
     "ap_cost": 5,
     "ap_gain": 0,
     "application_timing": "standard",
-    "dagger_ability_mode": "pen_absolute"
+    "dagger_ability_mode": "pen_absolute",
+    "effect_refs": {
+      "consume": "EFF401",
+      "read_breach": "EFF401"
+    }
   },
   "ABI501": {
     "name": "Ярость",

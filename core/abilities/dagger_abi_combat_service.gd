@@ -92,7 +92,7 @@ static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
 		_effect(engine,action.source_id,action.target_id,action.event_id,AbilityCatalog.effect_id(ATTACK_HEAVY,"pre_attack"),true)
 	else:
 		var target := engine.state.get_combatant(action.target_id)
-		var breach := _active_stacks(target,BREACH,engine.state.round_number,5)
+		var breach := _active_stacks(target,AbilityCatalog.effect_id(DEF_COMBO,"read_breach"),engine.state.round_number,5)
 		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_COMBO,"pre_attack"),true,{"dagger_dodge_pct":5.0 * float(breach)})
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
@@ -129,12 +129,12 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var oh := _weapon(source,1)
 	var mh_average := _average(mh)
 	var oh_average := _average(oh)
-	var poison_stacks := _active_stacks(target,POISON,engine.state.round_number,10)
-	var breach_stacks := _active_stacks(target,BREACH,engine.state.round_number,5)
+	var poison_stacks := _active_stacks(target,AbilityCatalog.effect_id(COATING,"on_weapon_hit"),engine.state.round_number,10)
+	var breach_stacks := _active_stacks(target,AbilityCatalog.effect_id(id,"read_breach") if id in [DEF_COMBO,PEN_DEEP,PEN_ABSOLUTE] else AbilityCatalog.effect_id(QUICK),engine.state.round_number,5)
 	# Consume at cast time AFTER snapshotting bonuses and strike count.
 	# Miss/dodge/block cannot refund spent poison. Breach stays for DEF_COMBO.
 	if id in [DEF_COMBO, ATTACK_FLURRY, PEN_DEEP]:
-		_remove_effect(target,POISON)
+		_remove_effect(target,AbilityCatalog.effect_id(id,"consume"))
 		action.set_result("poison_stacks_consumed",poison_stacks)
 	var ids: Array[int] = []
 	if id == QUICK:
@@ -188,7 +188,7 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 		# successful hit (not after miss/dodge/block).
 		var target := engine.state.get_combatant(attack.target_id)
 		if target != null:
-			_remove_effect(target,BREACH)
+			_remove_effect(target,AbilityCatalog.effect_id(PEN_ABSOLUTE,"consume"))
 		return
 	# Coating is applied only by successful ORDINARY MH/OH dagger attacks.
 	if not bool(attack.payload.get("is_weapon_attack",false)) or String(attack.payload.get("source_kind","")) == "ability":

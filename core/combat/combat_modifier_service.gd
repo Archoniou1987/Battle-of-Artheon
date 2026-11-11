@@ -107,7 +107,7 @@ static func block_chance(combatant: CombatantState, round_number: int) -> float:
 
 static func block_crush_chance(combatant: CombatantState, round_number: int) -> float:
 	# RAGE's per-stack modifier belongs to EFF501; CRUSHER is a regular EFF overlay.
-	return value(combatant, "block_crush", round_number) + effect_stack_bonus(combatant, AxeAbiCombatService.RAGE, "block_crush_per_stack", round_number)
+	return value(combatant, "block_crush", round_number) + effect_stack_bonus(combatant, AbilityCatalog.effect_id(AxeAbiCombatService.RAGE_ABI), "block_crush_per_stack", round_number)
 
 static func armour_penetration_flat(combatant: CombatantState, round_number: int) -> float:
 	return value(combatant, "armour_penetration_flat", round_number)
