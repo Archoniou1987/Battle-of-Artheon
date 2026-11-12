@@ -22,8 +22,6 @@ var stat_minus_buttons: Dictionary = {}
 var save_button: Button
 var reset_button: Button
 var back_button: Button
-var combat_section: VBoxContainer
-var resistance_section: VBoxContainer
 var square_host: Control
 var square_content: Control
 var layout_row: BoxContainer
@@ -438,34 +436,3 @@ func refresh() -> void:
 	reset_button.disabled = progression.pending_stats.is_empty()
 	_refresh_detail_values()
 
-func _refresh_derived_sections() -> void:
-	for child in combat_section.get_children():
-		combat_section.remove_child(child)
-		child.queue_free()
-	for child in resistance_section.get_children():
-		resistance_section.remove_child(child)
-		child.queue_free()
-	combat_section.add_child(_label("Боевые показатели", 18, GOLD))
-	resistance_section.add_child(_label("Защита и сопротивления", 18, GOLD))
-	if character == null:
-		return
-	# Only values already defined by CharacterCombatBuilder are displayed.
-	# Other combat formulas will be connected when their data contracts are finalized.
-	var totals: Dictionary = ParCalculationService.calculate(character, item_repository).get("totals", {})
-	var hp := 100 + int(totals["PAR010"])
-	var mana := 30 + int(totals["PAR011"])
-	_add_derived_row(combat_section, "Здоровье (база)", str(hp))
-	_add_derived_row(combat_section, "Мана (база)", str(mana))
-	_add_derived_row(combat_section, "Макс. очки действий (база)", "5")
-	_add_derived_row(resistance_section, "Броня по зонам", "Данные экипировки")
-	_add_derived_row(resistance_section, "Сопротивления стихиям", "Ожидает расчёта")
-
-
-func _add_derived_row(parent: VBoxContainer, caption: String, value: String) -> void:
-	var row := HBoxContainer.new()
-	parent.add_child(row)
-	var left := _label(caption, 14, MUTED)
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(left)
-	var right := _label(value, 14, GOLD)
-	row.add_child(right)
