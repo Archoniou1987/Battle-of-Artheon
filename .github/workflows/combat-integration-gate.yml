@@ -80,6 +80,26 @@ jobs:
             echo "::endgroup::"
           done
           exit "$status"
+      - name: Verify WORLD reward journaling, restart and atomic state ownership
+        shell: bash
+        run: |
+          status=0
+          # Preserve the exact item/reward and HP/mana world checkpoint.
+          # These scenarios must not be replaced by Combat-only test doubles.
+          for script in \
+            tests/map/map_combat_settlement_resume_runner.gd \
+            tests/map/map_world_commit_runner.gd \
+            tests/map/map_real_duel_reward_chain_runner.gd
+          do
+            echo "::group::WORLD/REWARD integration: $script"
+            if ! GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh "$script"; then
+              echo "::error title=WORLD/REWARD integration regression::$script"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
+
       - name: Upload failed integration diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
