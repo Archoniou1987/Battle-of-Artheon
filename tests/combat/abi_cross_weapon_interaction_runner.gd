@@ -11,6 +11,7 @@ func _check(ok: bool, label: String) -> void:
 		print("ABI_CROSS_WEAPON_CASE=FAIL ",label)
 
 func _initialize() -> void:
+	_legacy_design_is_non_runtime()
 	_abi_to_eff_references()
 	_char_npc_par_projection_contract()
 	_npc_resource_and_level_ownership()
@@ -133,6 +134,23 @@ func _npc_resource_and_level_ownership() -> void:
 	# No coefficient for an elite rank or for 75->100% PvE levelling is
 	# applied by this builder today. Rank remains authored metadata.
 	_check(String(npc.rank)=="elite" and scaled_level != null and scaled_level.max_hp==original.max_hp,"A07:rank_does_not_implicitly_change_HP")
+
+## A08: The November design JSON is an archive, never an ABI/EFF
+## numeric source. Do NOT test equality with historical balance numbers.
+func _legacy_design_is_non_runtime() -> void:
+	const DESIGN_PATH := "res://data/abilities/physical_onehand_v12_design.json"
+	var historic: Dictionary = TestFixtureLoader.load_json(DESIGN_PATH)
+	_check(String(historic.get("runtime_status",""))=="historical_design_only","A08:design_marked_historical")
+	_check(historic.get("runtime_authoritative",true)==false,"A08:design_not_runtime_authority")
+	_check(Array(historic.get("canonical_runtime_sources",[]))==[
+		AbilityCatalog.CANONICAL_PATH,EffectCatalog.DEFAULT_PATH
+	],"A08:single_authoritative_ABI_EFF_catalog_paths")
+	_check(AbilityCatalog.CANONICAL_PATH!=DESIGN_PATH and EffectCatalog.DEFAULT_PATH!=DESIGN_PATH,"A08:runtime_loaders_do_not_target_design")
+	var runtime_abi: Dictionary = AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var runtime_eff: Dictionary = EffectCatalog.load_json()
+	_check(runtime_abi.has("ABI404") and runtime_eff.has("EFF404"),"A08:runtime_catalogs_own_approved_ABI_EFF")
+	_check(not historic.has("ABI404") and historic.has("abilities"),"A08:design_has_historical_structure_only")
+
 
 func _abi_to_eff_references() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
