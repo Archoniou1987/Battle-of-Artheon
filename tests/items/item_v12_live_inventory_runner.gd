@@ -4,8 +4,56 @@ extends SceneTree
 func _initialize() -> void:
 	call_deferred("_verify")
 
+## A09: source-level boundary for the GAME routes (not the archived
+## generator tests). This is deliberately part of the manual integration Gate.
+## A future loot migration must explicitly use v1.2 and update this contract.
+func _verify_generator_ownership(errors: Array[String]) -> void:
+	if ItemTemplateGeneratorV12.RULE_PATH != "res://data/items/item_generator_v12_rules.json":
+		errors.append("A09: v1.2 rule owner redirected")
+	var production_routes := {
+		"res://scenes/main/main.gd": [
+			"res://scenes/debug/item_template_generator_v12.tscn"
+		],
+		"res://ui/inventory/inventory_screen.gd": [
+			"ItemV12InstanceFactory.grant_weapon("
+		],
+		"res://core/items/item_v12_instance_factory.gd": [
+			"ItemTemplateGeneratorV12.new()",
+			"ItemTemplateGeneratorV12.RULE_PATH",
+			"\"origin\": \"v12_game_generator\""
+		],
+		"res://core/map/map_combat_outcome_service.gd": [
+			"NpcPossessionLootService"
+		],
+		"res://core/map/map_combat_settlement_service.gd": [
+			"NpcPossessionLootService"
+		],
+		"res://core/loot/npc_possession_loot_service.gd": [
+			"repository.get_item("
+		]
+	}
+	for path in production_routes:
+		if not FileAccess.file_exists(path):
+			errors.append("A09: missing live generator route: " + String(path))
+			continue
+		var source := FileAccess.get_file_as_string(path)
+		for required in Array(production_routes[path]):
+			if not source.contains(String(required)):
+				errors.append("A09: missing canonical route " + String(required) + " in " + String(path))
+		for retired in ["ItemGenerator.new(", "LootService.new(", "CombatRewardService.", "ChestService."]:
+			if source.contains(retired):
+				errors.append("A09: legacy v1 generator reintroduced in live route " + String(path))
+	var menu_source := FileAccess.get_file_as_string("res://scenes/main/main.gd")
+	if menu_source.contains("res://scenes/debug/item_generator_lab.tscn"):
+		errors.append("A09: archived v1 item lab exposed as active debug generator")
+	var legacy := FileAccess.get_file_as_string("res://core/loot/loot_service.gd")
+	if not legacy.contains("generator: ItemGenerator"):
+		errors.append("A09: legacy loot test adapter changed; review ownership before migration")
+
+
 func _verify() -> void:
 	var errors: Array[String] = []
+	_verify_generator_ownership(errors)
 	var hero := CharacterState.new("V12_BAG_HERO","Hero",40)
 	var repo := ItemRepository.new()
 	var created_ids: Array[String] = []
