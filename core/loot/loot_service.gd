@@ -1,6 +1,10 @@
 class_name LootService
 extends RefCounted
 
+## LEGACY v1 test/compatibility entrypoint: requires ItemGenerator and
+## historical quality weights. The live map/settlement route uses
+## NpcPossessionLootService to transfer existing NPC item instances.
+## Do not connect this v1 roller to production loot or infer v1.2 balance.
 var rng := RandomNumberGenerator.new()
 
 func _init(seed_value: int = 1) -> void:
