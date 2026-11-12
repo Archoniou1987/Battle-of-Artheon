@@ -51,9 +51,49 @@ func _verify_generator_ownership(errors: Array[String]) -> void:
 		errors.append("A09: legacy loot test adapter changed; review ownership before migration")
 
 
+## A12: the WORLD reward path selects the NPC's existing v1.2 ITEMID.
+## No second generator, PAR reroll, or replacement instance may be involved.
+func _verify_v12_npc_possession_reward(errors: Array[String]) -> void:
+	var npc_catalog: Dictionary = TestFixtureLoader.load_json("res://data/npc/starting_region_npcs.json")
+	var npc_template := NpcState.new(Dictionary(Array(npc_catalog.get("npcs",[]))[2]))
+	var npc := NpcInstance.new("A12_V12_NPC_001",npc_template)
+	var repository := ItemRepository.new()
+	var item := ItemV12InstanceFactory.generate_weapon("SWORD_DEF",40,"purple",202611067)
+	if item.is_empty():
+		errors.append("A12: canonical v1.2 NPC test item unavailable")
+		return
+	var item_id := String(item.get("instance_id",""))
+	if not repository.add_item(item) or not npc.receive_item(item_id,repository):
+		errors.append("A12: NPC cannot own the original v1.2 instance")
+		return
+	var drops := NpcPossessionLootService.new(42).roll_drops(npc,repository,{"purple":100.0})
+	if drops.size()!=1:
+		errors.append("A12: NPC possession must select one original item, not reroll")
+		return
+	var drop: Dictionary = drops[0]
+	if String(drop.get("instance_id",""))!=item_id or drop.get("damage",{})!=item.get("damage",{}) or drop.get("par_bonuses",{})!=item.get("par_bonuses",{}) or String(drop.get("loot_source_id",""))!=npc.instance_id:
+		errors.append("A12: NPC reward must preserve exact v1.2 ID and rolls")
+		return
+	var recipient := CharacterState.new("A12_REWARD_PLAYER","Reward Test",40)
+	var pool := EncounterLootPool.new()
+	if not pool.add_drop(item_id,npc.instance_id):
+		errors.append("A12: world reward pool rejected original item ID")
+		return
+	pool.assign_all(recipient.character_id)
+	if not pool.claim(item_id,recipient,repository) or not recipient.inventory.owns(item_id):
+		errors.append("A12: reward claim did not transfer original v1.2 instance")
+		return
+	if pool.claim(item_id,recipient,repository):
+		errors.append("A12: world reward allows duplicate claim")
+	var saved: Dictionary = repository.get_item(item_id)
+	if saved.get("damage",{})!=item.get("damage",{}) or saved.get("par_bonuses",{})!=item.get("par_bonuses",{}):
+		errors.append("A12: claimed reward changed original v1.2 item rolls")
+
+
 func _verify() -> void:
 	var errors: Array[String] = []
 	_verify_generator_ownership(errors)
+	_verify_v12_npc_possession_reward(errors)
 	var hero := CharacterState.new("V12_BAG_HERO","Hero",40)
 	var repo := ItemRepository.new()
 	var created_ids: Array[String] = []
