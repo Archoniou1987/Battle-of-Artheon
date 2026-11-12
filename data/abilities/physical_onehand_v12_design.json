@@ -1,7 +1,7 @@
 {
   "version": "design-2026-11-04",
-  "runtime_status": "integrated_not_yet_ci_verified",
-  "note": "Physical dagger/axe/hammer runtime ABI/EFF integrated into shared Combat Engine; manual Combat Integration Gate regression still pending. Sword ABI301-308 unchanged; magic archetypes deferred.",
+  "runtime_status": "historical_design_only",
+  "note": "HISTORICAL DESIGN SNAPSHOT ONLY (2026-11-04). Not a runtime, UI, generator or balance source. Stored numeric values, effect descriptions, runtime ID maps and integration notes may be outdated. The canonical ABI/EFF catalogs and current Gate tests alone govern implemented behavior. Never import these historical values into gameplay without an explicit approved balance change.",
   "abilities": {
     "DAGGER_01": {
       "name": "Быстрая атака",
@@ -299,5 +299,11 @@
     "Hammer DEF03 and ATTACK03 fractional charge consumption uses mathematical rounding; DEF04 duration rounds uses mathematical rounding.",
     "Hammer tempo debuffs are metadata-only until the future stun/control contract is approved.",
     "All new combat runners included only in manually-dispatched Combat Integration Gate, NOT automatically executed."
-  ]
+  ],
+  "runtime_authoritative": false,
+  "canonical_runtime_sources": [
+    "res://data/abilities/catalog.json",
+    "res://data/effects/catalog.json"
+  ],
+  "historical_original_note": "Physical dagger/axe/hammer runtime ABI/EFF integrated into shared Combat Engine; manual Combat Integration Gate regression still pending. Sword ABI301-308 unchanged; magic archetypes deferred."
 }
