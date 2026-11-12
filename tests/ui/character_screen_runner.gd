@@ -62,7 +62,7 @@ func _run() -> void:
 	assert(canonical.has("main_hand_damage"))
 	var combat_totals := CharacterStatsService.combat_stats(screen.character, instance.item_repository)
 	var built_fighter := CharacterCombatBuilder.build(screen.character, instance.item_repository)
-	var built_profiles:Array = built_fighter.combat_stats.get("weapon_profiles", [])
+	var built_profiles:Array = WeaponAttackProfile.all(built_fighter)
 	var combat_profiles:Array = combat_totals.get("weapon_profiles", [])
 	assert(built_fighter.level == screen.character.progression.level)
 	assert(is_equal_approx(float(built_fighter.combat_stats["crit_chance_rating_percent"]), float(canonical["crit_chance_rating_percent"])))
