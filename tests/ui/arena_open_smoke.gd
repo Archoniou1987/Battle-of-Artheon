@@ -69,6 +69,28 @@ func _run() -> void:
 		return
 	arena.fighter_popup.hide()
 	actor.active_effects.clear()
+	# A11: negative EFF overlays must use the exact same COMBAT readout
+	# as buffs. Neither the avatar nor inventory may invent a second formula.
+	actor.active_effects.append({
+		"effect_id":"EFF_UI_ACTIVE_DEBUFF",
+		"definition":{"kind":"debuff","name":"Боевой штраф","crit_chance_direct_pct":-10.0,"physical_damage_outgoing_direct_pct":-12.0},
+		"start_round":1,"remaining_rounds":2,"revealed":true
+	})
+	arena._sync_combat_session()
+	var debuffed: Dictionary = arena.published_player_readout
+	var effective_crit := CombatMath.effective_crit(
+		CombatModifierService.effective_percent(actor,"crit_chance_rating",1),0.0)
+	if not is_equal_approx(float(debuffed.get("crit_after_dr_pct",NAN)),effective_crit) or not is_equal_approx(float(debuffed.get("physical_outgoing_bonus_pct",NAN)),-12.0):
+		push_error("ARENA_OPEN_SMOKE=FAIL: avatar readout ignores active debuff modifiers")
+		quit(1)
+		return
+	arena._show_fighter_details(true)
+	if not arena.fighter_popup_text.text.contains("%.2f%%" % effective_crit) or not arena.fighter_popup_text.text.contains("-12.00%"):
+		push_error("ARENA_OPEN_SMOKE=FAIL: avatar popup omits effective debuff values")
+		quit(1)
+		return
+	arena.fighter_popup.hide()
+	actor.active_effects.clear()
 	arena._sync_combat_session()
 	# Use a canonical definition for UI selection; no fake combat damage.
 	arena.combat_session.ability_scheduler.loadouts[arena.combat_session.player_id] = ["ABI301"]
