@@ -59,7 +59,10 @@ func _test_mana_and_ownership() -> void:
 	hero.mana = 0
 	# Using an elixir opens the round first: configured passive regeneration
 	# applies once before the immediate +30 mana from the test elixir.
-	var expected_after_elixir := mini(hero.max_mana,int(ResourceRegenerationRules.mana_per_interval(0.0))+30)
+	# Round-open regeneration includes the canonical WIS -> PAR015 bonus.
+	# Read the actual Combat modifier instead of assuming zero derived mana regen.
+	var round_mana_bonus := CombatModifierService.value(hero,"mana_regen_round",session.state.round_number+1)
+	var expected_after_elixir := mini(hero.max_mana,int(ResourceRegenerationRules.mana_per_interval(round_mana_bonus))+30)
 	check(bool(session.use_elixir(1).get("ok",false)),"mana_click_succeeds")
 	check(hero.mana==expected_after_elixir,"mana_restored_immediately")
 	check(not bool(session.use_elixir(1).get("ok",true)),"cannot_reuse_mana_same_round")
