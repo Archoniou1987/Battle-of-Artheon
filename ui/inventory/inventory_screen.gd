@@ -974,10 +974,10 @@ func _generator_v12_create() -> void:
 		v12_status_label.text = generator_status.text
 		return
 	refresh() # Emits inventory_changed -> canonical game save in Main.
-	var pending := Dictionary(item.get("v12_pending_bonuses",{}))
+	# The v1.2 factory already canonicalizes Attack Power into PAR232,
+	# which participates in CharacterCombatBuilder and Combat Engine.
+	# Never tell the player that a valid generated PAR232 is inactive.
 	generator_status.text = "Создан в сумке: %s · %s" % [String(item.get("name","")),String(item["instance_id"])]
-	if not pending.is_empty():
-		generator_status.text += "\nВнимание: рейтинг Сила атаки пока ожидает канонический PAR и не влияет на бой."
 	v12_status_label.text = generator_status.text
 
 func _open_item_generator() -> void:
