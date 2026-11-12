@@ -173,7 +173,7 @@ func _ready() -> void:
 	back.pressed.connect(func() -> void: back_requested.emit())
 	header.add_child(back)
 	var report_button := Button.new()
-	report_button.text = "PAR 108"
+	report_button.text = "PAR %d" % ParCalculationService.registry().size()
 	report_button.tooltip_text = "Снимок всех PAR персонажа и боевого участника"
 	report_button.pressed.connect(_show_par_report)
 	header.add_child(report_button)
@@ -200,7 +200,7 @@ func _ready() -> void:
 	abi_lab_dialog = AbiTestLabDialog.new()
 	add_child(abi_lab_dialog)
 	par_report_dialog = AcceptDialog.new()
-	par_report_dialog.title = "PAR / Combat — 108 параметров"
+	par_report_dialog.title = "PAR / Combat — %d параметров" % ParCalculationService.registry().size()
 	par_report_dialog.min_size = Vector2i(350, 540)
 	add_child(par_report_dialog)
 	par_report_text = TextEdit.new()
