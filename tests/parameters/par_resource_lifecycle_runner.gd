@@ -75,6 +75,8 @@ func equipment_and_persistence() -> void:
 
 func regen_fighter(id: String, hp_regen: float, mana_regen: float) -> CombatantState:
 	var hero := CharacterState.new(id, id)
+	# Isolate item PAR015/PAR016 lifecycle from independently tested WIS bonus.
+	hero.progression.base_stats["PAR005"] = 0
 	var repo := ItemRepository.new()
 	check(equip_ring(hero, repo, id + "_ring", {"PAR015":mana_regen, "PAR016":hp_regen}), "equip regen ring " + id)
 	return CharacterCombatBuilder.build(hero, repo)
