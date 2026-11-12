@@ -89,7 +89,8 @@ jobs:
           for script in \
             tests/map/map_combat_settlement_resume_runner.gd \
             tests/map/map_world_commit_runner.gd \
-            tests/map/map_real_duel_reward_chain_runner.gd
+            tests/map/map_real_duel_reward_chain_runner.gd \
+            tests/map/solo_live_npc_combat_runner.gd
           do
             echo "::group::WORLD/REWARD integration: $script"
             if ! GODOT_TEST_TIMEOUT=45 bash tools/run_godot_check.sh "$script"; then
