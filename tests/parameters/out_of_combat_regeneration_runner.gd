@@ -19,6 +19,8 @@ func _initialize() -> void:
 
 func fixture(hp_percent: float, mana_flat: float, hp_flat: float) -> Dictionary:
 	var hero := CharacterState.new("regen_hero", "Regen Hero")
+	# Isolate item/legacy PAR015 behaviour; WIS=30 is tested separately.
+	hero.progression.base_stats["PAR005"] = 0
 	var repository := ItemRepository.new()
 	var ring := {
 		"instance_id": "regen_ring",
