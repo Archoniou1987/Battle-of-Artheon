@@ -182,6 +182,9 @@ func npc_regeneration() -> void:
 
 func arena_regeneration() -> void:
 	var hero := CharacterState.new("arena_resource_player", "Arena resources")
+	# This fixture isolates the equipment PAR015 bonus. WIS is tested in the
+	# canonical final PAR/Combat runner with 30 WIS => 35 mana.
+	hero.progression.base_stats["PAR005"] = 0
 	var repo := ItemRepository.new()
 	check(equip_ring(hero, repo, "arena_regen_ring", {"PAR015":4.0, "PAR016":6.0}), "arena equip regen")
 	var arena := ArenaCombatSession.new(hero, repo)
