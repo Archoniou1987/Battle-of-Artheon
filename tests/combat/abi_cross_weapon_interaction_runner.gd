@@ -13,6 +13,7 @@ func _check(ok: bool, label: String) -> void:
 func _initialize() -> void:
 	_abi_to_eff_references()
 	_char_npc_par_projection_contract()
+	_npc_resource_and_level_ownership()
 	_abi_mh_bonus_ownership()
 	_dagger_abi_coefficients_from_catalog()
 	_dagger_legacy_action_uses_canonical_bonus()
@@ -92,6 +93,46 @@ func _char_npc_par_projection_contract() -> void:
 	_check(main_damage is Array and Array(main_damage).size()==2,"A07:CHAR_main_hand_range_is_array")
 	_check(not hero_snapshot.has("off_hand_damage"),"A07:CHAR_absent_off_hand_has_no_range")
 
+
+## A07 resource/level contract: the world uses NPC template pools
+## when supplied. Legacy fallback remains for incomplete old templates,
+## while combat_level changes RatingMatrix conversion, not authored strength.
+## This is an audit guard, not approval of NPC balance/scaling.
+func _npc_resource_and_level_ownership() -> void:
+	var document: Dictionary = TestFixtureLoader.load_json("res://data/npc/starting_region_npcs.json")
+	var chief_data: Dictionary = Dictionary(Array(document.get("npcs",[]))[4]).duplicate(true)
+	var base: Dictionary = chief_data["base"]
+	var totals: Dictionary = base["par_totals"]
+	totals["PAR031"] = 100.0
+	var npc := NpcState.new(chief_data)
+	var original := NpcCombatBuilder.build(npc)
+	_check(original != null,"A07:authored_NPC_resources_build")
+	if original == null:
+		return
+	_check(original.max_hp==140 and original.max_mana==20,"A07:authored_HP_mana_override_legacy_fallback")
+	_check(is_equal_approx(float(original.combat_stats.get("dodge_rating_percent",-1)),RatingMatrix.to_percent(100.0,npc.level)),"A07:NPC_rating_uses_own_level")
+	var scaled_level := NpcCombatBuilder.build(npc,60)
+	_check(scaled_level != null,"A07:combat_level_override_build")
+	if scaled_level != null:
+		_check(scaled_level.level==60,"A07:combat_level_sets_runtime_level")
+		_check(scaled_level.max_hp==140 and scaled_level.max_mana==20,"A07:combat_level_does_not_silently_scale_resources")
+		_check(scaled_level.combat_stats["par_totals"]==original.combat_stats["par_totals"],"A07:combat_level_keeps_authored_PAR")
+		_check(is_equal_approx(float(scaled_level.combat_stats.get("dodge_rating_percent",-1)),RatingMatrix.to_percent(100.0,60)),"A07:combat_level_uses_canonical_rating_curve")
+	# Absent pools use the OLD NPC fallback. This differs from CHAR
+	# max-mana derivation and must not be changed without balance approval.
+	var legacy_data: Dictionary = chief_data.duplicate(true)
+	var legacy_base: Dictionary = legacy_data["base"]
+	legacy_base.erase("health")
+	legacy_base.erase("mana")
+	var legacy := NpcCombatBuilder.build(NpcState.new(legacy_data))
+	_check(legacy != null,"A07:legacy_NPC_missing_resource_pools_build")
+	if legacy != null:
+		_check(legacy.max_hp==190 and legacy.max_mana==60,"A07:legacy_NPC_fallback_unchanged")
+	var char_pools := CharacterState.maximum_resources({"PAR010":90,"PAR011":40})
+	_check(int(char_pools["max_hp"])==190 and int(char_pools["max_mana"])==70,"A07:CHAR_canonical_resource_formula_distinct_from_legacy_NPC")
+	# No coefficient for an elite rank or for 75->100% PvE levelling is
+	# applied by this builder today. Rank remains authored metadata.
+	_check(String(npc.rank)=="elite" and scaled_level != null and scaled_level.max_hp==original.max_hp,"A07:rank_does_not_implicitly_change_HP")
 
 func _abi_to_eff_references() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
