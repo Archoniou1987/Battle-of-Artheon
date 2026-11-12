@@ -1,8 +1,11 @@
 class_name ItemGenerator
 extends RefCounted
 
-## LEGACY COMPATIBILITY ONLY: do not use this generator for new item templates.
-## Generator v1.2 (ItemTemplateGeneratorV12 / Project 25) is the sole active ruleset.
+## LEGACY TEST COMPATIBILITY ONLY: v1 quality coefficients and generated
+## GEN- IDs remain for historical loot, chest and NPC-possession tests.
+## The live game creates new items through ItemV12InstanceFactory ->
+## ItemTemplateGeneratorV12, with Project 25 v1.2 rules.
+## Never connect ItemGenerator to new gameplay or use these numbers for balance.
 
 const STAT_POOL := ["PAR001", "PAR002", "PAR003", "PAR004", "PAR005", "PAR006"]
 const QUALITY_RULES := {
