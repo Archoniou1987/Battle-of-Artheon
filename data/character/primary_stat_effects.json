@@ -3,7 +3,7 @@
   "notes": "v1.2: PAR150 keeps immutable source key magic_damage_rating, but is absolute Spell Power. ABI damage/heal with optional spell_power_scale K uses base + K*SP; no DR. Other ratings remain level-scaled, direct percentage overlays are separate. HP balance final revision 2026-11-07: PAR006 (END) grants +10 max HP per point; the earlier +40 experimental value is retired. Base 100 HP unchanged. Changing maximum does not auto-heal current HP. WIS regeneration approved 2026-11-12: each point of PAR005 adds +1 PAR015 mana/round (and per 10s out of combat), on top of base +5 and equipment/talent PAR015. WIS 30 => 35 without extra PAR015.",
   "effects": {
     "PAR001": {
-      "physical_damage_flat": 1
+      "attack_power_rating": 10
     },
     "PAR002": {
       "dodge_rating": 5,
