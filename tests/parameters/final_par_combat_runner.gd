@@ -18,6 +18,7 @@ func weapon(minimum: float, kind: String = "slashing") -> Dictionary:
 func _initialize() -> void:
 	balance_cases()
 	mana_rule_ownership_cases()
+	strength_attack_power_cases()
 	weapon_cases()
 	shared_combat_cases()
 	npc_level_cases()
@@ -73,6 +74,24 @@ func mana_rule_ownership_cases() -> void:
 		CombatResourceService.apply_round_regeneration(combat)
 		check(fighter.mana==35,"WIS:35_mana_per_round_in_combat")
 
+## STR contributes to PAR232 once; PAR052 remains independent.
+func strength_attack_power_cases() -> void:
+	var hero := CharacterState.new("str_par232", "STR attack power audit")
+	var repo := ItemRepository.new()
+	var before := ParCalculationService.calculate(hero, repo)
+	hero.progression.base_stats["PAR001"] = 3
+	var after := ParCalculationService.calculate(hero, repo)
+	check(not before.is_empty() and not after.is_empty(), "STR:canonical_PAR_sums_available")
+	if before.is_empty() or after.is_empty():
+		return
+	check(is_equal_approx(float(after["totals"]["PAR232"]) - float(before["totals"]["PAR232"]), 20.0), "STR:each_point_grants_10_PAR232")
+	check(is_equal_approx(float(after["totals"]["PAR052"]) - float(before["totals"]["PAR052"]), 0.0), "STR:no_direct_PAR052_bonus")
+	var fighter := CharacterCombatBuilder.build(hero, repo)
+	check(fighter != null, "STR:combat_snapshot_available")
+	if fighter != null:
+		var profiles := WeaponAttackProfile.all(fighter)
+		check(profiles.size() == 1 and is_equal_approx(float(profiles[0].damage_min), 4.1), "STR:unarmed_MH_uses_PAR232_once")
+
 func weapon_cases() -> void:
 	for mode in ["fists", "mh", "oh", "dual", "two_handed", "broken_mh", "broken_oh"]:
 		var hero := CharacterState.new("hero_" + mode, "Hero")
@@ -114,9 +133,9 @@ func weapon_cases() -> void:
 		var view := CharacterStatsService.snapshot(hero, repo)
 		check(profiles[0].damage_min == view.main_hand_damage[0], mode + " UI damage matches combat")
 		if mode in ["fists", "oh", "broken_mh", "broken_oh"]:
-			check(profiles[0].damage_min == 3 and profiles[0].damage_max == 5 and profiles[0].damage_type == "blunt", mode + " fist 2-4 plus PAR052 exactly once")
+			check(is_equal_approx(float(profiles[0].damage_min),2.7) and is_equal_approx(float(profiles[0].damage_max),4.7) and profiles[0].damage_type == "blunt", mode + " fist 2-4 plus PAR232 exactly once")
 		if mode in ["oh", "dual"]:
-			check(profiles[1].weapon_index == 1 and is_equal_approx(float(profiles[1].damage_min),4.5), mode + " OH index and damage")
+			check(profiles[1].weapon_index == 1 and is_equal_approx(float(profiles[1].damage_min),4.25), mode + " OH index and damage")
 			var trigger: Dictionary = fighter.combat_stats.weapon_on_hit_effects[0]
 			check(trigger.weapon_index == 1 and trigger.source_instance_id == "oh_" + mode, mode + " OH trigger keeps weapon ownership")
 			var state := CombatState.new()
