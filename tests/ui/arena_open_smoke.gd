@@ -20,6 +20,12 @@ func _run() -> void:
 		push_error("ARENA_OPEN_SMOKE=FAIL: arena was not opened")
 		quit(1)
 		return
+	# A11: diagnostic count is derived from the live PAR registry, not
+	# a stale hardcoded "108" when new PAR identifiers are added.
+	if not arena.par_report_dialog.title.contains(str(ParCalculationService.registry().size())):
+		push_error("ARENA_OPEN_SMOKE=FAIL: PAR diagnostic header differs from registry")
+		quit(1)
+		return
 	if arena.player_slots.size() != 14 or arena.enemy_slots.size() != 14:
 		push_error("ARENA_OPEN_SMOKE=FAIL: equipment slots missing")
 		quit(1)
