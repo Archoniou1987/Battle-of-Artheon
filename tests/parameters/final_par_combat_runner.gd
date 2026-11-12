@@ -17,6 +17,7 @@ func weapon(minimum: float, kind: String = "slashing") -> Dictionary:
 
 func _initialize() -> void:
 	balance_cases()
+	mana_rule_ownership_cases()
 	weapon_cases()
 	shared_combat_cases()
 	npc_level_cases()
@@ -25,6 +26,46 @@ func _initialize() -> void:
 		push_error(message)
 	print("FINAL_PAR_COMBAT_TEST=", "PASS" if errors.is_empty() else "FAIL", " failures=", errors.size())
 	quit(0 if errors.is_empty() else 1)
+
+## A10 is a CURRENT-RUNTIME contract, NOT a decision that replaces an
+## earlier WIS mana-regen proposal. Any future balance change must be approved
+## and update the single primary-stat and regeneration configs together.
+func mana_rule_ownership_cases() -> void:
+	var primary_cfg := PrimaryStatEffects.load_config()
+	var wis_effects: Dictionary = Dictionary(Dictionary(primary_cfg.get("effects",{})).get("PAR005",{}))
+	check(is_equal_approx(float(wis_effects.get("max_mana_flat",-1.0)),10.0),"A10:current_WIS_max_mana_from_primary_config")
+	check(not wis_effects.has("mana_regen") and not wis_effects.has("mana_regen_round"),"A10:WIS_regen_not_currently_implemented")
+	var hero := CharacterState.new("a10_wis_mana", "WIS mana audit")
+	var repo := ItemRepository.new()
+	hero.progression.base_stats["PAR005"] = 2
+	var before := ParCalculationService.calculate(hero,repo)
+	hero.progression.base_stats["PAR005"] = 5
+	var after := ParCalculationService.calculate(hero,repo)
+	check(not before.is_empty() and not after.is_empty(),"A10:canonical_PAR_sums_available")
+	if before.is_empty() or after.is_empty():
+		return
+	var b: Dictionary = before["totals"]
+	var a: Dictionary = after["totals"]
+	check(is_equal_approx(float(a["PAR011"])-float(b["PAR011"]),30.0),"A10:WIS_affects_max_mana_only")
+	check(is_equal_approx(float(a["PAR015"]),float(b["PAR015"])),"A10:WIS_does_not_implicitly_raise_PAR015")
+	var maximums := CharacterState.maximum_resources(a)
+	check(int(maximums["max_mana"])==CharacterState.BASE_MAX_MANA+int(a["PAR011"]),"A10:one_character_max_mana_formula")
+	var regen_cfg := ResourceRegenerationRules.config()
+	check(int(regen_cfg.get("interval_seconds",-1))==10 and is_equal_approx(float(regen_cfg.get("base_mana_per_interval",-1.0)),5.0),"A10:configured_current_regen_anchor")
+	var base_regen := ResourceRegenerationRules.mana_per_interval(0.0)
+	var boosted_regen := ResourceRegenerationRules.mana_per_interval(2.5)
+	check(is_equal_approx(base_regen,5.0) and is_equal_approx(boosted_regen,7.5),"A10:single_base_plus_PAR015_formula")
+	hero.current_mana = 0
+	check(OutOfCombatRegenerationService.advance(hero,repo,10.0),"A10:out_of_combat_mana_interval_applied")
+	check(hero.current_mana==5,"A10:WIS_does_not_create_unapproved_out_of_combat_regen")
+	var fighter := CharacterCombatBuilder.build(hero,repo)
+	check(fighter!=null,"A10:canonical_combat_snapshot")
+	if fighter != null:
+		fighter.mana=0
+		var combat := CombatState.new()
+		combat.add_combatant(fighter)
+		CombatResourceService.apply_round_regeneration(combat)
+		check(fighter.mana==5,"A10:same_base_regen_in_combat_despite_WIS")
 
 func weapon_cases() -> void:
 	for mode in ["fists", "mh", "oh", "dual", "two_handed", "broken_mh", "broken_oh"]:
