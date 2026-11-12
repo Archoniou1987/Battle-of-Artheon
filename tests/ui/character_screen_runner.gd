@@ -120,7 +120,8 @@ func _run() -> void:
 	assert(screen.detail_values.size() == ParCalculationService.registry().size())
 	assert(screen.detail_values.size() == 109)
 	assert(screen.detail_values.has("PAR232"))
-	assert((screen.detail_values["PAR052"] as Label).text != "—")
+	assert((screen.detail_values["PAR232"] as Label).text != "—")
+	assert((screen.detail_values["PAR052"] as Label).text == "—") # No innate direct damage from STR.
 
 	for tab_index in range(4):
 		screen.detail_tabs.current_tab = tab_index
