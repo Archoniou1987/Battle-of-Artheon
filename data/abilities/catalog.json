@@ -697,5 +697,406 @@
     "max_damage_multiplier": 3,
     "tempo_control_per_charge": 2,
     "max_tempo_control": 200
+  },
+  "ABI409": {
+    "name": "Быстрый укол",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "combo_ability_mode": "atk_quick",
+    "base_damage": 3,
+    "damage_per_10_levels": 3,
+    "attack_power_coefficient": 0.65
+  },
+  "ABI410": {
+    "name": "Сосредоточение убийцы",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF407",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "atk_focus",
+    "base_damage": 0,
+    "damage_per_10_levels": 0,
+    "attack_power_coefficient": 0
+  },
+  "ABI411": {
+    "name": "Шквал клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "atk_flurry",
+    "base_damage": 4,
+    "damage_per_10_levels": 2,
+    "attack_power_coefficient": 0.5,
+    "hit_count": 3
+  },
+  "ABI412": {
+    "name": "Безжалостное добивание",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "atk_finish",
+    "base_damage": 12,
+    "damage_per_10_levels": 7,
+    "attack_power_coefficient": 1.3,
+    "damage_per_charge": 5,
+    "low_hp_threshold_pct": 30,
+    "low_hp_bonus_pct": 30
+  },
+  "ABI413": {
+    "name": "Режущий выпад",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "combo_ability_mode": "def_lunge",
+    "base_damage": 4,
+    "damage_per_10_levels": 3,
+    "attack_power_coefficient": 0.7,
+    "dodge_bonus_damage_pct": 40,
+    "dodge_bonus_ap": 1
+  },
+  "ABI414": {
+    "name": "Танец теней",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF409",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "def_dance",
+    "base_damage": 0,
+    "damage_per_10_levels": 0,
+    "attack_power_coefficient": 0
+  },
+  "ABI415": {
+    "name": "Веер клинков",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "def_fan",
+    "base_damage": 4,
+    "damage_per_10_levels": 3,
+    "attack_power_coefficient": 0.7,
+    "max_targets": 5,
+    "damage_bonus_per_charge_pct": 10
+  },
+  "ABI416": {
+    "name": "Смертельная комбинация",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "def_combo",
+    "base_damage": 6,
+    "damage_per_10_levels": 4,
+    "attack_power_coefficient": 0.85,
+    "damage_bonus_per_charge_pct": 10
+  },
+  "ABI417": {
+    "name": "Прокалывающий удар",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "combo_ability_mode": "pen_pierce",
+    "base_damage": 3,
+    "damage_per_10_levels": 3,
+    "attack_power_coefficient": 0.7
+  },
+  "ABI418": {
+    "name": "Уязвимое место",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "pen_weakspot",
+    "base_damage": 5,
+    "damage_per_10_levels": 4,
+    "attack_power_coefficient": 0.8,
+    "min_breach_stacks": 2,
+    "extra_breach_stacks": 2,
+    "bonus_ap_on_condition": 1
+  },
+  "ABI419": {
+    "name": "Глубокий прокол",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "pen_deep",
+    "base_damage": 8,
+    "damage_per_10_levels": 5,
+    "attack_power_coefficient": 1,
+    "damage_bonus_per_breach_pct": 10
+  },
+  "ABI420": {
+    "name": "Абсолютное пробитие",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 7,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "pen_absolute",
+    "base_damage": 12,
+    "damage_per_10_levels": 7,
+    "attack_power_coefficient": 1.1,
+    "armour_bypass_pct_per_breach_stack": 20
+  },
+  "ABI701": {
+    "name": "Колющий выпад",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "combo_ability_mode": "spear_thrust",
+    "base_damage": 5,
+    "damage_per_10_levels": 4,
+    "attack_power_coefficient": 0.8,
+    "slow_bonus_damage_pct": 30
+  },
+  "ABI702": {
+    "name": "Подсечка",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "spear_sweep",
+    "base_damage": 4,
+    "damage_per_10_levels": 3,
+    "attack_power_coefficient": 0.7,
+    "max_targets": 5
+  },
+  "ABI703": {
+    "name": "Пронзающий натиск",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "spear_impale",
+    "base_damage": 10,
+    "damage_per_10_levels": 6,
+    "attack_power_coefficient": 1.2,
+    "control_on_slow": 100
+  },
+  "ABI704": {
+    "name": "Раскол брони",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "piercing"
+      }
+    ],
+    "cooldown_rounds": 6,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "combo_ability_mode": "spear_fracture",
+    "base_damage": 14,
+    "damage_per_10_levels": 7,
+    "attack_power_coefficient": 1.3
   }
 }
