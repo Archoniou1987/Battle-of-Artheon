@@ -17,7 +17,13 @@ static func build(character: CharacterState, repository: ItemRepository) -> Dict
 		var item := ItemResolver.resolve_equipped(slot, character.equipment, repository)
 		if not ItemDurabilityService.is_usable(item):
 			continue
-		for raw_id in item.get("abilities", []):
+		var ids: Array = Array(item.get("abilities",[]))
+		# Read-only upgrade for persisted v1.2 dagger items authored before ABI v2.
+		# Item ownership and saved rolls are unchanged; generator remains sole ABI owner.
+		var old_archetype := String(item.get("generated_from_template",""))
+		if String(item.get("origin","")) == "v12_game_generator" and old_archetype in ["DAGGER_ATTACK","DAGGER_DEF","DAGGER_PEN"] and ids.size() == 4 and ids.has("ABI401"):
+			ids = ItemV12InstanceFactory._physical_weapon_abilities(old_archetype)
+		for raw_id in ids:
 			var ability_id := String(raw_id)
 			if ability_id.is_empty() or AbilityCatalog.is_retired_numbered_abi(ability_id) or seen.has(ability_id) or weapon_index >= MAX_WEAPON_ABILITIES:
 				continue
