@@ -4,7 +4,7 @@ extends SceneTree
 ## ABI test laboratory uses LAB_* IDs, not the production catalog.
 func _initialize() -> void:
 	var defs := AbilityCatalog.load_json("res://data/abilities/catalog.json")
-	var ranges := [[301,308],[401,408],[501,508],[601,606]]
+	var ranges := [[301,308],[401,420],[501,508],[601,606],[701,704]]
 	var expected: Dictionary = {}
 	for limits in ranges:
 		for n in range(int(limits[0]),int(limits[1])+1):
@@ -25,8 +25,10 @@ func _initialize() -> void:
 	for id in expected:
 		var approved: Dictionary = defs.get(id,{})
 		var family_field := "sword_ability_mode"
-		if String(id).begins_with("ABI4"):
+		if String(id).begins_with("ABI4") and int(String(id).trim_prefix("ABI")) <= 408:
 			family_field = "dagger_ability_mode"
+		elif String(id).begins_with("ABI7") or String(id).begins_with("ABI4"):
+			family_field = "combo_ability_mode"
 		elif String(id).begins_with("ABI5"):
 			family_field = "axe_ability_mode"
 		elif String(id).begins_with("ABI6"):
@@ -40,7 +42,7 @@ func _initialize() -> void:
 			if component is Dictionary and String(component.get("kind","")) == "effect":
 				var effect_id := String(component.get("effect_id",""))
 				ok = ok and not effect_id.is_empty() and not EffectCatalog.definition(effect_defs,effect_id).is_empty()
-	for retired in ["ABI001","ABI002","ABI003","ABI004","ABI005","ABI006","ABI300","ABI309","ABI400","ABI409","ABI500","ABI509","ABI600","ABI607","ABI700"]:
+	for retired in ["ABI001","ABI002","ABI003","ABI004","ABI005","ABI006","ABI300","ABI309","ABI400","ABI500","ABI509","ABI600","ABI607","ABI700"]:
 		ok = ok and not defs.has(retired) and AbilityCatalog.is_retired_numbered_abi(retired)
 	for current in expected:
 		ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(current))
