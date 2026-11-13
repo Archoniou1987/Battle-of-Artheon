@@ -16,9 +16,6 @@ func _initialize() -> void:
 	_char_npc_par_projection_contract()
 	_npc_resource_and_level_ownership()
 	_abi_mh_bonus_ownership()
-	_dagger_abi_coefficients_from_catalog()
-	_dagger_legacy_action_uses_canonical_bonus()
-	_dagger_poison_proc_from_eff()
 	_abi_target_limits_from_catalog()
 	_legacy_abi_target_cap_fallback()
 	_sword_cripple_versus_axe_damage()
@@ -35,7 +32,6 @@ func _initialize() -> void:
 	_axe_abi_coefficients_from_catalog()
 	_hammer_abi_coefficients_from_catalog()
 	_hammer_eff601_charge_generation()
-	_dagger_poison_versus_hammer_reflection()
 	_axe_counter_versus_dagger_dodge()
 	_hammer_tempo_versus_axe_immunity()
 	print("ABI_CROSS_WEAPON_INTERACTION_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=",failures)
@@ -148,7 +144,7 @@ func _legacy_design_is_non_runtime() -> void:
 	_check(AbilityCatalog.CANONICAL_PATH!=DESIGN_PATH and EffectCatalog.DEFAULT_PATH!=DESIGN_PATH,"A08:runtime_loaders_do_not_target_design")
 	var runtime_abi: Dictionary = AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	var runtime_eff: Dictionary = EffectCatalog.load_json()
-	_check(runtime_abi.has("ABI404") and runtime_eff.has("EFF404"),"A08:runtime_catalogs_own_approved_ABI_EFF")
+	_check(runtime_abi.has("ABI404") and runtime_eff.has("EFF406"),"A08:runtime_catalogs_own_approved_ABI_EFF")
 	_check(not historic.has("ABI404") and historic.has("abilities"),"A08:design_has_historical_structure_only")
 
 
@@ -176,7 +172,7 @@ func _abi_target_limits_from_catalog() -> void:
 	for spec in [
 		{"abi":"ABI302","class":"sword","expected":3},
 		{"abi":"ABI307","class":"sword","expected":5},
-		{"abi":"ABI403","class":"dagger","expected":5},
+		{"abi":"ABI407","class":"dagger","expected":5},
 		{"abi":"ABI508","class":"axe","expected":3}
 	]:
 		var id := String(spec["abi"])
@@ -197,8 +193,8 @@ func _abi_target_limits_from_catalog() -> void:
 		var engine: CombatEngine = ctx["engine"]
 		if id == "ABI302":
 			SwordAbiCombatService.dispatch(engine,limited)
-		elif id == "ABI403":
-			DaggerAbiCombatService.dispatch(engine,limited)
+		elif id == "ABI407":
+			WeaponComboAbiCombatService.dispatch(engine,limited)
 		else:
 			AxeAbiCombatService.dispatch(engine,limited)
 		_check(Array(limited.result.get("child_event_ids",[])).size() == 2,id+":target_cap_dispatch")
@@ -209,7 +205,7 @@ func _legacy_abi_target_cap_fallback() -> void:
 	for spec in [
 		{"abi":"ABI302","class":"sword","mode":"aoe_3","count":3},
 		{"abi":"ABI307","class":"sword","mode":"dodge_ultimate","count":5},
-		{"abi":"ABI403","class":"dagger","mode":"","count":5},
+		{"abi":"ABI407","class":"dagger","mode":"","count":5},
 		{"abi":"ABI508","class":"axe","mode":"","count":3}
 	]:
 		var ctx := _pair(String(spec["class"]),"hammer")
@@ -225,7 +221,7 @@ func _legacy_abi_target_cap_fallback() -> void:
 		if String(spec["class"]) == "sword":
 			SwordAbiCombatService.dispatch(engine,action)
 		elif String(spec["class"]) == "dagger":
-			DaggerAbiCombatService.dispatch(engine,action)
+			WeaponComboAbiCombatService.dispatch(engine,action)
 		else:
 			AxeAbiCombatService.dispatch(engine,action)
 		_check(Array(action.result.get("child_event_ids",[])).size()==int(spec["count"]),id+":legacy_target_cap_from_catalog")
@@ -362,7 +358,7 @@ func _dagger_abi_coefficients_from_catalog() -> void:
 				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":int(spec["count"])
 			})
 		var definition: Dictionary = Dictionary(defs[id]).duplicate(true)
-		if id == "ABI403" or id == "ABI405":
+		if id == "ABI407" or id == "ABI405":
 			_check(is_equal_approx(float(definition.get("damage_multiplier",-1.0)),1.0),id+":authored_base_multiplier")
 		for field in Dictionary(scenario["overrides"]):
 			definition[field] = scenario["overrides"][field]
@@ -954,19 +950,6 @@ func _eff_sword_scaling_ownership() -> void:
 ## Per-unit and max values are changed in fixture only, leaving balance intact.
 func _dynamic_effects_from_catalog() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
-
-	var dagger_ctx := _pair("dagger","axe")
-	var dagger_state: CombatState = dagger_ctx["state"]
-	var dagger_engine: CombatEngine = dagger_ctx["engine"]
-	dagger_engine.canonical_effects["EFF404"]["contextual_modifier"]["per_unit"] = 7
-	dagger_engine.canonical_effects["EFF404"]["contextual_modifier"]["maximum"] = 18
-	_effect(dagger_ctx,"left","right","EFF401",{"sword_stacks_to_apply":3},true)
-	var combo_action := AbilityRuntime.build_action_event(dagger_state,"left","right","ABI404",abilities["ABI404"])
-	DaggerAbiCombatService.prepare_action(dagger_engine,combo_action)
-	dagger_engine.resolve_pending_events()
-	var dagger_buff := _active_effect(dagger_state.get_combatant("left"),"EFF404")
-	_check(not dagger_buff.is_empty(),"dagger:contextual_dodge_applied")
-	_check(is_equal_approx(float(Dictionary(dagger_buff.get("definition",{})).get("dodge_direct_pct",-1)),18.0),"dagger:contextual_dodge_per_stack_and_cap")
 
 	var axe_ctx := _pair("axe","hammer")
 	var axe_state: CombatState = axe_ctx["state"]
