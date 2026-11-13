@@ -1,7 +1,7 @@
 extends SceneTree
 
 ## Current physical dagger / 2H spear ABI v2 canonical loadout and combat smoke.
-## Legacy ABI401-408 remain covered by the cross-weapon interaction runner.
+## The previous dagger ABI implementations are retired; only canonical ABI401-412 are active.
 var failures: Array[String] = []
 
 func _check(ok: bool, label: String) -> void:
@@ -27,9 +27,9 @@ func _session(archetype: String, seed_value: int) -> ArenaCombatSession:
 		return null
 	_check(hero.equip("main_hand",String(item["instance_id"]),repo),archetype+"_equipped")
 	var sets := {
-		"DAGGER_ATTACK": ["ABI409","ABI410","ABI411","ABI412"],
-		"DAGGER_DEF": ["ABI413","ABI414","ABI415","ABI416"],
-		"DAGGER_PEN": ["ABI417","ABI418","ABI419","ABI420"],
+		"DAGGER_ATTACK": ["ABI401","ABI402","ABI403","ABI404"],
+		"DAGGER_DEF": ["ABI405","ABI406","ABI407","ABI408"],
+		"DAGGER_PEN": ["ABI409","ABI410","ABI411","ABI412"],
 		"2H_SPEAR": ["ABI701","ABI702","ABI703","ABI704"]
 	}
 	var expected: Array = sets[archetype]
@@ -89,35 +89,35 @@ func _run() -> void:
 		_check(effects.has(id),"effect_"+id)
 	var attack := _session("DAGGER_ATTACK",202611131)
 	if attack != null:
-		if _cast(attack,"ABI409"):
-			_check(_count(attack,"ABI409")==1,"attack_quick_one_hit")
+		if _cast(attack,"ABI401"):
+			_check(_count(attack,"ABI401")==1,"attack_quick_one_hit")
 			_check(not _active(attack.fighter(true),"EFF406").is_empty(),"attack_accuracy_on_hit")
-		if _cast(attack,"ABI410"):
+		if _cast(attack,"ABI402"):
 			_check(not _active(attack.fighter(true),"EFF407").is_empty(),"attack_focus_buff")
-		if _cast(attack,"ABI411"):
-			_check(_count(attack,"ABI411")==3,"attack_flurry_three_hits")
-		if _cast(attack,"ABI412"):
-			_check(_count(attack,"ABI412")==1,"attack_finisher")
+		if _cast(attack,"ABI403"):
+			_check(_count(attack,"ABI403")==3,"attack_flurry_three_hits")
+		if _cast(attack,"ABI404"):
+			_check(_count(attack,"ABI404")==1,"attack_finisher")
 	var defensive := _session("DAGGER_DEF",202611132)
 	if defensive != null:
-		if _cast(defensive,"ABI414"):
+		if _cast(defensive,"ABI406"):
 			_check(not _active(defensive.fighter(true),"EFF409").is_empty(),"def_dodge_buff")
-		if _cast(defensive,"ABI413"):
-			_check(_count(defensive,"ABI413")==1,"def_lunge")
-		if _cast(defensive,"ABI415"):
-			_check(_count(defensive,"ABI415")>=1,"def_fan")
-		if _cast(defensive,"ABI416"):
+		if _cast(defensive,"ABI405"):
+			_check(_count(defensive,"ABI405")==1,"def_lunge")
+		if _cast(defensive,"ABI407"):
+			_check(_count(defensive,"ABI407")>=1,"def_fan")
+		if _cast(defensive,"ABI408"):
 			_check(not _active(defensive.fighter(true),"EFF410").is_empty(),"def_combo_buff")
 	var pen := _session("DAGGER_PEN",202611133)
 	if pen != null:
-		if _cast(pen,"ABI417"):
+		if _cast(pen,"ABI409"):
 			_check(not _active(pen.fighter(false),"EFF401").is_empty(),"pen_breach_on_hit")
 		_apply(pen,"EFF401")
-		if _cast(pen,"ABI418"):
+		if _cast(pen,"ABI410"):
 			_check(int(_active(pen.fighter(false),"EFF401").get("stacks",0))>=3,"pen_weakspot_adds_stacks")
-		if _cast(pen,"ABI419"):
+		if _cast(pen,"ABI411"):
 			_check(not _active(pen.fighter(false),"EFF411").is_empty(),"pen_damage_weakening")
-		if _cast(pen,"ABI420"):
+		if _cast(pen,"ABI412"):
 			_check(_active(pen.fighter(false),"EFF401").is_empty(),"pen_finish_consumes_breach")
 	var spear := _session("2H_SPEAR",202611134)
 	if spear != null:
