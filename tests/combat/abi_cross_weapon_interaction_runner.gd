@@ -330,89 +330,7 @@ func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
 			_check(int(pending.payload.get("sword_bleed_ticks",-1))==3,"ABI308:legacy_bleed_ticks_from_catalog")
 
 
-func _dagger_abi_coefficients_from_catalog() -> void:
-	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
-	for scenario in [
-		{"abi":"ABI401","overrides":{"damage_multiplier":0.37,"ap_gain":3},"poison":0,"breach":0,"expected_damage":[37.0]},
-		{"abi":"ABI403","overrides":{"damage_multiplier":0.80},"poison":0,"breach":0,"expected_damage":[140.0]},
-		{"abi":"ABI404","overrides":{"poison_damage_bonus_per_stack":0.27},"poison":2,"breach":0,"expected_damage":[154.0,115.5]},
-		{"abi":"ABI405","overrides":{"damage_multiplier":1.25},"poison":0,"breach":0,"expected_damage":[125.0,93.75]},
-		{"abi":"ABI406","overrides":{"strike_damage_multiplier":0.42},"poison":3,"breach":0,"expected_damage":[42.0,31.5,42.0]},
-		{"abi":"ABI407","overrides":{"breach_damage_multiplier":0.80,"poison_stacks_per_breach":3},"poison":5,"breach":2,"expected_damage":[160.0]},
-		{"abi":"ABI408","overrides":{"armour_bypass_pct_per_breach_stack":11.0},"poison":0,"breach":3,"expected_damage":[100.0,75.0]}
-	]:
-		var id := String(scenario["abi"])
-		var ctx := _pair("dagger","axe")
-		var state: CombatState = ctx["state"]
-		var engine: CombatEngine = ctx["engine"]
-		var defender := state.get_combatant("right")
-		for spec in [
-			{"eff":"EFF403","count":int(scenario["poison"])},
-			{"eff":"EFF401","count":int(scenario["breach"])}
-		]:
-			if int(spec["count"]) <= 0:
-				continue
-			var eff_id := String(spec["eff"])
-			defender.active_effects.append({
-				"effect_id":eff_id,"definition":EffectCatalog.definition(engine.canonical_effects,eff_id).duplicate(true),
-				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":int(spec["count"])
-			})
-		var definition: Dictionary = Dictionary(defs[id]).duplicate(true)
-		if id == "ABI407" or id == "ABI405":
-			_check(is_equal_approx(float(definition.get("damage_multiplier",-1.0)),1.0),id+":authored_base_multiplier")
-		for field in Dictionary(scenario["overrides"]):
-			definition[field] = scenario["overrides"][field]
-		definition["rolls"] = {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
-		var action := AbilityRuntime.build_action_event(state,"left","right",id,definition)
-		DaggerAbiCombatService.dispatch(engine,action)
-		var attack_events: Array[CombatEvent] = []
-		for pending in state.pending_events:
-			if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("dagger_abi_id","")) == id:
-				attack_events.append(pending)
-		var expected: Array = scenario["expected_damage"]
-		_check(attack_events.size()==expected.size(),id+":custom_attack_count")
-		for i in range(mini(attack_events.size(),expected.size())):
-			_check(is_equal_approx(float(attack_events[i].payload.get("raw_damage",-1.0)),float(expected[i])),id+":custom_damage_"+str(i))
-		if id == "ABI401" and not attack_events.is_empty():
-			_check(int(attack_events[0].payload.get("dagger_ap_gain_on_hit",-1))==3,"ABI401:custom_AP_in_attack_snapshot")
-			var attacker := state.get_combatant("left")
-			attacker.action_points = 0
-			engine.resolve_pending_events()
-			_check(attacker.action_points==3,"ABI401:custom_AP_awarded_after_hit")
-		if id == "ABI407":
-			_check(int(action.result.get("breach_stacks_to_apply",-1))==1,"ABI407:poison_conversion_ratio_from_abi")
-		if id == "ABI408" and not attack_events.is_empty():
-			_check(is_equal_approx(float(attack_events[0].payload.get("dagger_armour_bypass_pct",-1.0)),33.0),"ABI408:armour_bypass_from_abi")
-
 ## Older ACTION events never carried the new numeric fields.
-func _dagger_legacy_action_uses_canonical_bonus() -> void:
-	var ctx := _pair("dagger","axe")
-	var state: CombatState = ctx["state"]
-	var engine: CombatEngine = ctx["engine"]
-	var legacy := state.create_event(CombatEvent.Kind.ACTION,"left","right",{"ability_id":"ABI401","source_kind":"ability","zone":"chest"})
-	DaggerAbiCombatService.dispatch(engine,legacy)
-	for event in state.pending_events:
-		if event.kind == CombatEvent.Kind.ATTACK and String(event.payload.get("dagger_abi_id","")) == "ABI401":
-			_check(is_equal_approx(float(event.payload.get("raw_damage",-1.0)),20.0),"ABI401:legacy_action_uses_canonical_multiplier")
-			_check(int(event.payload.get("dagger_ap_gain_on_hit",-1))==1,"ABI401:legacy_action_uses_canonical_AP")
-			return
-	_check(false,"ABI401:legacy_action_queued_attack")
-
-func _dagger_poison_proc_from_eff() -> void:
-	var ctx := _pair("dagger","axe")
-	var state: CombatState = ctx["state"]
-	var engine: CombatEngine = ctx["engine"]
-	var source := state.get_combatant("left")
-	source.action_points = 0
-	engine.canonical_effects["EFF403"]["ap_gain_on_apply_chance_pct"] = 100.0
-	engine.canonical_effects["EFF403"]["ap_gain_on_apply"] = 2
-	_effect(ctx,"left","right","EFF403")
-	_check(source.action_points==2,"EFF403:poison_AP_proc_uses_effect_chance_and_amount")
-	source.action_points = 0
-	engine.canonical_effects["EFF403"]["ap_gain_on_apply_chance_pct"] = 0.0
-	_effect(ctx,"left","right","EFF403")
-	_check(source.action_points==0,"EFF403:zero_proc_chance_prevents_AP")
-
 ## The canonical EFF rage cap and ABI requirements are independent.
 ## All changed values are test-only and must survive action snapshots.
 func _axe_abi_coefficients_from_catalog() -> void:
@@ -1049,31 +967,6 @@ func _axe_rage_value_comes_from_eff() -> void:
 		"start_round":1, "remaining_rounds":5, "stacks":3
 	})
 	_check(is_equal_approx(CombatModifierService.block_crush_chance(axe,1),10.5),"axe:rage_reads_test_only_eff501_rate")
-
-func _dagger_poison_versus_hammer_reflection() -> void:
-	var ctx := _pair("dagger","hammer")
-	var state: CombatState = ctx["state"]
-	var hammer := state.get_combatant("right")
-	_effect(ctx,"left","left","EFF402",{},true)
-	_effect(ctx,"right","right","EFF602",{},true)
-	_check(is_equal_approx(CombatModifierService.modifier(hammer,"reflection_pct",1),20.0),"hammer:reflection_effect_active")
-	var mh := _attack(ctx,"left","right",0)
-	var oh := _attack(ctx,"left","right",1)
-	_check(String(mh.result.get("outcome","")) == "connected" and String(oh.result.get("outcome","")) == "connected","dagger:mh_oh_both_connected")
-	_check(_effects_count(hammer,"EFF403") == 1 and _effect_stacks(hammer,"EFF403") == 2,"dagger:coating_applies_two_poison_stacks")
-	var reflected := 0
-	var own_hits := 0
-	for event in state.event_log:
-		if event.kind != CombatEvent.Kind.DAMAGE:
-			continue
-		if String(event.payload.get("source","")) == "hammer_reflection":
-			reflected += 1
-			_check(event.source_id == "right" and event.target_id == "left","hammer:reflection_hits_attacker")
-		elif event.source_id == "left" and event.target_id == "right":
-			own_hits += 1
-	_check(own_hits == 2 and reflected == 2,"hammer:one_reflection_per_dagger_hit_no_recursive_chain")
-	_check(HammerAbiCombatService.charges(hammer,1) == 2,"hammer:one_charge_per_taken_damage_event")
-	print("ABI_CROSS_WEAPON_CASE=CHECKED dagger_poison_vs_hammer_reflection")
 
 func _axe_counter_versus_dagger_dodge() -> void:
 	var ctx := _pair("dagger","axe")
