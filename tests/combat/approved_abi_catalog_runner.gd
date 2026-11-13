@@ -101,5 +101,18 @@ func _initialize() -> void:
 	for template in Array(bot_fixtures.get("templates",[])):
 		for ability_id in Array(Dictionary(template).get("abilities",[])):
 			ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(ability_id))
+	# Old dagger dispatch is deleted; only the three new four-ABI archetypes remain.
+	ok = ok and not FileAccess.file_exists("res://core/abilities/dagger_abi_combat_service.gd")
+	for spec in [
+		{"archetype":"DAGGER_ATTACK","ids":["ABI401","ABI402","ABI403","ABI404"]},
+		{"archetype":"DAGGER_DEF","ids":["ABI405","ABI406","ABI407","ABI408"]},
+		{"archetype":"DAGGER_PEN","ids":["ABI409","ABI410","ABI411","ABI412"]}
+	]:
+		var actual := ItemV12InstanceFactory._physical_weapon_abilities(String(spec["archetype"]))
+		ok = ok and actual == Array(spec["ids"])
+		for ability_id in actual:
+			var ability: Dictionary = defs.get(ability_id,{})
+			ok = ok and not String(ability.get("combo_ability_mode","")).is_empty()
+			ok = ok and not ability.has("dagger_ability_mode")
 	print("APPROVED_ABI_CATALOG_TEST=" + ("PASS" if ok else "FAIL"))
 	quit(0 if ok else 1)
