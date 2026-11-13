@@ -186,6 +186,10 @@ func resolve_active_timed_effects() -> Array[int]:
 			if state.round_number<int(active.get("start_round",999999)) or int(active.get("remaining_rounds",0))<=0:
 				continue
 			var definition:Dictionary=active.get("definition",{})
+			# EFF-owned periodic Tempo loss uses the existing control scale.
+			var tempo_per_round := float(definition.get("tempo_per_round",0.0))
+			if tempo_per_round < 0.0:
+				CombatTempoService.apply_control(combatant,-tempo_per_round)
 			if not String(definition.get("kind","")) in ["dot", "hot"]:
 				continue
 			# Shared-duration EFF has one DoT packet per round, multiplied
@@ -280,6 +284,12 @@ func end_round() -> Dictionary:
 			combatant.hp = mini(combatant.hp, combatant.max_hp)
 	# Death is finalized before threshold checks; dead fighters cannot stun/rebound.
 	CombatTempoService.end_round(state)
+	# A scheduled stun ends spear slowing, avoiding a permanent suppression loop.
+	for combatant in state.combatants.values():
+		if combatant != null and combatant.tempo_stun_round == state.round_number + 1:
+			for active in combatant.active_effects.duplicate():
+				if Array(Dictionary(active.get("definition",{})).get("tags",[])).has("SPEAR_SLOW"):
+					combatant.active_effects.erase(active)
 	_tick_effect_durations()
 	# Instant ABI effects were mechanically active throughout this round;
 	# only now can observers see them. Cleanse remains unavailable until
