@@ -204,10 +204,10 @@
     {
       "id": "DAGGER_DEF",
       "abilities": [
-        "ABI413",
-        "ABI414",
-        "ABI415",
-        "ABI416"
+        "ABI405",
+        "ABI406",
+        "ABI407",
+        "ABI408"
       ],
       "name": "Кинжал · защитный",
       "kind": "weapon",
@@ -226,10 +226,10 @@
     {
       "id": "DAGGER_ATTACK",
       "abilities": [
-        "ABI409",
-        "ABI410",
-        "ABI411",
-        "ABI412"
+        "ABI401",
+        "ABI402",
+        "ABI403",
+        "ABI404"
       ],
       "name": "Кинжал · атакующий",
       "kind": "weapon",
@@ -266,10 +266,10 @@
     {
       "id": "DAGGER_PEN",
       "abilities": [
-        "ABI417",
-        "ABI418",
-        "ABI419",
-        "ABI420"
+        "ABI409",
+        "ABI410",
+        "ABI411",
+        "ABI412"
       ],
       "name": "Кинжал · пробивающий",
       "kind": "weapon",
