@@ -38,7 +38,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				var status: String = String(event.result.get("outcome", ""))
 				var hit: Dictionary = {
 					"event_id": event.event_id,
-					"index": int(event.payload.get("dagger_strike_index", -1)),
+					"index": int(event.payload.get("combo_strike_index", -1)),
 					"zone": String(event.payload.get("zone", "chest")),
 					"critical": bool(event.result.get("critical", false)),
 					"outcome": status,
@@ -96,7 +96,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				var hit: Dictionary = abi_hit_details.get(int(raw_hit_id), {})
 				if bool(hit.get("critical", false)):
 					critical_count += 1
-			if name_id != "ABI406" and critical_count > 0:
+			if name_id != "ABI403" and critical_count > 0:
 				parts.append("крит: %d/%d" % [critical_count, hit_ids.size()])
 			if int(values.get("healing", 0)) > 0:
 				parts.append("+%d HP" % int(values.get("healing", 0)))
@@ -106,20 +106,20 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				parts.append("снят %s" % _effect_name(String(effect_id), effects_catalog))
 			for effect_id in Array(values.get("missed_effects", [])):
 				parts.append("%s не наложен" % _effect_name(String(effect_id), effects_catalog))
-			if name_id != "ABI406":
+			if name_id != "ABI403":
 				for missed_hit in Array(values.get("failed_hits", [])):
 					parts.append(String(missed_hit))
 			if parts.is_empty():
 				var reason: String = String(event.result.get("outcome", ""))
 				parts.append(_ability_outcome(reason))
 			result.append(prefix + ": " + "; ".join(parts))
-			if name_id == "ABI406":
+			if name_id == "ABI403":
 				# Display real resolved events, without rolling or applying damage again.
 				for raw_hit_id in hit_ids:
 					var hit: Dictionary = abi_hit_details.get(int(raw_hit_id), {})
 					var hit_index: int = int(hit.get("index", -1))
 					var strike_number: int = hit_index + 1 if hit_index >= 0 else hit_ids.find(raw_hit_id) + 1
-					var hand := "MH" if hit_index < 0 or hit_index % 2 == 0 else "OH"
+					var hand := "MH" # ABI403 performs three individual MH strikes.
 					var status: String = String(hit.get("outcome", ""))
 					var strike_result := "%d урона%s" % [int(hit.get("damage", 0)), " (крит)" if bool(hit.get("critical", false)) else ""] if status == "connected" else _attack_outcome(status)
 					result.append("  Удар %d (%s, %s): %s" % [strike_number, hand, _zone_name(String(hit.get("zone", "chest"))), strike_result])
