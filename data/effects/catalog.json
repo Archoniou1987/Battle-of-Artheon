@@ -373,5 +373,128 @@
         "magic_damage_direct_pct"
       ]
     }
+  },
+  "EFF406": {
+    "id": "EFF406",
+    "name": "Точность",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_ACCURACY"
+    ]
+  },
+  "EFF407": {
+    "id": "EFF407",
+    "name": "Сосредоточение убийцы",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_FOCUS"
+    ],
+    "crit_chance_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "combo_accuracy_stacks",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": [
+        "crit_chance_direct_pct"
+      ]
+    }
+  },
+  "EFF408": {
+    "id": "EFF408",
+    "name": "Заряды контратаки",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_COUNTER"
+    ]
+  },
+  "EFF409": {
+    "id": "EFF409",
+    "name": "Танец теней",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_DANCE"
+    ],
+    "dodge_direct_pct": 15
+  },
+  "EFF410": {
+    "id": "EFF410",
+    "name": "Защитная комбинация",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_COMBO"
+    ],
+    "dodge_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "combo_counter_stacks",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": [
+        "dodge_direct_pct"
+      ]
+    }
+  },
+  "EFF411": {
+    "id": "EFF411",
+    "name": "Ослабление удара",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "DAGGER_WEAKEN"
+    ],
+    "physical_damage_outgoing_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "combo_breach_stacks",
+      "per_unit": -5,
+      "minimum": -25,
+      "maximum": 0,
+      "fields": [
+        "physical_damage_outgoing_direct_pct"
+      ]
+    }
+  },
+  "EFF412": {
+    "id": "EFF412",
+    "name": "Замедление копья",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SPEAR_SLOW"
+    ],
+    "tempo_per_round": -10
+  },
+  "EFF413": {
+    "id": "EFF413",
+    "name": "Раскол брони копья",
+    "kind": "debuff",
+    "duration_rounds": 3,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SPEAR_ARMOUR_FRACTURE"
+    ],
+    "armour_reduction_pct": 15
   }
 }
