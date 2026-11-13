@@ -84,7 +84,7 @@ func resolve(engine: CombatEngine) -> void:
 	for action in locked_actions:
 		if action.kind==CombatEvent.Kind.ACTION and bool(action.payload.get("is_counterattack_abi",false)):
 			action.payload["counter_abi_mh_zone"]=String(mh_zone_by_source.get(action.source_id,""))
-		if action.kind==CombatEvent.Kind.ACTION and (AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
+		if action.kind==CombatEvent.Kind.ACTION and (WeaponComboAbiCombatService.is_combo_ability(String(action.payload.get("ability_id",""))) or AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
 			if mh_zone_by_source.has(action.source_id):
 				action.payload["zone"]=String(mh_zone_by_source[action.source_id])
 	# Only instant ABI effects modify the conditions of this round's
