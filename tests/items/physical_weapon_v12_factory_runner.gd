@@ -18,9 +18,9 @@ func _run() -> void:
 		"SWORD_DEF","SWORD_DODGE","SWORD_CRIT",
 		"DAGGER_DEF","DAGGER_ATTACK","DAGGER_PEN",
 		"AXE_DEF","AXE_ATTACK","AXE_SHIELD",
-		"HAMMER_DEF","HAMMER_ATTACK"
+		"HAMMER_DEF","HAMMER_ATTACK", "2H_SPEAR"
 	]
-	var families := {"SWORD_":"sword","DAGGER_":"dagger","AXE_":"axe","HAMMER_":"hammer"}
+	var families := {"SWORD_":"sword","DAGGER_":"dagger","AXE_":"axe","HAMMER_":"hammer","2H_":"spear"}
 	var seed_value := 20261104
 	var rules: Dictionary = ItemTemplateGeneratorV12.new().rules
 	var abilities: Dictionary = AbilityCatalog.load_json("res://data/abilities/catalog.json")
@@ -33,6 +33,8 @@ func _run() -> void:
 		_check(String(item.get("slot",""))=="main_hand",archetype_id+"_slot")
 		_check(item.get("equip_slots",[]) == WeaponHandPolicy.allowed_slots(archetype_id),archetype_id+"_hand_compatibility")
 		_check(Array(item.get("abilities",[])).size()==4,archetype_id+"_runtime_abi_gate")
+		if archetype_id == "2H_SPEAR":
+			_check(Array(item.get("slot_usage",[])) == ["main_hand","off_hand"],"spear_reserves_both_hands")
 		for rule in Array(rules.get("weapon_archetypes", [])):
 			var definition: Dictionary = rule
 			if String(definition.get("id","")) == archetype_id:
@@ -98,14 +100,14 @@ func _run() -> void:
 		_check(switch_hero.equip("main_hand",switch_id,switch_repo),"switch_equip_mh")
 		var mh_par := ParCalculationService.calculate(switch_hero,switch_repo)
 		var mh_abilities := EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo)
-		_check(mh_abilities.has("ABI406"),"switch_mh_has_abi")
+		_check(mh_abilities.has("ABI411"),"switch_mh_has_abi")
 		var main_range: Dictionary = mh_par.get("attack_ranges",{}).get("PAR050",{})
 		_check(switch_hero.unequip("main_hand",switch_repo)==switch_id,"switch_unequip_mh")
 		_check(switch_hero.equip("off_hand",switch_id,switch_repo),"switch_equip_oh")
 		var oh_par := ParCalculationService.calculate(switch_hero,switch_repo)
 		var off_range: Dictionary = oh_par.get("attack_ranges",{}).get("PAR051",{})
 		_check(is_equal_approx(float(off_range.get("min",-1)),float(main_range.get("min",0))*0.75),"switch_oh_damage75")
-		_check(not EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo).has("ABI406"),"switch_oh_no_abi")
+		_check(not EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo).has("ABI411"),"switch_oh_no_abi")
 		for par_id in original_bonuses:
 			var expected := float(original_bonuses[par_id])*0.75
 			var actual := float(Dictionary(oh_par.get("sources",{}).get(par_id,{})).get("equipment",0.0))
@@ -115,7 +117,7 @@ func _run() -> void:
 		_check(unchanged.get("damage",{})==original_damage and unchanged.get("par_bonuses",{})==original_bonuses,"switch_item_not_mutated")
 		_check(switch_hero.unequip("off_hand",switch_repo)==switch_id,"switch_unequip_oh")
 		_check(switch_hero.equip("main_hand",switch_id,switch_repo),"switch_return_mh")
-		_check(EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo).has("ABI406"),"switch_mh_abi_restored")
+		_check(EquipmentAbilityLoadout.active_abilities(switch_hero,switch_repo).has("ABI411"),"switch_mh_abi_restored")
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_DEF",40,"purple",1,"OH").is_empty(),"axe_no_oh")
 	_check(not ItemV12InstanceFactory.generate_weapon("AXE_ATTACK",40,"purple",1,"OH").is_empty(),"axe_attack_oh")
 	_check(not ItemV12InstanceFactory.generate_weapon("HAMMER_ATTACK",40,"purple",1,"OH").is_empty(),"hammer_attack_oh")
