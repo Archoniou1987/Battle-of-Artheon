@@ -75,6 +75,9 @@ func _resolve_action(event: CombatEvent) -> void:
 	if SwordAbiCombatService.is_sword_ability(String(event.payload.get("ability_id",""))):
 		SwordAbiCombatService.dispatch(self,event)
 		return
+	if WeaponComboAbiCombatService.is_combo_ability(String(event.payload.get("ability_id",""))):
+		WeaponComboAbiCombatService.dispatch(self,event)
+		return
 	if DaggerAbiCombatService.is_dagger_ability(String(event.payload.get("ability_id",""))):
 		DaggerAbiCombatService.dispatch(self,event)
 		return
@@ -341,6 +344,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
 			event.set_result("outcome", "dodge")
 			AxeAbiCombatService.on_dodge(self,event,defender)
+			WeaponComboAbiCombatService.on_dodge(self,event,defender)
 			return
 		event.set_result("uses_physical_block",_event_uses_physical_block(event))
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
@@ -430,7 +434,12 @@ func _resolve_attack(event: CombatEvent) -> void:
 	# EFF401 is a percentage-point reduction, before v1.2 diminishing.
 	# EFF401 penetration and hammer armour bonuses enter the raw percentage
 	# before DR. Post-DR additions could recreate 100% physical immunity.
-	var after_breach_pct := maxf(0.0,raw_armour_pct-CombatModifierService.effect_stack_bonus(defender,DaggerAbiCombatService.BREACH,"armour_reduction_pct_per_stack",state.round_number))
+	# All armour-cut EFF share the pre-DR layer and add without a special-case whitelist.
+	var active_armour_cut := 0.0
+	for debuff in CombatModifierService.active_effects(defender,state.round_number):
+		var def: Dictionary = Dictionary(debuff.get("definition",{}))
+		active_armour_cut += float(def.get("armour_reduction_pct_per_stack",0.0))*float(debuff.get("stacks",1)) + float(def.get("armour_reduction_pct",0.0))
+	var after_breach_pct := maxf(0.0,raw_armour_pct-active_armour_cut)
 	var armour_before_dr := after_breach_pct+CombatModifierService.effect_stack_bonus(defender,HammerAbiCombatService.CHARGE,"armour_and_resistance_direct_pct_per_stack",state.round_number)
 	var armour_percent := CombatRatingCurves.diminishing(armour_before_dr,"armour")
 	# Active zone fracture only reduces its named physical zone.
@@ -441,7 +450,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 				armour_percent *= 1.0-clampf(float(fdef.get("armour_reduction_pct",0.0))/100.0,0.0,1.0)
 	# Apply ABI408 to the FINAL armour percentage (including temporary
 	# charge buffs) so five breach stacks actually mean zero armour.
-	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE:
+	if String(event.payload.get("dagger_abi_id","")) == DaggerAbiCombatService.PEN_ABSOLUTE or String(event.payload.get("combo_abi_id","")) == "ABI420":
 		armour_percent *= 1.0-clampf(float(event.payload.get("dagger_armour_bypass_pct",0.0))/100.0,0.0,1.0)
 	var reduction := clampf(armour_percent / 100.0,0.0,1.0)
 	event.set_result("dagger_breach_stacks",dagger_breach_stacks)
@@ -451,6 +460,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_raw_percent",raw_armour_pct); event.set_result("armour_after_breach_percent",after_breach_pct); event.set_result("armour_before_dr_percent",armour_before_dr); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
 	SwordAbiCombatService.on_connected_attack(self,event,attacker,defender)
 	DaggerAbiCombatService.on_connected_attack(self,event,attacker)
+	WeaponComboAbiCombatService.on_connected_attack(self,event,attacker)
 	AxeAbiCombatService.on_connected_attack(self,event)
 	HammerAbiCombatService.on_connected_attack(self,event,attacker)
 	if is_weapon_attack:
