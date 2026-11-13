@@ -1,0 +1,305 @@
+extends SceneTree
+
+var errors: Array[String] = []
+
+func check(ok: bool, message: String) -> void:
+	if not ok:
+		errors.append(message)
+
+func put(hero: CharacterState, repo: ItemRepository, id: String, slot: String, extra: Dictionary) -> void:
+	var item := {"instance_id":id, "equip_slots":[slot], "slot_usage":[slot]}
+	item.merge(extra, true)
+	ItemDurabilityService.initialize_item(item, 100)
+	check(repo.add_item(item) and hero.receive_item(id, repo) and hero.equip(slot, id, repo), "equip " + id)
+
+func weapon(minimum: float, kind: String = "slashing") -> Dictionary:
+	return {"type":"weapon", "damage":{"min":minimum,"max":minimum,"type":kind}, "par_stats":{"PAR057":1}}
+
+func _initialize() -> void:
+	balance_cases()
+	mana_rule_ownership_cases()
+	strength_attack_power_cases()
+	weapon_cases()
+	shared_combat_cases()
+	npc_level_cases()
+	stun_cases()
+	for message in errors:
+		push_error(message)
+	print("FINAL_PAR_COMBAT_TEST=", "PASS" if errors.is_empty() else "FAIL", " failures=", errors.size())
+	quit(0 if errors.is_empty() else 1)
+
+## WIS balance approved 2026-11-12: one point of PAR005 contributes
+## +10 maximum mana AND +1 PAR015 per round/10 seconds. Baseline +5 remains.
+## The canonical PAR derivation owns WIS; Combat/OOC only consume PAR015.
+func mana_rule_ownership_cases() -> void:
+	var primary_cfg := PrimaryStatEffects.load_config()
+	var wis_effects: Dictionary = Dictionary(Dictionary(primary_cfg.get("effects",{})).get("PAR005",{}))
+	check(is_equal_approx(float(wis_effects.get("max_mana_flat",-1.0)),10.0),"WIS:+10_maximum_mana_per_point")
+	check(is_equal_approx(float(wis_effects.get("mana_regen_round",-1.0)),1.0),"WIS:+1_mana_regeneration_per_point")
+	var hero := CharacterState.new("a10_wis_mana", "WIS mana audit")
+	var repo := ItemRepository.new()
+	hero.progression.base_stats["PAR005"] = 2
+	var before := ParCalculationService.calculate(hero,repo)
+	hero.progression.base_stats["PAR005"] = 5
+	var after := ParCalculationService.calculate(hero,repo)
+	check(not before.is_empty() and not after.is_empty(),"WIS:canonical_PAR_sums_available")
+	if before.is_empty() or after.is_empty():
+		return
+	var b: Dictionary = before["totals"]
+	var a: Dictionary = after["totals"]
+	check(is_equal_approx(float(a["PAR011"])-float(b["PAR011"]),30.0),"WIS:max_mana_difference_3_points")
+	check(is_equal_approx(float(a["PAR015"])-float(b["PAR015"]),3.0),"WIS:PAR015_difference_3_points")
+	var maximums := CharacterState.maximum_resources(a)
+	check(int(maximums["max_mana"])==CharacterState.BASE_MAX_MANA+int(a["PAR011"]),"WIS:one_character_max_mana_formula")
+	var regen_cfg := ResourceRegenerationRules.config()
+	check(int(regen_cfg.get("interval_seconds",-1))==10 and is_equal_approx(float(regen_cfg.get("base_mana_per_interval",-1.0)),5.0),"WIS:base_5_and_interval_10_seconds")
+	check(is_equal_approx(ResourceRegenerationRules.mana_per_interval(0.0),5.0),"WIS:base_5_unmodified")
+	check(is_equal_approx(ResourceRegenerationRules.mana_per_interval(2.5),7.5),"WIS:item_PAR015_is_additive")
+	hero.progression.base_stats["PAR005"] = 30
+	var wis30 := ParCalculationService.calculate(hero,repo)
+	check(not wis30.is_empty(),"WIS:30_snapshot_available")
+	if wis30.is_empty():
+		return
+	check(is_equal_approx(float(wis30["totals"]["PAR015"]),30.0),"WIS:30_contributes_exact_30_PAR015")
+	check(is_equal_approx(ResourceRegenerationRules.mana_per_interval(float(wis30["totals"]["PAR015"])),35.0),"WIS:30_total_35_mana_round")
+	hero.current_mana = 0
+	check(OutOfCombatRegenerationService.advance(hero,repo,10.0),"WIS:out_of_combat_mana_interval_applied")
+	check(hero.current_mana==35,"WIS:35_mana_per_10_seconds_outside_combat")
+	var fighter := CharacterCombatBuilder.build(hero,repo)
+	check(fighter!=null,"WIS:canonical_combat_snapshot")
+	if fighter != null:
+		fighter.mana=0
+		var combat := CombatState.new()
+		combat.add_combatant(fighter)
+		CombatResourceService.apply_round_regeneration(combat)
+		check(fighter.mana==35,"WIS:35_mana_per_round_in_combat")
+
+## STR contributes to PAR232 once; PAR052 remains independent.
+func strength_attack_power_cases() -> void:
+	var hero := CharacterState.new("str_par232", "STR attack power audit")
+	var repo := ItemRepository.new()
+	var before := ParCalculationService.calculate(hero, repo)
+	hero.progression.base_stats["PAR001"] = 3
+	var after := ParCalculationService.calculate(hero, repo)
+	check(not before.is_empty() and not after.is_empty(), "STR:canonical_PAR_sums_available")
+	if before.is_empty() or after.is_empty():
+		return
+	check(is_equal_approx(float(after["totals"]["PAR232"]) - float(before["totals"]["PAR232"]), 20.0), "STR:each_point_grants_10_PAR232")
+	check(is_equal_approx(float(after["totals"]["PAR052"]) - float(before["totals"]["PAR052"]), 0.0), "STR:no_direct_PAR052_bonus")
+	var fighter := CharacterCombatBuilder.build(hero, repo)
+	check(fighter != null, "STR:combat_snapshot_available")
+	if fighter != null:
+		var profiles := WeaponAttackProfile.all(fighter)
+		check(profiles.size() == 1 and is_equal_approx(float(profiles[0].damage_min), 4.1), "STR:unarmed_MH_uses_PAR232_once")
+
+func weapon_cases() -> void:
+	for mode in ["fists", "mh", "oh", "dual", "two_handed", "broken_mh", "broken_oh"]:
+		var hero := CharacterState.new("hero_" + mode, "Hero")
+		var repo := ItemRepository.new()
+		if mode in ["mh", "dual", "two_handed", "broken_mh"]:
+			var item := weapon(10)
+			if mode == "two_handed":
+				item["slot_usage"] = ["main_hand", "off_hand"]
+			put(hero, repo, "mh_" + mode, "main_hand", item)
+		if mode in ["oh", "dual", "broken_oh"]:
+			var dagger := weapon(5, "piercing")
+			dagger["on_hit_effect"] = {"effect_id":"EFF001", "chance":100}
+			put(hero, repo, "oh_" + mode, "off_hand", dagger)
+		if mode == "broken_mh":
+			var broken := repo.get_item("mh_" + mode)
+			broken["durability_current"] = 0
+			repo.update_item(broken)
+		if mode == "broken_oh":
+			var broken := repo.get_item("oh_" + mode)
+			broken["durability_current"] = 0
+			repo.update_item(broken)
+		if mode == "two_handed":
+			var forbidden := weapon(5, "piercing")
+			forbidden.merge({"instance_id":"forbidden_oh","equip_slots":["off_hand"],"slot_usage":["off_hand"]})
+			ItemDurabilityService.initialize_item(forbidden, 100)
+			repo.add_item(forbidden)
+			hero.receive_item("forbidden_oh", repo)
+			# EquipmentState refuses the occupied OH. Atomic replacement is a separate supported operation.
+			check(not hero.equip("off_hand", "forbidden_oh", repo), "2H reserves OH through the character API")
+		var fighter := CharacterCombatBuilder.build(hero, repo)
+		check(fighter != null, mode + " build")
+		if fighter == null:
+			continue
+		var expected_count := 2 if mode in ["oh", "dual"] else 1
+		check(fighter.combat_stats.par_totals.PAR057 == expected_count, mode + " PAR057")
+		var profiles := WeaponAttackProfile.all(fighter)
+		check(profiles.size() == expected_count, mode + " profile count")
+		check(profiles[0].weapon_index == 0 and fighter.combat_stats.weapon_profiles[0].slot == "main_hand", mode + " MH first")
+		var view := CharacterStatsService.snapshot(hero, repo)
+		check(profiles[0].damage_min == view.main_hand_damage[0], mode + " UI damage matches combat")
+		if mode in ["fists", "oh", "broken_mh", "broken_oh"]:
+			check(is_equal_approx(float(profiles[0].damage_min),2.7) and is_equal_approx(float(profiles[0].damage_max),4.7) and profiles[0].damage_type == "blunt", mode + " fist 2-4 plus PAR232 exactly once")
+		if mode in ["oh", "dual"]:
+			check(profiles[1].weapon_index == 1 and is_equal_approx(float(profiles[1].damage_min),4.25), mode + " OH index and damage")
+			var trigger: Dictionary = fighter.combat_stats.weapon_on_hit_effects[0]
+			check(trigger.weapon_index == 1 and trigger.source_instance_id == "oh_" + mode, mode + " OH trigger keeps weapon ownership")
+			var state := CombatState.new()
+			state.add_combatant(fighter)
+			var target := CharacterCombatBuilder.build(CharacterState.new("target_" + mode, "Target"), ItemRepository.new())
+			state.add_combatant(target)
+			var engine := CombatEngine.new(state)
+			var parent := state.create_event(CombatEvent.Kind.ATTACK, fighter.combatant_id, target.combatant_id, {"weapon_index":0})
+			engine._trigger_weapon_on_hit(parent, fighter, target, {"on_hit_effect":1})
+			check(state.pending_events.is_empty(), mode + " OH effect never belongs to MH")
+			parent.payload.weapon_index = 1
+			engine._trigger_weapon_on_hit(parent, fighter, target, {"on_hit_effect":1})
+			check(state.pending_events.size() == 1, mode + " OH effect triggers on OH")
+			fighter.combat_stats.weapon_profiles[1].is_unarmed = true
+			check(not bool(ParAttackContract.validate(fighter).ok), "OH cannot masquerade as a virtual fist")
+
+func shared_combat_cases() -> void:
+	var hero := CharacterState.new("caster", "Caster")
+	var repo := ItemRepository.new()
+	put(hero, repo, "rating_ring", "ring1", {"combat_stats":{"hit_chance_direct_pct":2},"par_stats":{"PAR030":10,"PAR033":500,"PAR035":100,"PAR150":100}})
+	var fighter := CharacterCombatBuilder.build(hero, repo)
+	var view := CharacterStatsService.snapshot(hero, repo)
+	check(view.hit_chance_rating == 15 and is_equal_approx(view.hit_chance_rating_percent, 5.0), "primary and equipment hit sum before matrix")
+	check(view.crit_damage_rating == 105 and is_equal_approx(view.crit_damage_rating_percent, 21.0), "PAR035 is a rating")
+	check(not view.has("counterattack_rating") and not view.has("counterattack_rating_percent"), "retired PAR075 must not be exposed as a live stat")
+	check(view.magic_damage_rating == 105 and not view.has("magic_damage_rating_percent"), "PAR150 keeps absolute SP, no RatingMatrix conversion")
+	var old_errors := Engine.print_error_messages
+	Engine.print_error_messages = false
+	for invalid in ["bad", null, NAN, INF]:
+		check(CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":invalid}).is_empty(), "reject invalid snapshot overlay before coercion")
+	Engine.print_error_messages = old_errors
+	var direct := CharacterStatsService.snapshot(hero, repo, {"magic_damage_direct_pct":7})
+	check(is_equal_approx(float(direct.magic_damage_direct_pct),7.0) and float(direct.magic_damage_rating)==105.0, "direct percentage and absolute SP have independent units")
+	var invalid_abs := view.duplicate(true)
+	invalid_abs["magic_damage_rating"] = NAN
+	var old_absolute_errors := Engine.print_error_messages
+	Engine.print_error_messages = false
+	check(CharacterStatsService.convert_ratings(invalid_abs,hero.progression.level).is_empty(), "reject non-finite absolute Spell Power before combat")
+	Engine.print_error_messages = old_absolute_errors
+	var target := CharacterCombatBuilder.build(CharacterState.new("target", "Target"), ItemRepository.new(), {"health":2000})
+	var state := CombatState.new()
+	state.add_combatant(fighter)
+	state.add_combatant(target)
+	state.begin_round()
+	var engine := CombatEngine.new(state)
+	var observed: Array[CombatEvent] = []
+	for magic in [false, true]:
+		var payload := {"raw_damage":10.0,"damage_type":"fire" if magic else "slashing","uses_magic_hit":magic,"magic_hit_roll":1,"rolls":{"hit":1,"crit":1,"dodge":100}}
+		var attack := state.create_event(CombatEvent.Kind.ATTACK, "caster", "target", payload)
+		state.queue_event(attack)
+		engine.resolve_pending_events()
+		observed.append(attack)
+	check(is_equal_approx(float(observed[0].result.hit_chance), 100.0) and is_equal_approx(float(observed[1].result.hit_chance), 100.0), "one PAR030 and one approved hit baseline for both attack types")
+	check(bool(observed[0].result.critical) and bool(observed[1].result.critical), "PAR033 critical applies to physical and magical attacks")
+	check(is_equal_approx(observed[0].result.raw_damage, 17.1), "existing 1.5 crit plus PAR035 percentage points")
+	check(is_equal_approx(observed[1].result.raw_damage, 17.1), "magic attack is not multiplied by PAR150 without an ABI K")
+	var action := AbilityRuntime.build_action_event(state, "caster", "target", "AUDIT_PROJECTILE", {"delivery_type":"PROJECTILE","uses_magic_hit":true,"magic_hit_roll":1,"rolls":{"crit":1},"components":[{"kind":"damage","amount":10.0,"damage_type":"fire"}]})
+	state.queue_event(action)
+	engine.resolve_pending_events()
+	var child: CombatEvent = null
+	for event in state.event_log:
+		if event.parent_event_id == action.event_id and event.kind == CombatEvent.Kind.ATTACK:
+			child = event
+	check(child != null, "ABI projectile creates an attack")
+	if child != null:
+		check(bool(child.payload.uses_magic_hit) and bool(child.payload.hit_already_resolved), "ABI preserves magic routing and does not reroll hit")
+		check(is_equal_approx(child.result.raw_damage, 17.1), "ABI with no K does not receive SP or duplicate magic percent")
+	var zero := engine._make_action_component_event(action, {"kind":"damage","amount":0,"damage_type":"fire"}, "target", 1)
+	check(zero.payload.raw_damage == 0, "a missing ABI K keeps zero-base magic damage at zero")
+	var group := GroupCombatState.new(state)
+	group.add_member("A", "caster")
+	group.add_member("B", "target")
+	group.set_active_opponent("caster", "target")
+	var zones := CombatZoneState.new(group)
+	zones.set_zone("caster", CombatZoneState.ZONE_2)
+	zones.set_zone("target", CombatZoneState.ZONE_2)
+	var api := CombatCommandApi.new(state, group, zones, RoundOrchestrator.new(state, engine, group, zones))
+	for id in ParCombatContract.RATINGS.keys() + ParCombatContract.ABSOLUTE_STATS.keys() + ["PAR073"]:
+		var saved: Variant = fighter.combat_stats.par_totals[id]
+		fighter.combat_stats.par_totals.erase(id)
+		check(not bool(ParCombatContract.validate(fighter).ok), "diagnose missing " + id)
+		var old_print := Engine.print_error_messages
+		Engine.print_error_messages = false
+		var result := api.queue_default_weapon_attacks("caster")
+		var bad := state.create_event(CombatEvent.Kind.ATTACK, "caster", "target", {"raw_damage":999,"rolls":{"hit":1}})
+		engine.resolve_event(bad)
+		Engine.print_error_messages = old_print
+		check(not bool(result.ok) and state.pending_events.is_empty(), "no partial queue without " + id)
+		check(bad.result.get("outcome") == "invalid_par_contract", "engine rejects missing " + id)
+		fighter.combat_stats.par_totals[id] = saved
+
+	for key in ParCombatContract.RATINGS.values():
+		var field: String = key + "_percent"
+		var saved: Variant = fighter.combat_stats[field]
+		fighter.combat_stats.erase(field)
+		check(not bool(ParCombatContract.validate(fighter).ok), "converted rating cannot default to zero: " + field)
+		fighter.combat_stats[field] = saved
+	fighter.combat_stats.hit_chance_rating += 1
+	check(not bool(ParCombatContract.validate(fighter).ok), "semantic rating cannot diverge from PAR source")
+	fighter.combat_stats.hit_chance_rating -= 1
+	fighter.combat_stats.magic_damage_rating += 1
+	check(not bool(ParCombatContract.validate(fighter).ok), "PAR150 absolute SP cannot diverge from canonical source")
+	fighter.combat_stats.magic_damage_rating -= 1
+	fighter.active_effects.append({"definition":{"magic_damage_direct_pct":NAN},"start_round":state.round_number,"remaining_rounds":1})
+	var saved_print := Engine.print_error_messages
+	Engine.print_error_messages = false
+	var invalid := state.create_event(CombatEvent.Kind.ATTACK, "caster", "target", {"raw_damage":999,"rolls":{"hit":1}})
+	engine.resolve_event(invalid)
+	Engine.print_error_messages = saved_print
+	check(invalid.result.get("outcome") == "invalid_par_contract" and state.pending_events.is_empty(), "non-finite runtime overlay cannot enter damage")
+	fighter.active_effects.clear()
+
+func npc_level_cases() -> void:
+	var totals := {"PAR052":0,"PAR057":1,"PAR073":1}
+	for id in ParCombatContract.RATINGS:
+		totals[id] = 100
+	for id in ParCombatContract.ABSOLUTE_STATS:
+		totals[id] = 100
+	var npc := NpcState.new({"id":"audit_npc","name":"NPC","level":1,"base":{"health":100,"mana":0,"par_totals":totals,"par_attack_ranges":{"PAR050":{"min":2,"max":4,"type":"blunt"}},"combat_stats":{"weapon_profiles":[{"slot":"main_hand","damage_min":2,"damage_max":4,"damage_type":"blunt"}]}}})
+	check(is_equal_approx(NpcCombatBuilder.build(npc).combat_stats.crit_chance_rating_percent, 20), "NPC template-level rating")
+	var repo := NpcRepository.new()
+	repo.add(npc)
+	var instance := NpcInstance.new("audit_npc_instance", npc)
+	instance.level = 100
+	var player := CharacterCombatBuilder.build(CharacterState.new("npc_test_player", "Player"), ItemRepository.new())
+	var session := MapEncounterCombatService.begin({"ok":true,"npcs":[instance]}, repo, player)
+	check(bool(session.ok) and session.enemy.level == 100 and is_equal_approx(session.enemy.combat_stats.crit_chance_rating_percent, 4), "NPC instance level owns its RatingMatrix conversion")
+
+func stun_cases() -> void:
+	var hero := CharacterState.new("stunned", "Stunned")
+	var session := ArenaCombatSession.new(hero, ItemRepository.new())
+	var fighter := session.fighter(true)
+	fighter.tempo = -100
+	# A raw negative pool is not an immediate stun. Only scheduled stun blocks actions.
+	fighter.tempo_stun_round = session.state.round_number
+	check(not bool(session.commands.queue_default_weapon_attacks(fighter.combatant_id).ok) and session.state.pending_events.is_empty(), "stun rejects command attacks before queue mutation")
+	var scheduler := AbilityScheduler.new({"STUN_TEST":{"mana_cost":3,"components":[{"kind":"damage","amount":10,"damage_type":"fire"}]}}, {fighter.combatant_id:["STUN_TEST"]})
+	var mana := fighter.mana
+	check(scheduler.cast_event(session.state, fighter.combatant_id, session.ENEMY_ID, "STUN_TEST") == null and fighter.mana == mana, "stun rejects ABI before charging mana")
+	check(scheduler.ready_events(session.state, fighter.combatant_id, session.ENEMY_ID).is_empty(), "stun rejects scheduled ABI")
+	fighter.tempo_stun_round = session.state.round_number + 1
+	var result := session.play_round(["head"], ["head", "chest"])
+	check(bool(result.ok) and session.state.round_number == 1, "stunned arena player can still end the round")
+	var attacks := 0
+	for event in session.state.event_log:
+		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == fighter.combatant_id:
+			attacks += 1
+	check(attacks == 0, "stun suppresses player attacks in Arena")
+
+func balance_cases() -> void:
+	var state := CombatState.new()
+	var engine := CombatEngine.new(state)
+	check(engine._hit_chance(-10) == 20 and engine._hit_chance(5) == 100, "default engine loads approved level hit table")
+	check(is_equal_approx(CombatRatingCurves.armour_raw_pct(80.0,1),40.0), "v1.2 armour curve owns mitigation, not legacy physical_combat.json")
+	var explicit := CombatEngine.new(state, TestFixtureLoader.load_json("res://data/balance/physical_combat.json"))
+	check(engine.physical_balance == explicit.physical_balance, "Arena/default and explicit balance contracts agree")
+
+	var attacker := CharacterCombatBuilder.build(CharacterState.new("balance_attacker", "A"), ItemRepository.new())
+	var defender := CharacterCombatBuilder.build(CharacterState.new("balance_defender", "D"), ItemRepository.new(), {"health":1000})
+	defender.armour = {"chest":{"slashing":50.0}}
+	state.add_combatant(attacker)
+	state.add_combatant(defender)
+	state.begin_round()
+	var event := state.create_event(CombatEvent.Kind.ATTACK, attacker.combatant_id, defender.combatant_id, {"raw_damage":100.0,"damage_type":"slashing","zone":"chest","rolls":{"hit":1,"crit":100,"dodge":100}})
+	state.queue_event(event)
+	engine.resolve_pending_events()
+	check(defender.hp == 925, "50 armour at Lv1 absorbs 25 of 100 damage and leaves 925 HP")

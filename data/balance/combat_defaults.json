@@ -8,13 +8,9 @@
   "crit": {
     "base_damage_multiplier": 1.5
   },
-  "counterattack": {
-    "main_hand_damage_coefficient": 0.8
-  },
   "action_points": {
     "combat_start": 0,
-    "maximum": 5,
-    "basic_physical_attack_gain": 1
+    "maximum": 5
   },
   "stun_protection": {
     "negative_tempo_multiplier": 0.5,

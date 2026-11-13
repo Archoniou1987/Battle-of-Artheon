@@ -37,7 +37,7 @@ func add_area(area:MapArea,positions:Array[Vector2i])->bool:
 func place_entity(entity_id:String,pos:Vector2i)->bool:
 	if entity_id.is_empty() or not in_bounds(pos) or not cell(pos).is_passable(): return false
 	entity_positions[entity_id]=pos; return true
-func move_entity(entity_id:String,to:Vector2i)->Dictionary:
+func move_entity(entity_id:String,to:Vector2i,reveal_destination:bool=true)->Dictionary:
 	if not entity_positions.has(entity_id): return {"ok":false,"reason":"unknown_entity"}
 	if not in_bounds(to): return {"ok":false,"reason":"out_of_bounds"}
 	var target:=cell(to)
@@ -45,7 +45,11 @@ func move_entity(entity_id:String,to:Vector2i)->Dictionary:
 	var from:Vector2i=entity_positions[entity_id]
 	if HexGrid.distance(from,to)!=1: return {"ok":false,"reason":"not_adjacent"}
 	var transition:=area_transition(from,to)
-	entity_positions[entity_id]=to; target.discovered=true; target.visited=true
+	entity_positions[entity_id]=to
+	# Exploration is player-owned. Non-player movers must opt out.
+	if reveal_destination:
+		target.discovered=true
+		target.visited=true
 	return {"ok":true,"from":from,"to":to,"movement_cost":target.movement_cost,"areas":target.area_ids.duplicate(),"area_entered":transition.entered,"area_exited":transition.exited,"area_stayed":transition.stayed,"objects":target.object_ids.duplicate(),"effects":target.effects.duplicate(),"triggers":target.triggers.duplicate()}
 
 func reveal_from(origin:Vector2i,radius:int)->Array[Vector2i]:

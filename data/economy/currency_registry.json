@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "currencies": [
+    {"id": "CURRENCY_01", "placeholder_name": "Валюта 1", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_02", "placeholder_name": "Валюта 2", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_03", "placeholder_name": "Валюта 3", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_04", "placeholder_name": "Валюта 4", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_05", "placeholder_name": "Валюта 5", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_06", "placeholder_name": "Валюта 6", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_07", "placeholder_name": "Валюта 7", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_08", "placeholder_name": "Валюта 8", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_09", "placeholder_name": "Валюта 9", "display_name": null, "icon_id": null, "enabled": false},
+    {"id": "CURRENCY_10", "placeholder_name": "Валюта 10", "display_name": null, "icon_id": null, "enabled": false}
+  ],
+  "notes": "Reserved currency IDs only. Prices, exchange rates, wallet balances and payment operations are not implemented."
+}

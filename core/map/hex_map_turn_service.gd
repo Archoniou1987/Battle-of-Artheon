@@ -51,5 +51,83 @@ func resolve_group_victory(result:Dictionary,map:TacticalMapState,bridge:MapNpcB
 		coordinator.finish_combat()
 	return outcome
 
+## World-map opt-in route. Map contact and patrol/chase movement are
+## handled by the existing HexEncounterCoordinator; the combat state is
+## still owned by MapEncounterCombatService / GroupCombatSimulator.
+func begin_resumable_group_combat(encounter: Dictionary, repository: NpcRepository, fighter: CombatantState, encounter_key: String, checkpoint_path: String = GroupCombatCheckpointService.DEFAULT_PATH) -> Dictionary:
+	if not coordinator.combat_active and not FileAccess.file_exists(checkpoint_path):
+		return {"ok":false,"reason":"no_active_map_encounter"}
+	var opened: Dictionary = MapEncounterCombatService.begin_resumable(encounter,repository,fighter,encounter_key,checkpoint_path)
+	if bool(opened.get("ok",false)):
+		coordinator.combat_active = true
+	return opened
+
+## Maps may progress after the outcome journal is durable and applied,
+## but the calling game state still MUST persist the expedition/repository
+## and acknowledge the journal in a later step.
+func resolve_group_victory_durable(session: Dictionary, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository, loot_service: NpcPossessionLootService, quality_chances: Dictionary, encounter_key: String, receipt_path: String = MapCombatSettlementService.DEFAULT_PATH, now_unix: int = -1) -> Dictionary:
+	if not coordinator.combat_active:
+		return {"ok":false,"reason":"no_active_combat"}
+	var result: Dictionary = MapCombatSettlementService.settle(session,expedition,map,bridge,player,repository,loot_service,quality_chances,encounter_key,receipt_path,now_unix)
+	if bool(result.get("ok",false)):
+		coordinator.finish_combat()
+	return result
+
+## On restart a world may be reconstructed with every NPC alive again.
+## Reapply the immutable journal before map movement/patrol simulation.
+func recover_settled_group_victory(receipt_path: String, encounter_key: String, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository) -> Dictionary:
+	var result: Dictionary = MapCombatSettlementService.apply(receipt_path,encounter_key,expedition,map,bridge,player,repository)
+	if bool(result.get("ok",false)):
+		coordinator.finish_combat()
+	return result
+
+## Fully committed world-map completion: keep the coordinator's
+## movement/patrol pause until the combat reward, player resources and
+## single atomic expedition/inventory snapshot are verified on disk.
+## The older resolve_group_victory_durable() remains available for callers
+## managing their own snapshot/acknowledgement workflow.
+func finalize_group_victory_atomic(session: Dictionary, encounter_key: String, expedition: ExpeditionState, map: TacticalMapState, bridge: MapNpcBridge, player: CharacterState, repository: ItemRepository, loot_service: NpcPossessionLootService, quality_chances: Dictionary, receipt_path: String = MapCombatSettlementService.DEFAULT_PATH, checkpoint_path: String = GroupCombatCheckpointService.DEFAULT_PATH, world_snapshot_path: String = MapWorldCommitService.DEFAULT_PATH, now_unix: int = -1, ground_loot_solo: bool = false) -> Dictionary:
+	if not coordinator.combat_active:
+		return {"ok":false,"reason":"no_active_combat"}
+	var simulator: GroupCombatSimulator = session.get("simulator") as GroupCombatSimulator
+	if simulator == null or player == null or repository == null:
+		return {"ok":false,"reason":"missing_atomic_combat_owner"}
+	if String(session.get("checkpoint_path","")) != checkpoint_path:
+		return {"ok":false,"reason":"atomic_checkpoint_path_mismatch"}
+	var resolved: Dictionary = MapCombatSettlementService.settle(session,expedition,map,bridge,player,repository,loot_service,quality_chances,encounter_key,receipt_path,now_unix)
+	if not bool(resolved.get("ok",false)):
+		return {"ok":false,"reason":"world_settlement_failed","detail":String(resolved.get("reason","unknown"))}
+	# Opt-in Solo Final-v1 world mode: rewards become persistent ground
+	# objects before the atomic world save; no claim or 15-minute TTL.
+	# Legacy reward-pool callers retain their old semantics by default.
+	if ground_loot_solo:
+		var journal := MapCombatSettlementService.read(receipt_path,encounter_key,expedition.expedition_id,player.character_id)
+		if not bool(journal.get("ok",false)):
+			return {"ok":false,"reason":"ground_receipt_missing","detail":String(journal.get("reason","unknown"))}
+		var transferred := GroundLootSettlementAdapter.migrate(expedition,repository,encounter_key,player,String(journal["sha256"]))
+		if not bool(transferred.get("ok",false)):
+			return {"ok":false,"reason":"ground_migration_failed","detail":String(transferred.get("reason","unknown"))}
+	# The canonical combatant (not the map-NPC or the Arena test avatar)
+	# owns these resources. Failure retains the journals and map pause.
+	var winner: CombatantState = simulator.state.get_combatant(player.character_id)
+	if winner == null or not player.commit_combat_resources(winner,repository):
+		return {"ok":false,"reason":"combat_resource_commit_failed"}
+	# The authoritative expedition snapshot must include the actual player
+	# hex. Without this, a verified world cannot be mounted after restart.
+	if not map.entity_positions.has(player.character_id):
+		return {"ok":false,"reason":"atomic_player_not_on_map"}
+	var old_position: Vector2i = expedition.player_position
+	expedition.player_position = map.entity_positions[player.character_id]
+	var stored := MapWorldCommitService.commit(session,encounter_key,expedition,map,bridge,player,repository,receipt_path,checkpoint_path,world_snapshot_path)
+	if not bool(stored.get("ok",false)):
+		expedition.player_position = old_position
+	if not bool(stored.get("ok",false)):
+		return {"ok":false,"reason":"atomic_world_commit_failed","detail":String(stored.get("reason","unknown"))}
+	var acknowledgement := MapWorldCommitService.acknowledge(world_snapshot_path,receipt_path,checkpoint_path,encounter_key,expedition.expedition_id,player.character_id)
+	if not bool(acknowledgement.get("ok",false)):
+		return {"ok":false,"reason":"atomic_world_ack_failed","detail":String(acknowledgement.get("reason","unknown"))}
+	coordinator.finish_combat()
+	return {"ok":true,"world_snapshot_path":world_snapshot_path,"defeated_ids":resolved.get("defeated_ids",[]),"loot_pool":expedition.restore_loot_pool(encounter_key),"ground_loot_solo":ground_loot_solo,"world_committed":true}
+
 func finish_combat()->void:
 	coordinator.finish_combat()

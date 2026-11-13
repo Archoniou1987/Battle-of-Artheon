@@ -1,0 +1,1075 @@
+{
+  "version": "core-balance-v1.2",
+  "note": "Canonical Project 25 Generator v1.2; PAR232 reference +100% Lv10 -> +60% Lv75, doubled weapon base scale, 10:1 physical conversion.",
+  "damage_quality_factors": {
+    "white": 1,
+    "green": 1.05,
+    "blue": 1.125,
+    "purple": 1.25
+  },
+  "rarities": {
+    "white": {
+      "start": 1,
+      "factor": 1,
+      "bonus": 0
+    },
+    "green": {
+      "start": 10,
+      "factor": 1.1,
+      "bonus": 1
+    },
+    "blue": {
+      "start": 20,
+      "factor": 1.25,
+      "bonus": 2
+    },
+    "purple": {
+      "start": 40,
+      "factor": 1.5,
+      "bonus": 3
+    }
+  },
+  "schools": [
+    {
+      "id": "fire",
+      "name": "Fire",
+      "pen": "PAR165"
+    },
+    {
+      "id": "frost",
+      "name": "Frost",
+      "pen": "PAR166"
+    },
+    {
+      "id": "nature",
+      "name": "Nature",
+      "pen": "PAR168"
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning",
+      "pen": "PAR167"
+    },
+    {
+      "id": "holy",
+      "name": "Holy",
+      "pen": "PAR170"
+    },
+    {
+      "id": "dark",
+      "name": "Dark",
+      "pen": "PAR169"
+    }
+  ],
+  "stat_par": {
+    "hp": "PAR010",
+    "mana": "PAR011",
+    "dodge": "PAR031",
+    "crit": "PAR033",
+    "crit_damage": "PAR035",
+    "anticrit": "PAR034",
+    "anti_dodge": "PAR032",
+    "attack": "PAR232",
+    "spell": "PAR150",
+    "reduce": "PAR135",
+    "armour_pen": "PAR126",
+    "shield_pen": "PAR072",
+    "magic_res": "PAR190",
+    "mana_regen": "PAR015",
+    "magic_pen": "PAR164",
+    "phys_res": "PAR127"
+  },
+  "slot_budget_notes": {
+    "2H": "PROPOSED_IN_GENERATOR_V12_ONLY; 22.5%=15% MH + 7.5% OH"
+  },
+  "slot_budgets": {
+    "MH": 15,
+    "MH/OH": 15,
+    "OH": 7.5,
+    "2H": 22.5,
+    "Шлем": 7.1,
+    "Плечи": 6,
+    "Нагрудник": 10.9,
+    "Перчатки": 3.8,
+    "Наручи": 3.8,
+    "Пояс": 3.8,
+    "Штаны": 7.1,
+    "Ботинки": 7.5,
+    "Плащ": 5,
+    "Щит": 7.5,
+    "Кулон": 7.5,
+    "Кольцо": 7.5
+  },
+  "armor_slots": [
+    "Шлем",
+    "Плечи",
+    "Нагрудник",
+    "Перчатки",
+    "Наручи",
+    "Пояс",
+    "Штаны",
+    "Ботинки"
+  ],
+  "stat_priority_slots": [
+    "Перчатки",
+    "Наручи",
+    "Пояс",
+    "Кольцо",
+    "Амулет"
+  ],
+  "weapon_archetypes": [
+    {
+      "id": "SWORD_DEF",
+      "abilities": [
+        "ABI301",
+        "ABI302",
+        "ABI303",
+        "ABI306"
+      ],
+      "name": "Меч · защитный",
+      "kind": "weapon",
+      "family": "sword",
+      "slot": "MH",
+      "weights": {
+        "anticrit": 50,
+        "anti_dodge": 50
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "SWORD_DODGE",
+      "abilities": [
+        "ABI301",
+        "ABI302",
+        "ABI304",
+        "ABI307"
+      ],
+      "name": "Меч · уклонение",
+      "kind": "weapon",
+      "family": "sword",
+      "slot": "MH",
+      "weights": {
+        "anticrit": 33.25,
+        "anti_dodge": 17.1,
+        "dodge": 44.65,
+        "attack": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR002"
+      ]
+    },
+    {
+      "id": "SWORD_CRIT",
+      "abilities": [
+        "ABI301",
+        "ABI302",
+        "ABI305",
+        "ABI308"
+      ],
+      "name": "Меч · критический",
+      "kind": "weapon",
+      "family": "sword",
+      "slot": "MH",
+      "weights": {
+        "anti_dodge": 20,
+        "crit": 30,
+        "attack": 20,
+        "crit_damage": 30
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "SWORD_MAGIC",
+      "name": "Меч · магический",
+      "kind": "weapon",
+      "family": "sword",
+      "slot": "MH",
+      "weights": {
+        "anticrit": 20,
+        "crit": 20,
+        "spell": 60
+      },
+      "requirements": [
+        "PAR001",
+        "PAR004"
+      ]
+    },
+    {
+      "id": "DAGGER_DEF",
+      "abilities": [
+        "ABI405",
+        "ABI406",
+        "ABI407",
+        "ABI408"
+      ],
+      "name": "Кинжал · защитный",
+      "kind": "weapon",
+      "family": "dagger",
+      "slot": "MH/OH",
+      "weights": {
+        "dodge": 54,
+        "anticrit": 33,
+        "anti_dodge": 13
+      },
+      "requirements": [
+        "PAR002",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "DAGGER_ATTACK",
+      "abilities": [
+        "ABI401",
+        "ABI402",
+        "ABI403",
+        "ABI404"
+      ],
+      "name": "Кинжал · атакующий",
+      "kind": "weapon",
+      "family": "dagger",
+      "slot": "MH/OH",
+      "weights": {
+        "dodge": 38,
+        "crit": 25,
+        "crit_damage": 25,
+        "attack": 12
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "DAGGER_MAGIC",
+      "name": "Кинжал · магический",
+      "kind": "weapon",
+      "family": "dagger",
+      "slot": "MH/OH",
+      "weights": {
+        "dodge": 30,
+        "crit": 25,
+        "anticrit": 10,
+        "spell": 35
+      },
+      "requirements": [
+        "PAR002",
+        "PAR004"
+      ]
+    },
+    {
+      "id": "DAGGER_PEN",
+      "abilities": [
+        "ABI409",
+        "ABI410",
+        "ABI411",
+        "ABI412"
+      ],
+      "name": "Кинжал · пробивающий",
+      "kind": "weapon",
+      "family": "dagger",
+      "slot": "MH/OH",
+      "weights": {
+        "dodge": 32.069,
+        "armour_pen": 45.5172,
+        "attack": 10,
+        "anti_dodge": 12.4138
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "AXE_DEF",
+      "abilities": [
+        "ABI501",
+        "ABI502",
+        "ABI503",
+        "ABI504"
+      ],
+      "name": "Топор · защитный",
+      "kind": "weapon",
+      "family": "axe",
+      "slot": "MH",
+      "weights": {
+        "crit": 26.6,
+        "crit_damage": 16.15,
+        "shield_pen": 10.45,
+        "dodge": 31.35,
+        "anticrit": 10.45,
+        "attack": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR002"
+      ]
+    },
+    {
+      "id": "AXE_ATTACK",
+      "abilities": [
+        "ABI501",
+        "ABI502",
+        "ABI505",
+        "ABI506"
+      ],
+      "name": "Топор · атакующий",
+      "kind": "weapon",
+      "family": "axe",
+      "slot": "MH",
+      "weights": {
+        "crit": 35,
+        "crit_damage": 30,
+        "shield_pen": 10,
+        "attack": 20,
+        "anti_dodge": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "AXE_SHIELD",
+      "abilities": [
+        "ABI501",
+        "ABI502",
+        "ABI507",
+        "ABI508"
+      ],
+      "name": "Топор · щитолом",
+      "kind": "weapon",
+      "family": "axe",
+      "slot": "MH",
+      "weights": {
+        "crit": 20,
+        "crit_damage": 20,
+        "shield_pen": 40,
+        "attack": 10,
+        "anti_dodge": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "HAMMER_DEF",
+      "abilities": [
+        "ABI601",
+        "ABI602",
+        "ABI603",
+        "ABI604"
+      ],
+      "name": "Молот · защитный",
+      "kind": "weapon",
+      "family": "hammer",
+      "slot": "MH",
+      "weights": {
+        "hp": 50,
+        "reduce": 30,
+        "anticrit": 20
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "HAMMER_ATTACK",
+      "abilities": [
+        "ABI601",
+        "ABI602",
+        "ABI605",
+        "ABI606"
+      ],
+      "name": "Молот · атакующий",
+      "kind": "weapon",
+      "family": "hammer",
+      "slot": "MH",
+      "weights": {
+        "hp": 30,
+        "attack": 35,
+        "crit": 15,
+        "crit_damage": 15,
+        "anti_dodge": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "HAMMER_MAGIC",
+      "name": "Молот · магический",
+      "kind": "weapon",
+      "family": "hammer",
+      "slot": "MH",
+      "weights": {
+        "hp": 35,
+        "reduce": 10,
+        "spell": 40,
+        "crit": 15
+      },
+      "requirements": [
+        "PAR001",
+        "PAR004"
+      ]
+    },
+    {
+      "id": "2H_SWORD",
+      "name": "2H меч",
+      "kind": "weapon",
+      "family": "sword",
+      "slot": "2H",
+      "weights": {
+        "attack": 30,
+        "crit": 25,
+        "crit_damage": 20,
+        "anti_dodge": 20,
+        "anticrit": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "2H_SPEAR",
+      "name": "2H копьё",
+      "kind": "weapon",
+      "family": "spear",
+      "slot": "2H",
+      "weights": {
+        "attack": 18,
+        "anti_dodge": 24,
+        "armour_pen": 35,
+        "dodge": 23
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003"
+      ],
+      "abilities": [
+        "ABI701",
+        "ABI702",
+        "ABI703",
+        "ABI704"
+      ]
+    },
+    {
+      "id": "2H_AXE",
+      "name": "2H топор",
+      "kind": "weapon",
+      "family": "axe",
+      "slot": "2H",
+      "weights": {
+        "attack": 15,
+        "crit": 30,
+        "crit_damage": 25,
+        "anti_dodge": 5,
+        "shield_pen": 25
+      },
+      "requirements": [
+        "PAR001",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "2H_HAMMER",
+      "name": "2H молот",
+      "kind": "weapon",
+      "family": "hammer",
+      "slot": "2H",
+      "weights": {
+        "attack": 40,
+        "crit": 20,
+        "crit_damage": 15,
+        "hp": 25
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "STAFF_SUPPORT",
+      "name": "Посох · поддержка",
+      "kind": "weapon",
+      "family": "staff",
+      "slot": "2H",
+      "weights": {
+        "hp": 20,
+        "spell": 35,
+        "crit": 10,
+        "magic_res": 15,
+        "mana_regen": 15,
+        "magic_pen": 5
+      },
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
+    },
+    {
+      "id": "STAFF_ATTACK",
+      "name": "Посох · атакующий",
+      "kind": "weapon",
+      "family": "staff",
+      "slot": "2H",
+      "weights": {
+        "spell": 45,
+        "crit": 25,
+        "crit_damage": 20,
+        "magic_pen": 10
+      },
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "STAFF_PEN",
+      "name": "Посох · пробивающий",
+      "kind": "weapon",
+      "family": "staff",
+      "slot": "2H",
+      "weights": {
+        "spell": 35,
+        "crit": 15,
+        "crit_damage": 10,
+        "magic_pen": 40
+      },
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
+    }
+  ],
+  "armor_archetypes": [
+    {
+      "id": "HEAVY_DEF",
+      "name": "Защитная тяжёлая",
+      "kind": "armor",
+      "material": "metal",
+      "profile": "80/20",
+      "weights": {
+        "hp": 36.9444,
+        "phys_res": 15.8333,
+        "magic_res": 10.5556,
+        "anticrit": 26.3889,
+        "reduce": 5.2778,
+        "attack": 5
+      },
+      "requirements": [
+        "PAR006",
+        "PAR001"
+      ]
+    },
+    {
+      "id": "HEAVY_UNIVERSAL",
+      "name": "Универсальная тяжёлая",
+      "kind": "armor",
+      "material": "metal",
+      "profile": "75/25",
+      "weights": {
+        "hp": 35,
+        "phys_res": 10,
+        "magic_res": 5,
+        "anticrit": 15,
+        "reduce": 5,
+        "attack": 15,
+        "crit": 10,
+        "anti_dodge": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "HEAVY_BATTLE",
+      "name": "Боевая тяжёлая",
+      "kind": "armor",
+      "material": "metal",
+      "profile": "70/30",
+      "weights": {
+        "hp": 30,
+        "phys_res": 5,
+        "magic_res": 5,
+        "anticrit": 10,
+        "reduce": 5,
+        "attack": 20,
+        "crit": 15,
+        "anti_dodge": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "HEAVY_ASSAULT",
+      "name": "Штурмовая тяжёлая",
+      "kind": "armor",
+      "material": "metal",
+      "profile": "65/35",
+      "weights": {
+        "hp": 20,
+        "phys_res": 5,
+        "magic_res": 5,
+        "anticrit": 10,
+        "attack": 30,
+        "crit": 25,
+        "anti_dodge": 5
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006",
+        "PAR003"
+      ]
+    },
+    {
+      "id": "HEAVY_MAGIC",
+      "name": "Магическая тяжёлая",
+      "kind": "armor",
+      "material": "metal",
+      "profile": "75/25",
+      "weights": {
+        "hp": 30,
+        "phys_res": 15,
+        "magic_res": 15,
+        "anticrit": 10,
+        "spell": 30
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006",
+        "PAR004"
+      ]
+    },
+    {
+      "id": "MEDIUM_DEF",
+      "name": "Защитная средняя",
+      "kind": "armor",
+      "material": "leather",
+      "profile": "55/45",
+      "weights": {
+        "hp": 29,
+        "phys_res": 6,
+        "magic_res": 6,
+        "anticrit": 12,
+        "dodge": 35,
+        "crit": 12
+      },
+      "requirements": [
+        "PAR002",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "MEDIUM_UNIVERSAL",
+      "name": "Универсальная средняя",
+      "kind": "armor",
+      "material": "leather",
+      "profile": "50/50",
+      "weights": {
+        "hp": 18,
+        "dodge": 29,
+        "attack": 23,
+        "crit": 18,
+        "anti_dodge": 12
+      },
+      "requirements": [
+        "PAR002",
+        "PAR003",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "MEDIUM_BATTLE",
+      "name": "Боевая средняя",
+      "kind": "armor",
+      "material": "leather",
+      "profile": "45/55",
+      "weights": {
+        "hp": 13,
+        "dodge": 25,
+        "attack": 25,
+        "crit": 25,
+        "anti_dodge": 12
+      },
+      "requirements": [
+        "PAR003",
+        "PAR002"
+      ]
+    },
+    {
+      "id": "MEDIUM_MAGIC",
+      "name": "Магическая средняя",
+      "kind": "armor",
+      "material": "leather",
+      "profile": "50/50",
+      "weights": {
+        "hp": 15,
+        "magic_res": 10,
+        "anticrit": 5,
+        "dodge": 30,
+        "spell": 40
+      },
+      "requirements": [
+        "PAR002",
+        "PAR004",
+        "PAR005"
+      ]
+    },
+    {
+      "id": "LIGHT_DEF",
+      "name": "Защитная лёгкая",
+      "kind": "armor",
+      "material": "cloth",
+      "profile": "30/70",
+      "weights": {
+        "hp": 20,
+        "phys_res": 5,
+        "magic_res": 10,
+        "anticrit": 10,
+        "spell": 35,
+        "crit": 10,
+        "magic_pen": 10
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006",
+        "PAR005"
+      ]
+    },
+    {
+      "id": "LIGHT_UNIVERSAL",
+      "name": "Универсальная лёгкая",
+      "kind": "armor",
+      "material": "cloth",
+      "profile": "25/75",
+      "weights": {
+        "hp": 15,
+        "magic_res": 5,
+        "anticrit": 5,
+        "spell": 40,
+        "crit": 20,
+        "magic_pen": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
+    },
+    {
+      "id": "LIGHT_BATTLE",
+      "name": "Боевая магическая",
+      "kind": "armor",
+      "material": "cloth",
+      "profile": "20/80",
+      "weights": {
+        "hp": 10,
+        "mana": 5,
+        "magic_res": 5,
+        "spell": 40,
+        "crit": 25,
+        "magic_pen": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
+    },
+    {
+      "id": "LIGHT_ASSAULT",
+      "name": "Штурмовая магическая",
+      "kind": "armor",
+      "material": "cloth",
+      "profile": "15/85",
+      "weights": {
+        "hp": 5,
+        "mana": 5,
+        "spell": 45,
+        "crit": 25,
+        "magic_pen": 20
+      },
+      "requirements": [
+        "PAR004",
+        "PAR005"
+      ]
+    },
+    {
+      "id": "LIGHT_RESOURCE",
+      "name": "Ресурсная магическая",
+      "kind": "armor",
+      "material": "cloth",
+      "profile": "30/70",
+      "weights": {
+        "hp": 10,
+        "mana": 40,
+        "magic_res": 10,
+        "spell": 30,
+        "crit": 5,
+        "magic_pen": 5
+      },
+      "requirements": [
+        "PAR005",
+        "PAR004"
+      ]
+    }
+  ],
+  "jewelry_archetypes": [
+    {
+      "id": "CHARM_PHYS_ATTACK",
+      "name": "Кулон / плащ · PHYS_ATTACK",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "35/65",
+      "weights": {
+        "hp": 5,
+        "attack": 30,
+        "crit": 25,
+        "crit_damage": 20,
+        "armour_pen": 10,
+        "anti_dodge": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_PHYS_ATTACK",
+      "name": "Кольцо · PHYS_ATTACK",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "35/65",
+      "weights": {
+        "hp": 5,
+        "attack": 30,
+        "crit": 25,
+        "crit_damage": 20,
+        "armour_pen": 10,
+        "anti_dodge": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_PHYS_DEF",
+      "name": "Кулон / плащ · PHYS_DEF",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 30,
+        "attack": 10,
+        "crit": 5,
+        "anti_dodge": 5,
+        "dodge": 15,
+        "anticrit": 20,
+        "phys_res": 15
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_PHYS_DEF",
+      "name": "Кольцо · PHYS_DEF",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 30,
+        "attack": 10,
+        "crit": 5,
+        "anti_dodge": 5,
+        "dodge": 15,
+        "anticrit": 20,
+        "phys_res": 15
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_MAG_ATTACK",
+      "name": "Кулон / плащ · MAG_ATTACK",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "35/65",
+      "weights": {
+        "mana": 10,
+        "mana_regen": 10,
+        "spell": 30,
+        "crit": 20,
+        "magic_pen": 20,
+        "dodge": 10
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_MAG_ATTACK",
+      "name": "Кольцо · MAG_ATTACK",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "35/65",
+      "weights": {
+        "mana": 10,
+        "mana_regen": 10,
+        "spell": 30,
+        "crit": 20,
+        "magic_pen": 20,
+        "dodge": 10
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_MAG_DEF",
+      "name": "Кулон / плащ · MAG_DEF",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 20,
+        "mana": 15,
+        "mana_regen": 10,
+        "spell": 15,
+        "magic_res": 25,
+        "anticrit": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_MAG_DEF",
+      "name": "Кольцо · MAG_DEF",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "65/35",
+      "weights": {
+        "hp": 20,
+        "mana": 15,
+        "mana_regen": 10,
+        "spell": 15,
+        "magic_res": 25,
+        "anticrit": 15
+      },
+      "requirements": [
+        "PAR004",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "CHARM_UNIVERSAL",
+      "name": "Кулон / плащ · UNIVERSAL",
+      "kind": "jewelry",
+      "slot": "Кулон",
+      "slots": [
+        "Кулон",
+        "Плащ"
+      ],
+      "profile": "50/50",
+      "weights": {
+        "hp": 20,
+        "mana": 10,
+        "attack": 10,
+        "spell": 10,
+        "crit": 10,
+        "dodge": 10,
+        "anticrit": 10,
+        "phys_res": 10,
+        "magic_res": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    },
+    {
+      "id": "RING_UNIVERSAL",
+      "name": "Кольцо · UNIVERSAL",
+      "kind": "jewelry",
+      "slot": "Кольцо",
+      "slots": [
+        "Кольцо"
+      ],
+      "profile": "50/50",
+      "weights": {
+        "hp": 20,
+        "mana": 10,
+        "attack": 10,
+        "spell": 10,
+        "crit": 10,
+        "dodge": 10,
+        "anticrit": 10,
+        "phys_res": 10,
+        "magic_res": 10
+      },
+      "requirements": [
+        "PAR001",
+        "PAR006"
+      ]
+    }
+  ],
+  "attack_power_balance": {
+    "base_damage_multiplier": 2,
+    "start_level": 10,
+    "end_level": 75,
+    "start_percent": 100,
+    "end_percent": 60,
+    "reference_par_lines_per_slot": 2
+  }
+}

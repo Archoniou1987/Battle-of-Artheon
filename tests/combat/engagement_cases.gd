@@ -6,10 +6,10 @@ static func run(balance:Dictionary)->bool:
 
 static func _context()->Dictionary:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("player","Player",10,100))
-	state.add_combatant(CombatantState.new("e0","E0",10,100))
-	state.add_combatant(CombatantState.new("e1","E1",10,100))
-	state.add_combatant(CombatantState.new("e2","E2",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("player","Player",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("e0","E0",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("e1","E1",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("e2","E2",10,100))
 	var group:=GroupCombatState.new(state)
 	group.add_member("players","player")
 	group.add_member("enemies","e0")
@@ -70,7 +70,7 @@ static func _death_bypass(balance:Dictionary)->bool:
 	var controller:GroupCombatController=x["controller"]
 	controller.engagement.request_change("player","e1","player","PLAYER",50)
 	controller.engagement.resolve_end_round(10)
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"player","e1",{"amount":150.0,"damage_type":"physical"}))
@@ -83,7 +83,7 @@ static func _dead_requester_cannot_force_target(balance:Dictionary)->bool:
 	var x:=_context()
 	var state:CombatState=x["state"]
 	var controller:GroupCombatController=x["controller"]
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	controller.engagement.request_change("player","e1","e1","NPC",1)

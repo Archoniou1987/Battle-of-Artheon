@@ -31,6 +31,121 @@ var battle_combat_state:CombatState
 var battle_active:=false
 var battle_defeat_button:Button
 var chase_entity_id:String=""
+var cell_content_panel:CellContentPanel
+var _verified_cell_world:MapCellWorldSession
+var cell_content_bridge:MapNpcBridge=MapNpcBridge.new()
+var cell_content_expedition:ExpeditionState
+var cell_content_character:CharacterState
+var cell_content_repository:ItemRepository
+var cell_content_encounter_key:String=""
+var cell_content_world_snapshot_path:String=""
+var _cell_pickup_service:=GroundLootService.new()
+var _cell_pickup_ticket:String=""
+var _cell_pickup_started_ms:int=0
+
+## The viewer can be given the SAME live owners as a playable expedition.
+## If none are supplied, its read-only panel still lists map objects.
+func set_cell_content_context(expedition:ExpeditionState,character:CharacterState,bridge:MapNpcBridge,repository:ItemRepository=null,encounter_key:String="",snapshot_path:String="")->void:
+	_cancel_cell_pickup()
+	cell_content_expedition=expedition
+	cell_content_character=character
+	cell_content_bridge=bridge if bridge!=null else MapNpcBridge.new()
+	cell_content_repository=repository
+	_verified_cell_world=null
+	cell_content_encounter_key=encounter_key
+	cell_content_world_snapshot_path=snapshot_path
+	refresh_cell_content()
+
+## Live Solo entry point: the viewer may operate on an expedition only
+## after the map and saved world agree about the player and defeated NPCs.
+## The caller owns map generation and NPC tombstone reconciliation first.
+func attach_verified_cell_world(snapshot_path:String,encounter_key:String,expedition_id:String,player_id:String,bridge:MapNpcBridge)->Dictionary:
+	if playable_map==null or _moving or battle_active:
+		return {"ok":false,"reason":"viewer_map_not_ready"}
+	var opened:Dictionary=MapCellWorldSession.open(snapshot_path,encounter_key,expedition_id,player_id,playable_map,bridge)
+	if not bool(opened.get("ok",false)):
+		return opened
+	var live:MapCellWorldSession=opened["session"]
+	set_cell_content_context(live.expedition,live.character,live.bridge,live.repository,live.encounter_key,live.snapshot_path)
+	_verified_cell_world=live
+	player_hex=playable_map.entity_positions[player_id]
+	refresh_cell_content()
+	return {"ok":true,"session":live}
+
+func refresh_cell_content()->void:
+	if cell_content_panel==null or playable_map==null:
+		return
+	if cell_content_character==null:
+		cell_content_character=CharacterState.new("PLAYER","Explorer",1)
+	if cell_content_expedition==null:
+		cell_content_expedition=ExpeditionState.new("DEBUG_CELL_CONTENT")
+	cell_content_panel.set_projection(CellContentService.inspect_current_cell(playable_map,cell_content_bridge,cell_content_expedition,cell_content_character,int(Time.get_unix_time_from_system())))
+
+func _on_cell_content_selected(kind:String,id:String,action:String)->void:
+	# Selection is read-only until the interaction resolver authorizes
+	# live pickup, attack, hunting and quest actions.
+	if move_status!=null:
+		move_status.text="На клетке: "+kind+" / "+id+" ("+action+")"
+
+
+## Only a fully committed world snapshot can authorize UI pickup.
+## The standalone debug viewer has no durable world owner by default.
+func _begin_cell_pickup(instance_id:String)->void:
+	if _moving or battle_active or not _cell_pickup_ticket.is_empty():
+		return
+	if cell_content_repository==null or cell_content_character==null or cell_content_expedition==null or cell_content_encounter_key.is_empty() or cell_content_world_snapshot_path.is_empty():
+		cell_content_panel.finish_pickup_display("Подбор недоступен без сохранённой экспедиции.")
+		return
+	var verified:=MapWorldCommitService.read(cell_content_world_snapshot_path,cell_content_encounter_key,cell_content_expedition.expedition_id,cell_content_character.character_id)
+	if not bool(verified.get("ok",false)):
+		cell_content_panel.finish_pickup_display("Сначала требуется сохранение мира.")
+		return
+	var started:=_cell_pickup_service.begin_pickup(cell_content_expedition,playable_map,cell_content_character,cell_content_repository,instance_id,int(Time.get_unix_time_from_system()))
+	if not bool(started.get("ok",false)):
+		cell_content_panel.finish_pickup_display("Нельзя подобрать: "+String(started.get("reason","unknown")))
+		return
+	_cell_pickup_ticket=String(started["ticket"])
+	_cell_pickup_started_ms=Time.get_ticks_msec()
+	cell_content_panel.show_pickup_progress(0.0)
+
+func _cancel_cell_pickup()->void:
+	if _cell_pickup_ticket.is_empty():
+		return
+	_cell_pickup_service.cancel_pickup(_cell_pickup_ticket)
+	_cell_pickup_ticket=""
+	if cell_content_panel!=null:
+		cell_content_panel.finish_pickup_display("Подбор отменён.")
+
+func _advance_cell_pickup()->void:
+	if _cell_pickup_ticket.is_empty():
+		return
+	if _moving or battle_active:
+		_cancel_cell_pickup()
+		return
+	var elapsed:=float(Time.get_ticks_msec()-_cell_pickup_started_ms)/1000.0
+	cell_content_panel.show_pickup_progress(elapsed)
+	if elapsed < float(GroundLootService.PICKUP_SECONDS):
+		return
+	# A pickup transaction must never be considered complete in memory
+	# unless the matching world + inventory snapshot can be saved.
+	var previous_world:Dictionary=cell_content_expedition.world_state.duplicate(true)
+	var result:=_cell_pickup_service.finish_pickup(_cell_pickup_ticket,cell_content_expedition,playable_map,cell_content_character,cell_content_repository,int(Time.get_unix_time_from_system()))
+	_cell_pickup_ticket=""
+	if not bool(result.get("ok",false)):
+		cell_content_panel.finish_pickup_display("Подбор не выполнен: "+String(result.get("reason","unknown")))
+		refresh_cell_content()
+		return
+	var saved:=MapWorldCommitService.save_progress(cell_content_world_snapshot_path,cell_content_encounter_key,cell_content_expedition,cell_content_character,cell_content_repository)
+	if not bool(saved.get("ok",false)):
+		# Roll back only the fresh ground/inventory transition; do not
+		# allow an unsaved item to be treated as owned.
+		cell_content_character.inventory.remove_instance(String(result["instance_id"]),cell_content_character.equipment)
+		cell_content_expedition.world_state=previous_world
+		cell_content_panel.finish_pickup_display("Ошибка сохранения. Предмет остался на земле.")
+		refresh_cell_content()
+		return
+	cell_content_panel.finish_pickup_display("Предмет подобран.")
+	refresh_cell_content()
 
 var loot_expedition:ExpeditionState
 var loot_player_id:String=""
@@ -168,6 +283,12 @@ func _ready()->void:
 	canvas.set_debug_reveal_all(true)
 	_build_movement_panel()
 	_build_game_navigation()
+	cell_content_panel=CellContentPanel.new()
+	$Root/Sidebar.add_child(cell_content_panel)
+	$Root/Sidebar.move_child(cell_content_panel,4)
+	cell_content_panel.entry_selected.connect(_on_cell_content_selected)
+	cell_content_panel.pickup_requested.connect(_begin_cell_pickup)
+	cell_content_panel.pickup_cancel_requested.connect(_cancel_cell_pickup)
 	_loot_refresh_timer=Timer.new()
 	_loot_refresh_timer.wait_time=1.0
 	_loot_refresh_timer.timeout.connect(_on_loot_refresh)
@@ -196,6 +317,16 @@ func _random_seed()->void:
 	_regenerate()
 
 func _regenerate()->void:
+	_cancel_cell_pickup()
+	# The new generated map is a different world: never retain an old
+	# expedition's repository or player ownership in this debug scene.
+	_verified_cell_world=null
+	cell_content_expedition=null
+	cell_content_character=null
+	cell_content_repository=null
+	cell_content_bridge=MapNpcBridge.new()
+	cell_content_encounter_key=""
+	cell_content_world_snapshot_path=""
 	var seed_value:int=int(seed_input.value)
 	var generated:=LocationGenerator.generate(20,20,seed_value)
 	canvas.set_generated(generated)
@@ -228,6 +359,7 @@ func _regenerate()->void:
 		move_status.text="Выберите клетку"
 	_update_movement_panel()
 	refresh_loot_markers()
+	refresh_cell_content()
 	var map:TacticalMapState=generated.map
 	var blocked:=0
 	for pos in map.cells.keys():
@@ -294,6 +426,8 @@ func _route_to(destination:Vector2i,allow_target_npc:bool=false)->Array[Vector2i
 
 func _select_destination(pos:Vector2i)->void:
 	if playable_map==null or battle_active: return
+	if not _cell_pickup_ticket.is_empty():
+		_cancel_cell_pickup()
 	if pos==player_hex:
 		if _moving:
 			_request_stop()
@@ -362,6 +496,7 @@ func _prepare_step()->void:
 	move_status.text="Движение: %.0f сек/гекс"%_step_duration
 
 func _process(delta:float)->void:
+	_advance_cell_pickup()
 	if battle_active: return
 	if patrol_runtime.advance(delta):
 		canvas.queue_redraw()
@@ -379,8 +514,22 @@ func _process(delta:float)->void:
 		move_status.text="Движение: "+str(result.get("reason","ошибка"))
 		_update_movement_panel()
 		return
+	# A verified Solo world must commit movement before UI or combat
+	# observes the destination; otherwise closing the app rolls back
+	# player position while items remain in a newer save.
+	if _verified_cell_world!=null:
+		var persisted:Dictionary=_verified_cell_world.save_player_position()
+		if not bool(persisted.get("ok",false)):
+			playable_map.entity_positions["PLAYER"]=player_hex
+			_moving=false
+			_next_hex=Vector2i(-1,-1)
+			planned_path.clear()
+			move_status.text="Движение не сохранено: "+String(persisted.get("reason","unknown"))
+			_update_movement_panel()
+			return
 	player_hex=_next_hex
 	planned_path.remove_at(0)
+	refresh_cell_content()
 	var encountered_id:=_npc_at(player_hex)
 	if not encountered_id.is_empty():
 		canvas.set_player_view(player_hex,target_hex,planned_path)
@@ -513,6 +662,7 @@ func _npc_at(pos:Vector2i)->String:
 	return ""
 
 func _start_test_battle(entity_id:String)->void:
+	_cancel_cell_pickup()
 	if battle_active or entity_id.is_empty() or not playable_map.entity_positions.has(entity_id): return
 	battle_group_ids.clear()
 	var contact_pos:Vector2i=playable_map.entity_positions[entity_id]

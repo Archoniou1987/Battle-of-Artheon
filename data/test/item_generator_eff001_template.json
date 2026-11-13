@@ -1,12 +1,21 @@
 {
-  "id":"GEN_DAGGER_EFF001_L50",
-  "name":"Level 50 Bleeding Dagger",
-  "item_level":50,
-  "equip_slots":["main_hand","off_hand"],
-  "slot_usage":["main_hand"],
-  "damage_min":2,
-  "damage_max":5,
-  "damage_type":"piercing",
-  "base_stats":{},
-  "on_hit_effect":{"effect_id":"EFF001","chance":100.0}
+  "id": "GEN_DAGGER_EFF001_L50",
+  "name": "Level 50 Bleeding Dagger",
+  "item_level": 50,
+  "equip_slots": [
+    "main_hand",
+    "off_hand"
+  ],
+  "slot_usage": [
+    "main_hand"
+  ],
+  "damage_min": 2,
+  "damage_max": 5,
+  "damage_type": "piercing",
+  "par_stats": {},
+  "on_hit_effect": {
+    "effect_id": "EFF001",
+    "chance": 100.0
+  },
+  "combat_stats": {}
 }

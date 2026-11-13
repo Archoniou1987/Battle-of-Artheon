@@ -5,11 +5,11 @@ static func run() -> bool:
 	print("CASE_SUITE_START=action_resolver_cases")
 	var ok := true
 	var state := CombatState.new()
-	var source := CombatantState.new("source", "Source", 1, 100)
-	var target := CombatantState.new("target", "Target", 1, 100)
+	var source := TestFixtureLoader.new_combatant("source", "Source", 1, 100)
+	var target := TestFixtureLoader.new_combatant("target", "Target", 1, 100)
 	state.add_combatant(source)
 	state.add_combatant(target)
-	var engine := CombatEngine.new(state, {})
+	var engine := CombatEngine.new(TestFixtureLoader.canonicalize_state(state), {})
 
 	var projectile := AbilityRuntime.build_action_event(state, "source", "target", "ABI_TEST", {
 		"delivery_type": "PROJECTILE",
@@ -62,19 +62,19 @@ static func run() -> bool:
 	ok = ok and String(unsupported.result.get("outcome", "")) == "no_supported_components"
 	ok = ok and unsupported.result.get("unsupported_components", []).has("future_component")
 
-	var definitions := {"ABI_SCHEDULED":{"delivery_type":"DIRECT","target_scope":"SINGLE","components":[{"kind":"damage","amount":1,"damage_type":"lightning"}],"mana_cost":1,"cooldown_rounds":1}}
-	var loadouts := {"source":["ABI_SCHEDULED"]}
+	var definitions := {"TEST_SCHEDULED":{"delivery_type":"DIRECT","target_scope":"SINGLE","components":[{"kind":"damage","amount":1,"damage_type":"lightning"}],"mana_cost":1,"cooldown_rounds":1}}
+	var loadouts := {"source":["TEST_SCHEDULED"]}
 	var scheduler := AbilityScheduler.new(definitions, loadouts)
 	source.mana = 10
 	var scheduled:Array[CombatEvent] = scheduler.ready_events(state, "source", "target")
 	ok = ok and scheduled.size() == 1
 	ok = ok and scheduled[0].kind == CombatEvent.Kind.ACTION
-	ok = ok and String(scheduled[0].payload.get("ability_id", "")) == "ABI_SCHEDULED"
+	ok = ok and String(scheduled[0].payload.get("ability_id", "")) == "TEST_SCHEDULED"
 
 	# Casting commits resource and cooldown before resolution. A later Magic Hit miss
 	# must not refund either cost.
-	var miss_definitions := {"ABI_MAGIC_MISS":{"delivery_type":"DIRECT","target_scope":"SINGLE","uses_magic_hit":true,"magic_hit_roll":100,"components":[{"kind":"damage","amount":10,"damage_type":"fire"}],"mana_cost":3,"cooldown_rounds":2}}
-	var miss_scheduler := AbilityScheduler.new(miss_definitions, {"source":["ABI_MAGIC_MISS"]})
+	var miss_definitions := {"TEST_MAGIC_MISS":{"delivery_type":"DIRECT","target_scope":"SINGLE","uses_magic_hit":true,"magic_hit_roll":100,"components":[{"kind":"damage","amount":10,"damage_type":"fire"}],"mana_cost":3,"cooldown_rounds":2}}
+	var miss_scheduler := AbilityScheduler.new(miss_definitions, {"source":["TEST_MAGIC_MISS"]})
 	source.mana = 10
 	var miss_events:Array[CombatEvent] = miss_scheduler.ready_events(state, "source", "target")
 	ok = ok and miss_events.size() == 1 and source.mana == 7
@@ -82,9 +82,9 @@ static func run() -> bool:
 		engine.resolve_event(miss_events[0])
 		ok = ok and String(miss_events[0].result.get("outcome", "")) == "magic_miss"
 		ok = ok and source.mana == 7
-	ok = ok and not AbilityRuntime.can_use("ABI_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 1)
-	ok = ok and not AbilityRuntime.can_use("ABI_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 2)
-	ok = ok and AbilityRuntime.can_use("ABI_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 3)
+	ok = ok and not AbilityRuntime.can_use("TEST_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 1)
+	ok = ok and not AbilityRuntime.can_use("TEST_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 2)
+	ok = ok and AbilityRuntime.can_use("TEST_MAGIC_MISS", miss_scheduler.cooldowns_by_combatant.get("source", {}), state.round_number + 3)
 
 	if not ok:
 		print("ACTION_RESOLVER_CASES=FAIL hp=",target.hp," projectile=",projectile.result," mixed=",mixed.result," unsupported=",unsupported.result," scheduled=",scheduled.size())

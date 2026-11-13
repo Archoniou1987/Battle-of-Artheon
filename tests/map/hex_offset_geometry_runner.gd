@@ -9,9 +9,9 @@ func _initialize()->void:
 			for next in HexGrid.neighbors(pos):
 				ok=ok and HexGrid.distance(pos,next)==1
 				ok=ok and HexGrid.neighbors(next).has(pos)
-				var x0:=sqrt(3.0)*(float(q)+float(r%2)*0.5)
+				var x0:=sqrt(3.0)*(float(q)+float(r & 1)*0.5)
 				var y0:=1.5*float(r)
-				var x1:=sqrt(3.0)*(float(next.x)+float(next.y%2)*0.5)
+				var x1:=sqrt(3.0)*(float(next.x)+float(next.y & 1)*0.5)
 				var y1:=1.5*float(next.y)
 				ok=ok and absf(Vector2(x0,y0).distance_to(Vector2(x1,y1))-sqrt(3.0))<0.001
 	var generated:=LocationGenerator.generate(20,20,777)

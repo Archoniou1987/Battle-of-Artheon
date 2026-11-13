@@ -1,10 +1,18 @@
 {
-  "id":"GEN_SWORD_L50",
-  "name":"Level 50 Sword",
-  "item_level":50,
-  "equip_slots":["main_hand","off_hand"],
-  "slot_usage":["main_hand"],
-  "damage_min":25,
-  "damage_max":33,
-  "base_stats":{"END":5}
+  "id": "GEN_SWORD_L50",
+  "name": "Level 50 Sword",
+  "item_level": 50,
+  "equip_slots": [
+    "main_hand",
+    "off_hand"
+  ],
+  "slot_usage": [
+    "main_hand"
+  ],
+  "damage_min": 25,
+  "damage_max": 33,
+  "par_stats": {
+    "PAR006": 5
+  },
+  "combat_stats": {}
 }
