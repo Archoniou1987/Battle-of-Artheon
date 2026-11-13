@@ -8,13 +8,14 @@ const SWORD_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT"]
 const DAGGER_ARCHETYPES := ["DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN"]
 const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_SHIELD"]
 const HAMMER_ARCHETYPES := ["HAMMER_DEF", "HAMMER_ATTACK"]
-const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "HAMMER_DEF", "HAMMER_ATTACK"]
+const SPEAR_ARCHETYPES := ["2H_SPEAR"]
+const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "HAMMER_DEF", "HAMMER_ATTACK", "2H_SPEAR"]
 const ACCEPTED_QUALITIES := ["white", "green", "blue", "purple"]
 
 static func generate_sword(archetype_id: String, level: int, quality: String, seed_value: int) -> Dictionary:
 	return generate_weapon(archetype_id, level, quality, seed_value, "MH")
 
-## Canonical v1.2 rolls for all APPROVED physical 1H weapon archetypes.
+## Canonical v1.2 rolls for approved physical weapons, including 2H spear.
 ## ABI are assigned only after their runtime implementation is ready.
 static func generate_weapon(archetype_id: String, level: int, quality: String, seed_value: int, hand: String = "MH") -> Dictionary:
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH"].has(hand):
@@ -23,7 +24,7 @@ static func generate_weapon(archetype_id: String, level: int, quality: String, s
 		return {}
 	var engine := ItemTemplateGeneratorV12.new()
 	var generated := engine.generate({
-		"archetypes": [archetype_id], "weapon_hand": "MH",
+		"archetypes": [archetype_id], "weapon_hand": "2H" if SPEAR_ARCHETYPES.has(archetype_id) else "MH",
 		"min_level": level, "max_level": level,
 		"quality": quality, "count": 1, "seed": maxi(1, seed_value),
 		"group_qualities": false
@@ -42,7 +43,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var quality := String(row.get("quality", ""))
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
 		return {}
-	if not ["MH", "OH"].has(hand) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
+	if not ["MH", "OH", "2H"].has(hand) or (hand == "2H" and not SPEAR_ARCHETYPES.has(archetype_id)) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
 		return {}
 	if not row.get("variant", null) is Dictionary:
 		return {}
@@ -89,7 +90,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"attack_power_balance_version": 2, # Canonical 10:1 ratings, not old 5:1 PAR232.
 		"slot": "main_hand",
 		"equip_slots": allowed_slots,
-		"slot_usage": [],
+		"slot_usage": ["main_hand","off_hand"] if SPEAR_ARCHETYPES.has(archetype_id) else [],
 		"icon_id": "ICON_0002", # Placeholder until visual templates/atlas binding stage.
 		"damage": {"min": int(damage[0]), "max": int(damage[1]), "type": _damage_type(family)},
 		"damage_type": _damage_type(family),
@@ -184,6 +185,7 @@ static func _weapon_family(archetype_id: String) -> String:
 	if DAGGER_ARCHETYPES.has(archetype_id): return "dagger"
 	if AXE_ARCHETYPES.has(archetype_id): return "axe"
 	if HAMMER_ARCHETYPES.has(archetype_id): return "hammer"
+	if SPEAR_ARCHETYPES.has(archetype_id): return "spear"
 	return ""
 
 static func _family_name(family: String) -> String:
@@ -192,6 +194,7 @@ static func _family_name(family: String) -> String:
 		"dagger": return "Кинжал"
 		"axe": return "Топор"
 		"hammer": return "Молот"
+		"spear": return "Копьё"
 	return family
 
 static func _archetype_name(archetype_id: String) -> String:
@@ -202,11 +205,12 @@ static func _archetype_name(archetype_id: String) -> String:
 		"DAGGER_ATTACK", "AXE_ATTACK", "HAMMER_ATTACK": return "атакующий"
 		"DAGGER_PEN": return "пробивающий"
 		"AXE_SHIELD": return "щитолом"
+		"2H_SPEAR": return "двуручное"
 	return archetype_id
 
 static func _damage_type(family: String) -> String:
 	match family:
-		"dagger": return "piercing"
+		"dagger", "spear": return "piercing"
 		"axe": return "chopping"
 		"hammer": return "blunt"
 	return "slashing"
