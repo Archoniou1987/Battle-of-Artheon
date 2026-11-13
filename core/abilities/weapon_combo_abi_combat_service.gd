@@ -58,10 +58,32 @@ static func _effect(engine: CombatEngine, source_id: String, target_id: String, 
 	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source_id,target_id,payload,parent_id))
 
 static func _valid_enemy(engine: CombatEngine, source_id: String, target_id: String) -> bool:
-	return DaggerAbiCombatService._valid_enemy(engine,source_id,target_id)
+	var source := engine.state.get_combatant(source_id)
+	var target := engine.state.get_combatant(target_id)
+	if source == null or target == null or source.is_death_finalized() or target.is_death_finalized() or source_id == target_id:
+		return false
+	if engine.group_state != null and engine.group_state.team_of(source_id) == engine.group_state.team_of(target_id):
+		return false
+	if engine.zone_state != null and engine.zone_state.distance(source_id,target_id) != 0:
+		return false
+	return true
 
 static func _targets(engine: CombatEngine, action: CombatEvent, count: int) -> Array[String]:
-	return DaggerAbiCombatService._targets(engine,action,count)
+	var ids: Array[String] = []
+	if _valid_enemy(engine,action.source_id,action.target_id):
+		ids.append(action.target_id)
+	var rest: Array[String] = []
+	for raw_id in engine.state.combatants.keys():
+		var id := String(raw_id)
+		if ids.has(id) or not _valid_enemy(engine,action.source_id,id):
+			continue
+		rest.append(id)
+	rest.sort()
+	while ids.size() < count and not rest.is_empty():
+		var index := engine.combat_rng.randi_range(0,rest.size()-1)
+		ids.append(rest[index])
+		rest.remove_at(index)
+	return ids
 
 static func _number(id: String, key: String, action: CombatEvent) -> float:
 	return AbilityCatalog.number(id,key,action.payload)
