@@ -720,7 +720,8 @@
     "combo_ability_mode": "atk_quick",
     "base_damage": 3,
     "damage_per_10_levels": 3,
-    "attack_power_coefficient": 0.65
+    "attack_power_coefficient": 0.65,
+    "description": "Удар даёт 1 заряд Точности, при крите — 2. +1 AP при попадании."
   },
   "ABI410": {
     "name": "Сосредоточение убийцы",
@@ -744,7 +745,8 @@
     "combo_ability_mode": "atk_focus",
     "base_damage": 0,
     "damage_per_10_levels": 0,
-    "attack_power_coefficient": 0
+    "attack_power_coefficient": 0,
+    "description": "На 2 раунда повышает шанс крита на 5% за заряд Точности (макс +25%). Заряды сохраняются. +1 AP."
   },
   "ABI411": {
     "name": "Шквал клинков",
@@ -769,7 +771,8 @@
     "base_damage": 4,
     "damage_per_10_levels": 2,
     "attack_power_coefficient": 0.5,
-    "hit_count": 3
+    "hit_count": 3,
+    "description": "Три отдельных удара. Каждый может критовать; крит даёт заряд Точности."
   },
   "ABI412": {
     "name": "Безжалостное добивание",
@@ -796,7 +799,8 @@
     "attack_power_coefficient": 1.3,
     "damage_per_charge": 5,
     "low_hp_threshold_pct": 30,
-    "low_hp_bonus_pct": 30
+    "low_hp_bonus_pct": 30,
+    "description": "Поглощает все заряды Точности и усиливает урон за каждый. Дополнительный бонус при HP цели ниже 30%."
   },
   "ABI413": {
     "name": "Режущий выпад",
@@ -822,7 +826,8 @@
     "damage_per_10_levels": 3,
     "attack_power_coefficient": 0.7,
     "dodge_bonus_damage_pct": 40,
-    "dodge_bonus_ap": 1
+    "dodge_bonus_ap": 1,
+    "description": "При попадании +1 AP. После уклонения в предыдущем раунде наносит больше урона и даёт ещё +1 AP."
   },
   "ABI414": {
     "name": "Танец теней",
@@ -846,7 +851,8 @@
     "combo_ability_mode": "def_dance",
     "base_damage": 0,
     "damage_per_10_levels": 0,
-    "attack_power_coefficient": 0
+    "attack_power_coefficient": 0,
+    "description": "На 2 раунда +15% уклонения. Успешные уклонения дают заряды Контратаки (макс 5). +1 AP."
   },
   "ABI415": {
     "name": "Веер клинков",
@@ -872,7 +878,8 @@
     "damage_per_10_levels": 3,
     "attack_power_coefficient": 0.7,
     "max_targets": 5,
-    "damage_bonus_per_charge_pct": 10
+    "damage_bonus_per_charge_pct": 10,
+    "description": "Физический AoE-урон до 5 целей, усиливается зарядами Контратаки. Заряды не расходуются."
   },
   "ABI416": {
     "name": "Смертельная комбинация",
@@ -897,7 +904,8 @@
     "base_damage": 6,
     "damage_per_10_levels": 4,
     "attack_power_coefficient": 0.85,
-    "damage_bonus_per_charge_pct": 10
+    "damage_bonus_per_charge_pct": 10,
+    "description": "Поглощает заряды Контратаки, усиливает удар и временно повышает уклонение. Второй удар при экипированном OH кинжале."
   },
   "ABI417": {
     "name": "Прокалывающий удар",
@@ -921,7 +929,8 @@
     "combo_ability_mode": "pen_pierce",
     "base_damage": 3,
     "damage_per_10_levels": 3,
-    "attack_power_coefficient": 0.7
+    "attack_power_coefficient": 0.7,
+    "description": "Физический удар, при попадании накладывает Пробитую броню (до 5 зарядов) и даёт +1 AP."
   },
   "ABI418": {
     "name": "Уязвимое место",
@@ -948,7 +957,8 @@
     "attack_power_coefficient": 0.8,
     "min_breach_stacks": 2,
     "extra_breach_stacks": 2,
-    "bonus_ap_on_condition": 1
+    "bonus_ap_on_condition": 1,
+    "description": "Удар; при 2+ зарядах Пробитой брони добавляет ещё 2 заряда и восстанавливает +1 AP."
   },
   "ABI419": {
     "name": "Глубокий прокол",
@@ -973,7 +983,8 @@
     "base_damage": 8,
     "damage_per_10_levels": 5,
     "attack_power_coefficient": 1,
-    "damage_bonus_per_breach_pct": 10
+    "damage_bonus_per_breach_pct": 10,
+    "description": "Удар сильнее за каждый заряд Пробитой брони. При попадании ослабляет физический урон цели на 2 раунда."
   },
   "ABI420": {
     "name": "Абсолютное пробитие",
@@ -998,7 +1009,8 @@
     "base_damage": 12,
     "damage_per_10_levels": 7,
     "attack_power_coefficient": 1.1,
-    "armour_bypass_pct_per_breach_stack": 20
+    "armour_bypass_pct_per_breach_stack": 20,
+    "description": "Поглощает все заряды Пробитой брони при попадании. Игнорирует 20% брони за заряд, максимум 100%."
   },
   "ABI701": {
     "name": "Колющий выпад",
@@ -1023,7 +1035,8 @@
     "base_damage": 5,
     "damage_per_10_levels": 4,
     "attack_power_coefficient": 0.8,
-    "slow_bonus_damage_pct": 30
+    "slow_bonus_damage_pct": 30,
+    "description": "Физический выпад, +1 AP при попадании. Дополнительный урон по цели под Замедлением."
   },
   "ABI702": {
     "name": "Подсечка",
@@ -1048,7 +1061,8 @@
     "base_damage": 4,
     "damage_per_10_levels": 3,
     "attack_power_coefficient": 0.7,
-    "max_targets": 5
+    "max_targets": 5,
+    "description": "AoE-удар, накладывающий Замедление на 2 раунда (−10 к шкале контроля каждый раунд). +1 AP."
   },
   "ABI703": {
     "name": "Пронзающий натиск",
@@ -1073,7 +1087,8 @@
     "base_damage": 10,
     "damage_per_10_levels": 6,
     "attack_power_coefficient": 1.2,
-    "control_on_slow": 100
+    "control_on_slow": 100,
+    "description": "Мощный удар. Если цель замедлена, дополнительно снижает её шкалу контроля на 100 и снимает Замедление."
   },
   "ABI704": {
     "name": "Раскол брони",
@@ -1097,6 +1112,7 @@
     "combo_ability_mode": "spear_fracture",
     "base_damage": 14,
     "damage_per_10_levels": 7,
-    "attack_power_coefficient": 1.3
+    "attack_power_coefficient": 1.3,
+    "description": "Мощный удар. По замедленной цели накладывает Раскол брони на 3 раунда."
   }
 }
