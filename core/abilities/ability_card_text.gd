@@ -6,7 +6,7 @@ extends RefCounted
 static func describe(ability_id: String, definition: Dictionary, ap_available: int = -1) -> String:
 	var lines: PackedStringArray = []
 	match ability_id:
-		"ABI409","ABI410","ABI411","ABI412","ABI413","ABI414","ABI415","ABI416","ABI417","ABI418","ABI419","ABI420","ABI701","ABI702","ABI703","ABI704":
+		"ABI401","ABI402","ABI403","ABI404","ABI405","ABI406","ABI407","ABI408","ABI409","ABI410","ABI411","ABI412","ABI701","ABI702","ABI703","ABI704":
 			lines.append(String(definition.get("description","")))
 			if float(definition.get("base_damage",0.0)) > 0.0:
 				lines.append("Урон: база + усиление за каждые 10 уровней + %.2f × бонус силы атаки." % float(definition.get("attack_power_coefficient",0.0)))
@@ -31,27 +31,6 @@ static func describe(ability_id: String, definition: Dictionary, ap_available: i
 		"ABI308":
 			lines.append("Удар MH: +10 п.п. шанса крита и +25% критического урона за AP.")
 			lines.append("При попадании: 3 дополнительных тика текущего кровотечения, без расхода стаков.")
-		"ABI401":
-			lines.append("Отдельный удар: 20% MH. При попадании +1 AP, 1 стак пробитой брони (−3% брони, до 5).")
-		"ABI402":
-			lines.append("На 5 раундов: обычные MH/OH удары накладывают яд (до 10 стаков, 1 урон за стак/раунд).")
-			lines.append("+1 AP при активации; каждый успешный стак яда имеет 5% шанс дать +1 AP.")
-		"ABI403":
-			lines.append("После уклонения в предыдущем раунде: до 5 соседних целей получают средний урон MH+OH.")
-		"ABI404":
-			lines.append("Удары MH+OH с +10% урона за стак яда на цели (макс +100%).")
-			lines.append("На 2 раунда +5% уклонения за стак пробитой брони цели (до +25%).")
-		"ABI405":
-			lines.append("MH+OH. Перед атаками текущего раунда и на следующий: −50% уклонения и антикрита цели.")
-		"ABI406":
-			lines.append("По одному удару на текущий стак яда (макс 10): чередование MH/OH по 60% среднего урона.")
-			lines.append("Без OH каждый второй удар имеет нулевой урон.")
-		"ABI407":
-			lines.append("50% среднего урона MH за стак пробитой брони (до 250%).")
-			lines.append("При попадании добавляет 1 стак пробитой брони после расчёта удара.")
-		"ABI408":
-			lines.append("MH+OH. За каждый стак пробитой брони цель теряет 20% брони только против этой ABI.")
-			lines.append("Стаки расходуются при успешном попадании хотя бы одним клинком.")
 		"ABI501":
 			lines.append("Усиливает обычную MH-атаку на +20%. +1 AP, +1 стак Ярости.")
 			lines.append("Ярость: до 5 стаков, +2% пробития любого блока за стак; общий срок 5 раундов.")
