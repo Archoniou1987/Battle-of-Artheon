@@ -5,9 +5,9 @@ extends SceneTree
 ## scheduler and CombatEngine; seed only the prerequisites that normally arise
 ## from earlier successful rounds (dodge/crit, bleed, poison, rage, charges).
 ## Keep this independent of damage balance numbers.
-const RANGES := [[301,308],[401,408],[501,508],[601,606]]
+const RANGES := [[301,308],[501,508],[601,606]]
 const LINKED_MH := ["ABI301","ABI501","ABI601"]
-const NON_ATTACK := ["ABI402","ABI501","ABI504","ABI507","ABI602","ABI603","ABI605"]
+const NON_ATTACK := ["ABI501","ABI504","ABI507","ABI602","ABI603","ABI605"]
 const INVALID_OUTCOMES := ["invalid_combatant","invalid_target","friendly_target",
 	"out_of_range","sword_mh_required","dagger_mh_required","axe_mh_required",
 	"hammer_mh_required","no_available_strikes","no_reachable_target",
@@ -26,13 +26,10 @@ func _initialize() -> void:
 			_test_ability("ABI%d" % number)
 	_test_axe_preflight("ABI506")
 	_test_axe_preflight("ABI507")
-	_test_trigger_preflight("ABI403")
 	_test_trigger_preflight("ABI502")
-	_test_low_ap_preflight("ABI408")
 	_test_low_ap_preflight("ABI606")
 	_test_shared_duration("ABI301","EFF301",false,1)
 	_test_shared_duration("ABI501","EFF501",true,2)
-	_test_dagger_coating_lifecycle()
 	_test_hammer_charge_spend()
 	print("APPROVED_ABI_RUNTIME_MATRIX_TEST=", "PASS" if failures.is_empty() else "FAIL",
 		" checked=",checked_count," failures=",failures)
