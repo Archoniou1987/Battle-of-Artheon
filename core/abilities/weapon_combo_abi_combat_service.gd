@@ -26,10 +26,10 @@ static func _profile(source: CombatantState, id: String) -> Dictionary:
 	for raw in WeaponAttackProfile.all(source):
 		var profile: Dictionary = raw
 		if int(profile.get("weapon_index",-1)) == 0 and String(profile.get("weapon_class","")).to_lower() == family:
-			if family == "spear" and (source.combat_stats.get("weapon_profiles",[]) as Array).is_empty():
-				return {}
-			if family == "spear" and not bool(Dictionary(source.combat_stats["weapon_profiles"][0]).get("two_handed",false)):
-				return {}
+			if family == "spear":
+				var weapons: Array = source.combat_stats.get("weapon_profiles",[])
+				if weapons.is_empty() or not bool(Dictionary(weapons[0]).get("two_handed",false)):
+					return {}
 			return profile
 	return {}
 
@@ -74,7 +74,10 @@ static func _damage(source: CombatantState, profile: Dictionary, id: String, act
 	var step := _number(id,"damage_per_10_levels",action)
 	var coefficient := _number(id,"attack_power_coefficient",action)
 	var rating := float(Dictionary(source.combat_stats.get("par_totals",{})).get("PAR232",0.0))
-	var weapon: Dictionary = source.combat_stats.get("weapon_profiles",[])[0]
+	var equipped: Array = source.combat_stats.get("weapon_profiles",[])
+	if equipped.is_empty():
+		return maxf(0.0,base + float(floori(float(item_level) / 10.0)) * step)
+	var weapon: Dictionary = equipped[0]
 	var bonus := AttackPowerService.damage_bonus(rating,"main_hand",bool(weapon.get("two_handed",false)))
 	return maxf(0.0,base + float(floori(float(item_level) / 10.0)) * step + coefficient * bonus)
 
