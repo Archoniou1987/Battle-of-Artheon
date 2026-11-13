@@ -9,7 +9,7 @@ static func describe(ability_id: String, definition: Dictionary, ap_available: i
 		"ABI409","ABI410","ABI411","ABI412","ABI413","ABI414","ABI415","ABI416","ABI417","ABI418","ABI419","ABI420","ABI701","ABI702","ABI703","ABI704":
 			lines.append(String(definition.get("description","")))
 			if float(definition.get("base_damage",0.0)) > 0.0:
-				lines.append("Урон: база + усиление за каждые 10 уровней + %.2f × бонус PAR232." % float(definition.get("attack_power_coefficient",0.0)))
+				lines.append("Урон: база + усиление за каждые 10 уровней + %.2f × бонус силы атаки." % float(definition.get("attack_power_coefficient",0.0)))
 		"ABI301":
 			lines.append("Усиливает обычную атаку MH на +%d урона без дополнительного удара." % int(definition.get("mh_flat_bonus", 0)))
 			lines.append("При попадании: +1 AP и 1 стак кровотечения.")
