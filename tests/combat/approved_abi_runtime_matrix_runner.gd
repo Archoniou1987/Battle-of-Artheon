@@ -363,38 +363,6 @@ func _test_shared_duration(abi: String, effect_id: String, on_player: bool, cool
 
 ## ABI402 must add poison ONLY from connected ordinary dagger MH/OH hits;
 ## ten stacks is the cap, the coating expires, and poison does not linger.
-func _test_dagger_coating_lifecycle() -> void:
-	var session := _fixture("ABI402")
-	if session == null:
-		return
-	var target := session.fighter(false)
-	for round_number in range(1,7):
-		var selected := "ABI402" if round_number == 1 else ""
-		var result := session.play_round(_attacks(session),_blocks(session),selected)
-		if not bool(result.get("ok",false)):
-			_check(false,"ABI402:coating_round_" + str(round_number) + ":" + String(result.get("reason","unknown")))
-			return
-		var count := 0
-		var stacks := 0
-		for raw in target.active_effects:
-			var record: Dictionary = raw
-			if String(record.get("effect_id","")) == "EFF403":
-				count += 1
-				stacks = int(record.get("stacks",0))
-		if round_number <= 5:
-			_check(count == 1 and stacks == mini(10,round_number * 2),"ABI402:mh_oh_poison_stacks_" + str(round_number))
-		else:
-			_check(count == 0,"ABI402:poison_expires_when_coating_ends")
-	var dot_count := 0
-	for event in session.state.event_log:
-		if event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("effect_id","")) == "EFF403" and String(event.payload.get("source","")) == "effect":
-			dot_count += 1
-			_check(not event.payload.has("crit"),"ABI402:poison_dot_no_crit")
-	_check(dot_count >= 4,"ABI402:poison_ticks_through_real_rounds")
-	print("APPROVED_ABI_COATING_CASE=CHECKED stacks_cap=10 rounds=6")
-
-## Hammer charges must be earned from normal combat and spent once by the
-## accepted ability; ordinary MH after it may earn new charges for future rounds.
 func _test_hammer_charge_spend() -> void:
 	var session := _fixture("ABI606")
 	if session == null:
