@@ -76,7 +76,7 @@ static func _damage(source: CombatantState, profile: Dictionary, id: String, act
 	var rating := float(Dictionary(source.combat_stats.get("par_totals",{})).get("PAR232",0.0))
 	var weapon: Dictionary = source.combat_stats.get("weapon_profiles",[])[0]
 	var bonus := AttackPowerService.damage_bonus(rating,"main_hand",bool(weapon.get("two_handed",false)))
-	return maxf(0.0,base + float(item_level / 10) * step + coefficient * bonus)
+	return maxf(0.0,base + float(floori(float(item_level) / 10.0)) * step + coefficient * bonus)
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, amount: float, extra: Dictionary = {}) -> int:
 	var component := {"damage_type":String(profile.get("damage_type","piercing")),"zone":String(action.payload.get("zone","chest"))}
