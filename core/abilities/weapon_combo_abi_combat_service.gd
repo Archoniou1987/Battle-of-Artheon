@@ -3,11 +3,11 @@ extends RefCounted
 
 ## Physical dagger archetypes and 2H spear. ABI owns magnitudes, EFF owns
 ## duration/stacking, CombatEngine owns hit/crit/armour and Tempo owns stun.
-const ATTACK := ["ABI409","ABI410","ABI411","ABI412"]
-const DEFENCE := ["ABI413","ABI414","ABI415","ABI416"]
-const PENETRATION := ["ABI417","ABI418","ABI419","ABI420"]
+const ATTACK := ["ABI401","ABI402","ABI403","ABI404"]
+const DEFENCE := ["ABI405","ABI406","ABI407","ABI408"]
+const PENETRATION := ["ABI409","ABI410","ABI411","ABI412"]
 const SPEAR := ["ABI701","ABI702","ABI703","ABI704"]
-const ABILITIES := ["ABI409","ABI410","ABI411","ABI412","ABI413","ABI414","ABI415","ABI416","ABI417","ABI418","ABI419","ABI420","ABI701","ABI702","ABI703","ABI704"]
+const ABILITIES := ["ABI401","ABI402","ABI403","ABI404","ABI405","ABI406","ABI407","ABI408","ABI409","ABI410","ABI411","ABI412","ABI701","ABI702","ABI703","ABI704"]
 const ACCURACY := "EFF406"
 const FOCUS := "EFF407"
 const COUNTER := "EFF408"
@@ -103,8 +103,8 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		action.set_result("outcome","matching_mh_required")
 		return
 	var round_number := engine.state.round_number
-	if id in ["ABI410","ABI414"]:
-		if id == "ABI410":
+	if id in ["ABI402","ABI406"]:
+		if id == "ABI402":
 			_effect(engine,action.source_id,action.source_id,action.event_id,FOCUS,true,{"combo_accuracy_stacks":_stacks(source,ACCURACY,round_number)})
 		else:
 			_effect(engine,action.source_id,action.source_id,action.event_id,DANCE,true)
@@ -118,12 +118,12 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var ids: Array[int] = []
 	var extras := {}
 	match id:
-		"ABI409","ABI417":
+		"ABI401","ABI409":
 			ids.append(_queue_attack(engine,action,action.target_id,profile,base))
-		"ABI411":
+		"ABI403":
 			for hit_index in range(maxi(1,int(_number(id,"hit_count",action)))):
 				ids.append(_queue_attack(engine,action,action.target_id,profile,base,{"combo_strike_index":hit_index}))
-		"ABI412":
+		"ABI404":
 			var count := _stacks(source,ACCURACY,round_number)
 			_remove(source,ACCURACY)
 			base += float(count) * _number(id,"damage_per_charge",action)
@@ -131,18 +131,18 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 				base *= 1.0 + _number(id,"low_hp_bonus_pct",action)/100.0
 			ids.append(_queue_attack(engine,action,action.target_id,profile,base))
 			action.set_result("charges_consumed",count)
-		"ABI413":
+		"ABI405":
 			var dodged := AbilityRuntime.previous_round_trigger_met(engine.state,source.combatant_id,"dodge")
 			if dodged:
 				base *= 1.0 + _number(id,"dodge_bonus_damage_pct",action)/100.0
 			extras["combo_bonus_ap"] = int(_number(id,"dodge_bonus_ap",action)) if dodged else 0
 			ids.append(_queue_attack(engine,action,action.target_id,profile,base,extras))
-		"ABI415":
+		"ABI407":
 			var charge_count := _stacks(source,COUNTER,round_number)
 			base *= 1.0 + float(charge_count) * _number(id,"damage_bonus_per_charge_pct",action)/100.0
 			for target_id in _targets(engine,action,int(_number(id,"max_targets",action))):
 				ids.append(_queue_attack(engine,action,target_id,profile,base))
-		"ABI416":
+		"ABI408":
 			var charge_count := _stacks(source,COUNTER,round_number)
 			_remove(source,COUNTER)
 			_effect(engine,action.source_id,action.source_id,action.event_id,COUNTER_BUFF,true,{"combo_counter_stacks":charge_count})
@@ -156,14 +156,14 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			if not oh.is_empty():
 				ids.append(_queue_attack(engine,action,action.target_id,oh,base*0.5))
 			action.set_result("charges_consumed",charge_count)
-		"ABI418":
+		"ABI410":
 			var n := _stacks(target,BREACH,round_number)
 			ids.append(_queue_attack(engine,action,action.target_id,profile,base,{"combo_breach_snapshot":n}))
-		"ABI419":
+		"ABI411":
 			var n := _stacks(target,BREACH,round_number)
 			base *= 1.0 + float(n)*_number(id,"damage_bonus_per_breach_pct",action)/100.0
 			ids.append(_queue_attack(engine,action,action.target_id,profile,base,{"combo_breach_snapshot":n}))
-		"ABI420":
+		"ABI412":
 			var n := _stacks(target,BREACH,round_number)
 			ids.append(_queue_attack(engine,action,action.target_id,profile,base,{"dagger_armour_bypass_pct":float(n)*_number(id,"armour_bypass_pct_per_breach_stack",action)}))
 		"ABI701":
@@ -188,27 +188,27 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 		return
 	var round_number := engine.state.round_number
 	match id:
-		"ABI409":
+		"ABI401":
 			_effect(engine,attacker.combatant_id,attacker.combatant_id,attack.event_id,ACCURACY)
 			if bool(attack.result.get("critical",false)):
 				_effect(engine,attacker.combatant_id,attacker.combatant_id,attack.event_id,ACCURACY)
 			attacker.gain_action_points(int(AbilityCatalog.number(id,"ap_gain")))
-		"ABI411":
+		"ABI403":
 			if bool(attack.result.get("critical",false)):
 				_effect(engine,attacker.combatant_id,attacker.combatant_id,attack.event_id,ACCURACY)
-		"ABI413":
+		"ABI405":
 			attacker.gain_action_points(int(AbilityCatalog.number(id,"ap_gain"))+int(attack.payload.get("combo_bonus_ap",0)))
-		"ABI417":
+		"ABI409":
 			attacker.gain_action_points(int(AbilityCatalog.number(id,"ap_gain")))
 			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,BREACH)
-		"ABI418":
+		"ABI410":
 			if int(attack.payload.get("combo_breach_snapshot",0)) >= int(AbilityCatalog.number(id,"min_breach_stacks")):
 				for index in range(int(AbilityCatalog.number(id,"extra_breach_stacks"))):
 					_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,BREACH)
 				attacker.gain_action_points(int(AbilityCatalog.number(id,"bonus_ap_on_condition")))
-		"ABI419":
+		"ABI411":
 			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,WEAKEN,false,{"combo_breach_stacks":int(attack.payload.get("combo_breach_snapshot",0))})
-		"ABI420":
+		"ABI412":
 			_remove(target,BREACH)
 		"ABI701":
 			attacker.gain_action_points(int(AbilityCatalog.number(id,"ap_gain")))
@@ -223,7 +223,7 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 				_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,FRACTURE)
 
 static func on_dodge(engine: CombatEngine, attack: CombatEvent, defender: CombatantState) -> void:
-	if defender == null or _profile(defender,"ABI413").is_empty():
+	if defender == null or _profile(defender,"ABI405").is_empty():
 		return
 	if _has(defender,DANCE,engine.state.round_number):
 		_effect(engine,defender.combatant_id,defender.combatant_id,attack.event_id,COUNTER)
