@@ -84,7 +84,7 @@ func resolve(engine: CombatEngine) -> void:
 	for action in locked_actions:
 		if action.kind==CombatEvent.Kind.ACTION and bool(action.payload.get("is_counterattack_abi",false)):
 			action.payload["counter_abi_mh_zone"]=String(mh_zone_by_source.get(action.source_id,""))
-		if action.kind==CombatEvent.Kind.ACTION and (DaggerAbiCombatService.is_dagger_ability(String(action.payload.get("ability_id",""))) or AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
+		if action.kind==CombatEvent.Kind.ACTION and (AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
 			if mh_zone_by_source.has(action.source_id):
 				action.payload["zone"]=String(mh_zone_by_source[action.source_id])
 	# Only instant ABI effects modify the conditions of this round's
@@ -92,11 +92,8 @@ func resolve(engine: CombatEngine) -> void:
 	for event in preparation_actions:
 		engine.state.queue_event(event)
 	engine.resolve_pending_events()
-	# ABI404/405 apply their current-round defensive/offensive EFF BEFORE
-	# any regular attacks, independent of the sealed action order.
+	# Prepare ABI effects owned by active services before ordinary attacks.
 	for event in locked_actions:
-		if event.kind == CombatEvent.Kind.ACTION and DaggerAbiCombatService.is_dagger_ability(String(event.payload.get("ability_id",""))):
-			DaggerAbiCombatService.prepare_action(engine,event)
 		if event.kind == CombatEvent.Kind.ACTION and AxeAbiCombatService.is_axe_ability(String(event.payload.get("ability_id",""))):
 			AxeAbiCombatService.prepare_action(engine,event)
 	engine.resolve_pending_events()
