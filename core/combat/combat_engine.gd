@@ -438,7 +438,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var active_armour_cut := 0.0
 	for debuff in CombatModifierService.active_effects(defender,state.round_number):
 		var def: Dictionary = Dictionary(debuff.get("definition",{}))
-		active_armour_cut += float(def.get("armour_reduction_pct_per_stack",0.0))*float(debuff.get("stacks",1)) + float(def.get("armour_reduction_pct",0.0))
+		active_armour_cut += float(def.get("armour_reduction_pct_per_stack",0.0))*float(debuff.get("stacks",1)) + float(def.get("armour_reduction_raw_pct",0.0))
 	var after_breach_pct := maxf(0.0,raw_armour_pct-active_armour_cut)
 	var armour_before_dr := after_breach_pct+CombatModifierService.effect_stack_bonus(defender,HammerAbiCombatService.CHARGE,"armour_and_resistance_direct_pct_per_stack",state.round_number)
 	var armour_percent := CombatRatingCurves.diminishing(armour_before_dr,"armour")
