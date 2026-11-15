@@ -96,10 +96,14 @@ static func _restore_character(saved: Dictionary, repository: ItemRepository) ->
 				allowed.append(target)
 				usage = [target]
 		if not allowed.has(occupied[0]) or usage.size() != occupied.size():
-			return {"ok":false,"reason":"world_equipment_occupancy_mismatch"}
+			# Read-only diagnostics: surface the exact historical equipment
+			# discrepancy rather than guessing how to rewrite saved ownership.
+			return {"ok":false,"reason":"world_equipment_occupancy_mismatch",
+				"detail":"item=%s occupied=%s allowed=%s usage=%s" % [String(item_id).substr(0,60),str(occupied),str(allowed),str(usage)]}
 		for slot in usage:
 			if not occupied.has(slot):
-				return {"ok":false,"reason":"world_equipment_usage_mismatch"}
+				return {"ok":false,"reason":"world_equipment_usage_mismatch",
+					"detail":"item=%s occupied=%s allowed=%s usage=%s" % [String(item_id).substr(0,60),str(occupied),str(allowed),str(usage)]}
 	character.equipment = equipment
 	if not character.restore_elixir_slots(saved["elixirs"],repository):
 		return {"ok":false,"reason":"world_elixir_slot_invalid"}
