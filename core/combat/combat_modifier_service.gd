@@ -32,11 +32,18 @@ static func _effect_values(combatant: CombatantState, field: String, round_numbe
 			continue
 		if bool(definition.get("apply_stacks_to_modifiers",false)):
 			value *= float(record.get("stacks",1))
+		# Unique is a modifier-level rule, including across different EFF IDs.
+		# Primary-stat exceptions may supply separate all/specific categories.
 		var group := String(definition.get("unique_group",""))
+		var kind := String(definition.get("kind",""))
+		if kind in ["buff","debuff"] and not bool(definition.get("allow_modifiers_stacking",false)):
+			group = field
+			if field.begins_with("primary_stat_") and String(definition.get("stat_category","")) in ["all","specific"]:
+				group += ":" + String(definition["stat_category"])
 		if group.is_empty():
 			sum += value
 			continue
-		var key := group + ":" + field + (":positive" if value>0.0 else ":negative")
+		var key := group + ":" + (":positive" if value>0.0 else ":negative")
 		if not best.has(key) or absf(value)>absf(float(best[key])):
 			best[key] = value
 	for v in best.values():
