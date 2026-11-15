@@ -107,7 +107,7 @@ func _init() -> void:
 		var line := String(line_value)
 		if line.contains("атакует"):
 			weapon_lines += 1
-		if line.contains("ABI «Кровавый порез»"):
+		if line.contains("ABI «Защитный удар»"):
 			abi_lines += 1
 	_check(weapon_lines >= 2 and abi_lines == 1, "journal_reconciles_physical_and_abi")
 
