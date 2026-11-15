@@ -18,9 +18,9 @@ func _verify() -> void:
 	root.add_child(dialog)
 	await process_frame
 	for entry in [
-		["SWORD_DEF", 202611041, ["ABI301", "ABI302", "ABI303", "ABI306"]],
-		["SWORD_DODGE", 202611042, ["ABI301", "ABI302", "ABI304", "ABI307"]],
-		["SWORD_CRIT", 202611043, ["ABI301", "ABI302", "ABI305", "ABI308"]]
+		["SWORD_DEF", 202611041, ["ABI301", "ABI302", "ABI303", "ABI304"]],
+		["SWORD_DODGE", 202611042, ["ABI305", "ABI306", "ABI307", "ABI308"]],
+		["SWORD_CRIT", 202611043, ["ABI309", "ABI310", "ABI311", "ABI312"]]
 	]:
 		var item := ItemV12InstanceFactory.grant_sword(hero, repository, String(entry[0]), 40, "purple", int(entry[1]))
 		_check(not item.is_empty(), String(entry[0]) + "_generated")
