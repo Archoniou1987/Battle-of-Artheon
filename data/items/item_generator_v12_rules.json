@@ -384,15 +384,15 @@
     {
       "id": "HAMMER_ATTACK",
       "abilities": [
-        "ABI601",
-        "ABI602",
         "ABI605",
-        "ABI606"
+        "ABI606",
+        "ABI607",
+        "ABI608"
       ],
-      "name": "Молот · атакующий",
+      "name": "Булава · атакующая двуручная",
       "kind": "weapon",
       "family": "hammer",
-      "slot": "MH",
+      "slot": "2H",
       "weights": {
         "hp": 30,
         "attack": 35,
@@ -495,7 +495,7 @@
     },
     {
       "id": "2H_HAMMER",
-      "name": "2H молот",
+      "name": "Двуручная булава · базовый шаблон",
       "kind": "weapon",
       "family": "hammer",
       "slot": "2H",
@@ -508,6 +508,12 @@
       "requirements": [
         "PAR001",
         "PAR006"
+      ],
+      "abilities": [
+        "ABI605",
+        "ABI606",
+        "ABI607",
+        "ABI608"
       ]
     },
     {
