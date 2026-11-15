@@ -49,6 +49,16 @@ static func application_modifiers(definition: Dictionary, context: Dictionary = 
 		resolved = resolved.duplicate(true)
 		for field in Array(rule.get("fields",[])):
 			resolved[String(field)] = value
+	# EFF owns optional rank-specific numeric magnitudes, never ABI or ITEM.
+	var rank_values: Variant = definition.get("values_by_rank",null)
+	if rank_values is Dictionary:
+		var effect_rank := clampi(int(context.get("effect_rank",1)),1,10)
+		resolved = resolved.duplicate(true)
+		for field in rank_values:
+			var values: Variant = rank_values[field]
+			if values is Array and Array(values).size() == 10:
+				resolved[String(field)] = float(Array(values)[effect_rank-1])
+		resolved["effect_rank"] = effect_rank
 	var ranks: Variant = definition.get("rating_delta_by_rank",null)
 	if ranks is Array and Array(ranks).size() == 10:
 		var rank := clampi(int(context.get("effect_rank",1)),1,10)
