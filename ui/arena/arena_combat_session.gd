@@ -313,6 +313,22 @@ func _validate_ability(source_id:String,ability_id:String,ready_round:int) -> Di
 		return {"ok":false,"reason":"ability_target_unavailable"}
 	return {"ok":true,"target_id":target_id}
 
+## Arena training NPC: select defensive zones without reading the player's
+## locked attacks. Training rotation is intentionally simple and deterministic.
+## Actual outcomes remain exclusively in CombatEngine (manual/auto block/crush).
+static func enemy_manual_block_plan(enemy: CombatantState, round_number: int) -> Array[String]:
+	var result: Array[String] = []
+	if enemy == null or not enemy.can_manual_block():
+		return result
+	var capacity := CombatModifierService.manual_block_zone_capacity(enemy)
+	if capacity < 1 or capacity > 4:
+		return result
+	var zones := CombatCommandApi.BODY_ZONES
+	var first := (maxi(1,round_number) + 2) % zones.size()
+	for index in range(capacity):
+		result.append(String(zones[(first + index) % zones.size()]))
+	return result
+
 func play_round(attacks: Array[String], blocks: Array[String], ability_id: String = "") -> Dictionary:
 	# A persistent character at 0 HP cannot start acting again merely by
 	# reopening a test duel. A new life/recovery rule must be explicit.
@@ -370,6 +386,18 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 			var ability_result:=commands.cast_ability(player_id,target_id,ability_id)
 			if not bool(ability_result.get("ok",false)):
 				return {"ok":false,"reason":String(ability_result.get("reason","ability_rejected"))}
+	# Same canonical manual-block command used by the player. Commit NPC
+	# defence before any attack resolves; do not infer the player's selections.
+	if enemy_stunned:
+		commands.clear_manual_block(ENEMY_ID)
+	else:
+		var npc_blocks := enemy_manual_block_plan(fighter(false),next_round)
+		if npc_blocks.is_empty():
+			commands.clear_manual_block(ENEMY_ID)
+		else:
+			var npc_block_result := commands.set_manual_block(ENEMY_ID,npc_blocks)
+			if not bool(npc_block_result.get("ok",false)):
+				return {"ok":false,"reason":String(npc_block_result.get("reason","enemy_block_rejected"))}
 	if not enemy_stunned:
 		var enemy_result := _queue_attacks(ENEMY_ID, npc_targets)
 		if not bool(enemy_result.get("ok", false)):
