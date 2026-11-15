@@ -229,79 +229,59 @@
   },
   "EFF501": {
     "id": "EFF501",
-    "name": "Ярость",
-    "kind": "buff",
+    "name": "Рваная рана",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "physical",
     "duration_rounds": 5,
     "stacking": "shared_duration",
-    "max_stacks": 5,
-    "polarity": "BUFF",
+    "max_stacks": 3,
+    "polarity": "DEBUFF",
     "tags": [
-      "RAGE"
+      "AXE_WOUND",
+      "BLEED",
+      "DOT"
     ],
-    "block_crush_per_stack": 2
+    "values_by_rank": {
+      "damage": [
+        1,
+        2,
+        4,
+        7,
+        11,
+        16,
+        22,
+        29,
+        37,
+        46
+      ]
+    },
+    "rank_balance_status": "PROVISIONAL - tune via BoA balance"
   },
   "EFF502": {
     "id": "EFF502",
-    "name": "Подсечён",
+    "name": "Боевой азарт топора",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "AXE_BERSERK"
+    ],
+    "physical_damage_outgoing_direct_pct": 20,
+    "incoming_damage_direct_pct": 10
+  },
+  "EFF503": {
+    "id": "EFF503",
+    "name": "Подорванная защита",
     "kind": "debuff",
     "duration_rounds": 2,
     "stacking": "unique",
     "polarity": "DEBUFF",
     "tags": [
-      "AXE_DEF_SWEEP"
+      "AXE_SHIELD_BREAK"
     ],
-    "crit_chance_direct_pct": -25,
-    "anti_dodge_direct_pct": -25
-  },
-  "EFF503": {
-    "id": "EFF503",
-    "name": "Стойка возмездия",
-    "kind": "buff",
-    "duration_rounds": 1,
-    "stacking": "unique",
-    "polarity": "BUFF",
-    "tags": [
-      "AXE_COUNTER_STANCE"
-    ],
-    "dodge_direct_pct": 0,
-    "counterattack_cap": 5,
-    "contextual_modifier": {
-      "input_field": "axe_rage_stacks",
-      "legacy_value_field": "axe_stance_dodge_pct",
-      "per_unit": 5,
-      "minimum": 0,
-      "maximum": 25,
-      "fields": [
-        "dodge_direct_pct"
-      ]
-    }
-  },
-  "EFF504": {
-    "id": "EFF504",
-    "name": "Разрушенная защита",
-    "kind": "debuff",
-    "duration_rounds": 1,
-    "stacking": "unique",
-    "polarity": "DEBUFF",
-    "tags": [
-      "AXE_ATTACK_BREAKER"
-    ],
-    "dodge_direct_pct": -25,
-    "anti_crit_direct_pct": -25
-  },
-  "EFF505": {
-    "id": "EFF505",
-    "name": "Крушитель",
-    "kind": "buff",
-    "duration_rounds": 20,
-    "stacking": "unique",
-    "polarity": "BUFF",
-    "tags": [
-      "AXE_CRUSHER"
-    ],
-    "crit_chance_direct_pct": 20,
-    "block_crush": 20,
-    "incoming_damage_direct_pct": 10
+    "shield_auto_block_direct_pct": -20
   },
   "EFF601": {
     "id": "EFF601",
