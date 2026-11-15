@@ -21,6 +21,8 @@ static func generate_sword(archetype_id: String, level: int, quality: String, se
 static func generate_weapon(archetype_id: String, level: int, quality: String, seed_value: int, hand: String = "MH") -> Dictionary:
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH", "2H"].has(hand):
 		return {}
+	if TWO_HAND_ARCHETYPES.has(archetype_id) and hand == "MH":
+		hand = "2H"
 	if TWO_HAND_ARCHETYPES.has(archetype_id) != (hand == "2H"):
 		return {}
 	if hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id):
