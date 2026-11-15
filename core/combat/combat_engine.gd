@@ -353,6 +353,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
 				SwordAbiCombatService.on_block(self,event,defender)
+				HammerAbiCombatService.on_block(self,event,defender)
 				return
 		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
 		event.set_result("auto_block_chance",auto_block)
@@ -365,6 +366,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 			if not auto_block_crushed:
 				event.set_result("outcome", "auto_block")
 				SwordAbiCombatService.on_block(self,event,defender)
+				HammerAbiCombatService.on_block(self,event,defender)
 				return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
