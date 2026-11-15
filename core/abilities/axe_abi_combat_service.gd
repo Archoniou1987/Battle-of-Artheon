@@ -89,7 +89,8 @@ static func _targets(engine: CombatEngine, action: CombatEvent, limit: int) -> A
 static func _damage(source: CombatantState, profile: Dictionary, id: String, multiplier: float) -> float:
 	var base := AbilityCatalog.ranked_damage(id,int(profile.get("item_level",source.level)))
 	var attack_power := float(Dictionary(source.combat_stats.get("par_totals",{})).get("PAR232",0))
-	var two_handed := bool(profile.get("two_handed",false))
+	var weapons: Array = source.combat_stats.get("weapon_profiles",[])
+	var two_handed := not weapons.is_empty() and bool(Dictionary(weapons[0]).get("two_handed",false))
 	var bonus := AttackPowerService.damage_bonus(attack_power,"main_hand",two_handed)
 	return maxf(0.0,(base+AbilityCatalog.number(id,"attack_power_coefficient")*bonus)*multiplier)
 
@@ -185,8 +186,6 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent) -> vo
 		var healing := roundi(float(actor.max_hp)*float(int(attack.payload.get("axe_wounds_snapshot",0)))*pct/100.0)
 		if healing>0:
 			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,actor.combatant_id,actor.combatant_id,{"inline_heal":healing,"clamp_heal_to_max":true,"source_type":"ability","ability_id":id},attack.event_id))
-	if id == "ABI510":
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(id,"on_hit"))
 	if int(attack.payload.get("axe_consume_wounds",0))>0:
 		_consume_wounds(target,attack.source_id,int(attack.payload["axe_consume_wounds"]))
 
@@ -203,7 +202,7 @@ static func on_damage(engine: CombatEngine, damage_event: CombatEvent, target: C
 			return
 		var pct := float(parent.payload.get("axe_heal_from_damage_pct",0))
 		var cap_pct := float(parent.payload.get("axe_heal_max_hp_cap_pct",0))
-		var raw_heal := roundi(float(int(damage_event.result.get("final_damage",0)))*pct/100.0)
+		var raw_heal := roundi(float(int(damage_event.result.get("hp_removed",0)))*pct/100.0)
 		var bounded := mini(raw_heal,roundi(float(source.max_hp)*cap_pct/100.0))
 		if bounded>0:
 			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source.combatant_id,source.combatant_id,{"inline_heal":bounded,"clamp_heal_to_max":true,"source_type":"ability","ability_id":"ABI504"},damage_event.event_id))
