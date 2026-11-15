@@ -49,6 +49,10 @@ func _session(archetype: String, seed_value: int) -> ArenaCombatSession:
 	target.combat_stats["dodge_rating_percent"] = 0.0
 	target.combat_stats["shield_auto_block_rating_percent"] = 0.0
 	target.combat_loadout["can_auto_block"] = false
+	# This test isolates dagger ABI/EFF outcomes; the separate NPC defence
+	# runner verifies real manual blocks. An AI guard rotation here would
+	# prevent ABI411/412 on-hit effects from executing.
+	target.combat_loadout["can_manual_block"] = false
 	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = []
 	var options := session.player_ability_options()
 	for index in range(4):
