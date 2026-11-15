@@ -5,6 +5,41 @@ extends RefCounted
 const TEMPLATE_PATH := "res://data/items/arena_templates.json"
 const PAR_PATH := "res://data/parameters/par_registry.json"
 
+## Restore ONLY existing historical preview items from retired test templates.
+## Not listed in load_templates(), so these IDs cannot be newly generated.
+const RETIRED_PREVIEW_TEMPLATES := {
+	"training_healer_chest_abi004": {
+		"name":"Учебный нагрудник целителя", "type":"armour",
+		"equip_slots":["chest"], "slot":"chest",
+		"icon_id":"ICON_0025", "par_stats":{}
+	},
+	"training_fire_staff_abi003": {
+		"name":"Учебный посох пламени", "type":"weapon",
+		"equip_slots":["main_hand"], "slot":"main_hand",
+		"weapon_class":"staff", "icon_id":"ICON_0002",
+		"damage":{"min":10,"max":14,"type":"blunt"},
+		"par_stats":{"PAR057":1}
+	}
+}
+
+static func _retired_preview_instance(instance: Dictionary, template_id: String) -> Dictionary:
+	var instance_id := String(instance.get("instance_id",""))
+	if not RETIRED_PREVIEW_TEMPLATES.has(template_id) or not instance_id.begins_with("preview_" + template_id + "_"):
+		return {}
+	var resolved: Dictionary = Dictionary(RETIRED_PREVIEW_TEMPLATES[template_id]).duplicate(true)
+	resolved["id"] = template_id
+	resolved["template_id"] = template_id
+	resolved["instance_id"] = instance_id
+	resolved["requirements"] = {}
+	resolved["combat_stats"] = {}
+	resolved["par_bonuses"] = {}
+	resolved["abilities"] = [] # ABI003/004 stay retired.
+	resolved["legacy_retired_preview"] = true
+	for field in ["rarity","quality","quality_multiplier","origin","durability_max","durability_current","_durability_repair_progress","owner_id"]:
+		if instance.has(field):
+			resolved[field] = instance[field]
+	return resolved if validate_parameters(resolved) else {}
+
 static func load_templates() -> Dictionary:
 	var result := {}
 	if not FileAccess.file_exists(TEMPLATE_PATH):
@@ -37,6 +72,9 @@ static func resolve(instance: Dictionary) -> Dictionary:
 		return instance.duplicate(true) if validate_parameters(instance) else {}
 	var templates := load_templates()
 	if not templates.has(template_id):
+		var retired := _retired_preview_instance(instance,template_id)
+		if not retired.is_empty():
+			return retired
 		push_error("Item template not found: " + template_id)
 		return {}
 	var template: Dictionary = templates[template_id]
