@@ -65,7 +65,7 @@ static func is_retired_numbered_abi(ability_id: String) -> bool:
 		(index>=301 and index<=316)
 		or (index>=401 and index<=412)
 		or (index>=501 and index<=516)
-		or (index>=601 and index<=606)
+		or (index>=601 and index<=608)
 		or (index>=701 and index<=704)
 	)
 
