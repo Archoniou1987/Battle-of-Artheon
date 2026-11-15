@@ -510,7 +510,8 @@
     "tags": [
       "SWORD_MASTERY"
     ],
-    "unique_group": "sword_mastery"
+    "unique_group": "sword_mastery",
+    "apply_stacks_to_modifiers": true
   },
   "EFF315": {
     "id": "EFF315",
