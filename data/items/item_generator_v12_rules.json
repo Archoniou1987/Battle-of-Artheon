@@ -124,7 +124,7 @@
         "ABI301",
         "ABI302",
         "ABI303",
-        "ABI306"
+        "ABI304"
       ],
       "name": "Меч · защитный",
       "kind": "weapon",
@@ -142,10 +142,10 @@
     {
       "id": "SWORD_DODGE",
       "abilities": [
-        "ABI301",
-        "ABI302",
-        "ABI304",
-        "ABI307"
+        "ABI305",
+        "ABI306",
+        "ABI307",
+        "ABI308"
       ],
       "name": "Меч · уклонение",
       "kind": "weapon",
@@ -165,10 +165,10 @@
     {
       "id": "SWORD_CRIT",
       "abilities": [
-        "ABI301",
-        "ABI302",
-        "ABI305",
-        "ABI308"
+        "ABI309",
+        "ABI310",
+        "ABI311",
+        "ABI312"
       ],
       "name": "Меч · критический",
       "kind": "weapon",
@@ -438,6 +438,12 @@
       "requirements": [
         "PAR001",
         "PAR003"
+      ],
+      "abilities": [
+        "ABI313",
+        "ABI314",
+        "ABI315",
+        "ABI316"
       ]
     },
     {
