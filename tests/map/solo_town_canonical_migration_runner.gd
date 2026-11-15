@@ -140,8 +140,8 @@ func _initialize() -> void:
 	check(JSON.stringify(historical_repo.to_dict())==JSON.stringify(raw_historical),"historical_item_repository_unchanged")
 	# The compatibility applies to this exact archived fixture identity,
 	# never unknown or newly crafted template references.
-	check(ItemTemplateService.resolve({"template_id":"missing_mystery","instance_id":"preview_missing_mystery_1"}).is_empty(),"unknown_template_stays_invalid")
-	check(ItemTemplateService.resolve({"template_id":"training_healer_chest_abi004","instance_id":"FORGED_NEW_CHEST"}).is_empty(),"retired_template_cannot_be_newly_minted")
+	check(ItemTemplateService._retired_preview_instance({"instance_id":"preview_missing_mystery_1"},"missing_mystery").is_empty(),"unknown_template_stays_invalid")
+	check(ItemTemplateService._retired_preview_instance({"instance_id":"FORGED_NEW_CHEST"},"training_healer_chest_abi004").is_empty(),"retired_template_cannot_be_newly_minted")
 	if FileAccess.file_exists(historical_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(historical_path))
 	if FileAccess.file_exists(PATH):
