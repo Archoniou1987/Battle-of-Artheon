@@ -1,200 +1,154 @@
 extends SceneTree
 
-## Physical axe v1.2: one MH ABI pack, rage cap, conditional casts and
-## combat damage/effect events. Run manually via Combat Integration Gate.
+## Real four-archetype axe ABI501–516, wound EFF501 and weapon hand integration.
 var problems: Array[String] = []
 
-func _initialize() -> void:
-	call_deferred("_run")
+const KITS := {
+	"AXE_DEF":["ABI501","ABI502","ABI503","ABI504"],
+	"AXE_ATTACK":["ABI505","ABI506","ABI507","ABI508"],
+	"AXE_SHIELD":["ABI509","ABI510","ABI511","ABI512"],
+	"2H_AXE":["ABI513","ABI514","ABI515","ABI516"]
+}
 
-func _check(condition: bool, label: String) -> void:
-	if not condition:
+func _initialize() -> void:
+	call_deferred("_verify")
+
+func _check(ok: bool, label: String) -> void:
+	if not ok:
 		problems.append(label)
 		print("AXE_V12_FAIL=",label)
 
-func _effect(fighter: CombatantState, effect_id: String) -> Dictionary:
-	for raw in fighter.active_effects:
-		var record: Dictionary = raw
-		if String(record.get("effect_id","")) == effect_id:
-			return record
+func _effect(target: CombatantState, id: String) -> Dictionary:
+	for raw in target.active_effects:
+		if String(Dictionary(raw).get("effect_id",""))==id:
+			return raw
 	return {}
 
-func _attacks(session: ArenaCombatSession, abi_id: String) -> Array[CombatEvent]:
-	var found: Array[CombatEvent] = []
+func _attacks(session: ArenaCombatSession, id: String) -> Array[CombatEvent]:
+	var result: Array[CombatEvent] = []
 	for event in session.state.event_log:
-		if event.kind == CombatEvent.Kind.ATTACK and String(event.payload.get("axe_abi_id","")) == abi_id:
-			found.append(event)
-	return found
+		if event.kind == CombatEvent.Kind.ATTACK and String(event.payload.get("axe_abi_id",""))==id:
+			result.append(event)
+	return result
 
-func _make_session(archetype: String, seed_value: int) -> ArenaCombatSession:
-	var hero := CharacterState.new("AXE_"+archetype,"Axe Test",40)
-	for par_id in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
-		hero.progression.base_stats[par_id] = 90
+func _session(archetype: String, seed: int) -> ArenaCombatSession:
+	var character := CharacterState.new("AXE_"+archetype,"Axe Test",40)
+	for key in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
+		character.progression.base_stats[key]=90
 	var repo := ItemRepository.new()
-	var item := ItemV12InstanceFactory.grant_weapon(hero,repo,archetype,40,"purple",seed_value)
-	_check(not item.is_empty(),archetype+"_generated")
+	var hand := "MH" if archetype=="AXE_DEF" else "2H"
+	var item := ItemV12InstanceFactory.grant_weapon(character,repo,archetype,40,"purple",seed,hand)
+	_check(not item.is_empty(),archetype+"_item_generated")
 	if item.is_empty():
 		return null
-	_check(hero.equip("main_hand",String(item.get("instance_id","")),repo),archetype+"_equipped")
-	var ability_sets := {
-		"AXE_DEF":["ABI501","ABI502","ABI503","ABI504"],
-		"AXE_ATTACK":["ABI501","ABI502","ABI505","ABI506"],
-		"AXE_SHIELD":["ABI501","ABI502","ABI507","ABI508"]
-	}
-	var expected: Array = ability_sets.get(archetype,[])
-	_check(item.get("abilities",[]) == expected,archetype+"_loadout")
-	var session := ArenaCombatSession.new(hero,repo)
+	_check(item.get("abilities",[])==KITS[archetype],archetype+"_four_unique_ABI")
+	_check(Array(item.get("slot_usage",[])).size()==(0 if archetype=="AXE_DEF" else 2),archetype+"_hand_ownership")
+	_check(character.equip("main_hand",String(item.get("instance_id","")),repo),archetype+"_equipped")
+	_check(ItemRepository.from_dict(repo.to_dict()).get_item(String(item.get("instance_id",""))).get("abilities",[])==KITS[archetype],archetype+"_save_load_ABI")
+	var session := ArenaCombatSession.new(character,repo)
 	var actor := session.fighter(true)
 	var victim := session.fighter(false)
+	_check(actor!=null and victim!=null,archetype+"_fighters")
 	if actor == null or victim == null:
-		_check(false,archetype+"_fighters")
 		return null
-	actor.hp = 100000
-	actor.max_hp = 100000
-	victim.hp = 100000
-	victim.max_hp = 100000
-	actor.combat_stats["hit_chance_rating_percent"] = 100.0
-	actor.combat_stats["crit_chance_rating_percent"] = 100.0
-	victim.combat_stats["anti_crit_rating_percent"] = 0.0
-	victim.combat_stats["dodge_rating_percent"] = 0.0
-	victim.combat_stats["shield_auto_block_rating_percent"] = 0.0
-	victim.combat_loadout["can_auto_block"] = false
-	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID] = []
+	actor.hp=100000
+	actor.max_hp=100000
+	victim.hp=100000
+	victim.max_hp=100000
+	actor.combat_stats["hit_chance_rating_percent"]=100.0
+	victim.combat_stats["dodge_rating_percent"]=0.0
+	victim.combat_stats["shield_auto_block_rating_percent"]=0.0
+	victim.combat_loadout["can_auto_block"]=false
+	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID]=[]
 	var options := session.player_ability_options()
 	for i in range(4):
-		_check(i < options.size() and String(options[i].get("id",""))==String(expected[i]),archetype+"_abi_slot_"+str(i))
-	for id in expected:
-		session.ability_scheduler.definitions[id]["rolls"] = {"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":1}
+		_check(i<options.size() and String(options[i].get("id",""))==String(Array(KITS[archetype])[i]),archetype+"_slot_"+str(i))
+	for id in Array(KITS[archetype]):
+		session.ability_scheduler.definitions[String(id)]["rolls"]={"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100}
 	return session
 
-func _cast(session: ArenaCombatSession, ability_id: String) -> bool:
-	session.fighter(true).action_points = 8
-	var result := session.play_round(["chest"],["head","arms"],ability_id)
-	_check(bool(result.get("ok",false)),ability_id+"_cast")
+func _cast(session: ArenaCombatSession, id: String) -> bool:
+	session.fighter(true).action_points=8
+	var result := session.play_round(["chest"],["head","arms"],id)
+	_check(bool(result.get("ok",false)),id+"_cast")
 	return bool(result.get("ok",false))
 
-func _give_rage(fighter: CombatantState, stacks: int) -> void:
-	for raw in fighter.active_effects.duplicate():
-		if String(raw.get("effect_id","")) == "EFF501":
-			fighter.active_effects.erase(raw)
-	fighter.active_effects.append({
-		"effect_id":"EFF501","definition":EffectCatalog.load_json()["EFF501"],
-		"source_id":fighter.combatant_id,"start_round":0,
-		"remaining_rounds":5,"stacks":stacks,"active_stacks":stacks
+func _wound_fixture(session: ArenaCombatSession, stacks: int) -> void:
+	var target := session.fighter(false)
+	target.active_effects.append({
+		"effect_id":"EFF501",
+		"definition":Dictionary(EffectCatalog.load_json()["EFF501"]).duplicate(true),
+		"source_id":session.player_id,
+		"start_round":0,
+		"remaining_rounds":5,
+		"stacks":stacks,
+		"active_stacks":stacks
 	})
 
-func _run() -> void:
-	var catalog := AbilityCatalog.load_json("res://data/abilities/catalog.json")
-	var effects := EffectCatalog.load_json()
-	for id in AxeAbiCombatService.ABILITIES:
-		_check(catalog.has(id),"catalog_"+id)
-		if catalog.has(id):
-			_check(AbilityRuntime.validate_definition(id,catalog[id]).is_empty(),"definition_"+id)
-	for id in ["EFF501","EFF502","EFF503","EFF504","EFF505"]:
-		_check(effects.has(id),"effect_catalog_"+id)
-	_check(String(catalog.get("ABI502",{}).get("trigger_previous_round",""))=="crit_or_block_crush","cut_previous_crit_or_crush")
-	var preflight := CombatState.new()
-	preflight.begin_round()
-	var previous_hit := preflight.create_event(CombatEvent.Kind.ATTACK,"player","enemy",{"round":1})
-	previous_hit.set_result("critical",true)
-	preflight.record_event(previous_hit)
-	_check(AbilityRuntime.previous_round_trigger_met(preflight,"player","crit_or_block_crush",2),"axe_crit_in_last_round")
-	_check(not AbilityRuntime.previous_round_trigger_met(preflight,"player","crit_or_block_crush",1),"axe_trigger_wrong_round_rejected")
-
-	_check(int(catalog.get("ABI507",{}).get("cooldown_rounds",-1))==5,"crusher_cd5")
-
-	# Solo UI preflight must match the actual Scheduler trigger and axe
-	# prerequisites; a stale crit may never leave ABI502 selectable.
-	var ui_session := _make_session("AXE_DEF",202611084)
-	if ui_session != null:
-		var teams := GroupCombatState.new(ui_session.state)
-		teams.add_member("players",ui_session.player_id)
-		teams.add_member("enemies",ArenaCombatSession.ENEMY_ID)
-		var solo := GroupCombatSimulator.new(ui_session.state,teams)
-		solo.attack_pipeline.ability_scheduler = ui_session.ability_scheduler
-		ui_session.fighter(true).action_points = 8
-		var initial_controls := solo.player_controls(ui_session.player_id)
-		var initial_502 := false
-		for raw_option in Array(initial_controls.get("abilities",[])):
-			if String(raw_option.get("id",""))=="ABI502":
-				initial_502 = bool(raw_option.get("available",false))
-		_check(not initial_502,"solo_502_initial_trigger_missing")
-		ui_session.state.begin_round() # round 1: own critical hit
-		var first_crit := ui_session.state.create_event(CombatEvent.Kind.ATTACK,ui_session.player_id,ArenaCombatSession.ENEMY_ID)
-		first_crit.set_result("outcome","connected")
-		first_crit.set_result("critical",true)
-		ui_session.state.record_event(first_crit)
-		var ready_controls := solo.player_controls(ui_session.player_id)
-		var ready_502 := false
-		for raw_option in Array(ready_controls.get("abilities",[])):
-			if String(raw_option.get("id",""))=="ABI502":
-				ready_502 = bool(raw_option.get("available",false))
-		_check(ready_502,"solo_502_crit_previous_round")
-		ui_session.state.begin_round() # round 2: ordinary strike without crit
-		var normal_hit := ui_session.state.create_event(CombatEvent.Kind.ATTACK,ui_session.player_id,ArenaCombatSession.ENEMY_ID)
-		normal_hit.set_result("outcome","connected")
-		normal_hit.set_result("critical",false)
-		ui_session.state.record_event(normal_hit)
-		var stale_controls := solo.player_controls(ui_session.player_id)
-		var stale_502 := false
-		for raw_option in Array(stale_controls.get("abilities",[])):
-			if String(raw_option.get("id",""))=="ABI502":
-				stale_502 = bool(raw_option.get("available",false))
-		_check(not stale_502,"solo_502_stale_crit_rejected")
-	
-
-	var defence := _make_session("AXE_DEF",202611081)
-	if defence != null:
-		if _cast(defence,"ABI501"):
-			_check(int(_effect(defence.fighter(true),"EFF501").get("stacks",0))==1,"def_one_rage")
-			_check(_attacks(defence,"ABI501").size()==1,"rage_ordinary_mh_not_extra")
-		_check(_cast(defence,"ABI503"),"def_sweep")
-		_check(not _effect(defence.fighter(false),"EFF502").is_empty(),"def_sweep_debuff")
-		_give_rage(defence.fighter(true),5)
-		_check(_cast(defence,"ABI504"),"def_stance")
-		var saw_stance := false
-		for event in defence.state.event_log:
-			if event.kind==CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id",""))=="EFF503" and bool(event.result.get("resolved",false)):
-				saw_stance = true
-		_check(saw_stance,"def_stance_prepared")
-
-	var attack := _make_session("AXE_ATTACK",202611082)
-	if attack != null:
-		_check(not AxeAbiCombatService.can_cast(attack.state,attack.player_id,ArenaCombatSession.ENEMY_ID,"ABI506"),"execute_rejects_full_hp")
-		_give_rage(attack.fighter(true),5)
-		if _cast(attack,"ABI505"):
-			var saw_breaker := false
-			for event in attack.state.event_log:
-				if event.kind==CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id",""))=="EFF504":
-					saw_breaker = true
-			_check(saw_breaker,"attack_breaker_early_effect")
-		attack.fighter(false).hp = 19999
-		_check(AxeAbiCombatService.can_cast(attack.state,attack.player_id,ArenaCombatSession.ENEMY_ID,"ABI506"),"execute_eligible")
-		if _cast(attack,"ABI506"):
-			_check(_attacks(attack,"ABI506").size()==1,"execute_one_attack")
-			_check(_effect(attack.fighter(true),"EFF501").is_empty(),"execute_consumes_rage_on_hit")
-
-	var shield := _make_session("AXE_SHIELD",202611083)
+func _verify() -> void:
+	var defs := AbilityCatalog.load_json("res://data/abilities/catalog.json")
+	var eff := EffectCatalog.load_json()
+	_check(AxeAbiCombatService.ABILITIES.size()==16,"sixteen_axe_ABI")
+	for n in range(501,517):
+		var id := "ABI%d" % n
+		_check(defs.has(id),id+"_catalog")
+		if defs.has(id):
+			_check(AbilityRuntime.validate_definition(id,defs[id]).is_empty(),id+"_definition")
+			_check(Array(Dictionary(defs[id]).get("base_damage_by_rank",[])).size()==10,id+"_ten_ranks")
+	_check(eff.has("EFF501"),"wound_eff_exists")
+	_check(int(Dictionary(eff.get("EFF501",{})).get("max_stacks",0))==3,"wound_three_stacks")
+	_check(int(Dictionary(eff.get("EFF501",{})).get("duration_rounds",0))==5,"wound_five_rounds")
+	_check(Array(Dictionary(Dictionary(eff.get("EFF501",{})).get("values_by_rank",{})).get("damage",[])).size()==10,"wound_ten_ranks")
+	for kit in KITS:
+		var session := _session(String(kit),202611160+int(Array(KITS[kit])[0].substr(3)))
+		if session == null:
+			continue
+		var q := String(Array(KITS[kit])[0])
+		if _cast(session,q):
+			_check(_attacks(session,q).size()>=1,String(kit)+"_q_attacks")
+			_check(int(_effect(session.fighter(false),"EFF501").get("stacks",0))>=1,String(kit)+"_q_applies_wound")
+	var deep := _session("AXE_ATTACK",202611168)
+	if deep != null:
+		if _cast(deep,"ABI507"):
+			_check(int(_effect(deep.fighter(false),"EFF501").get("stacks",0))==2,"deep_wound_two_stacks")
+	var defend := _session("AXE_DEF",202611169)
+	if defend != null:
+		_wound_fixture(defend,3)
+		defend.fighter(true).hp=50000
+		if _cast(defend,"ABI504"):
+			_check(AxeAbiCombatService._wounds(defend.fighter(false),defend.player_id,defend.state.round_number)==0,"def_e_spends_wounds")
+			var heal_seen := false
+			for event in defend.state.event_log:
+				if event.kind==CombatEvent.Kind.EFFECT and String(event.payload.get("ability_id",""))=="ABI504" and int(event.result.get("healed",0))>0:
+					heal_seen=true
+			_check(heal_seen,"def_e_heals_real_post_mitigation_damage")
+	var execute := _session("AXE_ATTACK",202611170)
+	if execute != null:
+		_wound_fixture(execute,3)
+		execute.fighter(false).hp=30000
+		if _cast(execute,"ABI508"):
+			var hits := _attacks(execute,"ABI508")
+			_check(hits.size()==1,"execute_one_attack")
+			_check(AxeAbiCombatService._wounds(execute.fighter(false),execute.player_id,execute.state.round_number)==0,"execute_wounds_spent")
+	var shield := _session("AXE_SHIELD",202611171)
 	if shield != null:
-		_check(not AxeAbiCombatService.can_cast(shield.state,shield.player_id,ArenaCombatSession.ENEMY_ID,"ABI507"),"crusher_requires_rage")
-		_give_rage(shield.fighter(true),5)
-		_check(_cast(shield,"ABI507"),"shield_crusher")
-		_check(_effect(shield.fighter(true),"EFF501").is_empty(),"crusher_spends_rage")
-		_check(not _effect(shield.fighter(true),"EFF505").is_empty(),"crusher_twenty_round_buff")
-		_give_rage(shield.fighter(true),5)
-		if _cast(shield,"ABI508"):
-			_check(_attacks(shield,"ABI508").size()==1,"shieldbreaker_single_target")
-			_check(_effect(shield.fighter(true),"EFF501").is_empty(),"shieldbreaker_spends_rage")
-
-
-	# A saved EFF snapshot must control stacks independently of ABI507 needs.
-	if shield != null:
-		_give_rage(shield.fighter(true),8)
-		var rage_record := _effect(shield.fighter(true),"EFF501")
-		var capped_rage: Dictionary = Dictionary(rage_record.get("definition",{})).duplicate(true)
-		capped_rage["max_stacks"] = 3
-		rage_record["definition"] = capped_rage
-		_check(AxeAbiCombatService.rage_stacks(shield.fighter(true),shield.state.round_number)==3,"rage_stack_cap_from_eff_snapshot")
-
+		_wound_fixture(shield,3)
+		if _cast(shield,"ABI512"):
+			var hits := _attacks(shield,"ABI512")
+			_check(hits.size()==1,"shieldbreaker_one_attack")
+			if not hits.is_empty():
+				_check(bool(hits[0].payload.get("skip_auto_block",false)),"shieldbreaker_skips_auto_block_only")
+	var aoe := _session("2H_AXE",202611172)
+	if aoe != null:
+		for i in range(4):
+			var id := "AXE_EXTRA_"+str(i)
+			var enemy := CharacterCombatBuilder.build(CharacterState.new(id,id,40),ItemRepository.new(),{"health":100000,"mana":0})
+			aoe.state.add_combatant(enemy)
+			aoe.orchestrator.group_state.add_member("enemy",id)
+			aoe.orchestrator.zone_state.set_zone(id,CombatZoneState.ZONE_2)
+			enemy.combat_stats["dodge_rating_percent"]=0.0
+			enemy.combat_loadout["can_auto_block"]=false
+		if _cast(aoe,"ABI515"):
+			_check(_attacks(aoe,"ABI515").size()==5,"aoe_five_independent_attacks")
 	print("AXE_V12_ABI_EFF=",("PASS" if problems.is_empty() else "FAIL")," problems=",problems)
 	quit(0 if problems.is_empty() else 1)
