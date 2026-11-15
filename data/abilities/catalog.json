@@ -1660,7 +1660,7 @@
   },
   "ABI510": {
     "name": "Подрыв защиты",
-    "description": "Удар с +40 п.п. к шансу пробития ручного/автоматического блока.",
+    "description": "Одиночный удар с +40 п.п. к пробитию ручного и автоматического блока; не гарантирует попадания.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -1693,9 +1693,6 @@
       240
     ],
     "attack_power_coefficient": 0.75,
-    "effect_refs": {
-      "on_hit": "EFF503"
-    },
     "block_crush_bonus_pct": 40
   },
   "ABI511": {
