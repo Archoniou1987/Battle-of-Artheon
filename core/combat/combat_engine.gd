@@ -683,7 +683,7 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 	var max_stacks := maxi(1, int(definition.get("max_stacks", 1)))
 	var matching:Array = []
 	for active in target.active_effects:
-		if String(active.get("effect_id", "")) == effect_id and (stacking != "shared_duration" or String(active.get("source_id", "")) == event.source_id): matching.append(active)
+		if String(active.get("effect_id", "")) == effect_id and (stacking not in ["shared_duration","unique"] or String(active.get("source_id", "")) == event.source_id): matching.append(active)
 	# Shared-duration DoT is per effect and caster. New stacks join the tick
 	# starting NEXT round; only previously active stacks deal damage this round.
 	# Refresh counts three future ticks, including when already at stack cap.
@@ -726,8 +726,15 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 	if stacking == "stack":
 		if matching.size() < max_stacks: target.active_effects.append(record)
 		return
-	# UNIQUE means one logical buff/debuff per target. Reapplication replaces it.
-	for active in matching: target.active_effects.erase(active)
+	# Unique EFF instances remain independent per caster; the strongest
+	# modifier is chosen by CombatModifierService, not by deleting others.
+	# A lower rank from the SAME caster may refresh but never downgrade.
+	for active in matching:
+		var existing_def: Dictionary = active.get("definition",{})
+		if int(existing_def.get("effect_rank",1)) > int(definition.get("effect_rank",1)):
+			active["remaining_rounds"] = maxi(int(active.get("remaining_rounds",0)),int(definition.get("duration_rounds",1)))
+			return
+		target.active_effects.erase(active)
 	target.active_effects.append(record)
 
 func _make_effect_record(effect_id:String,definition:Dictionary,event:CombatEvent)->Dictionary:
