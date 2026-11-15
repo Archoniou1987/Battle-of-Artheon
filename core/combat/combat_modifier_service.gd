@@ -103,18 +103,42 @@ static func magic_damage_bonus_pct(combatant: CombatantState, round_number: int)
 
 ## Rating conversion is owned by CharacterStatsService. Canonical *_percent
 ## already includes permanent *_direct_pct, so this layer adds runtime overlays only.
+## Convert raw rating deltas only at the target PAR calculation boundary.
+## Two different EFF modifying the same PAR compete as Unique regardless
+## of whether their authoring unit is rating or direct percentage points.
 static func effective_percent(combatant: CombatantState, key: String, round_number: int) -> float:
 	var field := key + "_percent"
 	if not combatant.combat_stats.has(field) or not RatingMatrix._number(combatant.combat_stats[field]):
 		push_error("Missing mandatory converted rating: " + field)
 		return NAN
 	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
-	var direct := float(trait_modifiers(combatant).get(direct_key,0.0))
-	var rating_delta := _effect_values(combatant,key + "_delta",round_number)
-	var result := float(combatant.combat_stats[field]) + direct + _effect_values(combatant,direct_key,round_number)
-	if not is_zero_approx(rating_delta):
-		result += RatingMatrix.to_percent(rating_delta,combatant.level)
-	return result
+	var baseline := float(combatant.combat_stats[field]) + float(trait_modifiers(combatant).get(direct_key,0.0))
+	var unique: Dictionary = {}
+	var nonunique := 0.0
+	for record in active_effects(combatant,round_number):
+		var definition: Dictionary = record.get("definition",{})
+		var delta := float(definition.get(direct_key,0.0))
+		var rating_delta := float(definition.get(key+"_delta",0.0))
+		if not is_zero_approx(rating_delta):
+			delta += RatingMatrix.to_percent(rating_delta,combatant.level)
+		if bool(definition.get("apply_stacks_to_modifiers",false)):
+			delta *= float(record.get("stacks",1))
+		if is_zero_approx(delta):
+			continue
+		var kind := String(definition.get("kind",""))
+		if kind not in ["buff","debuff"] or bool(definition.get("allow_modifiers_stacking",false)):
+			nonunique += delta
+			continue
+		var group := key + (":positive" if delta>0.0 else ":negative")
+		if key in ["strength_rating","agility_rating","endurance_rating","intellect_rating","wisdom_rating","intuition_rating"]:
+			var category := String(definition.get("stat_category","specific"))
+			group += ":" + category
+		if not unique.has(group) or absf(delta) > absf(float(unique[group])):
+			unique[group] = delta
+	for v in unique.values():
+		nonunique += float(v)
+	var answer := baseline+nonunique
+	return maxf(0.0,answer) if key=="anti_crit_rating" else answer
 
 static func block_chance(combatant: CombatantState, round_number: int) -> float:
 	# One combined permanent+runtime percent, then v1.2 block diminishing.
