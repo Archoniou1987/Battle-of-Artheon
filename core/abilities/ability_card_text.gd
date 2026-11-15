@@ -10,27 +10,10 @@ static func describe(ability_id: String, definition: Dictionary, ap_available: i
 			lines.append(String(definition.get("description","")))
 			if float(definition.get("base_damage",0.0)) > 0.0:
 				lines.append("Урон: база + усиление за каждые 10 уровней + %.2f × бонус силы атаки." % float(definition.get("attack_power_coefficient",0.0)))
-		"ABI301":
-			lines.append("Усиливает обычную атаку MH на +%d урона без дополнительного удара." % int(definition.get("mh_flat_bonus", 0)))
-			lines.append("При попадании: +1 AP и 1 стак кровотечения.")
-		"ABI302":
-			lines.append("До 3 целей: отдельный удар по 50% урона MH.")
-			lines.append("При попадании: 1 стак кровотечения; +2 AP один раз за применение.")
-		"ABI303":
-			lines.append("Удар 50% MH. При попадании: −5% исходящего физического урона за каждый стак кровотечения на цели, 2 раунда.")
-		"ABI304":
-			lines.append("Удар 60% MH. При попадании: −1–5% антиизворотливости за каждый стак кровотечения на цели, 2 раунда (зависит от уровня EFF).")
-		"ABI305":
-			lines.append("Удар 75% MH. При попадании: −1–5% антикрита за каждый стак кровотечения на цели, 2 раунда (зависит от уровня EFF).")
-		"ABI306":
-			lines.append("Удар: 50% MH + 2% суммы брони пяти зон за каждый потраченный AP.")
-			lines.append("При попадании: 1 стак кровотечения.")
-		"ABI307":
-			lines.append("До 5 целей: 25% MH × потраченные AP по каждой цели.")
-			lines.append("При попадании: до 5 стаков кровотечения на цель.")
-		"ABI308":
-			lines.append("Удар MH: +10 п.п. шанса крита и +25% критического урона за AP.")
-			lines.append("При попадании: 3 дополнительных тика текущего кровотечения, без расхода стаков.")
+		"ABI301","ABI302","ABI303","ABI304","ABI305","ABI306","ABI307","ABI308","ABI309","ABI310","ABI311","ABI312","ABI313","ABI314","ABI315","ABI316":
+			lines.append(String(definition.get("description","")))
+			if float(definition.get("attack_power_coefficient",0.0)) > 0.0:
+				lines.append("Урон: числовое значение ранга I–X + бонус силы атаки.")
 		"ABI501":
 			lines.append("Усиливает обычную MH-атаку на +20%. +1 AP, +1 стак Ярости.")
 			lines.append("Ярость: до 5 стаков, +2% пробития любого блока за стак; общий срок 5 раундов.")
