@@ -152,7 +152,6 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			var heal_values: Array = Array(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("heal_from_damage_pct_by_wounds",[]))
 			if heal_values.size()==4:
 				extra["axe_heal_from_damage_pct"]=float(heal_values[clampi(wounds,0,3)])
-				extra["axe_heal_max_hp_cap_pct"]=AbilityCatalog.number(id,"heal_max_hp_cap_pct",action.payload)
 			extra["axe_consume_wounds"] = wounds
 		ids.append(_queue_attack(engine,action,target_id,profile,_damage(actor,profile,id,mult),extra))
 	action.set_result("outcome","dispatched" if not ids.is_empty() else "no_targets")
@@ -201,11 +200,11 @@ static func on_damage(engine: CombatEngine, damage_event: CombatEvent, target: C
 		if source == null or source.combatant_id == target.combatant_id:
 			return
 		var pct := float(parent.payload.get("axe_heal_from_damage_pct",0))
-		var cap_pct := float(parent.payload.get("axe_heal_max_hp_cap_pct",0))
-		var raw_heal := roundi(float(int(damage_event.result.get("hp_removed",0)))*pct/100.0)
-		var bounded := mini(raw_heal,roundi(float(source.max_hp)*cap_pct/100.0))
-		if bounded>0:
-			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source.combatant_id,source.combatant_id,{"inline_heal":bounded,"clamp_heal_to_max":true,"source_type":"ability","ability_id":"ABI504"},damage_event.event_id))
+		# CombatEngine has already calculated armour, damage reduction and actual damage.
+		# No arbitrary HP-% cap: a stronger final hit legitimately heals more.
+		var heal := maxi(0,roundi(float(int(damage_event.result.get("final_damage",0)))*pct/100.0))
+		if heal>0:
+			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source.combatant_id,source.combatant_id,{"inline_heal":heal,"clamp_heal_to_max":true,"source_type":"ability","ability_id":"ABI504"},damage_event.event_id))
 		return
 
 static func on_dodge(_engine: CombatEngine, _incoming: CombatEvent, _defender: CombatantState) -> void:
