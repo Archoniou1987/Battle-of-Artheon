@@ -170,8 +170,8 @@ func _abi_to_eff_references() -> void:
 func _abi_target_limits_from_catalog() -> void:
 	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	for spec in [
-		{"abi":"ABI302","class":"sword","expected":3},
-		{"abi":"ABI307","class":"sword","expected":5},
+		{"abi":"ABI307","class":"sword","expected":3},
+		{"abi":"ABI308","class":"sword","expected":5},
 		{"abi":"ABI407","class":"dagger","expected":5},
 		{"abi":"ABI508","class":"axe","expected":3}
 	]:
@@ -183,7 +183,7 @@ func _abi_target_limits_from_catalog() -> void:
 		var action_definition: Dictionary = authored.duplicate(true)
 		var intent := AbilityRuntime.build_action_event(state,"left","right",id,action_definition)
 		_check(int(intent.payload.get("max_targets",-1)) == int(spec["expected"]),id+":target_cap_in_event")
-		if id == "ABI307":
+		if id == "ABI308":
 			continue
 		# Lower cap in a test-only event, with more than two valid enemies.
 		action_definition["max_targets"] = 2
@@ -191,7 +191,7 @@ func _abi_target_limits_from_catalog() -> void:
 		state.add_combatant(_fighter("extra_2","hammer"))
 		var limited := AbilityRuntime.build_action_event(state,"left","right",id,action_definition)
 		var engine: CombatEngine = ctx["engine"]
-		if id == "ABI302":
+		if id == "ABI307":
 			SwordAbiCombatService.dispatch(engine,limited)
 		elif id == "ABI407":
 			WeaponComboAbiCombatService.dispatch(engine,limited)
@@ -203,8 +203,8 @@ func _abi_target_limits_from_catalog() -> void:
 ## must retain the authored AoE size, not silently fall back to one target.
 func _legacy_abi_target_cap_fallback() -> void:
 	for spec in [
-		{"abi":"ABI302","class":"sword","mode":"aoe_3","count":3},
-		{"abi":"ABI307","class":"sword","mode":"dodge_ultimate","count":5},
+		{"abi":"ABI307","class":"sword","mode":"dodge_aoe","count":3},
+		{"abi":"ABI308","class":"sword","mode":"dodge_e","count":5},
 		{"abi":"ABI407","class":"dagger","mode":"","count":5},
 		{"abi":"ABI508","class":"axe","mode":"","count":3}
 	]:
@@ -266,73 +266,25 @@ func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
 	var state: CombatState = ctx["state"]
 	var engine: CombatEngine = ctx["engine"]
 	var actor := state.get_combatant("left")
-	actor.action_points = 0
+	var q := AbilityRuntime.build_action_event(state,"left","right","ABI301",defs["ABI301"])
+	q.payload["zone"] = "chest"
+	SwordAbiCombatService.dispatch(engine,q)
+	var shots := Array(q.result.get("child_event_ids",[]))
+	_check(shots.size()==1,"ABI301:one_new_numeric_attack")
 	var profile: Dictionary = WeaponAttackProfile.all(actor)[0]
-	var rolls := {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
-	var mh := state.create_event(CombatEvent.Kind.ATTACK,"left","right",WeaponAttackProfile.attack_payload(profile,rolls,"chest"))
-	var definition: Dictionary = Dictionary(defs["ABI301"]).duplicate(true)
-	definition["ap_gain"] = 3
-	var action := AbilityRuntime.build_action_event(state,"left","right","ABI301",definition)
-	var round := CombatRound.new(state.round_number)
-	round.lock_action(mh)
-	round.lock_action(action)
-	round.resolve(engine)
-	_check(String(mh.result.get("outcome",""))=="connected","ABI301:MH_hit_connected")
-	_check(int(mh.payload.get("sword_ap_gain_on_hit",-1))==3,"ABI301:action_AP_snapshot_attached")
-	_check(actor.action_points==3,"ABI301:AP_from_authored_snapshot")
-
-	var aoe_ctx := _pair("sword","axe")
-	var aoe_state: CombatState = aoe_ctx["state"]
-	var aoe_engine: CombatEngine = aoe_ctx["engine"]
-	var aoe_actor := aoe_state.get_combatant("left")
-	aoe_actor.action_points = 0
-	var aoe_def: Dictionary = Dictionary(defs["ABI302"]).duplicate(true)
-	aoe_def["ap_gain"] = 4
-	aoe_def["rolls"] = rolls
-	var aoe_action := AbilityRuntime.build_action_event(aoe_state,"left","right","ABI302",aoe_def)
-	aoe_state.queue_event(aoe_action)
-	aoe_engine.resolve_pending_events()
-	_check(int(aoe_action.result.get("ap_gained_on_hit",-1))==4,"ABI302:AP_from_authored_snapshot")
-	_check(aoe_actor.action_points==4,"ABI302:AP_awarded_once")
-
-	var legacy_ctx := _pair("sword","axe")
-	var legacy_state: CombatState = legacy_ctx["state"]
-	var legacy_actor := legacy_state.get_combatant("left")
-	legacy_actor.action_points = 0
-	var legacy_hit := _attack(legacy_ctx,"left","right",0,{"sword_abi_id":"ABI301"})
-	_check(String(legacy_hit.result.get("outcome",""))=="connected","ABI301:legacy_MH_connected")
-	_check(legacy_actor.action_points==1,"ABI301:legacy_hit_uses_canonical_AP")
-
+	_check(is_equal_approx(AbilityCatalog.ranked_damage("ABI301",int(profile.get("item_level",1))),12.0),"ABI301:ranked_base_damage")
+	var effects := EffectCatalog.load_json()
+	_check(int(Dictionary(effects["EFF314"]).get("max_stacks",0))==3,"SWORD:mastery_owned_by_EFF")
 	var crit_ctx := _pair("sword","axe")
-	var crit_state: CombatState = crit_ctx["state"]
-	var crit_engine: CombatEngine = crit_ctx["engine"]
-	var crit_def: Dictionary = Dictionary(defs["ABI308"]).duplicate(true)
-	crit_def["crit_pct_per_ap"] = 17
-	crit_def["crit_damage_pct_per_ap"] = 31
-	var crit_action := AbilityRuntime.build_action_event(crit_state,"left","right","ABI308",crit_def)
-	crit_action.payload["ap_spent"] = 2
-	SwordAbiCombatService.dispatch(crit_engine,crit_action)
-	for pending in crit_state.pending_events:
-		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI308":
-			_check(is_equal_approx(float(pending.payload.get("sword_crit_chance_pct",-1.0)),34.0),"ABI308:crit_chance_from_authored_snapshot")
-			_check(is_equal_approx(float(pending.payload.get("sword_crit_damage_pct",-1.0)),62.0),"ABI308:crit_damage_from_authored_snapshot")
-	var old_crit_ctx := _pair("sword","axe")
-	var old_crit_state: CombatState = old_crit_ctx["state"]
-	var old_crit_engine: CombatEngine = old_crit_ctx["engine"]
-	var old_crit_action := old_crit_state.create_event(CombatEvent.Kind.ACTION,"left","right",{
-		"ability_id":"ABI308","sword_ability_mode":"crit_ultimate","ap_spent":2,"source_kind":"ability"
-	})
-	SwordAbiCombatService.dispatch(old_crit_engine,old_crit_action)
-	for pending in old_crit_state.pending_events:
-		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI308":
-			_check(is_equal_approx(float(pending.payload.get("sword_crit_chance_pct",-1.0)),20.0),"ABI308:legacy_crit_chance_from_catalog")
-			_check(is_equal_approx(float(pending.payload.get("sword_crit_damage_pct",-1.0)),50.0),"ABI308:legacy_crit_damage_from_catalog")
-			_check(int(pending.payload.get("sword_bleed_ticks",-1))==3,"ABI308:legacy_bleed_ticks_from_catalog")
+	var crit_action := AbilityRuntime.build_action_event(crit_ctx["state"],"left","right","ABI312",defs["ABI312"])
+	crit_action.payload["zone"]="chest"
+	SwordAbiCombatService.dispatch(crit_ctx["engine"],crit_action)
+	var found := false
+	for pending in crit_ctx["state"].pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI312":
+			found = is_equal_approx(float(pending.payload.get("sword_crit_chance_pct",0.0)),40.0)
+	_check(found,"ABI312:approved_plus40_crit_points")
 
-
-## Older ACTION events never carried the new numeric fields.
-## The canonical EFF rage cap and ABI requirements are independent.
-## All changed values are test-only and must survive action snapshots.
 func _axe_abi_coefficients_from_catalog() -> void:
 	var definitions := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	for scenario in [
@@ -685,27 +637,7 @@ func _eff_periodic_armour_policy_ownership() -> void:
 			_check(String(Dictionary(event.payload.get("periodic_armour",{})).get("zone",""))=="head","EFF301:timed_tick_uses_applied_EFF_snapshot")
 	_check(saw_tick,"EFF301:timed_tick_generated")
 
-	# ABI308's immediate burst uses the same EFF snapshot as timed ticks.
-	var burst_ctx := _pair("sword","axe")
-	var burst_state: CombatState = burst_ctx["state"]
-	var burst_engine: CombatEngine = burst_ctx["engine"]
-	var burst_target := burst_state.get_combatant("right")
-	var burst_def: Dictionary = EffectCatalog.definition(burst_engine.canonical_effects,"EFF301").duplicate(true)
-	burst_def["periodic_armour"]["zone"] = "head"
-	burst_target.active_effects.append({
-		"effect_id":"EFF301","definition":burst_def,"source_id":"left",
-		"start_round":1,"remaining_rounds":5,"stacks":2,"active_stacks":2
-	})
-	var connected := burst_state.create_event(CombatEvent.Kind.ATTACK,"left","right",{
-		"sword_abi_id":"ABI308","sword_bleed_ticks":3
-	})
-	SwordAbiCombatService.on_connected_attack(burst_engine,connected,burst_state.get_combatant("left"),burst_target)
-	var bursts := 0
-	for pending in burst_state.pending_events:
-		if pending.kind == CombatEvent.Kind.DAMAGE and bool(pending.payload.get("sword_burst_tick",false)):
-			bursts += 1
-			_check(String(Dictionary(pending.payload.get("periodic_armour",{})).get("zone",""))=="head","ABI308:burst_uses_applied_EFF_snapshot")
-	_check(bursts==3,"ABI308:three_bursts_keep_mitigation_snapshot")
+	# Retired ABI308 burst-tick behavior is no longer part of sword combat.
 
 
 func _damage_type(weapon_class: String) -> String:
@@ -795,77 +727,39 @@ func _sword_cripple_versus_axe_damage() -> void:
 	var ctx := _pair("sword","axe")
 	var state: CombatState = ctx["state"]
 	var axe := state.get_combatant("right")
-	_effect(ctx,"left","right","EFF301",{"sword_stacks_to_apply":4,"sword_eff_level":2})
-	var cripple := _effect(ctx,"left","right","EFF302",{"sword_eff_level":1})
-	_check(int(cripple.result.get("sword_bleed_snapshot",-1)) == 4,"sword:bleed_snapshot_four")
+	var weaken := _effect(ctx,"left","right","EFF320")
+	_check(bool(weaken.result.get("resolved",false)),"sword:E320_weakening_applied")
 	state.begin_round()
-	_check(is_equal_approx(CombatModifierService.modifier(axe,"physical_damage_outgoing_direct_pct",state.round_number),-20.0),"sword:cripple_reduces_axe_outgoing_by_20pct")
+	_check(is_equal_approx(CombatModifierService.modifier(axe,"physical_damage_outgoing_direct_pct",state.round_number),-15.0),"sword:unique_weaken_reduces_axe_by15")
 	var hit := _attack(ctx,"right","left")
-	_check(String(hit.result.get("outcome","")) == "connected","sword:axe_hit_connected")
-	_check(is_equal_approx(float(hit.result.get("raw_damage",-1.0)),80.0),"sword:cripple_applies_to_real_axe_attack")
-	print("ABI_CROSS_WEAPON_CASE=CHECKED sword_bleed_cripple_vs_axe")
+	_check(String(hit.result.get("outcome",""))=="connected","sword:axe_hit_connected")
+	_check(is_equal_approx(float(hit.result.get("raw_damage",-1.0)),85.0),"sword:weakening_applies_to_axe")
 
-## Test-only changed EFF definitions prove COMBAT never keeps base numbers.
 func _sword_effect_strength_from_catalog() -> void:
-	var ctx := _pair("sword","axe")
-	var engine: CombatEngine = ctx["engine"]
-	var state: CombatState = ctx["state"]
-	engine.canonical_effects["EFF301"]["damage"] = 2.0
-	engine.canonical_effects["EFF302"]["physical_damage_outgoing_direct_pct"] = -7.0
-	engine.canonical_effects["EFF303"]["anti_dodge_direct_pct"] = -2.0
-	engine.canonical_effects["EFF304"]["anti_crit_direct_pct"] = -3.0
-	_effect(ctx,"left","right","EFF301",{"sword_stacks_to_apply":3,"sword_eff_level":20})
-	var target := state.get_combatant("right")
-	for record in target.active_effects:
-		if String(record.get("effect_id","")) == "EFF301":
-			_check(is_equal_approx(float(Dictionary(record.get("definition",{})).get("damage",-1.0)),20.0),"sword:bleed_strength_from_eff_and_level_cap")
-	_effect(ctx,"left","right","EFF302",{"sword_eff_level":20})
-	_effect(ctx,"left","right","EFF303",{"sword_eff_level":20})
-	_effect(ctx,"left","right","EFF304",{"sword_eff_level":20})
-	state.begin_round()
-	_check(is_equal_approx(CombatModifierService.modifier(target,"physical_damage_outgoing_direct_pct",state.round_number),-21.0),"sword:cripple_strength_from_eff")
-	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_dodge_direct_pct",state.round_number),-30.0),"sword:slow_strength_from_eff_and_level_cap")
-	_check(is_equal_approx(CombatModifierService.modifier(target,"anti_crit_direct_pct",state.round_number),-45.0),"sword:lost_strength_from_eff_and_level_cap")
+	var defs := EffectCatalog.load_json()
+	var mastery: Dictionary = defs["EFF314"]
+	_check(int(mastery.get("max_stacks",0))==3,"EFF314:mastery_max3")
+	_check(int(mastery.get("duration_rounds",0))==3,"EFF314:mastery_three_rounds")
+	_check(is_equal_approx(float(mastery.get("hit_chance_direct_pct",0.0)),3.0),"EFF314:hit_bonus_from_catalog")
+	_check(is_equal_approx(float(mastery.get("damage_reduction",0.0)),0.02),"EFF314:resistance_from_catalog")
+	var fury: Dictionary = defs["EFF318"]
+	_check(is_equal_approx(float(fury.get("crit_chance_direct_pct",0.0)),20.0),"EFF318:blind_fury_crit")
+	_check(is_equal_approx(float(fury.get("incoming_damage_direct_pct",0.0)),15.0),"EFF318:blind_fury_vulnerability")
 
-## Test-only EFF changes prove COMBAT does not own level formulas or
-## which source effect is sampled at cast time. All runtime EFF snapshots
-## still store their resolved strength, not a duplicate balance catalog.
 func _eff_sword_scaling_ownership() -> void:
-	var ctx := _pair("sword","axe")
-	var engine: CombatEngine = ctx["engine"]
-	var state: CombatState = ctx["state"]
-	var target := state.get_combatant("right")
-	engine.canonical_effects["EFF301"]["damage"] = 4.0
-	engine.canonical_effects["EFF301"]["max_effect_level"] = 3
-	_effect(ctx,"left","right","EFF301",{"sword_stacks_to_apply":4,"sword_eff_level":20})
-	var bleed := _active_effect(target,"EFF301")
-	_check(is_equal_approx(float(Dictionary(bleed.get("definition",{})).get("damage",-1)),12.0),"EFF301:level_cap_and_damage_from_EFF")
+	var defs := EffectCatalog.load_json()
+	for id in ["EFF319","EFF321"]:
+		var definition: Dictionary = defs[id]
+		var ranked: Array = definition.get("rating_delta_by_rank",[])
+		_check(ranked.size()==10,id+":has_ten_effect_ranks")
+		if ranked.size()==10:
+			var third := EffectCatalog.application_modifiers(definition,{"effect_rank":3})
+			var key := "anti_crit_rating_delta" if id=="EFF319" else "hit_chance_rating_delta"
+			_check(is_equal_approx(float(third.get(key,0)),float(ranked[2])),id+":rank_magnitude_from_EFF")
+	var rank_1 := AbilityCatalog.rank_for_item_level(1)
+	var rank_75 := AbilityCatalog.rank_for_item_level(75)
+	_check(rank_1==0 and rank_75==7,"ABI:ten_level_rank_boundaries")
 
-	_effect(ctx,"left","right","EFF401",{"sword_stacks_to_apply":2})
-	# EFF302 deliberately samples a DIFFERENT active effect in this fixture.
-	# An embedded EFF301 switch in Combat would yield -20 instead of -10.
-	engine.canonical_effects["EFF302"]["snapshot_from"] = "EFF401"
-	engine.canonical_effects["EFF302"]["physical_damage_outgoing_direct_pct"] = -5.0
-	var cripple := _effect(ctx,"left","right","EFF302",{"sword_eff_level":20})
-	var cripple_def: Dictionary = _active_effect(target,"EFF302").get("definition",{})
-	_check(int(cripple.result.get("sword_bleed_snapshot",-1))==2,"EFF302:snapshot_source_from_catalog")
-	_check(is_equal_approx(float(cripple_def.get("physical_damage_outgoing_direct_pct",0.0)),-10.0),"EFF302:snapshot_strength_from_catalog")
-
-	engine.canonical_effects["EFF303"]["anti_dodge_direct_pct"] = -3.0
-	engine.canonical_effects["EFF303"]["application_scaling"]["use_level"] = false
-	var slow := _effect(ctx,"left","right","EFF303",{"sword_eff_level":20})
-	var slow_def: Dictionary = _active_effect(target,"EFF303").get("definition",{})
-	_check(int(slow.result.get("sword_bleed_snapshot",-1))==4,"EFF303:bleeding_snapshot_four")
-	_check(is_equal_approx(float(slow_def.get("anti_dodge_direct_pct",0.0)),-12.0),"EFF303:level_scaling_disabled_in_EFF")
-
-	engine.canonical_effects["EFF304"]["anti_crit_direct_pct"] = -2.0
-	engine.canonical_effects["EFF304"]["max_effect_level"] = 2
-	_effect(ctx,"left","right","EFF304",{"sword_eff_level":20})
-	var lost_def: Dictionary = _active_effect(target,"EFF304").get("definition",{})
-	_check(is_equal_approx(float(lost_def.get("anti_crit_direct_pct",0.0)),-16.0),"EFF304:level_cap_and_stacks_owned_by_EFF")
-
-## Real ABI paths must pass raw counts; EFF decides the % and its cap.
-## Per-unit and max values are changed in fixture only, leaving balance intact.
 func _dynamic_effects_from_catalog() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 
