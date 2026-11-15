@@ -58,6 +58,48 @@ func _initialize() -> void:
 		check(after["character"].inventory.owns("NEW_TOWN_ITEM"),"new_item_survives_reopen")
 		check(after["repository"].size()==2,"exact_item_count_after_restart")
 	check(not bool(SoloTownSaveService.save(PATH,legacy_owner,legacy_items).get("ok",false)),"unversioned_second_import_forbidden")
+	# Regression: ITEM v1.2 uses slot_usage=[] for a 1H weapon.
+	# Equipping interprets it as the selected slot; saving/loading must agree.
+	var one_h_owner := CharacterState.new("one_h_save_owner","1H persistence",20)
+	var one_h_repo := ItemRepository.new()
+	var one_h_item := {
+		"instance_id":"V12_EMPTY_USAGE_1H",
+		"name":"One handed fixture",
+		"type":"weapon","item_type":"weapon",
+		"equip_slots":["main_hand"],"slot_usage":[],
+		"requirements":{},"par_stats":{},"par_bonuses":{}
+	}
+	ItemDurabilityService.initialize_item(one_h_item,100)
+	check(one_h_repo.add_item(one_h_item),"v12_one_h_item_registered")
+	check(one_h_owner.receive_item("V12_EMPTY_USAGE_1H",one_h_repo),"v12_one_h_item_owned")
+	check(one_h_owner.equip("main_hand","V12_EMPTY_USAGE_1H",one_h_repo),"v12_one_h_equipped")
+	var one_h_saved := MapWorldCommitService._character_to_dict(one_h_owner)
+	var one_h_loaded := MapWorldCommitService._restore_character(one_h_saved,one_h_repo)
+	check(bool(one_h_loaded.get("ok",false)),"v12_one_h_empty_slot_usage_restores")
+	if bool(one_h_loaded.get("ok",false)):
+		var one_h_restored: CharacterState = one_h_loaded["character"]
+		check(one_h_restored.equipment.get_equipped_instance_id("main_hand")=="V12_EMPTY_USAGE_1H","v12_one_h_item_preserved_in_slot")
+		check(one_h_restored.inventory.owns("V12_EMPTY_USAGE_1H"),"v12_one_h_item_still_owned")
+	var one_h_path := PATH + ".v12_empty_usage"
+	var one_h_written := SoloTownSaveService.save(one_h_path,one_h_owner,one_h_repo)
+	check(bool(one_h_written.get("ok",false)),"v12_one_h_empty_usage_town_save")
+	var one_h_read := SoloTownSaveService.read(one_h_path,"one_h_save_owner")
+	check(bool(one_h_read.get("ok",false)),"v12_one_h_empty_usage_town_read")
+	# Negative control: never accept a partially occupied genuine 2H weapon.
+	var two_h_repo := ItemRepository.new()
+	var two_h_item := one_h_item.duplicate(true)
+	two_h_item["instance_id"]="V12_REQUIRED_TWO_SLOTS"
+	two_h_item["slot_usage"]=["main_hand","off_hand"]
+	check(two_h_repo.add_item(two_h_item),"two_h_fixture_registered")
+	var two_h_owner := CharacterState.new("two_h_invalid_owner","2H validation",20)
+	check(two_h_owner.receive_item("V12_REQUIRED_TWO_SLOTS",two_h_repo),"two_h_fixture_owned")
+	var two_h_saved := MapWorldCommitService._character_to_dict(two_h_owner)
+	var partial_slots: Dictionary = two_h_saved["equipment"]
+	partial_slots["main_hand"]="V12_REQUIRED_TWO_SLOTS"
+	var rejected := MapWorldCommitService._restore_character(two_h_saved,two_h_repo)
+	check(not bool(rejected.get("ok",false)) and String(rejected.get("reason",""))=="world_equipment_occupancy_mismatch","partial_two_h_still_rejected")
+	if FileAccess.file_exists(one_h_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(one_h_path))
 	if FileAccess.file_exists(PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
 	print("CANONICAL_TOWN_MIGRATION_TEST="+("PASS" if failures.is_empty() else "FAIL")+" failures="+str(failures))
