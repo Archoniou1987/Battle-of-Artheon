@@ -6,11 +6,11 @@ extends RefCounted
 ## contain generated archetype/level/quality templates.
 const SWORD_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "2H_SWORD"]
 const DAGGER_ARCHETYPES := ["DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN"]
-const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_SHIELD"]
+const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "2H_AXE"]
 const HAMMER_ARCHETYPES := ["HAMMER_DEF", "HAMMER_ATTACK"]
 const SPEAR_ARCHETYPES := ["2H_SPEAR"]
-const TWO_HAND_ARCHETYPES := ["2H_SPEAR","2H_SWORD"]
-const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "HAMMER_DEF", "HAMMER_ATTACK", "2H_SPEAR", "2H_SWORD"]
+const TWO_HAND_ARCHETYPES := ["2H_SPEAR","2H_SWORD","AXE_ATTACK","AXE_SHIELD","2H_AXE"]
+const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "2H_AXE", "HAMMER_DEF", "HAMMER_ATTACK", "2H_SPEAR", "2H_SWORD"]
 const ACCEPTED_QUALITIES := ["white", "green", "blue", "purple"]
 
 static func generate_sword(archetype_id: String, level: int, quality: String, seed_value: int) -> Dictionary:
@@ -21,7 +21,7 @@ static func generate_sword(archetype_id: String, level: int, quality: String, se
 static func generate_weapon(archetype_id: String, level: int, quality: String, seed_value: int, hand: String = "MH") -> Dictionary:
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH", "2H"].has(hand):
 		return {}
-	if hand == "2H" and not TWO_HAND_ARCHETYPES.has(archetype_id):
+	if TWO_HAND_ARCHETYPES.has(archetype_id) != (hand == "2H"):
 		return {}
 	if hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id):
 		return {}
@@ -46,7 +46,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var quality := String(row.get("quality", ""))
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
 		return {}
-	if not ["MH", "OH", "2H"].has(hand) or (hand == "2H" and not TWO_HAND_ARCHETYPES.has(archetype_id)) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
+	if not ["MH", "OH", "2H"].has(hand) or (TWO_HAND_ARCHETYPES.has(archetype_id) != (hand == "2H")) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
 		return {}
 	if not row.get("variant", null) is Dictionary:
 		return {}
@@ -208,7 +208,7 @@ static func _archetype_name(archetype_id: String) -> String:
 		"DAGGER_ATTACK", "AXE_ATTACK", "HAMMER_ATTACK": return "атакующий"
 		"DAGGER_PEN": return "пробивающий"
 		"AXE_SHIELD": return "щитолом"
-		"2H_SPEAR", "2H_SWORD": return "двуручный"
+		"2H_SPEAR", "2H_SWORD", "2H_AXE": return "двуручный"
 	return archetype_id
 
 static func _damage_type(family: String) -> String:
