@@ -30,20 +30,6 @@ func lock_action(event: CombatEvent) -> void:
 func resolve(engine: CombatEngine) -> void:
 	if resolved:
 		return
-	# Hammer ABI601 similarly buffs the FIRST ordinary MH attack rather
-	# than producing a second hit.
-	for abi_action in locked_actions:
-		if abi_action.kind != CombatEvent.Kind.ACTION or String(abi_action.payload.get("ability_id","")) != HammerAbiCombatService.HEAVY:
-			continue
-		for mh in locked_actions:
-			if mh.kind != CombatEvent.Kind.ATTACK or mh.source_id != abi_action.source_id:
-				continue
-			if not bool(mh.payload.get("is_weapon_attack",false)) or int(mh.payload.get("weapon_index",-1)) != 0 or int(mh.payload.get("hit_index",0)) != 0:
-				continue
-			mh.payload["hammer_abi_id"] = HammerAbiCombatService.HEAVY
-			mh.payload["hammer_mh_damage_bonus_pct"] = float(abi_action.payload.get("mh_damage_bonus_pct",0.0))
-			mh.payload["hammer_tempo_control_on_hit"] = float(abi_action.payload.get("tempo_control_on_hit",AbilityCatalog.number(HammerAbiCombatService.HEAVY,"tempo_control_on_hit")))
-			break
 	# Counter ABI inherits the FIRST ordinary MH strike zone in the sealed round.
 	# The OH zone is never a fallback. No implicit chest target is permitted.
 	var mh_zone_by_source:Dictionary={}
