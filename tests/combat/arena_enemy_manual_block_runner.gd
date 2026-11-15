@@ -59,5 +59,15 @@ func _initialize() -> void:
 		})
 		arena.engine.resolve_event(miss)
 		_check(String(miss.result.get("outcome",""))!="manual_block","npc_guard_only_selected_zones")
+	# Enemy attack zones must also change between actual Arena rounds.
+	var second_round := arena.play_round(["chest"],blocks)
+	_check(bool(second_round.get("ok",false)),"second_round_executes")
+	if bool(second_round.get("ok",false)):
+		_check(CombatModifierService.manual_block_zones(npc)==second,"npc_guard_changes_in_real_round")
+		var npc_zones: Array[String] = []
+		for combat_event in arena.state.event_log:
+			if combat_event.kind == CombatEvent.Kind.ATTACK and combat_event.source_id == ArenaCombatSession.ENEMY_ID and bool(combat_event.payload.get("is_weapon_attack",false)):
+				npc_zones.append(String(combat_event.payload.get("zone","")))
+		_check(npc_zones.has("chest") and npc_zones.has("arms"),"npc_attack_zones_vary_between_rounds")
 	print("ARENA_ENEMY_MANUAL_BLOCK=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
