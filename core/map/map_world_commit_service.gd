@@ -83,6 +83,11 @@ static func _restore_character(saved: Dictionary, repository: ItemRepository) ->
 		var item := repository.get_item(String(item_id))
 		var allowed: Array = item.get("equip_slots",[])
 		var usage: Array = item.get("slot_usage",[occupied[0]])
+		# EquipmentState.equip_item treats an explicitly empty slot_usage
+		# as the selected single slot (v1.2 one-handed weapons store []).
+		# Mirror that invariant on restore; do not relax 2H occupancy checks.
+		if usage.is_empty():
+			usage = [occupied[0]]
 		if occupied.size() == 1 and usage.size() == 1:
 			var target: String = String(occupied[0])
 			var opposite := "ring1" if target == "ring2" else "ring2"
