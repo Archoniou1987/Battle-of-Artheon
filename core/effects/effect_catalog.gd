@@ -50,6 +50,9 @@ static func application_modifiers(definition: Dictionary, context: Dictionary = 
 		for field in Array(rule.get("fields",[])):
 			resolved[String(field)] = value
 	# EFF owns optional rank-specific numeric magnitudes, never ABI or ITEM.
+	if context.has("effect_rank"):
+		resolved = resolved.duplicate(true)
+		resolved["effect_rank"] = clampi(int(context.get("effect_rank",1)),1,10)
 	var rank_values: Variant = definition.get("values_by_rank",null)
 	if rank_values is Dictionary:
 		var effect_rank := clampi(int(context.get("effect_rank",1)),1,10)
