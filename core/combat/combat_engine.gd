@@ -352,6 +352,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 			if not manual_block_crushed:
 				event.set_result("outcome", "manual_block")
 				_trigger_manual_block_effects(event, defender, rolls)
+				SwordAbiCombatService.on_block(self,event,defender)
 				return
 		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
 		event.set_result("auto_block_chance",auto_block)
@@ -362,12 +363,14 @@ func _resolve_attack(event: CombatEvent) -> void:
 			var auto_block_crushed:=_block_crushed(attacker, rolls)
 			event.set_result("auto_block_crushed",auto_block_crushed)
 			if not auto_block_crushed:
-				event.set_result("outcome", "auto_block"); return
+				event.set_result("outcome", "auto_block")
+				SwordAbiCombatService.on_block(self,event,defender)
+				return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
-	var raw_damage := float(event.payload.get("raw_damage", 0.0)) + float(event.payload.get("sword_mh_bonus_flat",0.0))
+	var raw_damage := float(event.payload.get("raw_damage", 0.0))
 	if String(event.payload.get("axe_abi_id","")) == AxeAbiCombatService.RAGE_ABI:
 		var axe_bonus := float(event.payload.get("axe_mh_damage_bonus_pct",0.0))
 		if not event.payload.has("axe_mh_damage_bonus_pct"):
