@@ -144,7 +144,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	if id == "ABI316":
 		extra["sword_mastery_snapshot"] = mastery
 	var ids: Array[int] = []
-	for target in _targets(engine,action,int(AbilityCatalog.number(id,"max_targets"))):
+	for target in _targets(engine,action,maxi(1,int(action.payload.get("max_targets",AbilityCatalog.number(id,"max_targets"))))):
 		ids.append(_attack(engine,action,target,profile,damage,extra))
 	action.set_result("outcome","dispatched" if not ids.is_empty() else "no_targets")
 	action.set_result("child_event_ids",ids)
