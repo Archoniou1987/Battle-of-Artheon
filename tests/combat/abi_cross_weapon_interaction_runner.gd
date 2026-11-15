@@ -173,7 +173,7 @@ func _abi_target_limits_from_catalog() -> void:
 		{"abi":"ABI307","class":"sword","expected":3},
 		{"abi":"ABI308","class":"sword","expected":5},
 		{"abi":"ABI407","class":"dagger","expected":5},
-		{"abi":"ABI508","class":"axe","expected":3}
+		{"abi":"ABI503","class":"axe","expected":3}
 	]:
 		var id := String(spec["abi"])
 		var authored: Dictionary = defs.get(id,{})
@@ -206,7 +206,7 @@ func _legacy_abi_target_cap_fallback() -> void:
 		{"abi":"ABI307","class":"sword","mode":"dodge_aoe","count":3},
 		{"abi":"ABI308","class":"sword","mode":"dodge_e","count":5},
 		{"abi":"ABI407","class":"dagger","mode":"","count":5},
-		{"abi":"ABI508","class":"axe","mode":"","count":3}
+		{"abi":"ABI503","class":"axe","mode":"","count":3}
 	]:
 		var ctx := _pair(String(spec["class"]),"hammer")
 		var state: CombatState = ctx["state"]
@@ -232,7 +232,6 @@ func _legacy_abi_target_cap_fallback() -> void:
 func _abi_mh_bonus_ownership() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	for case in [
-		{"ability_id":"ABI501","weapon_class":"axe","bonus":37.0,"payload_key":"axe_mh_damage_bonus_pct"},
 		{"ability_id":"ABI601","weapon_class":"hammer","bonus":43.0,"payload_key":"hammer_mh_damage_bonus_pct"}
 	]:
 		var id := String(case["ability_id"])
@@ -286,81 +285,31 @@ func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
 	_check(found,"ABI312:approved_plus40_crit_points")
 
 func _axe_abi_coefficients_from_catalog() -> void:
-	var definitions := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
-	for scenario in [
-		{"abi":"ABI502","overrides":{"attack_damage_pct":135.0},"rage":0,"expected":135.0},
-		{"abi":"ABI503","overrides":{"attack_damage_pct":137.0},"rage":0,"expected":137.0},
-		{"abi":"ABI505","overrides":{"attack_damage_pct":139.0},"rage":0,"expected":139.0},
-		{"abi":"ABI506","overrides":{"execute_hp_threshold_fraction":0.35,"min_rage_stacks":2,"damage_pct_per_rage_stack":91.0},"rage":4,"expected":364.0},
-		{"abi":"ABI508","overrides":{"single_target_damage_pct":170.0,"multi_target_damage_pct":65.0,"damage_pct_per_rage_stack":13.0},"rage":2,"expected":196.0}
-	]:
-		var id := String(scenario["abi"])
-		var ctx := _pair("axe","dagger")
-		var state: CombatState = ctx["state"]
-		var engine: CombatEngine = ctx["engine"]
-		var actor := state.get_combatant("left")
-		var target := state.get_combatant("right")
-		var rage_count := int(scenario["rage"])
-		if rage_count > 0:
-			actor.active_effects.append({
-				"effect_id":"EFF501","definition":EffectCatalog.definition(engine.canonical_effects,"EFF501").duplicate(true),
-				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":rage_count
-			})
-		if id == "ABI506":
-			target.hp = 3000
-			_check(not AxeAbiCombatService.can_cast(state,"left","right",id),"axe:canonical_execute_threshold_remains_20pct")
-		var definition: Dictionary = Dictionary(definitions[id]).duplicate(true)
-		for raw_field in Dictionary(scenario["overrides"]):
-			definition[raw_field] = scenario["overrides"][raw_field]
-		definition["rolls"] = {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
-		var action := AbilityRuntime.build_action_event(state,"left","right",id,definition)
-		AxeAbiCombatService.dispatch(engine,action)
-		var attacks: Array[CombatEvent] = []
-		for pending in state.pending_events:
-			if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("axe_abi_id","")) == id:
-				attacks.append(pending)
-		_check(attacks.size()==1,id+":single_attack_created")
-		if not attacks.is_empty():
-			_check(is_equal_approx(float(attacks[0].payload.get("raw_damage",-1.0)),float(scenario["expected"])),id+":custom_damage_from_abi")
-		if id == "ABI508":
-			var group_ctx := _pair("axe","dagger")
-			var group_state: CombatState = group_ctx["state"]
-			var group_engine: CombatEngine = group_ctx["engine"]
-			var group_actor := group_state.get_combatant("left")
-			group_actor.active_effects.append({
-				"effect_id":"EFF501","definition":EffectCatalog.definition(group_engine.canonical_effects,"EFF501").duplicate(true),
-				"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":rage_count
-			})
-			group_state.add_combatant(_fighter("extra_axe1","dagger"))
-			group_state.add_combatant(_fighter("extra_axe2","dagger"))
-			var group_action := AbilityRuntime.build_action_event(group_state,"left","right",id,definition)
-			AxeAbiCombatService.dispatch(group_engine,group_action)
-			var group_attacks: Array[CombatEvent] = []
-			for pending in group_state.pending_events:
-				if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("axe_abi_id","")) == id:
-					group_attacks.append(pending)
-			_check(group_attacks.size()==3,"ABI508:group_three_targets")
-			for attack in group_attacks:
-				_check(is_equal_approx(float(attack.payload.get("raw_damage",-1.0)),91.0),"ABI508:group_damage_from_abi")
-	# An ABI requirement is not the EFF stack cap, even when tuned to four.
-	var crusher_ctx := _pair("axe","dagger")
-	var crusher_state: CombatState = crusher_ctx["state"]
-	var crusher_engine: CombatEngine = crusher_ctx["engine"]
-	var crusher_actor := crusher_state.get_combatant("left")
-	crusher_actor.active_effects.append({
-		"effect_id":"EFF501","definition":EffectCatalog.definition(crusher_engine.canonical_effects,"EFF501").duplicate(true),
-		"source_id":"left","start_round":1,"remaining_rounds":5,"stacks":4
-	})
-	_check(not AxeAbiCombatService.can_cast(crusher_state,"left","right","ABI507"),"ABI507:canonical_requires_five_rage")
-	var crusher_def: Dictionary = Dictionary(definitions["ABI507"]).duplicate(true)
-	crusher_def["required_rage_stacks"] = 4
-	var crusher_action := AbilityRuntime.build_action_event(crusher_state,"left","left","ABI507",crusher_def)
-	AxeAbiCombatService.dispatch(crusher_engine,crusher_action)
-	_check(String(crusher_action.result.get("outcome",""))=="crusher_applied","ABI507:custom_requirement_from_abi")
-	_check(AxeAbiCombatService.rage_stacks(crusher_actor,crusher_state.round_number)==0,"ABI507:consumes_rage_on_activation")
-
-## Production hammer dispatch must honor changed test-only ABI coefficients.
-## EFF601 stacks, EFF603 duration and EFF604 magnitude stay in their catalogs.
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var effects := EffectCatalog.load_json()
+	for n in range(501,517):
+		var id := "ABI%d" % n
+		_check(defs.has(id),id+":in_canonical_catalog")
+		_check(Array(Dictionary(defs[id]).get("base_damage_by_rank",[])).size()==10,id+":ten_damage_ranks")
+		_check(not Dictionary(defs[id]).has("mh_damage_bonus_pct"),id+":no_retired_mh_multiplier")
+	var wounds: Dictionary = effects["EFF501"]
+	_check(int(wounds.get("max_stacks",0))==3,"axe:wounds_max3")
+	_check(int(wounds.get("duration_rounds",0))==5,"axe:wounds_five_rounds")
+	_check(Array(Dictionary(wounds.get("values_by_rank",{})).get("damage",[])).size()==10,"axe:dot_ten_ranks")
+	_check(Array(Dictionary(defs["ABI504"]).get("heal_from_damage_pct_by_wounds",[]))==[0,25,75,125],"ABI504:heal_pct_by_wounds")
+	_check(Array(Dictionary(defs["ABI508"]).get("bonus_damage_pct_by_wounds",[]))==[0,75,100,125],"ABI508:execute_bonus")
+	_check(is_equal_approx(float(Dictionary(defs["ABI508"]).get("execute_hp_threshold_fraction",0)),0.35),"ABI508:execute_threshold")
+	_check(int(Dictionary(defs["ABI512"]).get("max_targets",0))==1,"ABI512:one_target")
+	_check(bool(Dictionary(defs["ABI512"]).get("ignore_shield_auto_block",false)),"ABI512:shield_auto_bypass")
+	_check(int(Dictionary(defs["ABI516"]).get("max_targets",0))==5,"ABI516:five_targets")
+	var ctx := _pair("axe","dagger")
+	var state: CombatState = ctx["state"]
+	var target := state.get_combatant("right")
+	_effect(ctx,"left","right","EFF501",{"sword_stacks_to_apply":2,"effect_rank":4})
+	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==2,"axe:wounds_owned_by_source")
+	_check(AxeAbiCombatService._wounds(target,"other",state.round_number)==0,"axe:wounds_other_source_not_counted")
+	AxeAbiCombatService._consume_wounds(target,"left",1)
+	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==1,"axe:wounds_partially_consumed")
 func _hammer_abi_coefficients_from_catalog() -> void:
 	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	var heavy_ctx := _pair("hammer","axe")
@@ -763,19 +712,6 @@ func _eff_sword_scaling_ownership() -> void:
 func _dynamic_effects_from_catalog() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 
-	var axe_ctx := _pair("axe","hammer")
-	var axe_state: CombatState = axe_ctx["state"]
-	var axe_engine: CombatEngine = axe_ctx["engine"]
-	axe_engine.canonical_effects["EFF503"]["contextual_modifier"]["per_unit"] = 8
-	axe_engine.canonical_effects["EFF503"]["contextual_modifier"]["maximum"] = 22
-	_effect(axe_ctx,"left","left","EFF501",{"sword_stacks_to_apply":3},true)
-	var stance_action := AbilityRuntime.build_action_event(axe_state,"left","left","ABI504",abilities["ABI504"])
-	AxeAbiCombatService.dispatch(axe_engine,stance_action)
-	axe_engine.resolve_pending_events()
-	var stance := _active_effect(axe_state.get_combatant("left"),"EFF503")
-	_check(is_equal_approx(float(Dictionary(stance.get("definition",{})).get("dodge_direct_pct",-1)),22.0),"axe:contextual_dodge_per_rage_and_cap")
-	_check(int(Dictionary(stance.get("definition",{})).get("counterattack_cap",-1))==5,"axe:counter_cap_unmodified")
-
 	var hammer_ctx := _pair("hammer","axe")
 	var hammer_state: CombatState = hammer_ctx["state"]
 	var hammer_engine: CombatEngine = hammer_ctx["engine"]
@@ -853,54 +789,19 @@ func _dagger_breach_versus_hammer_armour() -> void:
 func _axe_rage_value_comes_from_eff() -> void:
 	var ctx := _pair("axe","dagger")
 	var state: CombatState = ctx["state"]
-	var axe := state.get_combatant("left")
-	var rage_definition: Dictionary = EffectCatalog.definition(EffectCatalog.load_json(),"EFF501").duplicate(true)
-	rage_definition["block_crush_per_stack"] = 3.5
-	axe.active_effects.append({
-		"effect_id":"EFF501", "definition":rage_definition, "source_id":"left",
-		"start_round":1, "remaining_rounds":5, "stacks":3
-	})
-	_check(is_equal_approx(CombatModifierService.block_crush_chance(axe,1),10.5),"axe:rage_reads_test_only_eff501_rate")
-
+	var target := state.get_combatant("right")
+	_effect(ctx,"left","right","EFF501",{"sword_stacks_to_apply":3,"effect_rank":4})
+	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==3,"axe:wounds_applied")
+	var resolved := _active_effect(target,"EFF501")
+	_check(int(Dictionary(resolved.get("definition",{})).get("effect_rank",0))==4,"axe:wound_effect_rank_from_EFF")
 func _axe_counter_versus_dagger_dodge() -> void:
-	var ctx := _pair("dagger","axe")
-	var state: CombatState = ctx["state"]
-	var axe := state.get_combatant("right")
-	axe.combat_stats["dodge_rating_percent"] = 100.0
-	_effect(ctx,"right","right","EFF503",{"axe_stance_dodge_pct":0.0},true)
-	var dodges := 0
-	for i in range(6):
-		var incoming := _attack(ctx,"left","right",i%2,{},1,1)
-		if String(incoming.result.get("outcome","")) == "dodge":
-			dodges += 1
-	var counters := 0
-	for event in state.event_log:
-		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == "right" and bool(event.payload.get("is_counterattack_abi",false)):
-			counters += 1
-			_check(String(event.result.get("outcome","")) == "connected","axe:counterattack_connected")
-	_check(dodges == 6,"axe:all_six_incoming_attacks_dodged")
-	_check(counters == 5,"axe:retaliation_capped_at_five")
-	# Changing only the EFF snapshot cap must change the number of counters.
-	var limited := _pair("dagger","axe")
-	var limited_state: CombatState = limited["state"]
-	var limited_axe := limited_state.get_combatant("right")
-	limited_axe.combat_stats["dodge_rating_percent"] = 100.0
-	_effect(limited,"right","right","EFF503",{"axe_stance_dodge_pct":0.0},true)
-	for record in limited_axe.active_effects:
-		if String(record.get("effect_id","")) == "EFF503":
-			var changed: Dictionary = Dictionary(record.get("definition",{})).duplicate(true)
-			changed["counterattack_cap"] = 2
-			record["definition"] = changed
-	for i in range(4):
-		_attack(limited,"left","right",i%2,{},1,1)
-	var limited_counters := 0
-	for event in limited_state.event_log:
-		if event.kind == CombatEvent.Kind.ATTACK and event.source_id == "right" and bool(event.payload.get("is_counterattack_abi",false)):
-			limited_counters += 1
-	_check(limited_counters == 2,"axe:counter_limit_from_eff503_snapshot")
-
-	print("ABI_CROSS_WEAPON_CASE=CHECKED axe_retaliation_vs_dagger_dodge")
-
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var effects := EffectCatalog.load_json()
+	_check(not defs.has("ABI517"),"axe:reject_unapproved_517")
+	_check(not effects.has("EFF505"),"axe:retired_crusher_effect_removed")
+	_check(int(Dictionary(defs["ABI510"]).get("block_crush_bonus_pct",0))==40,"axe:shieldbreaker_plus40_block_crush")
+	_check(int(Dictionary(defs["ABI511"]).get("shield_damage_bonus_pct",0))==35,"axe:shieldbreaker_plus35_vs_shield")
+	_check(int(Dictionary(defs["ABI512"]).get("shield_damage_bonus_pct",0))==50,"axe:shieldbreaker_e_plus50_vs_shield")
 func _hammer_tempo_versus_axe_immunity() -> void:
 	var ctx := _pair("hammer","axe")
 	var state: CombatState = ctx["state"]
