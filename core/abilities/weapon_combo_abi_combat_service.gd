@@ -53,6 +53,11 @@ static func _remove(source: CombatantState, eff_id: String) -> void:
 
 static func _effect(engine: CombatEngine, source_id: String, target_id: String, parent_id: int, eff_id: String, pre: bool = false, context: Dictionary = {}) -> void:
 	var payload := {"effect_id":eff_id,"source_type":"ability","base_chance":100.0,"effect_roll":1,"preparation_effect":pre}
+	var source := engine.state.get_combatant(source_id)
+	if source != null:
+		var family_id := "ABI701" if String(eff_id) in [SLOW,FRACTURE] else "ABI401"
+		var profile := _profile(source,family_id)
+		payload["effect_rank"] = AbilityCatalog.rank_for_item_level(int(profile.get("item_level",source.level)))+1
 	for field in context:
 		payload[field] = context[field]
 	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source_id,target_id,payload,parent_id))
