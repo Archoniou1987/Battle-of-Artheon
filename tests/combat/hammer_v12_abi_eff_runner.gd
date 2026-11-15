@@ -59,6 +59,9 @@ func _make_session(archetype: String, seed: int) -> ArenaCombatSession:
 	target.combat_stats["dodge_rating_percent"]=0.0
 	target.combat_stats["shield_auto_block_rating_percent"]=0.0
 	target.combat_loadout["can_auto_block"]=false
+	# Isolate ABI/EFF hit tests from the newly enabled Arena NPC manual AI.
+	# Dedicated Arena test covers live NPC blocks independently.
+	target.combat_loadout["can_manual_block"]=false
 	session.ability_scheduler.loadouts[ArenaCombatSession.ENEMY_ID]=[]
 	var options := session.player_ability_options()
 	for i in range(4):
