@@ -607,7 +607,8 @@
     "execute_multiplier": 1.25
   },
   "ABI601": {
-    "name": "Тяжёлый удар",
+    "name": "Дробящий удар",
+    "description": "Одиночный удар, +1 AP при успешном попадании.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -619,17 +620,31 @@
         "damage_type": "blunt"
       }
     ],
-    "cooldown_rounds": 2,
+    "cooldown_rounds": 1,
     "mana_cost": 0,
     "ap_cost": 0,
     "ap_gain": 1,
+    "ap_gain_on_hit": true,
     "application_timing": "standard",
-    "hammer_ability_mode": "mh_tempo",
-    "mh_damage_bonus_pct": 20,
-    "tempo_control_on_hit": 25
+    "hammer_ability_mode": "def_q",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      12,
+      22,
+      34,
+      49,
+      66,
+      86,
+      109,
+      137,
+      167,
+      200
+    ],
+    "attack_power_coefficient": 0.75
   },
   "ABI602": {
-    "name": "Отражение",
+    "name": "Глухая защита",
+    "description": "На 2 раунда −15% входящего физического урона, +10 п.п. автоблока при наличии щита.",
     "delivery_type": "DIRECT",
     "target_scope": "SINGLE",
     "target_team": "ALLY",
@@ -643,34 +658,32 @@
     ],
     "cooldown_rounds": 4,
     "mana_cost": 0,
-    "ap_cost": 0,
-    "ap_gain": 1,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
     "application_timing": "instant",
-    "hammer_ability_mode": "reflect"
+    "hammer_ability_mode": "def_guard",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "attack_power_coefficient": 0,
+    "effect_refs": {
+      "primary": "EFF602"
+    }
   },
   "ABI603": {
-    "name": "Восстановление",
-    "delivery_type": "DIRECT",
-    "target_scope": "SINGLE",
-    "target_team": "ALLY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "heal",
-        "amount": 0
-      }
-    ],
-    "cooldown_rounds": 7,
-    "mana_cost": 0,
-    "ap_cost": 3,
-    "ap_gain": 0,
-    "application_timing": "standard",
-    "hammer_ability_mode": "heal",
-    "charge_spend_fraction": 0.5,
-    "heal_hp_pct_per_spent_charge": 0.5
-  },
-  "ABI604": {
-    "name": "Разрушающий удар",
+    "name": "Ответный удар",
+    "description": "После успешного блока в прошлом раунде: усиленный удар и −10% входящего физического урона на 2 раунда.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -682,40 +695,35 @@
         "damage_type": "blunt"
       }
     ],
-    "cooldown_rounds": 7,
+    "cooldown_rounds": 3,
     "mana_cost": 0,
-    "ap_cost": 5,
+    "ap_cost": 3,
     "ap_gain": 0,
+    "ap_gain_on_hit": false,
     "application_timing": "standard",
-    "hammer_ability_mode": "armour_fracture",
+    "hammer_ability_mode": "def_counter",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      19,
+      34,
+      53,
+      76,
+      102,
+      133,
+      169,
+      212,
+      259,
+      310
+    ],
+    "attack_power_coefficient": 0.75,
     "effect_refs": {
       "on_hit": "EFF603"
     },
-    "damage_multiplier": 2
+    "trigger_previous_round": "block"
   },
-  "ABI605": {
-    "name": "Боевой прилив",
-    "delivery_type": "DIRECT",
-    "target_scope": "SINGLE",
-    "target_team": "ALLY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "effect",
-        "effect_id": "EFF604",
-        "base_chance": 100
-      }
-    ],
-    "cooldown_rounds": 5,
-    "mana_cost": 0,
-    "ap_cost": 3,
-    "ap_gain": 0,
-    "application_timing": "instant",
-    "hammer_ability_mode": "damage_surge",
-    "charge_spend_fraction": 0.25
-  },
-  "ABI606": {
-    "name": "Сокрушение",
+  "ABI604": {
+    "name": "Сокрушающая контратака",
+    "description": "Мощный удар: −25% исходящего физического урона цели и +15% своего физического урона на 2 раунда.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -731,12 +739,105 @@
     "mana_cost": 0,
     "ap_cost": 5,
     "ap_gain": 0,
+    "ap_gain_on_hit": false,
     "application_timing": "standard",
-    "hammer_ability_mode": "tempo_crush",
-    "damage_multiplier_per_charge": 0.03,
-    "max_damage_multiplier": 3,
-    "tempo_control_per_charge": 2,
-    "max_tempo_control": 200
+    "hammer_ability_mode": "def_finisher",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      26,
+      47,
+      73,
+      105,
+      142,
+      185,
+      234,
+      295,
+      359,
+      430
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF604",
+      "self_on_hit": "EFF605"
+    }
+  },
+  "ABI605": {
+    "name": "Тяжёлый удар",
+    "description": "Двуручный удар; +1 AP и 1 Сотрясение цели при попадании.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "hammer_ability_mode": "attack_q",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      15,
+      28,
+      43,
+      61,
+      83,
+      108,
+      136,
+      171,
+      209,
+      250
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF601"
+    }
+  },
+  "ABI606": {
+    "name": "Разрушение брони",
+    "description": "Сильный удар, накладывает −15 п.п. к сырому проценту брони на 2 раунда.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "hammer_ability_mode": "attack_break",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      17,
+      32,
+      49,
+      71,
+      96,
+      125,
+      158,
+      199,
+      242,
+      290
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF606"
+    }
   },
   "ABI401": {
     "name": "Быстрый укол",
@@ -1933,6 +2034,94 @@
       15,
       30,
       45
+    ]
+  },
+  "ABI607": {
+    "name": "Ударная волна",
+    "description": "До 3 целей; при попадании −50 Tempo и +1 Сотрясение каждой цели.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "hammer_ability_mode": "attack_wave",
+    "max_targets": 3,
+    "base_damage_by_rank": [
+      11,
+      21,
+      32,
+      47,
+      63,
+      82,
+      104,
+      130,
+      159,
+      190
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF601"
+    },
+    "tempo_control_on_hit": 50
+  },
+  "ABI608": {
+    "name": "Землетрясение",
+    "description": "До 3 целей; поглощает Сотрясение отдельно на каждой поражённой цели. +25/50/75% числового урона и −25/50/75 Tempo.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "blunt"
+      }
+    ],
+    "cooldown_rounds": 6,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "hammer_ability_mode": "attack_finisher",
+    "max_targets": 3,
+    "base_damage_by_rank": [
+      27,
+      50,
+      77,
+      110,
+      149,
+      194,
+      245,
+      308,
+      376,
+      450
+    ],
+    "attack_power_coefficient": 0.75,
+    "bonus_damage_pct_by_concussion": [
+      0,
+      25,
+      50,
+      75
+    ],
+    "tempo_control_by_concussion": [
+      0,
+      25,
+      50,
+      75
     ]
   }
 }
