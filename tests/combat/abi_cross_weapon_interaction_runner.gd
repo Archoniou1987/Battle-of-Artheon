@@ -28,11 +28,11 @@ func _initialize() -> void:
 	_item_weapon_on_hit_target_ownership()
 	_dagger_breach_versus_hammer_armour()
 	_hammer_charge_magic_resist_versus_penetration()
-	_axe_rage_value_comes_from_eff()
+	_axe_wounds_from_eff()
 	_axe_abi_coefficients_from_catalog()
 	_hammer_abi_coefficients_from_catalog()
 	_hammer_eff601_charge_generation()
-	_axe_counter_versus_dagger_dodge()
+	_axe_shield_breaker_catalog()
 	_hammer_tempo_versus_axe_immunity()
 	print("ABI_CROSS_WEAPON_INTERACTION_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=",failures)
 	quit(0 if failures.is_empty() else 1)
@@ -227,7 +227,7 @@ func _legacy_abi_target_cap_fallback() -> void:
 		_check(Array(action.result.get("child_event_ids",[])).size()==int(spec["count"]),id+":legacy_target_cap_from_catalog")
 
 
-## Changed test-only ABI501/ABI601 bonuses must reach the first ordinary
+## Changed test-only ABI601 bonuses must reach the first ordinary
 ## MH attack and real CombatEngine damage without any repeated +20 constant.
 func _abi_mh_bonus_ownership() -> void:
 	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
@@ -786,7 +786,7 @@ func _dagger_breach_versus_hammer_armour() -> void:
 	_check(HammerAbiCombatService.charges(hammer,state.round_number) >= 40,"hammer:charges_survive_armour_breach")
 	print("ABI_CROSS_WEAPON_CASE=CHECKED dagger_breach_vs_hammer_armour")
 
-func _axe_rage_value_comes_from_eff() -> void:
+func _axe_wounds_from_eff() -> void:
 	var ctx := _pair("axe","dagger")
 	var state: CombatState = ctx["state"]
 	var target := state.get_combatant("right")
@@ -794,7 +794,7 @@ func _axe_rage_value_comes_from_eff() -> void:
 	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==3,"axe:wounds_applied")
 	var resolved := _active_effect(target,"EFF501")
 	_check(int(Dictionary(resolved.get("definition",{})).get("effect_rank",0))==4,"axe:wound_effect_rank_from_EFF")
-func _axe_counter_versus_dagger_dodge() -> void:
+func _axe_shield_breaker_catalog() -> void:
 	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	var effects := EffectCatalog.load_json()
 	_check(not defs.has("ABI517"),"axe:reject_unapproved_517")
