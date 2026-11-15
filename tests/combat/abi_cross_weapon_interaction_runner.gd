@@ -296,8 +296,20 @@ func _axe_abi_coefficients_from_catalog() -> void:
 	_check(int(wounds.get("max_stacks",0))==3,"axe:wounds_max3")
 	_check(int(wounds.get("duration_rounds",0))==5,"axe:wounds_five_rounds")
 	_check(Array(Dictionary(wounds.get("values_by_rank",{})).get("damage",[])).size()==10,"axe:dot_ten_ranks")
-	_check(Array(Dictionary(defs["ABI504"]).get("heal_from_damage_pct_by_wounds",[]))==[0,25,75,125],"ABI504:heal_pct_by_wounds")
-	_check(Array(Dictionary(defs["ABI508"]).get("bonus_damage_pct_by_wounds",[]))==[0,75,100,125],"ABI508:execute_bonus")
+	var expected_heal := [0.0,25.0,75.0,125.0]
+	var heal: Array = Dictionary(defs["ABI504"]).get("heal_from_damage_pct_by_wounds",[])
+	var heal_matches := heal.size()==expected_heal.size()
+	if heal_matches:
+		for i in range(heal.size()):
+			heal_matches = heal_matches and is_equal_approx(float(heal[i]),expected_heal[i])
+	_check(heal_matches,"ABI504:heal_pct_by_wounds")
+	var expected_execute := [0.0,75.0,100.0,125.0]
+	var execute: Array = Dictionary(defs["ABI508"]).get("bonus_damage_pct_by_wounds",[])
+	var execute_matches := execute.size()==expected_execute.size()
+	if execute_matches:
+		for i in range(execute.size()):
+			execute_matches = execute_matches and is_equal_approx(float(execute[i]),expected_execute[i])
+	_check(execute_matches,"ABI508:execute_bonus")
 	_check(is_equal_approx(float(Dictionary(defs["ABI508"]).get("execute_hp_threshold_fraction",0)),0.35),"ABI508:execute_threshold")
 	_check(int(Dictionary(defs["ABI512"]).get("max_targets",0))==1,"ABI512:one_target")
 	_check(bool(Dictionary(defs["ABI512"]).get("ignore_shield_auto_block",false)),"ABI512:shield_auto_bypass")
