@@ -96,7 +96,7 @@ func _verify() -> void:
 			_check(AbilityRuntime.validate_definition(id,defs[id]).is_empty(),id+"_definition")
 			_check(Array(Dictionary(defs[id]).get("base_damage_by_rank",[])).size()==10,id+"_ten_ranks")
 	_check(eff.has("EFF501"),"wound_eff_exists")
-	_check(is_equal_approx(float(Dictionary(defs.get("ABI504",{})).get("heal_max_hp_cap_pct",-1)),10.0),"ABI504_heal_cap_ten_percent")
+	_check(not Dictionary(defs.get("ABI504",{})).has("heal_max_hp_cap_pct"),"ABI504_no_arbitrary_heal_cap")
 	_check(int(Dictionary(eff.get("EFF501",{})).get("max_stacks",0))==3,"wound_three_stacks")
 	_check(int(Dictionary(eff.get("EFF501",{})).get("duration_rounds",0))==5,"wound_five_rounds")
 	_check(Array(Dictionary(Dictionary(eff.get("EFF501",{})).get("values_by_rank",{})).get("damage",[])).size()==10,"wound_ten_ranks")
