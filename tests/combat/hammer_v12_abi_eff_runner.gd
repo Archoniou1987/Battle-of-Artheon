@@ -122,7 +122,11 @@ func _run() -> void:
 	if attack != null:
 		if _cast(attack,"ABI605"):
 			_check(_attacks(attack,"ABI605").size()==1,"attack_q_one_hit")
-			_check(HammerAbiCombatService._concussion(attack.fighter(false),attack.player_id,attack.state.round_number)>=1,"attack_q_concussion")
+			# On-hit effects start next round; the snapshot is queued, not active yet.
+			var concussion := _effect(attack.fighter(false),"EFF601")
+			_check(not concussion.is_empty() and int(concussion.get("stacks",0))>=1,"attack_q_concussion")
+			if not concussion.is_empty():
+				_check(int(concussion.get("start_round",-1))==attack.state.round_number+1,"attack_q_concussion_next_round")
 		if _cast(attack,"ABI606"):
 			_check(not _effect(attack.fighter(false),"EFF606").is_empty(),"armour_debuff_on_hit")
 	var execute := _make_session("HAMMER_ATTACK",202611182)
@@ -137,6 +141,12 @@ func _run() -> void:
 			_check(HammerAbiCombatService._concussion(execute.fighter(false),execute.player_id,execute.state.round_number)==0,"earthquake_consumes_concussion")
 	var legacy := _make_session("2H_HAMMER",202611183)
 	if legacy != null:
-		_check(legacy.player_ability_options().size()==4,"old_2h_template_uses_offensive_kit")
+		# Arena may show other ability cards: inspect the weapon's first four slots.
+		var choices := legacy.player_ability_options()
+		var matches := choices.size()>=4
+		for i in range(4):
+			if i>=choices.size() or String(choices[i].get("id",""))!=String(KITS["2H_HAMMER"][i]):
+				matches=false
+		_check(matches,"old_2h_template_uses_offensive_kit")
 	print("HAMMER_V12_ABI_EFF=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
