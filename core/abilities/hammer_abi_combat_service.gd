@@ -45,6 +45,35 @@ static func _effect(engine: CombatEngine, source_id: String, target_id: String, 
 		payload[key] = extras[key]
 	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source_id,target_id,payload,parent_id))
 
+## Apply ABI601 defence before sealed attacks resolve; AP generation on hit
+## remains separate and continues through normal CombatEngine attack results.
+static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
+	if String(action.payload.get("ability_id","")) != "ABI601":
+		return
+	var source := engine.state.get_combatant(action.source_id)
+	if source == null or source.is_death_finalized() or _weapon(source,"ABI601").is_empty():
+		return
+	var effect_id := AbilityCatalog.effect_id("ABI601","on_cast")
+	_effect(engine,action.source_id,action.source_id,action.event_id,effect_id,true)
+
+## The shared engine invokes this only for an actual, uncrushed manual or
+## shield auto-block. Merely selecting a protected zone never awards AP.
+static func on_block(engine: CombatEngine, blocked: CombatEvent, defender: CombatantState) -> void:
+	for record in CombatModifierService.active_effects(defender,engine.state.round_number):
+		if String(record.get("effect_id","")) != "EFF607":
+			continue
+		var definition: Dictionary = record.get("definition",{})
+		var max_awards := maxi(0,int(definition.get("max_ap_from_blocks_per_round",0)))
+		var reward := maxi(0,int(definition.get("ap_per_successful_block",0)))
+		var spent := int(record.get("block_ap_awarded",0))
+		if spent >= max_awards or reward <= 0:
+			continue
+		var amount := mini(reward,max_awards-spent)
+		record["block_ap_awarded"] = spent+amount
+		var gained := defender.gain_action_points(amount)
+		blocked.set_result("hammer_block_ap_gained",gained)
+		return
+
 static func _concussion(target: CombatantState, source_id: String, round_number: int) -> int:
 	var n := 0
 	for record in CombatModifierService.active_effects(target,round_number):
