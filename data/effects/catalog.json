@@ -496,5 +496,137 @@
       "SPEAR_ARMOUR_FRACTURE"
     ],
     "armour_reduction_raw_pct": 15
+  },
+  "EFF314": {
+    "id": "EFF314",
+    "name": "Мастерство клинка",
+    "kind": "buff",
+    "hit_chance_direct_pct": 3,
+    "damage_reduction": 0.02,
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3,
+    "polarity": "BUFF",
+    "tags": [
+      "SWORD_MASTERY"
+    ],
+    "unique_group": "sword_mastery"
+  },
+  "EFF315": {
+    "id": "EFF315",
+    "name": "Железная воля",
+    "kind": "buff",
+    "shield_auto_block_direct_pct": 10,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "unique_group": "shield_auto_block"
+  },
+  "EFF316": {
+    "id": "EFF316",
+    "name": "Парирование щитом",
+    "kind": "buff",
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "PARRY"
+    ],
+    "unique_group": "sword_parry"
+  },
+  "EFF317": {
+    "id": "EFF317",
+    "name": "Танец клинков",
+    "kind": "buff",
+    "dodge_direct_pct": 10,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "unique_group": "dodge"
+  },
+  "EFF318": {
+    "id": "EFF318",
+    "name": "Слепая ярость",
+    "kind": "buff",
+    "crit_chance_direct_pct": 20,
+    "incoming_damage_direct_pct": 15,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "unique_group": "sword_blind_fury"
+  },
+  "EFF319": {
+    "id": "EFF319",
+    "name": "Уязвимое место",
+    "kind": "debuff",
+    "anti_crit_rating_delta": -50,
+    "rating_delta_by_rank": [
+      -50,
+      -55,
+      -60,
+      -65,
+      -70,
+      -78,
+      -86,
+      -96,
+      -110,
+      -125
+    ],
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "anti_crit_rating"
+  },
+  "EFF320": {
+    "id": "EFF320",
+    "name": "Ослабление урона",
+    "kind": "debuff",
+    "physical_damage_outgoing_direct_pct": -15,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "physical_damage_outgoing"
+  },
+  "EFF321": {
+    "id": "EFF321",
+    "name": "Рассекающая волна",
+    "kind": "debuff",
+    "hit_chance_rating_delta": -50,
+    "rating_delta_by_rank": [
+      -50,
+      -55,
+      -60,
+      -65,
+      -70,
+      -78,
+      -86,
+      -96,
+      -110,
+      -125
+    ],
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "hit_chance_rating"
+  },
+  "EFF322": {
+    "id": "EFF322",
+    "name": "Прерывающий удар",
+    "kind": "debuff",
+    "tempo_modifier": -50,
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "sword_tempo_control"
+  },
+  "EFF323": {
+    "id": "EFF323",
+    "name": "Сокрушительный размах: контроль",
+    "kind": "debuff",
+    "tempo_modifier": -50,
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "sword_tempo_control"
   }
 }
