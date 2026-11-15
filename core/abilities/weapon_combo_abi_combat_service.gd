@@ -92,16 +92,15 @@ static func _number(id: String, key: String, action: CombatEvent) -> float:
 ## Do not read the already AP-enhanced weapon range: that would double-count.
 static func _damage(source: CombatantState, profile: Dictionary, id: String, action: CombatEvent) -> float:
 	var item_level := maxi(1,int(profile.get("item_level",source.level)))
-	var base := _number(id,"base_damage",action)
-	var step := _number(id,"damage_per_10_levels",action)
+	var base := AbilityCatalog.ranked_damage(id,item_level)
 	var coefficient := _number(id,"attack_power_coefficient",action)
 	var rating := float(Dictionary(source.combat_stats.get("par_totals",{})).get("PAR232",0.0))
 	var equipped: Array = source.combat_stats.get("weapon_profiles",[])
 	if equipped.is_empty():
-		return maxf(0.0,base + float(floori(float(item_level) / 10.0)) * step)
+		return maxf(0.0,base)
 	var weapon: Dictionary = equipped[0]
 	var bonus := AttackPowerService.damage_bonus(rating,"main_hand",bool(weapon.get("two_handed",false)))
-	return maxf(0.0,base + float(floori(float(item_level) / 10.0)) * step + coefficient * bonus)
+	return maxf(0.0,base + coefficient * bonus)
 
 static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, amount: float, extra: Dictionary = {}) -> int:
 	var component := {"damage_type":String(profile.get("damage_type","piercing")),"zone":String(action.payload.get("zone","chest"))}
