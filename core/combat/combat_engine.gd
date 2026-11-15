@@ -686,7 +686,7 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 	if stacking == "shared_duration":
 		if matching.is_empty():
 			var shared_record := _make_effect_record(effect_id, definition, event)
-			shared_record["stacks"] = mini(max_stacks,maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
+			shared_record["stacks"] = mini(max_stacks,maxi(1,int(event.payload.get("stacks_to_apply",event.payload.get("sword_stacks_to_apply",1)))))
 			shared_record["active_stacks"] = 0
 			# Shared DoT/HoT must not gain a periodic tick from an instant
 			# ABI's early application. Preserve the normal future tick count.
@@ -701,7 +701,7 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 			if int(definition.get("effect_rank",1)) > int(old_definition.get("effect_rank",1)):
 				shared["definition"] = definition.duplicate(true)
 			var previous_stacks: int = maxi(1,int(shared.get("stacks",1)))
-			var next_stacks: int = mini(max_stacks,previous_stacks+maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
+			var next_stacks: int = mini(max_stacks,previous_stacks+maxi(1,int(event.payload.get("stacks_to_apply",event.payload.get("sword_stacks_to_apply",1)))))
 			# An instant cast can add an undisclosed stack to a pre-existing,
 			# visible shared EFF. Keep the single logical record/timer, but
 			# do not reveal the stack count or refreshed timer mid-round.
