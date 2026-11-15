@@ -101,6 +101,49 @@ func _initialize() -> void:
 	check(String(rejected.get("detail","")).contains("V12_REQUIRED_TWO_SLOTS") and String(rejected.get("detail","")).contains("occupied=") and String(rejected.get("detail","")).contains("usage="),"bad_legacy_equipment_has_read_only_diagnostics")
 	if FileAccess.file_exists(one_h_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(one_h_path))
+	# Historical browser saves can still contain preview instance references to
+	# the two retired ABI003/004 templates. Restore their physical equipment
+	# without making obsolete ABI executable or re-creating live templates.
+	var historical_templates := ItemTemplateService.load_templates()
+	check(not historical_templates.has("training_healer_chest_abi004") and not historical_templates.has("training_fire_staff_abi003"),"retired_ABI_templates_not_live")
+	var historical_owner := CharacterState.new("historical_preview","Old preview owner",20)
+	var historical_repo := ItemRepository.new()
+	for historical in [
+		{"template_id":"training_healer_chest_abi004","instance_id":"preview_training_healer_chest_abi004_677486500","slot":"chest"},
+		{"template_id":"training_fire_staff_abi003","instance_id":"preview_training_fire_staff_abi003_677486501","slot":"main_hand"}
+	]:
+		var historical_item := {
+			"instance_id":historical["instance_id"],
+			"template_id":historical["template_id"],"rarity":"white"
+		}
+		ItemDurabilityService.initialize_item(historical_item,100)
+		check(historical_repo.add_item(historical_item),String(historical["slot"])+"_historic_item_registered")
+		check(historical_owner.receive_item(String(historical["instance_id"]),historical_repo),String(historical["slot"])+"_historic_item_owned")
+		var resolved: Dictionary = historical_repo.get_item(String(historical["instance_id"]))
+		check(bool(resolved.get("legacy_retired_preview",false)),String(historical["slot"])+"_historic_resolves")
+		check(Array(resolved.get("abilities",[])).is_empty(),String(historical["slot"])+"_retired_ABI_not_restored")
+		check(historical_owner.equip(String(historical["slot"]),String(historical["instance_id"]),historical_repo),String(historical["slot"])+"_historic_equipped")
+	var raw_historical := historical_repo.to_dict()
+	var historical_restored_repo := ItemRepository.from_dict(raw_historical)
+	var historical_snapshot := MapWorldCommitService._character_to_dict(historical_owner)
+	var restored_historical := MapWorldCommitService._restore_character(historical_snapshot,historical_restored_repo)
+	check(bool(restored_historical.get("ok",false)),"historical_preview_equipment_restore")
+	if bool(restored_historical.get("ok",false)):
+		var revived: CharacterState = restored_historical["character"]
+		check(revived.equipment.get_equipped_instance_id("chest")=="preview_training_healer_chest_abi004_677486500","historical_chest_kept")
+		check(revived.equipment.get_equipped_instance_id("main_hand")=="preview_training_fire_staff_abi003_677486501","historical_staff_kept")
+	var historical_path := PATH + ".retired_preview"
+	var historical_saved := SoloTownSaveService.save(historical_path,historical_owner,historical_repo)
+	check(bool(historical_saved.get("ok",false)),"historical_preview_city_saved")
+	var historical_reopened := SoloTownSaveService.read(historical_path,"historical_preview")
+	check(bool(historical_reopened.get("ok",false)),"historical_preview_city_reopened")
+	check(JSON.stringify(historical_repo.to_dict())==JSON.stringify(raw_historical),"historical_item_repository_unchanged")
+	# The compatibility applies to this exact archived fixture identity,
+	# never unknown or newly crafted template references.
+	check(ItemTemplateService.resolve({"template_id":"missing_mystery","instance_id":"preview_missing_mystery_1"}).is_empty(),"unknown_template_stays_invalid")
+	check(ItemTemplateService.resolve({"template_id":"training_healer_chest_abi004","instance_id":"FORGED_NEW_CHEST"}).is_empty(),"retired_template_cannot_be_newly_minted")
+	if FileAccess.file_exists(historical_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(historical_path))
 	if FileAccess.file_exists(PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
 	print("CANONICAL_TOWN_MIGRATION_TEST="+("PASS" if failures.is_empty() else "FAIL")+" failures="+str(failures))
