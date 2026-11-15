@@ -44,7 +44,7 @@ func _init() -> void:
 	if bool(wrong.get("ok",true)) or actor.mana!=initial_mana or session.state.round_number!=initial_round or not session.state.pending_events.is_empty():
 		_finish(false,"offhand_ability_must_reject_atomically")
 		return
-	# Real submit: two independent MH/OH physical strikes + one Кровавый порез.
+	# Real submit: two independent MH/OH physical strikes + one Защитный удар.
 	var result:=session.play_round(["head","legs"],blocks,"ABI301")
 	if not bool(result.get("ok",false)):
 		_finish(false,"round_rejected_"+String(result.get("reason","")))
@@ -53,7 +53,7 @@ func _init() -> void:
 	var weapon_lines: int = 0
 	for raw_line in Array(result.get("lines", [])):
 		var line: String = String(raw_line)
-		if line.contains("ABI «Кровавый порез»"):
+		if line.contains("ABI «Защитный удар»"):
 			named_abi_lines += 1
 		if line.contains("атакует"):
 			weapon_lines += 1
