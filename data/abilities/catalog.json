@@ -1,7 +1,7 @@
 {
   "ABI301": {
     "name": "Защитный удар",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой удар; при попадании +1 AP и один заряд Мастерства клинка (макс. 3).",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -39,7 +39,7 @@
   },
   "ABI302": {
     "name": "Железная воля",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Щит: +10 п.п. к шансу автоматического блока на 2 раунда; стандартный DR блока сохраняется.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -76,7 +76,7 @@
   },
   "ABI303": {
     "name": "Парирование",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Щит: после первого успешного ручного или автоматического блока в текущем раунде одна числовая контратака.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -113,7 +113,7 @@
   },
   "ABI304": {
     "name": "Броневой натиск",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Мощный числовой удар; поглощает до 3 зарядов Мастерства, +15% урона за заряд.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -148,7 +148,7 @@
   },
   "ABI305": {
     "name": "Быстрый выпад",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой быстрый удар; при попадании +1 AP и один заряд Мастерства.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -186,7 +186,7 @@
   },
   "ABI306": {
     "name": "Танец клинков",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "+10 п.п. к уклонению на 2 раунда (Unique); отдельных зарядов контратаки нет.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -223,7 +223,7 @@
   },
   "ABI307": {
     "name": "Круговой удар",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой круговой удар по 3 целям; при хотя бы одном попадании +2 AP один раз.",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "uses_magic_hit": false,
@@ -258,7 +258,7 @@
   },
   "ABI308": {
     "name": "Вихрь клинков",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой вихрь по 5 целям; до 3 зарядов Мастерства (+15% каждый) и +15% после уклонения в прошлом раунде. По одиночной цели не сильнее ABI304.",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "uses_magic_hit": false,
@@ -622,7 +622,6 @@
     "ap_gain_on_hit": true,
     "application_timing": "standard",
     "combo_ability_mode": "atk_quick",
-    "base_damage": 3,
     "attack_power_coefficient": 0.65,
     "description": "Удар даёт 1 заряд Точности, при крите — 2. +1 AP при попадании.",
     "base_damage_by_rank": [
@@ -636,8 +635,7 @@
       24,
       27,
       30
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI402": {
     "name": "Сосредоточение убийцы",
@@ -659,7 +657,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "atk_focus",
-    "base_damage": 0,
     "attack_power_coefficient": 0,
     "description": "На 2 раунда повышает шанс крита на 5% за заряд Точности (макс +25%). Заряды сохраняются. +1 AP.",
     "base_damage_by_rank": [
@@ -673,8 +670,7 @@
       0,
       0,
       0
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI403": {
     "name": "Шквал клинков",
@@ -696,7 +692,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "atk_flurry",
-    "base_damage": 4,
     "attack_power_coefficient": 0.5,
     "hit_count": 3,
     "description": "Три отдельных удара. Каждый может критовать; крит даёт заряд Точности.",
@@ -711,8 +706,7 @@
       18,
       20,
       22
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI404": {
     "name": "Безжалостное добивание",
@@ -734,7 +728,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "atk_finish",
-    "base_damage": 12,
     "attack_power_coefficient": 1.3,
     "damage_per_charge": 5,
     "low_hp_threshold_pct": 30,
@@ -751,8 +744,7 @@
       61,
       68,
       75
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI405": {
     "name": "Режущий выпад",
@@ -774,7 +766,6 @@
     "ap_gain_on_hit": true,
     "application_timing": "standard",
     "combo_ability_mode": "def_lunge",
-    "base_damage": 4,
     "attack_power_coefficient": 0.7,
     "dodge_bonus_damage_pct": 40,
     "dodge_bonus_ap": 1,
@@ -790,8 +781,7 @@
       25,
       28,
       31
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI406": {
     "name": "Танец теней",
@@ -813,7 +803,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "def_dance",
-    "base_damage": 0,
     "attack_power_coefficient": 0,
     "description": "На 2 раунда +15% уклонения. Успешные уклонения дают заряды Контратаки (макс 5). +1 AP.",
     "base_damage_by_rank": [
@@ -827,8 +816,7 @@
       0,
       0,
       0
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI407": {
     "name": "Веер клинков",
@@ -850,7 +838,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "def_fan",
-    "base_damage": 4,
     "attack_power_coefficient": 0.7,
     "max_targets": 5,
     "damage_bonus_per_charge_pct": 10,
@@ -866,8 +853,7 @@
       25,
       28,
       31
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI408": {
     "name": "Смертельная комбинация",
@@ -889,7 +875,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "def_combo",
-    "base_damage": 6,
     "attack_power_coefficient": 0.85,
     "damage_bonus_per_charge_pct": 10,
     "description": "Поглощает заряды Контратаки, усиливает удар и временно повышает уклонение. Второй удар при экипированном OH кинжале.",
@@ -904,8 +889,7 @@
       34,
       38,
       42
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI409": {
     "name": "Прокалывающий удар",
@@ -927,7 +911,6 @@
     "ap_gain_on_hit": true,
     "application_timing": "standard",
     "combo_ability_mode": "pen_pierce",
-    "base_damage": 3,
     "attack_power_coefficient": 0.7,
     "description": "Физический удар, при попадании накладывает Пробитую броню (до 5 зарядов) и даёт +1 AP.",
     "base_damage_by_rank": [
@@ -941,8 +924,7 @@
       24,
       27,
       30
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI410": {
     "name": "Уязвимое место",
@@ -964,7 +946,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "pen_weakspot",
-    "base_damage": 5,
     "attack_power_coefficient": 0.8,
     "min_breach_stacks": 2,
     "extra_breach_stacks": 2,
@@ -981,8 +962,7 @@
       33,
       37,
       41
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI411": {
     "name": "Глубокий прокол",
@@ -1004,7 +984,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "pen_deep",
-    "base_damage": 8,
     "attack_power_coefficient": 1,
     "damage_bonus_per_breach_pct": 10,
     "description": "Удар сильнее за каждый заряд Пробитой брони. При попадании ослабляет физический урон цели на 2 раунда.",
@@ -1019,8 +998,7 @@
       43,
       48,
       53
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI412": {
     "name": "Абсолютное пробитие",
@@ -1042,7 +1020,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "pen_absolute",
-    "base_damage": 12,
     "attack_power_coefficient": 1.1,
     "armour_bypass_pct_per_breach_stack": 20,
     "description": "Поглощает все заряды Пробитой брони при попадании. Игнорирует 20% брони за заряд, максимум 100%.",
@@ -1057,8 +1034,7 @@
       61,
       68,
       75
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI701": {
     "name": "Колющий выпад",
@@ -1080,7 +1056,6 @@
     "ap_gain_on_hit": true,
     "application_timing": "standard",
     "combo_ability_mode": "spear_thrust",
-    "base_damage": 5,
     "attack_power_coefficient": 0.8,
     "slow_bonus_damage_pct": 30,
     "description": "Физический выпад, +1 AP при попадании. Дополнительный урон по цели под Замедлением.",
@@ -1095,8 +1070,7 @@
       33,
       37,
       41
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI702": {
     "name": "Подсечка",
@@ -1118,7 +1092,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "spear_sweep",
-    "base_damage": 4,
     "attack_power_coefficient": 0.7,
     "max_targets": 5,
     "description": "AoE-удар, накладывающий Замедление на 2 раунда (−10 к шкале контроля каждый раунд). +1 AP.",
@@ -1133,8 +1106,7 @@
       25,
       28,
       31
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI703": {
     "name": "Пронзающий натиск",
@@ -1156,7 +1128,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "spear_impale",
-    "base_damage": 10,
     "attack_power_coefficient": 1.2,
     "control_on_slow": 100,
     "description": "Мощный удар. Если цель замедлена, дополнительно снижает её шкалу контроля на 100 и снимает Замедление.",
@@ -1171,8 +1142,7 @@
       52,
       58,
       64
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI704": {
     "name": "Раскол брони",
@@ -1194,7 +1164,6 @@
     "ap_gain_on_hit": false,
     "application_timing": "standard",
     "combo_ability_mode": "spear_fracture",
-    "base_damage": 14,
     "attack_power_coefficient": 1.3,
     "description": "Мощный удар. По замедленной цели накладывает Раскол брони на 3 раунда.",
     "base_damage_by_rank": [
@@ -1208,12 +1177,11 @@
       63,
       70,
       77
-    ],
-    "damage_ranks_migration": "Rank I=levels 1-10; item level selects ten-level segment; provisional numeric balance."
+    ]
   },
   "ABI309": {
     "name": "Точный удар",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой точный удар, +1 AP при попадании, дополнительно +1 AP при крите; Мастерство +1 за применение.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -1251,7 +1219,7 @@
   },
   "ABI310": {
     "name": "Слепая ярость",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Слепая ярость: +20 п.п. крита и +15% входящего урона на 2 раунда (Unique).",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -1288,7 +1256,7 @@
   },
   "ABI311": {
     "name": "Уязвимое место",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой удар и Unique-ослабление рейтинга антикрита PAR034 по рангу предмета, 2 раунда.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -1326,7 +1294,7 @@
   },
   "ABI312": {
     "name": "Безупречный удар",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой завершающий удар; +40 п.п. шанса крита, при крите Unique −15% исходящего физического урона цели на 2 раунда.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -1364,7 +1332,7 @@
   },
   "ABI313": {
     "name": "Широкий взмах",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой размах до 2 целей; +1 AP и один заряд Мастерства за применение при попадании.",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "uses_magic_hit": false,
@@ -1402,7 +1370,7 @@
   },
   "ABI314": {
     "name": "Рассекающая волна",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовая волна по 3 целям; Unique −рейтинга попадания PAR030 по рангу предмета на 2 раунда.",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "uses_magic_hit": false,
@@ -1440,7 +1408,7 @@
   },
   "ABI315": {
     "name": "Прерывающий удар",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой прерывающий удар; успешное попадание снижает Tempo цели на 50 по общим правилам.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -1478,7 +1446,7 @@
   },
   "ABI316": {
     "name": "Сокрушительный размах",
-    "description": "Числовой урон по рангу оружия; механика принадлежит SwordAbiCombatService.",
+    "description": "Числовой удар до 3 целей; расход 0–3 зарядов Мастерства: +15/30/45% урона, при 3 зарядах −50 Tempo на 1 раунд.",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "uses_magic_hit": false,
