@@ -273,89 +273,53 @@
   },
   "EFF601": {
     "id": "EFF601",
-    "name": "Заряд молота",
-    "kind": "buff",
-    "stacking": "permanent_charges",
-    "max_stacks": 100,
-    "permanent": true,
-    "polarity": "BUFF",
+    "name": "Сотрясение",
+    "kind": "debuff",
+    "stacking": "shared_duration",
+    "max_stacks": 3,
+    "duration_rounds": 4,
+    "polarity": "DEBUFF",
     "tags": [
-      "HAMMER_CHARGE"
+      "HAMMER_CONCUSSION"
     ],
-    "armour_and_resistance_direct_pct_per_stack": 0.25,
-    "charges_per_ordinary_mh_hit": 5,
-    "bonus_charges_on_ordinary_mh_crit": 5,
-    "charges_per_positive_damage_event_taken": 1,
-    "undispellable": true
+    "unique_group": "hammer_concussion"
   },
   "EFF602": {
     "id": "EFF602",
-    "name": "Отражение",
-    "kind": "buff",
-    "stacking": "unique",
-    "duration_rounds": 1,
-    "polarity": "BUFF",
-    "tags": [
-      "HAMMER_REFLECTION"
-    ],
-    "reflection_pct": 20
-  },
-  "EFF603": {
-    "id": "EFF603",
-    "name": "Разбитая броня",
-    "kind": "debuff",
-    "stacking": "unique",
-    "duration_rounds": 1,
-    "duration_from_charges": {
-      "charge_field": "hammer_fracture_charges",
-      "charges_per_round": 10,
-      "minimum_rounds": 0,
-      "maximum_rounds": 10
-    },
-    "polarity": "DEBUFF",
-    "tags": [
-      "HAMMER_ZONE_ARMOUR_FRACTURE"
-    ],
-    "armour_zone": "chest",
-    "armour_reduction_pct": 0,
-    "contextual_modifier": {
-      "input_field": "hammer_fracture_charges",
-      "legacy_value_field": "hammer_fracture_pct",
-      "per_unit": 1,
-      "minimum": 0,
-      "maximum": 100,
-      "fields": [
-        "armour_reduction_pct"
-      ]
-    },
-    "application_context_fields": {
-      "armour_zone": "hammer_fracture_zone"
-    }
-  },
-  "EFF604": {
-    "id": "EFF604",
-    "name": "Боевой прилив",
+    "name": "Глухая защита",
     "kind": "buff",
     "stacking": "unique",
     "duration_rounds": 2,
     "polarity": "BUFF",
     "tags": [
-      "HAMMER_SURGE"
+      "HAMMER_DEFENCE"
     ],
-    "physical_damage_outgoing_direct_pct": 0,
-    "magic_damage_direct_pct": 0,
-    "damage_lifesteal_pct": 20,
-    "contextual_modifier": {
-      "input_field": "hammer_surge_spent_charges",
-      "legacy_value_field": "hammer_surge_pct",
-      "per_unit": 1,
-      "minimum": 0,
-      "maximum": 25,
-      "fields": [
-        "physical_damage_outgoing_direct_pct",
-        "magic_damage_direct_pct"
-      ]
-    }
+    "incoming_damage_physical_direct_pct": -15,
+    "shield_auto_block_direct_pct": 10
+  },
+  "EFF603": {
+    "id": "EFF603",
+    "name": "Стойкость после блока",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_COUNTER_GUARD"
+    ],
+    "incoming_damage_physical_direct_pct": -10
+  },
+  "EFF604": {
+    "id": "EFF604",
+    "name": "Подавленный удар",
+    "kind": "debuff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_DAMAGE_WEAKEN"
+    ],
+    "physical_damage_outgoing_direct_pct": -25
   },
   "EFF406": {
     "id": "EFF406",
@@ -612,5 +576,29 @@
     "stacking": "unique",
     "polarity": "DEBUFF",
     "unique_group": "sword_tempo_control"
+  },
+  "EFF605": {
+    "id": "EFF605",
+    "name": "Боевой подъём",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_DAMAGE_BUFF"
+    ],
+    "physical_damage_outgoing_direct_pct": 15
+  },
+  "EFF606": {
+    "id": "EFF606",
+    "name": "Разрушенная броня",
+    "kind": "debuff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_ARMOUR_BREAK"
+    ],
+    "armour_reduction_raw_pct": 15
   }
 }
