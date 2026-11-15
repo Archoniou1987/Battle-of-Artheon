@@ -49,6 +49,13 @@ static func application_modifiers(definition: Dictionary, context: Dictionary = 
 		resolved = resolved.duplicate(true)
 		for field in Array(rule.get("fields",[])):
 			resolved[String(field)] = value
+	var ranks: Variant = definition.get("rating_delta_by_rank",null)
+	if ranks is Array and Array(ranks).size() == 10:
+		var rank := clampi(int(context.get("effect_rank",1)),1,10)
+		resolved = resolved.duplicate(true)
+		for key in definition.keys():
+			if String(key).ends_with("_rating_delta"):
+				resolved[String(key)] = float(Array(ranks)[rank-1])
 	var scaling: Variant = definition.get("application_scaling",null)
 	if scaling is Dictionary:
 		var rule: Dictionary = scaling
