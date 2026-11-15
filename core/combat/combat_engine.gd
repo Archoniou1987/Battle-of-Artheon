@@ -699,6 +699,11 @@ func _apply_timed_effect(target: CombatantState, effect_id: String, definition: 
 			target.active_effects.append(shared_record)
 		else:
 			var shared: Dictionary = matching[0]
+			# Rank belongs to the applied EFF. Higher-rank refresh may upgrade
+			# the active instance; weaker recasts never downgrade existing DoT.
+			var old_definition: Dictionary = shared.get("definition",{})
+			if int(definition.get("effect_rank",1)) > int(old_definition.get("effect_rank",1)):
+				shared["definition"] = definition.duplicate(true)
 			var previous_stacks: int = maxi(1,int(shared.get("stacks",1)))
 			var next_stacks: int = mini(max_stacks,previous_stacks+maxi(1,int(event.payload.get("sword_stacks_to_apply",1))))
 			# An instant cast can add an undisclosed stack to a pre-existing,
