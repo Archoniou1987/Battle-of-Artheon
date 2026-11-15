@@ -180,7 +180,7 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent) -> vo
 		_gain_once(engine,attack,actor)
 	if id in ["ABI501","ABI503","ABI505","ABI507","ABI509","ABI511","ABI513","ABI514"]:
 		var stacks := 2 if id=="ABI507" or (id=="ABI514" and int(attack.payload.get("axe_wounds_snapshot",0))>0) else 1
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,WOUND,{"sword_stacks_to_apply":stacks})
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,WOUND,{"stacks_to_apply":stacks})
 	if id == "ABI502":
 		var pct := AbilityCatalog.number(id,"heal_hp_pct_per_wound")
 		var healing := roundi(float(actor.max_hp)*float(int(attack.payload.get("axe_wounds_snapshot",0)))*pct/100.0)
