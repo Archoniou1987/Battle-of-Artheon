@@ -100,23 +100,16 @@ jobs:
             echo "::error::VERCEL_TOKEN secret is missing. Create it under Settings > Secrets and variables > Actions."
             exit 1
           fi
-          # Verify the GitHub Actions token (not the connected ChatGPT Vercel session).
-          # Keep response bodies and credentials out of CI logs.
-          user_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            --header "Authorization: Bearer $VERCEL_TOKEN" \
-            https://api.vercel.com/v2/user)
-          if [ "$user_status" != "200" ]; then
-            echo "::error::VERCEL_TOKEN cannot authenticate to Vercel (user API HTTP $user_status). Replace the GitHub Actions secret with a token from the account owning battle-of-artheon."
-            exit 1
-          fi
+          # Project-scoped tokens may not allow reading /v2/user. Verify
+          # the exact team-owned project required for this deployment instead.
           project_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
             --header "Authorization: Bearer $VERCEL_TOKEN" \
             'https://api.vercel.com/v9/projects/prj_O8XlqWc2OFjUvp9Z1RojYFiMOVCl?teamId=team_3X6DttKAdVaDmYJVv5SYCcsA')
           if [ "$project_status" != "200" ]; then
-            echo "::error::VERCEL_TOKEN can authenticate but cannot access the linked Vercel project/team (project API HTTP $project_status). Create a token with access to team dryun87-9174 and replace the GitHub Actions secret."
+            echo "::error::VERCEL_TOKEN cannot read the linked Vercel project (HTTP $project_status). Check the token's team/project scope, and confirm GitHub Actions has the intended VERCEL_TOKEN secret."
             exit 1
           fi
-          echo "VERCEL_ACCESS_PREFLIGHT=PASS"
+          echo "VERCEL_PROJECT_PREFLIGHT=PASS"
           mkdir -p build/web/.vercel
           printf '%s\n' '{"projectId":"prj_O8XlqWc2OFjUvp9Z1RojYFiMOVCl","orgId":"team_3X6DttKAdVaDmYJVv5SYCcsA"}' > build/web/.vercel/project.json
           # Project linkage already contains the canonical team ID; avoid a CLI scope alias.
