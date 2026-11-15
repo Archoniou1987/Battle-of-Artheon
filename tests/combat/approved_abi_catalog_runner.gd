@@ -4,7 +4,7 @@ extends SceneTree
 ## ABI test laboratory uses LAB_* IDs, not the production catalog.
 func _initialize() -> void:
 	var defs := AbilityCatalog.load_json("res://data/abilities/catalog.json")
-	var ranges := [[301,316],[401,412],[501,516],[601,606],[701,704]]
+	var ranges := [[301,316],[401,412],[501,516],[601,608],[701,704]]
 	var expected: Dictionary = {}
 	for limits in ranges:
 		for n in range(int(limits[0]),int(limits[1])+1):
@@ -40,7 +40,7 @@ func _initialize() -> void:
 			if component is Dictionary and String(component.get("kind","")) == "effect":
 				var effect_id := String(component.get("effect_id",""))
 				ok = ok and not effect_id.is_empty() and not EffectCatalog.definition(effect_defs,effect_id).is_empty()
-	for retired in ["ABI413","ABI414","ABI415","ABI416","ABI417","ABI418","ABI419","ABI420","ABI001","ABI002","ABI003","ABI004","ABI005","ABI006","ABI300","ABI317","ABI400","ABI500","ABI517","ABI600","ABI607","ABI700"]:
+	for retired in ["ABI413","ABI414","ABI415","ABI416","ABI417","ABI418","ABI419","ABI420","ABI001","ABI002","ABI003","ABI004","ABI005","ABI006","ABI300","ABI317","ABI400","ABI500","ABI517","ABI600","ABI609","ABI700"]:
 		ok = ok and not defs.has(retired) and AbilityCatalog.is_retired_numbered_abi(retired)
 	for current in expected:
 		ok = ok and not AbilityCatalog.is_retired_numbered_abi(String(current))
