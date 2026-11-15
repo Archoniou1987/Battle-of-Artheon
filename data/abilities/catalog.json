@@ -43,7 +43,12 @@
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
-    "components": [],
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF315"
+      }
+    ],
     "cooldown_rounds": 4,
     "mana_cost": 0,
     "ap_cost": 2,
@@ -77,9 +82,8 @@
     "uses_magic_hit": false,
     "components": [
       {
-        "kind": "damage",
-        "amount": 0,
-        "damage_type": "slashing"
+        "kind": "effect",
+        "effect_id": "EFF316"
       }
     ],
     "cooldown_rounds": 3,
@@ -186,7 +190,12 @@
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
-    "components": [],
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF317"
+      }
+    ],
     "cooldown_rounds": 4,
     "mana_cost": 0,
     "ap_cost": 2,
@@ -1246,7 +1255,12 @@
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
-    "components": [],
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF318"
+      }
+    ],
     "cooldown_rounds": 4,
     "mana_cost": 0,
     "ap_cost": 2,
