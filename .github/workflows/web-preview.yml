@@ -102,4 +102,5 @@ jobs:
           fi
           mkdir -p build/web/.vercel
           printf '%s\n' '{"projectId":"prj_O8XlqWc2OFjUvp9Z1RojYFiMOVCl","orgId":"team_3X6DttKAdVaDmYJVv5SYCcsA"}' > build/web/.vercel/project.json
-          npx --yes vercel@latest deploy build/web --prod --yes --token "$VERCEL_TOKEN" --scope dryun87-9174
+          # Project linkage already contains the canonical team ID; avoid a CLI scope alias.
+          npx --yes vercel@latest deploy build/web --prod --yes --token "$VERCEL_TOKEN"
