@@ -292,28 +292,8 @@
     "attack_power_coefficient": 0.75
   },
   "ABI501": {
-    "name": "Ярость",
-    "delivery_type": "DIRECT",
-    "target_scope": "SINGLE",
-    "target_team": "ALLY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "effect",
-        "effect_id": "EFF501",
-        "base_chance": 100
-      }
-    ],
-    "cooldown_rounds": 2,
-    "mana_cost": 0,
-    "ap_cost": 0,
-    "ap_gain": 1,
-    "application_timing": "standard",
-    "axe_ability_mode": "rage",
-    "mh_damage_bonus_pct": 20
-  },
-  "ABI502": {
-    "name": "Рубящий удар",
+    "name": "Рваный удар",
+    "description": "Удар, +1 рваная рана и +1 AP при попадании.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -325,17 +305,228 @@
         "damage_type": "chopping"
       }
     ],
-    "cooldown_rounds": 2,
+    "cooldown_rounds": 1,
     "mana_cost": 0,
     "ap_cost": 0,
-    "ap_gain": 2,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
     "application_timing": "standard",
-    "axe_ability_mode": "unblockable",
-    "trigger_previous_round": "crit_or_block_crush",
-    "attack_damage_pct": 120
+    "axe_ability_mode": "def_q",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      12,
+      22,
+      34,
+      49,
+      66,
+      86,
+      109,
+      137,
+      167,
+      200
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
+  },
+  "ABI502": {
+    "name": "Кровавый захват",
+    "description": "Небольшое лечение: 1% максимального HP за рану на поражённой цели (до 3%); раны остаются.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "def_w1",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      11,
+      20,
+      31,
+      44,
+      59,
+      77,
+      98,
+      123,
+      150,
+      180
+    ],
+    "attack_power_coefficient": 0.75,
+    "heal_hp_pct_per_wound": 1
   },
   "ABI503": {
-    "name": "Подсекающий удар",
+    "name": "Круговая жатва",
+    "description": "Удар до трёх целей, накладывает 1 рваную рану каждой.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "def_w2",
+    "max_targets": 3,
+    "base_damage_by_rank": [
+      9,
+      17,
+      26,
+      37,
+      50,
+      65,
+      82,
+      103,
+      125,
+      150
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
+  },
+  "ABI504": {
+    "name": "Кровавое возмездие",
+    "description": "Поглощает до 3 ран при попадании; лечение 25/75/125% реального урона, но не более 25% max HP.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "def_e",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      26,
+      48,
+      75,
+      108,
+      145,
+      189,
+      240,
+      301,
+      367,
+      440
+    ],
+    "attack_power_coefficient": 0.75,
+    "heal_from_damage_pct_by_wounds": [
+      0,
+      25,
+      75,
+      125
+    ],
+    "heal_max_hp_cap_pct": 25
+  },
+  "ABI505": {
+    "name": "Жестокий разрез",
+    "description": "Двуручный удар, +1 рана, +1 AP при попадании.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "axe_ability_mode": "attack_q",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      15,
+      28,
+      43,
+      61,
+      83,
+      108,
+      136,
+      171,
+      209,
+      250
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
+  },
+  "ABI506": {
+    "name": "Боевой азарт",
+    "description": "На два раунда +20% исходящего физического урона, +10% входящего.",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ALLY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "effect",
+        "effect_id": "EFF502",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "attack_w1",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "attack_power_coefficient": 0
+  },
+  "ABI507": {
+    "name": "Глубокая рана",
+    "description": "Сильный двуручный удар, накладывает 2 раны при попадании.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -349,107 +540,34 @@
     ],
     "cooldown_rounds": 4,
     "mana_cost": 0,
-    "ap_cost": 2,
-    "ap_gain": 0,
-    "application_timing": "standard",
-    "axe_ability_mode": "def_sweep",
-    "effect_refs": {
-      "on_hit": "EFF502"
-    },
-    "attack_damage_pct": 120
-  },
-  "ABI504": {
-    "name": "Стойка возмездия",
-    "delivery_type": "DIRECT",
-    "target_scope": "SINGLE",
-    "target_team": "ALLY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "effect",
-        "effect_id": "EFF503",
-        "base_chance": 100
-      }
-    ],
-    "cooldown_rounds": 5,
-    "mana_cost": 0,
-    "ap_cost": 4,
-    "ap_gain": 0,
-    "application_timing": "instant",
-    "axe_ability_mode": "def_stance"
-  },
-  "ABI505": {
-    "name": "Разрушительный удар",
-    "delivery_type": "MELEE",
-    "target_scope": "SINGLE",
-    "target_team": "ENEMY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "damage",
-        "amount": 0,
-        "damage_type": "chopping"
-      }
-    ],
-    "cooldown_rounds": 5,
-    "mana_cost": 0,
-    "ap_cost": 2,
-    "ap_gain": 0,
-    "application_timing": "standard",
-    "axe_ability_mode": "attack_breaker",
-    "effect_refs": {
-      "pre_attack": "EFF504"
-    },
-    "attack_damage_pct": 120
-  },
-  "ABI506": {
-    "name": "Смертельный удар",
-    "delivery_type": "MELEE",
-    "target_scope": "SINGLE",
-    "target_team": "ENEMY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "damage",
-        "amount": 0,
-        "damage_type": "chopping"
-      }
-    ],
-    "cooldown_rounds": 7,
-    "mana_cost": 0,
-    "ap_cost": 5,
-    "ap_gain": 0,
-    "application_timing": "standard",
-    "axe_ability_mode": "attack_execute",
-    "execute_hp_threshold_fraction": 0.2,
-    "min_rage_stacks": 1,
-    "damage_pct_per_rage_stack": 75
-  },
-  "ABI507": {
-    "name": "Крушитель",
-    "delivery_type": "DIRECT",
-    "target_scope": "SINGLE",
-    "target_team": "ALLY",
-    "uses_magic_hit": false,
-    "components": [
-      {
-        "kind": "effect",
-        "effect_id": "EFF505",
-        "base_chance": 100
-      }
-    ],
-    "cooldown_rounds": 5,
-    "mana_cost": 0,
     "ap_cost": 3,
     "ap_gain": 0,
-    "application_timing": "instant",
-    "axe_ability_mode": "crusher",
-    "required_rage_stacks": 5
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "attack_w2",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      20,
+      36,
+      56,
+      81,
+      109,
+      142,
+      180,
+      226,
+      276,
+      330
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
   },
   "ABI508": {
-    "name": "Удар щитолома",
+    "name": "Палач",
+    "description": "Поглощает до 3 ран; +75/100/125% урона; при HP цели ниже 35% дополнительный множитель ×1.25.",
     "delivery_type": "MELEE",
-    "target_scope": "RANDOM_N",
+    "target_scope": "SINGLE",
     "target_team": "ENEMY",
     "uses_magic_hit": false,
     "components": [
@@ -459,16 +577,35 @@
         "damage_type": "chopping"
       }
     ],
-    "cooldown_rounds": 7,
+    "cooldown_rounds": 6,
     "mana_cost": 0,
     "ap_cost": 5,
     "ap_gain": 0,
+    "ap_gain_on_hit": false,
     "application_timing": "standard",
-    "axe_ability_mode": "shieldbreaker",
-    "max_targets": 3,
-    "single_target_damage_pct": 150,
-    "multi_target_damage_pct": 50,
-    "damage_pct_per_rage_stack": 20
+    "axe_ability_mode": "attack_e",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      36,
+      66,
+      102,
+      147,
+      198,
+      258,
+      327,
+      411,
+      501,
+      600
+    ],
+    "attack_power_coefficient": 0.75,
+    "bonus_damage_pct_by_wounds": [
+      0,
+      75,
+      100,
+      125
+    ],
+    "execute_hp_threshold_fraction": 0.35,
+    "execute_multiplier": 1.25
   },
   "ABI601": {
     "name": "Тяжёлый удар",
@@ -1481,5 +1618,325 @@
     "effect_refs": {
       "primary": "EFF323"
     }
+  },
+  "ABI509": {
+    "name": "Раскалывающий удар",
+    "description": "Двуручный удар, +1 рана и +1 AP при попадании.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "axe_ability_mode": "shield_q",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      14,
+      25,
+      39,
+      56,
+      76,
+      99,
+      125,
+      158,
+      192,
+      230
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
+  },
+  "ABI510": {
+    "name": "Подрыв защиты",
+    "description": "Удар с +40 п.п. к шансу пробития ручного/автоматического блока.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "shield_w1",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      14,
+      26,
+      41,
+      59,
+      79,
+      103,
+      131,
+      164,
+      200,
+      240
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF503"
+    },
+    "block_crush_bonus_pct": 40
+  },
+  "ABI511": {
+    "name": "Сокрушительный разрез",
+    "description": "До двух целей, +1 рана при попадании, +35% урона по цели со щитом.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "shield_w2",
+    "max_targets": 2,
+    "base_damage_by_rank": [
+      13,
+      24,
+      37,
+      54,
+      73,
+      95,
+      120,
+      151,
+      184,
+      220
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    },
+    "shield_damage_bonus_pct": 35
+  },
+  "ABI512": {
+    "name": "Разрушитель щитов",
+    "description": "Поглощает до 3 ран; игнорирует щитовой автоблок, +50% урона по щиту, +20/40/60% за раны.",
+    "delivery_type": "MELEE",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 6,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "shield_e",
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      30,
+      55,
+      85,
+      123,
+      165,
+      215,
+      273,
+      343,
+      418,
+      500
+    ],
+    "attack_power_coefficient": 0.75,
+    "shield_damage_bonus_pct": 50,
+    "bonus_damage_pct_by_wounds": [
+      0,
+      20,
+      40,
+      60
+    ],
+    "ignore_shield_auto_block": true
+  },
+  "ABI513": {
+    "name": "Широкий разрез",
+    "description": "До двух целей, +1 рана каждой, +1 AP только один раз за применение.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 0,
+    "ap_cost": 0,
+    "ap_gain": 1,
+    "ap_gain_on_hit": true,
+    "application_timing": "standard",
+    "axe_ability_mode": "aoe_q",
+    "max_targets": 2,
+    "base_damage_by_rank": [
+      11,
+      20,
+      31,
+      44,
+      59,
+      77,
+      98,
+      123,
+      150,
+      180
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
+  },
+  "ABI514": {
+    "name": "Глубокая борозда",
+    "description": "До трёх целей: накладывает 2 раны, если цель уже ранена, иначе 1.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 0,
+    "ap_cost": 2,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "aoe_w1",
+    "max_targets": 3,
+    "base_damage_by_rank": [
+      10,
+      19,
+      29,
+      42,
+      56,
+      73,
+      93,
+      116,
+      142,
+      170
+    ],
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_hit": "EFF501"
+    }
+  },
+  "ABI515": {
+    "name": "Кровавый вихрь",
+    "description": "До пяти целей, +10% урона за рану на каждой цели; раны не тратятся.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 4,
+    "mana_cost": 0,
+    "ap_cost": 3,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "aoe_w2",
+    "max_targets": 5,
+    "base_damage_by_rank": [
+      12,
+      22,
+      34,
+      49,
+      66,
+      86,
+      109,
+      137,
+      167,
+      200
+    ],
+    "attack_power_coefficient": 0.75,
+    "bonus_damage_pct_per_wound": 10
+  },
+  "ABI516": {
+    "name": "Кровавый шторм",
+    "description": "До пяти целей; поглощает раны при попадании и получает +15/30/45% урона за раны каждой цели.",
+    "delivery_type": "MELEE",
+    "target_scope": "RANDOM_N",
+    "target_team": "ENEMY",
+    "uses_magic_hit": false,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 0,
+        "damage_type": "chopping"
+      }
+    ],
+    "cooldown_rounds": 6,
+    "mana_cost": 0,
+    "ap_cost": 5,
+    "ap_gain": 0,
+    "ap_gain_on_hit": false,
+    "application_timing": "standard",
+    "axe_ability_mode": "aoe_e",
+    "max_targets": 5,
+    "base_damage_by_rank": [
+      20,
+      37,
+      58,
+      83,
+      112,
+      146,
+      185,
+      233,
+      284,
+      340
+    ],
+    "attack_power_coefficient": 0.75,
+    "bonus_damage_pct_by_wounds": [
+      0,
+      15,
+      30,
+      45
+    ]
   }
 }
