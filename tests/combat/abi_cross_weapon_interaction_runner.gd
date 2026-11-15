@@ -305,7 +305,7 @@ func _axe_abi_coefficients_from_catalog() -> void:
 	var ctx := _pair("axe","dagger")
 	var state: CombatState = ctx["state"]
 	var target := state.get_combatant("right")
-	_effect(ctx,"left","right","EFF501",{"sword_stacks_to_apply":2,"effect_rank":4})
+	_effect(ctx,"left","right","EFF501",{"sword_stacks_to_apply":2,"effect_rank":4},true)
 	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==2,"axe:wounds_owned_by_source")
 	_check(AxeAbiCombatService._wounds(target,"other",state.round_number)==0,"axe:wounds_other_source_not_counted")
 	AxeAbiCombatService._consume_wounds(target,"left",1)
@@ -790,7 +790,7 @@ func _axe_rage_value_comes_from_eff() -> void:
 	var ctx := _pair("axe","dagger")
 	var state: CombatState = ctx["state"]
 	var target := state.get_combatant("right")
-	_effect(ctx,"left","right","EFF501",{"sword_stacks_to_apply":3,"effect_rank":4})
+	_effect(ctx,"left","right","EFF501",{"sword_stacks_to_apply":3,"effect_rank":4},true)
 	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==3,"axe:wounds_applied")
 	var resolved := _active_effect(target,"EFF501")
 	_check(int(Dictionary(resolved.get("definition",{})).get("effect_rank",0))==4,"axe:wound_effect_rank_from_EFF")
