@@ -314,15 +314,15 @@
     {
       "id": "AXE_ATTACK",
       "abilities": [
-        "ABI501",
-        "ABI502",
         "ABI505",
-        "ABI506"
+        "ABI506",
+        "ABI507",
+        "ABI508"
       ],
       "name": "Топор · атакующий",
       "kind": "weapon",
       "family": "axe",
-      "slot": "MH",
+      "slot": "2H",
       "weights": {
         "crit": 35,
         "crit_damage": 30,
@@ -338,15 +338,15 @@
     {
       "id": "AXE_SHIELD",
       "abilities": [
-        "ABI501",
-        "ABI502",
-        "ABI507",
-        "ABI508"
+        "ABI509",
+        "ABI510",
+        "ABI511",
+        "ABI512"
       ],
       "name": "Топор · щитолом",
       "kind": "weapon",
       "family": "axe",
-      "slot": "MH",
+      "slot": "2H",
       "weights": {
         "crit": 20,
         "crit_damage": 20,
@@ -471,7 +471,7 @@
     },
     {
       "id": "2H_AXE",
-      "name": "2H топор",
+      "name": "Топор · массовый двуручный",
       "kind": "weapon",
       "family": "axe",
       "slot": "2H",
@@ -485,6 +485,12 @@
       "requirements": [
         "PAR001",
         "PAR003"
+      ],
+      "abilities": [
+        "ABI513",
+        "ABI514",
+        "ABI515",
+        "ABI516"
       ]
     },
     {
