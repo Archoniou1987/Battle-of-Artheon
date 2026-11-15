@@ -278,11 +278,9 @@ static func magic_resist(combatant: CombatantState, resist_type: String, round_n
 	if not is_finite(general_raw) or not is_finite(school_raw):
 		push_error("Invalid magic resistance rating")
 		return 0.0
-	# EFF601 defines the charge bonus; the result enters raw school defence before DR.
 	var school_bonus := modifier(combatant,key+"_resist_direct_pct",round_number)
-	var charge_bonus := effect_stack_bonus(combatant, HammerAbiCombatService.CHARGE, "armour_and_resistance_direct_pct_per_stack", round_number)
 	var general_fraction := clampf(general_raw/100.0,0.0,1.0)
-	var school_fraction := clampf((school_raw+school_bonus+charge_bonus)/100.0,0.0,1.0)
+	var school_fraction := clampf((school_raw+school_bonus)/100.0,0.0,1.0)
 	var sequential_raw_pct := 100.0*(1.0-(1.0-general_fraction)*(1.0-school_fraction))
 	var penetration_pct := magic_penetration_percent(attacker,key,round_number)
 	var remaining_raw_pct := maxf(0.0,sequential_raw_pct-penetration_pct)
