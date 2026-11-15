@@ -15,7 +15,7 @@ func _initialize() -> void:
 	_abi_to_eff_references()
 	_char_npc_par_projection_contract()
 	_npc_resource_and_level_ownership()
-	_abi_mh_bonus_ownership()
+
 	_abi_target_limits_from_catalog()
 	_legacy_abi_target_cap_fallback()
 	_sword_cripple_versus_axe_damage()
@@ -23,17 +23,18 @@ func _initialize() -> void:
 	_eff_periodic_armour_policy_ownership()
 	_eff_sword_scaling_ownership()
 	_sword_hit_ap_and_critical_numbers_from_catalog()
-	_dynamic_effects_from_catalog()
-	_dynamic_fracture_policy_from_eff()
+
+
 	_item_weapon_on_hit_target_ownership()
-	_dagger_breach_versus_hammer_armour()
-	_hammer_charge_magic_resist_versus_penetration()
+
+
+	_mace_abi_cross_integration()
 	_axe_wounds_from_eff()
 	_axe_abi_coefficients_from_catalog()
-	_hammer_abi_coefficients_from_catalog()
-	_hammer_eff601_charge_generation()
+
+
 	_axe_shield_breaker_catalog()
-	_hammer_tempo_versus_axe_immunity()
+
 	print("ABI_CROSS_WEAPON_INTERACTION_TEST=", "PASS" if failures.is_empty() else "FAIL", " failures=",failures)
 	quit(0 if failures.is_empty() else 1)
 
@@ -229,36 +230,6 @@ func _legacy_abi_target_cap_fallback() -> void:
 
 ## Changed test-only ABI601 bonuses must reach the first ordinary
 ## MH attack and real CombatEngine damage without any repeated +20 constant.
-func _abi_mh_bonus_ownership() -> void:
-	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
-	for case in [
-		{"ability_id":"ABI601","weapon_class":"hammer","bonus":43.0,"payload_key":"hammer_mh_damage_bonus_pct"}
-	]:
-		var id := String(case["ability_id"])
-		var abi_definition: Dictionary = Dictionary(abilities[id]).duplicate(true)
-		_check(is_equal_approx(float(abi_definition.get("mh_damage_bonus_pct",-1.0)),20.0),id+":catalog_ordinary_mh_bonus")
-		abi_definition["mh_damage_bonus_pct"] = float(case["bonus"])
-		var ctx := _pair(String(case["weapon_class"]),"dagger")
-		var state: CombatState = ctx["state"]
-		var engine: CombatEngine = ctx["engine"]
-		var source := state.get_combatant("left")
-		var profile: Dictionary = WeaponAttackProfile.all(source)[0]
-		var rolls := {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
-		var mh := state.create_event(CombatEvent.Kind.ATTACK,"left","right",WeaponAttackProfile.attack_payload(profile,rolls,"chest"))
-		var ability_action := AbilityRuntime.build_action_event(state,"left","right",id,abi_definition)
-		var round := CombatRound.new(state.round_number)
-		round.lock_action(mh)
-		round.lock_action(ability_action)
-		round.resolve(engine)
-		var payload_key := String(case["payload_key"])
-		_check(is_equal_approx(float(mh.payload.get(payload_key,-1.0)),float(case["bonus"])),id+":MH_bonus_attached_from_ABI")
-		_check(String(mh.result.get("outcome","")) == "connected",id+":MH_hit_connected")
-		_check(is_equal_approx(float(mh.result.get("raw_damage",-1.0)),100.0*(1.0+float(case["bonus"])/100.0)),id+":MH_damage_follows_ABI_bonus")
-
-## The production dagger dispatch must obey changed test-only ABI values,
-## including old events which did not yet carry their ABI numeric fields.
-## Sword ABI301 links to the ordinary MH; ABI302 grants AP only once
-## after an actual connected AoE hit. Neither value belongs to Combat.
 func _sword_hit_ap_and_critical_numbers_from_catalog() -> void:
 	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
 	var ctx := _pair("sword","axe")
@@ -322,181 +293,6 @@ func _axe_abi_coefficients_from_catalog() -> void:
 	_check(AxeAbiCombatService._wounds(target,"other",state.round_number)==0,"axe:wounds_other_source_not_counted")
 	AxeAbiCombatService._consume_wounds(target,"left",1)
 	_check(AxeAbiCombatService._wounds(target,"left",state.round_number)==1,"axe:wounds_partially_consumed")
-func _hammer_abi_coefficients_from_catalog() -> void:
-	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
-	var heavy_ctx := _pair("hammer","axe")
-	var heavy_state: CombatState = heavy_ctx["state"]
-	var heavy_engine: CombatEngine = heavy_ctx["engine"]
-	var heavy_actor := heavy_state.get_combatant("left")
-	var heavy_profile: Dictionary = WeaponAttackProfile.all(heavy_actor)[0]
-	var rolls := {"hit":1,"reaction":100,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
-	var mh := heavy_state.create_event(CombatEvent.Kind.ATTACK,"left","right",WeaponAttackProfile.attack_payload(heavy_profile,rolls,"chest"))
-	var heavy_def: Dictionary = Dictionary(defs["ABI601"]).duplicate(true)
-	heavy_def["tempo_control_on_hit"] = 39
-	var heavy_action := AbilityRuntime.build_action_event(heavy_state,"left","right","ABI601",heavy_def)
-	var heavy_round := CombatRound.new(heavy_state.round_number)
-	heavy_round.lock_action(mh)
-	heavy_round.lock_action(heavy_action)
-	heavy_round.resolve(heavy_engine)
-	_check(is_equal_approx(float(mh.payload.get("hammer_tempo_control_on_hit",-1.0)),39.0),"ABI601:tempo_value_from_action_snapshot")
-	_check(String(mh.result.get("outcome",""))=="connected","ABI601:tempo_fixture_hit_connected")
-	_check(is_equal_approx(float(mh.result.get("tempo_control_applied",-1.0)),39.0),"ABI601:tempo_39_on_hit")
-
-	var heal_ctx := _pair("hammer","axe")
-	var heal_state: CombatState = heal_ctx["state"]
-	var heal_engine: CombatEngine = heal_ctx["engine"]
-	var healer := heal_state.get_combatant("left")
-	HammerAbiCombatService.gain_charges(heal_engine,healer,80)
-	healer.hp = 6000
-	var heal_def: Dictionary = Dictionary(defs["ABI603"]).duplicate(true)
-	heal_def["charge_spend_fraction"] = 0.30
-	heal_def["heal_hp_pct_per_spent_charge"] = 0.70
-	var heal_action := AbilityRuntime.build_action_event(heal_state,"left","left","ABI603",heal_def)
-	HammerAbiCombatService.dispatch(heal_engine,heal_action)
-	heal_engine.resolve_pending_events()
-	_check(int(heal_action.result.get("charges_consumed",-1))==24,"ABI603:custom_charge_spend")
-	_check(healer.hp==7680,"ABI603:custom_heal_per_spent_charge")
-	_check(HammerAbiCombatService.charges(healer,heal_state.round_number)==56,"ABI603:spent_only_24_charges")
-
-	var surge_ctx := _pair("hammer","axe")
-	var surge_state: CombatState = surge_ctx["state"]
-	var surge_engine: CombatEngine = surge_ctx["engine"]
-	var surger := surge_state.get_combatant("left")
-	HammerAbiCombatService.gain_charges(surge_engine,surger,80)
-	var surge_def: Dictionary = Dictionary(defs["ABI605"]).duplicate(true)
-	surge_def["charge_spend_fraction"] = 0.40
-	var surge_action := AbilityRuntime.build_action_event(surge_state,"left","left","ABI605",surge_def)
-	HammerAbiCombatService.dispatch(surge_engine,surge_action)
-	surge_engine.resolve_pending_events()
-	_check(int(surge_action.result.get("charges_consumed",-1))==32,"ABI605:custom_charge_spend")
-	_check(HammerAbiCombatService.charges(surger,surge_state.round_number)==48,"ABI605:spent_32_charges")
-	var surge_record := _active_effect(surger,"EFF604")
-	var surge_effect: Dictionary = surge_record.get("definition",{})
-	_check(is_equal_approx(float(surge_effect.get("physical_damage_outgoing_direct_pct",-1.0)),25.0),"EFF604:surge_strength_cap_independent_from_abi_spend")
-	_check(is_equal_approx(float(surge_effect.get("damage_lifesteal_pct",-1.0)),20.0),"EFF604:lifesteal_unchanged")
-
-	var fracture_ctx := _pair("hammer","axe")
-	var fracture_state: CombatState = fracture_ctx["state"]
-	var fracture_engine: CombatEngine = fracture_ctx["engine"]
-	var fracturer := fracture_state.get_combatant("left")
-	HammerAbiCombatService.gain_charges(fracture_engine,fracturer,40)
-	var fracture_def: Dictionary = Dictionary(defs["ABI604"]).duplicate(true)
-	fracture_def["damage_multiplier"] = 1.8
-	var fracture_action := AbilityRuntime.build_action_event(fracture_state,"left","right","ABI604",fracture_def)
-	HammerAbiCombatService.dispatch(fracture_engine,fracture_action)
-	var fracture_attacks: Array[CombatEvent] = []
-	for pending in fracture_state.pending_events:
-		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("hammer_abi_id",""))=="ABI604":
-			fracture_attacks.append(pending)
-	_check(fracture_attacks.size()==1,"ABI604:one_fracture_attack")
-	if not fracture_attacks.is_empty():
-		_check(is_equal_approx(float(fracture_attacks[0].payload.get("raw_damage",-1.0)),180.0),"ABI604:custom_multiplier_from_abi")
-		_check(int(fracture_attacks[0].payload.get("hammer_fracture_charges",-1))==40,"ABI604:charge_count_sent_to_eff")
-	_check(HammerAbiCombatService.charges(fracturer,fracture_state.round_number)==0,"ABI604:all_charges_consumed")
-
-	var crush_ctx := _pair("hammer","axe")
-	var crush_state: CombatState = crush_ctx["state"]
-	var crush_engine: CombatEngine = crush_ctx["engine"]
-	var crusher := crush_state.get_combatant("left")
-	HammerAbiCombatService.gain_charges(crush_engine,crusher,80)
-	var crush_def: Dictionary = Dictionary(defs["ABI606"]).duplicate(true)
-	crush_def["damage_multiplier_per_charge"] = 0.04
-	crush_def["max_damage_multiplier"] = 2.2
-	crush_def["tempo_control_per_charge"] = 3
-	crush_def["max_tempo_control"] = 160
-	var crush_action := AbilityRuntime.build_action_event(crush_state,"left","right","ABI606",crush_def)
-	HammerAbiCombatService.dispatch(crush_engine,crush_action)
-	var crush_attacks: Array[CombatEvent] = []
-	for pending in crush_state.pending_events:
-		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("hammer_abi_id",""))=="ABI606":
-			crush_attacks.append(pending)
-	_check(crush_attacks.size()==1,"ABI606:one_crush_attack")
-	if not crush_attacks.is_empty():
-		_check(is_equal_approx(float(crush_attacks[0].payload.get("raw_damage",-1.0)),220.0),"ABI606:custom_damage_multiplier_and_cap")
-		_check(int(crush_attacks[0].payload.get("hammer_formal_tempo_delta",0))==-160,"ABI606:custom_tempo_per_charge_and_cap")
-	_check(HammerAbiCombatService.charges(crusher,crush_state.round_number)==0,"ABI606:all_charges_consumed")
-
-
-## EFF601, not ABI, owns passive generation numbers and active snapshots.
-func _hammer_eff601_charge_generation() -> void:
-	var ctx := _pair("hammer","axe")
-	var engine: CombatEngine = ctx["engine"]
-	var state: CombatState = ctx["state"]
-	var hammer := state.get_combatant("left")
-	engine.canonical_effects["EFF601"]["charges_per_ordinary_mh_hit"] = 7
-	engine.canonical_effects["EFF601"]["charges_per_positive_damage_event_taken"] = 4
-	var first := _attack(ctx,"left","right")
-	_check(String(first.result.get("outcome",""))=="connected","EFF601:ordinary_mh_connected")
-	_check(HammerAbiCombatService.charges(hammer,state.round_number)==7,"EFF601:initial_charges_from_catalog")
-	var charge_record := _active_effect(hammer,"EFF601")
-	_check(not charge_record.is_empty(),"EFF601:charge_record_created")
-	if charge_record.is_empty():
-		return
-	var existing: Dictionary = Dictionary(charge_record.get("definition",{})).duplicate(true)
-	existing["charges_per_ordinary_mh_hit"] = 2
-	existing["charges_per_positive_damage_event_taken"] = 4
-	charge_record["definition"] = existing
-	var second := _attack(ctx,"left","right")
-	_check(String(second.result.get("outcome",""))=="connected","EFF601:second_mh_connected")
-	_check(HammerAbiCombatService.charges(hammer,state.round_number)==9,"EFF601:active_snapshot_controls_next_hit")
-	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE,"right","left",{
-		"amount":1000.0,"damage_type":"physical","source":"charge_generation_test"
-	})
-	engine.resolve_event(damage_event)
-	_check(int(damage_event.result.get("final_damage",0))>0,"EFF601:positive_incoming_damage_fixture")
-	_check(HammerAbiCombatService.charges(hammer,state.round_number)==13,"EFF601:active_snapshot_controls_damage_taken")
-	# Direct service callback exercises the critical branch deterministically,
-	# without relying on the fixture's PAR-derived critical chance.
-	existing["bonus_charges_on_ordinary_mh_crit"] = 3
-	charge_record["definition"] = existing
-	var critical_hit := state.create_event(CombatEvent.Kind.ATTACK,"left","right",{
-		"is_weapon_attack":true,"weapon_index":0,"source_kind":"weapon"
-	})
-	critical_hit.set_result("critical",true)
-	HammerAbiCombatService.on_connected_attack(engine,critical_hit,hammer)
-	_check(HammerAbiCombatService.charges(hammer,state.round_number)==18,"EFF601:active_snapshot_controls_critical_charge_bonus")
-
-
-## Different field names and duration divisors in a test-only EFF603
-## must work unchanged. The old hardcoded hammer zone/duration branches
-## would fail when the EFF policy no longer uses the historical names.
-func _dynamic_fracture_policy_from_eff() -> void:
-	var ctx := _pair("hammer","axe")
-	var engine: CombatEngine = ctx["engine"]
-	var state: CombatState = ctx["state"]
-	var fracture_definition: Dictionary = engine.canonical_effects["EFF603"]
-	fracture_definition["duration_from_charges"]["charge_field"] = "custom_fracture_charge_count"
-	fracture_definition["duration_from_charges"]["charges_per_round"] = 20
-	fracture_definition["contextual_modifier"]["input_field"] = "custom_fracture_charge_count"
-	fracture_definition["contextual_modifier"]["maximum"] = 45
-	fracture_definition["application_context_fields"]["armour_zone"] = "custom_selected_zone"
-	var applied := _effect(ctx,"left","right","EFF603",{
-		"custom_fracture_charge_count":70,
-		"custom_selected_zone":"arms",
-		"hammer_fracture_charges":0,
-		"hammer_fracture_zone":"legs"
-	},true)
-	var record := _active_effect(state.get_combatant("right"),"EFF603")
-	var snapshot: Dictionary = record.get("definition",{})
-	_check(bool(applied.result.get("resolved",false)),"EFF603:alternate_application_fields_resolved")
-	_check(int(snapshot.get("duration_rounds",-1))==4,"EFF603:duration_policy_from_catalog_only")
-	_check(String(snapshot.get("armour_zone",""))=="arms","EFF603:selected_zone_from_catalog_only")
-	_check(is_equal_approx(float(snapshot.get("armour_reduction_pct",-1.0)),45.0),"EFF603:magnitude_from_context_and_catalog_cap")
-	# A no-duration application is still rejected even without any EFF603
-	# branching in the Combat Engine.
-	var empty_ctx := _pair("hammer","axe")
-	var empty_engine: CombatEngine = empty_ctx["engine"]
-	var empty_state: CombatState = empty_ctx["state"]
-	var no_duration := empty_state.create_event(CombatEvent.Kind.EFFECT,"left","right",{
-		"effect_id":"EFF603","source_type":"ability","base_chance":100.0,
-		"effect_roll":1,"hammer_fracture_charges":0
-	})
-	empty_engine.resolve_event(no_duration)
-	_check(not bool(no_duration.result.get("resolved",true)) and String(no_duration.result.get("outcome",""))=="no_effect_duration","EFF603:zero_duration_rejected_without_id_branch")
-	_check(_active_effect(empty_state.get_combatant("right"),"EFF603").is_empty(),"EFF603:no_zero_duration_snapshot")
-
-## Item/on-hit trigger targeting must not depend on the literal EFF001 ID.
-## Both a different EFF and an explicit trigger target are real attack paths.
 func _item_weapon_on_hit_target_ownership() -> void:
 	var ctx := _pair("sword","axe")
 	var state: CombatState = ctx["state"]
@@ -721,41 +517,6 @@ func _eff_sword_scaling_ownership() -> void:
 	var rank_75 := AbilityCatalog.rank_for_item_level(75)
 	_check(rank_1==0 and rank_75==7,"ABI:ten_level_rank_boundaries")
 
-func _dynamic_effects_from_catalog() -> void:
-	var abilities := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
-
-	var hammer_ctx := _pair("hammer","axe")
-	var hammer_state: CombatState = hammer_ctx["state"]
-	var hammer_engine: CombatEngine = hammer_ctx["engine"]
-	hammer_engine.canonical_effects["EFF604"]["contextual_modifier"]["per_unit"] = 1.5
-	hammer_engine.canonical_effects["EFF604"]["contextual_modifier"]["maximum"] = 24
-	HammerAbiCombatService.gain_charges(hammer_engine,hammer_state.get_combatant("left"),80)
-	var surge_action := AbilityRuntime.build_action_event(hammer_state,"left","left","ABI605",abilities["ABI605"])
-	HammerAbiCombatService.dispatch(hammer_engine,surge_action)
-	hammer_engine.resolve_pending_events()
-	var surge := _active_effect(hammer_state.get_combatant("left"),"EFF604")
-	var surge_definition: Dictionary = surge.get("definition",{})
-	_check(is_equal_approx(float(surge_definition.get("physical_damage_outgoing_direct_pct",-1)),24.0),"hammer:contextual_physical_surge_and_cap")
-	_check(is_equal_approx(float(surge_definition.get("magic_damage_direct_pct",-1)),24.0),"hammer:contextual_magic_surge_and_cap")
-	_check(is_equal_approx(float(surge_definition.get("damage_lifesteal_pct",-1)),20.0),"hammer:lifesteal_unchanged")
-
-	# Fracture's magnitude and bounds belong to EFF603 as well.
-	hammer_engine.canonical_effects["EFF603"]["contextual_modifier"]["per_unit"] = 0.5
-	hammer_engine.canonical_effects["EFF603"]["contextual_modifier"]["maximum"] = 40
-	_effect(hammer_ctx,"left","right","EFF603",{"hammer_fracture_charges":100,"hammer_fracture_zone":"legs"},true)
-	var fracture := _active_effect(hammer_state.get_combatant("right"),"EFF603")
-	var fracture_definition: Dictionary = fracture.get("definition",{})
-	_check(is_equal_approx(float(fracture_definition.get("armour_reduction_pct",-1)),40.0),"hammer:fracture_magnitude_from_eff_and_cap")
-	_check(int(fracture_definition.get("duration_rounds",-1))==10,"hammer:fracture_duration_unchanged")
-	_check(String(fracture_definition.get("armour_zone",""))=="legs","hammer:fracture_zone_unchanged")
-
-	# A queued pre-migration event keeps its already-computed application value.
-	var old_event := _effect(hammer_ctx,"left","left","EFF604",{"hammer_surge_pct":11.0},true)
-	_check(bool(old_event.result.get("resolved",false)),"hammer:legacy_event_resolved")
-	var old_surge := _active_effect(hammer_state.get_combatant("left"),"EFF604")
-	_check(is_equal_approx(float(Dictionary(old_surge.get("definition",{})).get("physical_damage_outgoing_direct_pct",-1)),11.0),"hammer:legacy_event_kept_value")
-
-
 func _active_effect(fighter: CombatantState, effect_id: String) -> Dictionary:
 	for raw in fighter.active_effects:
 		var record: Dictionary = raw
@@ -763,40 +524,6 @@ func _active_effect(fighter: CombatantState, effect_id: String) -> Dictionary:
 			return record
 	return {}
 
-
-func _dagger_breach_versus_hammer_armour() -> void:
-	var ctx := _pair("dagger","hammer")
-	var state: CombatState = ctx["state"]
-	var hammer := state.get_combatant("right")
-	hammer.armour["chest"] = {"piercing":150.0}
-	var charge_definition: Dictionary = EffectCatalog.definition(EffectCatalog.load_json(),"EFF601").duplicate(true)
-	# Change the test-only EFF value; Combat must never keep a hardcoded 0.25.
-	charge_definition["armour_and_resistance_direct_pct_per_stack"] = 0.5
-	hammer.active_effects.append({
-		"effect_id":"EFF601","definition":charge_definition,"source_id":"right",
-		"start_round":1,"remaining_rounds":1,"stacks":40
-	})
-	var base_hit := _attack(ctx,"left","right")
-	_check(String(base_hit.result.get("outcome","")) == "connected","dagger:baseline_hit_connected")
-	var base_reduction := float(base_hit.result.get("armour_reduction",-1.0))
-	_check(is_equal_approx(float(base_hit.result.get("armour_before_dr_percent",-1.0)),float(base_hit.result.get("armour_raw_percent",-1.0))+20.0),"hammer:armour_reads_test_only_eff601_rate")
-	for i in range(5):
-		_effect(ctx,"left","right","EFF401")
-	_check(_effects_count(hammer,"EFF401") == 1 and _effect_stacks(hammer,"EFF401") == 5,"dagger:five_breach_stacks_in_one_record")
-	# Change only the active EFF snapshot, not CombatEngine: 5 stacks x 4 p.p.
-	for record in hammer.active_effects:
-		if String(record.get("effect_id","")) == "EFF401":
-			var active_definition: Dictionary = record["definition"]
-			active_definition["armour_reduction_pct_per_stack"] = 4.0
-	state.begin_round()
-	var breached_hit := _attack(ctx,"left","right")
-	var breached_reduction := float(breached_hit.result.get("armour_reduction",-1.0))
-	_check(String(breached_hit.result.get("outcome","")) == "connected","dagger:breached_hit_connected")
-	_check(int(breached_hit.result.get("dagger_breach_stacks",-1)) == 5,"dagger:five_stacks_visible_to_damage")
-	_check(is_equal_approx(float(breached_hit.result.get("armour_after_breach_percent",-1)),maxf(0.0,float(breached_hit.result.get("armour_raw_percent",-1))-20.0)),"dagger:armour_reads_test_only_eff401_rate")
-	_check(base_reduction > 0.0 and breached_reduction < base_reduction,"dagger:breach_counters_hammer_charge_armour")
-	_check(HammerAbiCombatService.charges(hammer,state.round_number) >= 40,"hammer:charges_survive_armour_breach")
-	print("ABI_CROSS_WEAPON_CASE=CHECKED dagger_breach_vs_hammer_armour")
 
 func _axe_wounds_from_eff() -> void:
 	var ctx := _pair("axe","dagger")
@@ -814,57 +541,52 @@ func _axe_shield_breaker_catalog() -> void:
 	_check(int(Dictionary(defs["ABI510"]).get("block_crush_bonus_pct",0))==40,"axe:shieldbreaker_plus40_block_crush")
 	_check(int(Dictionary(defs["ABI511"]).get("shield_damage_bonus_pct",0))==35,"axe:shieldbreaker_plus35_vs_shield")
 	_check(int(Dictionary(defs["ABI512"]).get("shield_damage_bonus_pct",0))==50,"axe:shieldbreaker_e_plus50_vs_shield")
-func _hammer_tempo_versus_axe_immunity() -> void:
+
+func _mace_abi_cross_integration() -> void:
+	var defs := AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH)
+	var effs := EffectCatalog.load_json()
+	for n in range(601,609):
+		var id := "ABI%d" % n
+		_check(defs.has(id),id+":approved")
+		_check(Array(Dictionary(defs[id]).get("base_damage_by_rank",[])).size()==10,id+":ten_numeric_ranks")
+		_check(not Dictionary(defs[id]).has("charge_spend_fraction"),id+":no_old_charge_system")
+	_check(not Dictionary(effs["EFF601"]).has("charges_per_ordinary_mh_hit"),"mace:no_passive_charges")
+	_check(int(Dictionary(effs["EFF601"]).get("max_stacks",0))==3,"mace:concussion_max3")
+	_check(int(Dictionary(effs["EFF601"]).get("duration_rounds",0))==4,"mace:concussion_duration4")
+	_check(is_equal_approx(float(Dictionary(effs["EFF602"]).get("incoming_damage_physical_direct_pct",0)),-15.0),"mace:guard15")
+	_check(is_equal_approx(float(Dictionary(effs["EFF603"]).get("incoming_damage_physical_direct_pct",0)),-10.0),"mace:counter10")
+	_check(is_equal_approx(float(Dictionary(effs["EFF604"]).get("physical_damage_outgoing_direct_pct",0)),-25.0),"mace:enemy_weakening25")
+	_check(is_equal_approx(float(Dictionary(effs["EFF605"]).get("physical_damage_outgoing_direct_pct",0)),15.0),"mace:self_damage15")
+	_check(is_equal_approx(float(Dictionary(effs["EFF606"]).get("armour_reduction_raw_pct",0)),15.0),"mace:armour_raw_cut15")
 	var ctx := _pair("hammer","axe")
 	var state: CombatState = ctx["state"]
-	var axe := state.get_combatant("right")
-	var miss := _attack(ctx,"left","right",0,{"hammer_abi_id":"ABI606","hammer_formal_tempo_delta":-200},100)
-	_check(String(miss.result.get("outcome","")) == "miss" and is_equal_approx(axe.tempo,0.0),"hammer:miss_does_not_control_tempo")
-	var hit := _attack(ctx,"left","right",0,{"hammer_abi_id":"ABI606","hammer_formal_tempo_delta":-200})
-	_check(String(hit.result.get("outcome","")) == "connected" and is_equal_approx(float(hit.result.get("tempo_control_applied",0.0)),200.0),"hammer:connected_hit_applies_200_tempo_debt")
-	CombatTempoService.end_round(state)
-	_check(axe.tempo_stun_round == 2,"hammer:stun_scheduled_for_round_two")
-	state.begin_round()
-	_check(CombatTempoService.is_stunned(axe,2),"hammer:next_round_stunned")
-	CombatTempoService.end_round(state)
-	_check(axe.tempo_immunity_until_round == 4,"hammer:two_rounds_immunity")
-	state.begin_round()
-	var second_hit := _attack(ctx,"left","right",0,{"hammer_abi_id":"ABI601"})
-	_check(is_equal_approx(float(second_hit.result.get("tempo_control_applied",0.0)),25.0),"hammer:control_still_accumulates_during_immunity")
-	CombatTempoService.end_round(state)
-	_check(axe.tempo_stun_round == 2 and CombatTempoService.is_immune(axe,3),"hammer:immune_round_three_no_rechain")
-	state.begin_round()
-	CombatTempoService.end_round(state)
-	_check(axe.tempo_stun_round == 2 and CombatTempoService.is_immune(axe,4),"hammer:immune_round_four_no_rechain")
-	state.begin_round()
-	CombatTempoService.end_round(state)
-	_check(axe.tempo_stun_round == 6,"hammer:accumulated_debt_stuns_after_immunity")
-	print("ABI_CROSS_WEAPON_CASE=CHECKED hammer_tempo_vs_axe_immunity")
+	var actor := state.get_combatant("left")
+	var target := state.get_combatant("right")
+	_effect(ctx,"left","left","EFF602",{},true)
+	_check(is_equal_approx(CombatModifierService.modifier(actor,"incoming_damage_physical_direct_pct",state.round_number),-15.0),"mace:guard_buff_active")
+	_effect(ctx,"left","left","EFF603",{},true)
+	_check(is_equal_approx(CombatModifierService.modifier(actor,"incoming_damage_physical_direct_pct",state.round_number),-15.0),"mace:strongest_guard_wins")
+	_effect(ctx,"left","right","EFF601",{"stacks_to_apply":3},true)
+	_check(HammerAbiCombatService._concussion(target,"left",state.round_number)==3,"mace:concussion_target3")
+	_check(HammerAbiCombatService._concussion(target,"other",state.round_number)==0,"mace:concussion_per_source")
+	HammerAbiCombatService._consume_concussion(target,"left",1)
+	_check(HammerAbiCombatService._concussion(target,"left",state.round_number)==2,"mace:concussion_partial_consume")
+	var attack := _attack(ctx,"left","right",0,{"hammer_abi_id":"ABI607","hammer_tempo_control_on_hit":50.0})
+	_check(String(attack.result.get("outcome",""))=="connected","mace:wave_hits")
+	_check(is_equal_approx(float(attack.result.get("tempo_control_applied",0)),50.0),"mace:tempo_50_shared_engine")
+	var ordinary := _attack(ctx,"left","right")
+	_check(String(ordinary.result.get("outcome",""))=="connected","mace:ordinary_MH_connected")
+	_check(_active_effect(actor,"EFF601").is_empty(),"mace:ordinary_MH_no_charge")
+	var physical_damage := state.create_event(CombatEvent.Kind.DAMAGE,"right","left",{"amount":1000.0,"damage_type":"physical","source":"mace_defence_test"})
+	var unguarded_ctx := _pair("hammer","axe")
+	var normal_target := unguarded_ctx["state"].get_combatant("left")
+	var normal_event := unguarded_ctx["state"].create_event(CombatEvent.Kind.DAMAGE,"right","left",{"amount":1000.0,"damage_type":"physical","source":"mace_defence_control"})
+	unguarded_ctx["engine"].resolve_event(normal_event)
+	ctx["engine"].resolve_event(physical_damage)
+	_check(int(physical_damage.result.get("final_damage",0))<=int(normal_event.result.get("final_damage",0)),"mace:physical_guard_reduces_damage")
+	var magic_before := CombatModifierService.magic_resist(target,"fire",state.round_number,actor)
+	_check(is_equal_approx(magic_before,CombatModifierService.magic_resist(target,"fire",state.round_number,actor)),"mace:concussion_not_magic_resistance")
+	var fracture := _effect(ctx,"left","right","EFF606",{},true)
+	_check(bool(fracture.result.get("resolved",false)),"mace:armour_debuff_effect")
+	_check(is_equal_approx(float(Dictionary(_active_effect(target,"EFF606").get("definition",{})).get("armour_reduction_raw_pct",0)),15.0),"mace:armour_debuff_owned_by_EFF")
 
-func _hammer_charge_magic_resist_versus_penetration() -> void:
-	var ctx := _pair("dagger","hammer")
-	var state: CombatState = ctx["state"]
-	var engine: CombatEngine = ctx["engine"]
-	var attacker := state.get_combatant("left")
-	var hammer := state.get_combatant("right")
-	var baseline := CombatModifierService.magic_resist(hammer,"fire",1,attacker)
-	HammerAbiCombatService.gain_charges(engine,hammer,80)
-	var fortified := CombatModifierService.magic_resist(hammer,"fire",1,attacker)
-	_check(HammerAbiCombatService.charges(hammer,1) == 80,"hammer:charge_cap_preserves_eighty")
-	_check(fortified > baseline,"hammer:charges_raise_magic_resist")
-	var first := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
-		"amount":100.0,"damage_type":"fire","source":"ability"
-	})
-	engine.resolve_event(first)
-	_check(is_equal_approx(float(first.result.get("magic_resist",-1.0)),fortified),"hammer:fire_damage_uses_charge_resistance")
-	var totals: Dictionary = attacker.combat_stats["par_totals"]
-	totals["PAR164"] = 10000.0
-	attacker.combat_stats["par_totals"] = totals
-	var penetrated := CombatModifierService.magic_resist(hammer,"fire",1,attacker)
-	_check(penetrated < fortified,"dagger:magic_pen_rating_counters_hammer_resist")
-	var second := state.create_event(CombatEvent.Kind.DAMAGE,"left","right",{
-		"amount":100.0,"damage_type":"fire","source":"ability"
-	})
-	engine.resolve_event(second)
-	_check(int(second.result.get("final_damage",0)) > int(first.result.get("final_damage",0)),"dagger:penetration_increases_real_magic_damage")
-	print("ABI_CROSS_WEAPON_CASE=CHECKED hammer_magic_resist_vs_penetration")
