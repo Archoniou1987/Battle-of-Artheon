@@ -20,12 +20,31 @@ static func trait_modifiers(combatant: CombatantState) -> Dictionary:
 	var raw: Variant = combatant.combat_stats.get("trait_modifiers", {})
 	return raw if raw is Dictionary else {}
 
+## Unique-by-modifier groups suppress weaker active buffs/debuffs without
+## deleting their timers. Positive and negative overlays compete separately.
+static func _effect_values(combatant: CombatantState, field: String, round_number: int) -> float:
+	var sum := 0.0
+	var best: Dictionary = {}
+	for record in active_effects(combatant,round_number):
+		var definition: Dictionary = record.get("definition",{})
+		var value := float(definition.get(field,0.0))
+		if is_zero_approx(value):
+			continue
+		if bool(definition.get("apply_stacks_to_modifiers",false)):
+			value *= float(record.get("stacks",1))
+		var group := String(definition.get("unique_group",""))
+		if group.is_empty():
+			sum += value
+			continue
+		var key := group + ":" + field + (":positive" if value>0.0 else ":negative")
+		if not best.has(key) or absf(value)>absf(float(best[key])):
+			best[key] = value
+	for v in best.values():
+		sum += float(v)
+	return sum
+
 static func flat_bonus(combatant: CombatantState, key: String, round_number: int) -> float:
-	var total := 0.0
-	for record in active_effects(combatant, round_number):
-		var definition: Dictionary = record.get("definition", {})
-		total += float(definition.get(key, 0.0))
-	return total
+	return _effect_values(combatant,key,round_number)
 
 static func modifier(combatant: CombatantState, key: String, round_number: int) -> float:
 	return float(trait_modifiers(combatant).get(key, 0.0)) + flat_bonus(combatant, key, round_number)
@@ -83,20 +102,11 @@ static func effective_percent(combatant: CombatantState, key: String, round_numb
 		push_error("Missing mandatory converted rating: " + field)
 		return NAN
 	var direct_key := key.trim_suffix("_rating") + "_direct_pct"
-	var permanent: Variant = trait_modifiers(combatant).get(direct_key, 0.0)
-	if not RatingMatrix._number(permanent):
-		push_error("Invalid runtime direct-percent modifier: " + direct_key)
-		return NAN
-	var result := float(combatant.combat_stats[field]) + float(permanent)
-	for record in active_effects(combatant, round_number):
-		var value: Variant = Dictionary(record.get("definition", {})).get(direct_key, 0.0)
-		if not RatingMatrix._number(value):
-			push_error("Invalid effect direct-percent modifier: " + direct_key)
-			return NAN
-		result += float(value)
-	if not is_finite(result):
-		push_error("Non-finite converted rating: " + field)
-		return NAN
+	var direct := float(trait_modifiers(combatant).get(direct_key,0.0))
+	var rating_delta := _effect_values(combatant,key + "_delta",round_number)
+	var result := float(combatant.combat_stats[field]) + direct + _effect_values(combatant,direct_key,round_number)
+	if not is_zero_approx(rating_delta):
+		result += RatingMatrix.to_percent(rating_delta,combatant.level)
 	return result
 
 static func block_chance(combatant: CombatantState, round_number: int) -> float:
