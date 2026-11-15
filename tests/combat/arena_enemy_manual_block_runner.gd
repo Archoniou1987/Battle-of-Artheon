@@ -9,6 +9,12 @@ func _check(ok: bool, name: String) -> void:
 		failures.append(name)
 		print("ARENA_ENEMY_BLOCK_FAIL=",name)
 
+func _unprotected(protected: Array[String]) -> String:
+	for zone in CombatCommandApi.BODY_ZONES:
+		if not protected.has(zone):
+			return String(zone)
+	return ""
+
 func _initialize() -> void:
 	var repo := ItemRepository.new()
 	var hero := CharacterState.new("ARENA_NPC_BLOCK_HERO","Block test",1)
@@ -39,7 +45,7 @@ func _initialize() -> void:
 		# Check a block through the unmodified shared CombatEngine with
 		# deterministic hit/dodge/block-crush rolls (no made-up NPC damage).
 		var event := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,{
-			"zone":"waist","damage_type":"slashing","raw_damage":10.0,
+			"zone":"waist","damage_type":"slashing","raw_damage":10.0,"hit_already_resolved":true,
 			"rolls":{"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
 		})
 		arena.engine.resolve_event(event)
@@ -47,8 +53,8 @@ func _initialize() -> void:
 		var lines := ArenaCombatLog.lines_for_round(arena.state.event_log,arena.state.round_number,arena.player_id,arena.ability_scheduler.definitions)
 		_check(" ".join(PackedStringArray(lines)).contains("ручной блок"),"npc_block_visible_in_arena_log")
 		var miss := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,{
-			"zone":"head" if not first.has("head") else "legs",
-			"damage_type":"slashing","raw_damage":10.0,
+			"zone":_unprotected(first),
+			"damage_type":"slashing","raw_damage":10.0,"hit_already_resolved":true,
 			"rolls":{"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
 		})
 		arena.engine.resolve_event(miss)
