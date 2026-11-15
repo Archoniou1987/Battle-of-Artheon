@@ -271,18 +271,6 @@
     "physical_damage_outgoing_direct_pct": 20,
     "incoming_damage_direct_pct": 10
   },
-  "EFF503": {
-    "id": "EFF503",
-    "name": "Подорванная защита",
-    "kind": "debuff",
-    "duration_rounds": 2,
-    "stacking": "unique",
-    "polarity": "DEBUFF",
-    "tags": [
-      "AXE_SHIELD_BREAK"
-    ],
-    "shield_auto_block_direct_pct": -20
-  },
   "EFF601": {
     "id": "EFF601",
     "name": "Заряд молота",
