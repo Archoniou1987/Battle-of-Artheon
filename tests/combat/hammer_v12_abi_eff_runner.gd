@@ -94,6 +94,12 @@ func _run() -> void:
 			_check(Array(Dictionary(catalog[id]).get("base_damage_by_rank",[])).size()==10,id+"_ten_ranks")
 	for id in ["EFF601","EFF602","EFF603","EFF604","EFF605","EFF606"]:
 		_check(effects.has(id),id+"_catalog")
+	_check(effects.has("EFF607"),"defensive_abi601_stance_catalog")
+	if effects.has("EFF607"):
+		_check(int(Dictionary(effects["EFF607"]).get("duration_rounds",0))==1,"stance_one_round")
+		_check(int(Dictionary(effects["EFF607"]).get("ap_per_successful_block",0))==1,"stance_ap_per_block")
+		_check(int(Dictionary(effects["EFF607"]).get("max_ap_from_blocks_per_round",0))==3,"stance_max_3_block_ap")
+	_check(String(Dictionary(Dictionary(catalog["ABI601"]).get("effect_refs",{})).get("on_cast",""))=="EFF607","abi601_effect_reference")
 	_check(int(Dictionary(effects["EFF601"]).get("max_stacks",0))==3,"concussion_max3")
 	_check(int(Dictionary(effects["EFF601"]).get("duration_rounds",0))==4,"concussion_duration4")
 	_check(not Dictionary(effects["EFF601"]).has("charges_per_ordinary_mh_hit"),"retired_100_charge_mechanic")
@@ -118,6 +124,25 @@ func _run() -> void:
 			_check(_attacks(defence,"ABI604").size()==1,"def_finisher_one_hit")
 			_check(not _effect(defence.fighter(true),"EFF605").is_empty(),"finisher_self_attack_buff")
 			_check(not _effect(defence.fighter(false),"EFF604").is_empty(),"finisher_enemy_weakening")
+	# AP from ABI601 is granted by each real block event with the EFF-owned
+	# maximum. It is not a bonus for choosing protected zones.
+	var guard := _make_session("HAMMER_DEF",202611184)
+	if guard != null:
+		guard.state.begin_round()
+		var actor := guard.fighter(true)
+		actor.action_points = 0
+		var prep := guard.state.create_event(CombatEvent.Kind.ACTION,guard.player_id,ArenaCombatSession.ENEMY_ID,{"ability_id":"ABI601","source_kind":"ability"})
+		HammerAbiCombatService.prepare_action(guard.engine,prep)
+		guard.engine.resolve_pending_events()
+		var stance := _effect(actor,"EFF607")
+		_check(not stance.is_empty(),"abi601_prepared_stance")
+		for index in range(5):
+			var successful_block := guard.state.create_event(CombatEvent.Kind.ATTACK,ArenaCombatSession.ENEMY_ID,guard.player_id,{"zone":"chest"})
+			successful_block.set_result("outcome","manual_block" if index%2==0 else "auto_block")
+			HammerAbiCombatService.on_block(guard.engine,successful_block,actor)
+		_check(actor.action_points==3,"abi601_three_block_ap_cap")
+		_check(int(stance.get("block_ap_awarded",0))==3,"abi601_block_count_cap")
+		_check(not _effect(actor,"EFF607").is_empty(),"abi601_buff_applies_independent_of_hit")
 	var attack := _make_session("HAMMER_ATTACK",202611181)
 	if attack != null:
 		if _cast(attack,"ABI605"):
