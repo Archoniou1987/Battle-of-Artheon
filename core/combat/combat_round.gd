@@ -30,21 +30,6 @@ func lock_action(event: CombatEvent) -> void:
 func resolve(engine: CombatEngine) -> void:
 	if resolved:
 		return
-	# ABI301 enhances the round's existing first MH hit, never inserts a
-	# second weapon attack. Attach before the sealed action batch resolves.
-	for abi_action in locked_actions:
-		if abi_action.kind != CombatEvent.Kind.ACTION or String(abi_action.payload.get("ability_id","")) != "ABI301":
-			continue
-		for mh in locked_actions:
-			if mh.kind != CombatEvent.Kind.ATTACK or mh.source_id != abi_action.source_id:
-				continue
-			if not bool(mh.payload.get("is_weapon_attack",false)) or int(mh.payload.get("weapon_index",-1)) != 0 or int(mh.payload.get("hit_index",0)) != 0:
-				continue
-			mh.payload["sword_abi_id"] = "ABI301"
-			mh.payload["sword_eff_level"] = int(abi_action.payload.get("sword_eff_level",1))
-			mh.payload["sword_mh_bonus_flat"] = float(abi_action.payload.get("mh_flat_bonus",0.0))
-			mh.payload["sword_ap_gain_on_hit"] = int(abi_action.payload.get("ap_gain",AbilityCatalog.number("ABI301","ap_gain")))
-			break
 	# Axe ABI501 enhances ONE existing ordinary MH attack, never adds a hit.
 	for abi_action in locked_actions:
 		if abi_action.kind != CombatEvent.Kind.ACTION or String(abi_action.payload.get("ability_id","")) != AxeAbiCombatService.RAGE_ABI:
@@ -84,7 +69,7 @@ func resolve(engine: CombatEngine) -> void:
 	for action in locked_actions:
 		if action.kind==CombatEvent.Kind.ACTION and bool(action.payload.get("is_counterattack_abi",false)):
 			action.payload["counter_abi_mh_zone"]=String(mh_zone_by_source.get(action.source_id,""))
-		if action.kind==CombatEvent.Kind.ACTION and (WeaponComboAbiCombatService.is_combo_ability(String(action.payload.get("ability_id",""))) or AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
+		if action.kind==CombatEvent.Kind.ACTION and (SwordAbiCombatService.is_sword_ability(String(action.payload.get("ability_id",""))) or WeaponComboAbiCombatService.is_combo_ability(String(action.payload.get("ability_id",""))) or AxeAbiCombatService.is_axe_ability(String(action.payload.get("ability_id",""))) or HammerAbiCombatService.is_hammer_ability(String(action.payload.get("ability_id","")))):
 			if mh_zone_by_source.has(action.source_id):
 				action.payload["zone"]=String(mh_zone_by_source[action.source_id])
 	# Only instant ABI effects modify the conditions of this round's
@@ -94,6 +79,8 @@ func resolve(engine: CombatEngine) -> void:
 	engine.resolve_pending_events()
 	# Prepare ABI effects owned by active services before ordinary attacks.
 	for event in locked_actions:
+		if event.kind == CombatEvent.Kind.ACTION and SwordAbiCombatService.is_sword_ability(String(event.payload.get("ability_id",""))):
+			SwordAbiCombatService.prepare_action(engine,event)
 		if event.kind == CombatEvent.Kind.ACTION and AxeAbiCombatService.is_axe_ability(String(event.payload.get("ability_id",""))):
 			AxeAbiCombatService.prepare_action(engine,event)
 	engine.resolve_pending_events()
