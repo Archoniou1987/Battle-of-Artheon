@@ -14,7 +14,8 @@ static func effect_id(ability_id: String, role: String = "primary") -> String:
 		for raw in ability.get("components", []):
 			if raw is Dictionary and String(raw.get("kind", "")) == "effect":
 				return String(raw.get("effect_id", ""))
-		return String(ability.get("sword_eff_id", ""))
+		var refs: Variant = ability.get("effect_refs", {})
+		return String(refs.get("primary", "")) if refs is Dictionary else String(ability.get("sword_eff_id", ""))
 	var refs: Variant = ability.get("effect_refs", {})
 	return String(refs.get(role, "")) if refs is Dictionary else ""
 
@@ -28,6 +29,20 @@ static func number(ability_id: String, field: String, snapshot: Dictionary = {})
 		_canonical_definitions = load_json(CANONICAL_PATH)
 	return float(definition(_canonical_definitions,ability_id).get(field,0.0))
 
+
+## ABI owns per-rank damage. The item level selects the fixed ten-level band.
+static func rank_for_item_level(item_level: int) -> int:
+	return clampi(int(floori(float(maxi(1,item_level)-1)/10.0)),0,9)
+
+static func ranked_damage(ability_id: String, item_level: int) -> float:
+	if _canonical_definitions.is_empty():
+		_canonical_definitions = load_json(CANONICAL_PATH)
+	var definition_data := definition(_canonical_definitions,ability_id)
+	var values: Array = definition_data.get("base_damage_by_rank",[])
+	if values.size() != 10:
+		push_error("Missing ten ABI damage ranks for " + ability_id)
+		return 0.0
+	return maxf(0.0,float(values[rank_for_item_level(item_level)]))
 
 static func load_json(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path): return {}
@@ -47,7 +62,7 @@ static func is_retired_numbered_abi(ability_id: String) -> bool:
 		return false
 	var index := int(suffix)
 	return not (
-		(index>=301 and index<=308)
+		(index>=301 and index<=316)
 		or (index>=401 and index<=412)
 		or (index>=501 and index<=508)
 		or (index>=601 and index<=606)
