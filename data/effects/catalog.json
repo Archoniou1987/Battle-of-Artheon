@@ -600,5 +600,18 @@
       "HAMMER_ARMOUR_BREAK"
     ],
     "armour_reduction_raw_pct": 15
+  },
+  "EFF607": {
+    "id": "EFF607",
+    "name": "Стойка защитника",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 1,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_BLOCK_AP"
+    ],
+    "ap_per_successful_block": 1,
+    "max_ap_from_blocks_per_round": 3
   }
 }
