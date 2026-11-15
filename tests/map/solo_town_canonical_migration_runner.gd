@@ -98,6 +98,7 @@ func _initialize() -> void:
 	partial_slots["main_hand"]="V12_REQUIRED_TWO_SLOTS"
 	var rejected := MapWorldCommitService._restore_character(two_h_saved,two_h_repo)
 	check(not bool(rejected.get("ok",false)) and String(rejected.get("reason",""))=="world_equipment_occupancy_mismatch","partial_two_h_still_rejected")
+	check(String(rejected.get("detail","")).contains("V12_REQUIRED_TWO_SLOTS") and String(rejected.get("detail","")).contains("occupied=") and String(rejected.get("detail","")).contains("usage="),"bad_legacy_equipment_has_read_only_diagnostics")
 	if FileAccess.file_exists(one_h_path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(one_h_path))
 	if FileAccess.file_exists(PATH):
