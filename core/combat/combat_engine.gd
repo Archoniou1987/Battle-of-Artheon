@@ -347,7 +347,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 		if _event_uses_physical_block(event) and _manual_block_success(event, defender):
 			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
 			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
-			var manual_block_crushed:=_block_crushed(attacker, rolls)
+			var manual_block_crushed:=_block_crushed(attacker, rolls, float(event.payload.get("axe_block_crush_bonus_pct",0.0)))
 			event.set_result("manual_block_crushed",manual_block_crushed)
 			if not manual_block_crushed:
 				event.set_result("outcome", "manual_block")
@@ -357,10 +357,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
 		event.set_result("auto_block_chance",auto_block)
 		event.set_result("auto_block_roll",int(rolls.get("auto_block", 100)))
-		if _event_uses_physical_block(event) and defender.can_auto_block() and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
+		if _event_uses_physical_block(event) and defender.can_auto_block() and not bool(event.payload.get("skip_auto_block",false)) and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
 			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
 			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
-			var auto_block_crushed:=_block_crushed(attacker, rolls)
+			var auto_block_crushed:=_block_crushed(attacker, rolls, float(event.payload.get("axe_block_crush_bonus_pct",0.0)))
 			event.set_result("auto_block_crushed",auto_block_crushed)
 			if not auto_block_crushed:
 				event.set_result("outcome", "auto_block")
@@ -371,11 +371,6 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
-	if String(event.payload.get("axe_abi_id","")) == AxeAbiCombatService.RAGE_ABI:
-		var axe_bonus := float(event.payload.get("axe_mh_damage_bonus_pct",0.0))
-		if not event.payload.has("axe_mh_damage_bonus_pct"):
-			axe_bonus = float(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),AxeAbiCombatService.RAGE_ABI).get("mh_damage_bonus_pct",0.0))
-		raw_damage *= 1.0 + axe_bonus/100.0
 	if String(event.payload.get("hammer_abi_id","")) == HammerAbiCombatService.HEAVY:
 		var hammer_bonus := float(event.payload.get("hammer_mh_damage_bonus_pct",0.0))
 		if not event.payload.has("hammer_mh_damage_bonus_pct"):
@@ -515,6 +510,7 @@ func _resolve_damage(event: CombatEvent) -> void:
 	event.set_result("hp_after", target.hp)
 	event.set_result("visible_hp_after", target.visible_hp())
 	event.set_result("connected", true)
+	AxeAbiCombatService.on_damage(self,event,target)
 	HammerAbiCombatService.on_damage(self,event,target)
 
 func _resolve_effect(event: CombatEvent) -> void:
@@ -804,8 +800,8 @@ func _manual_block_success(event: CombatEvent, defender: CombatantState) -> bool
 	var attack_zone:=String(event.payload.get("zone",""))
 	var chosen_zones:Array=CombatModifierService.manual_block_zones(defender)
 	return chosen_zones.has(attack_zone)
-func _block_crushed(attacker: CombatantState, rolls: Dictionary) -> bool:
-	var chance:=CombatModifierService.block_crush_chance(attacker, state.round_number)
+func _block_crushed(attacker: CombatantState, rolls: Dictionary, axe_bonus: float = 0.0) -> bool:
+	var chance:=CombatModifierService.block_crush_chance(attacker, state.round_number) + axe_bonus
 	return CombatMath.roll_success(chance, int(rolls.get("block_crush", 100)))
 func _armour_for(defender: CombatantState, zone: String, damage_type: String) -> float:
 	var zone_armour: Dictionary = defender.armour.get(zone, {}); return float(zone_armour.get(damage_type, 0.0))
