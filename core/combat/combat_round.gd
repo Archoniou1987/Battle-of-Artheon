@@ -57,6 +57,8 @@ func resolve(engine: CombatEngine) -> void:
 			SwordAbiCombatService.prepare_action(engine,event)
 		if event.kind == CombatEvent.Kind.ACTION and AxeAbiCombatService.is_axe_ability(String(event.payload.get("ability_id",""))):
 			AxeAbiCombatService.prepare_action(engine,event)
+		if event.kind == CombatEvent.Kind.ACTION and HammerAbiCombatService.is_hammer_ability(String(event.payload.get("ability_id",""))):
+			HammerAbiCombatService.prepare_action(engine,event)
 	engine.resolve_pending_events()
 	for event in locked_actions:
 		engine.state.queue_event(event)
