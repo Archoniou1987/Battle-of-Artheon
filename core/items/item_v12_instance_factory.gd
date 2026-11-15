@@ -4,27 +4,30 @@ extends RefCounted
 ## Bridge from the canonical v1.2 calculator to persistable game instances.
 ## Uses one self-contained instance, because arena_templates.json does NOT
 ## contain generated archetype/level/quality templates.
-const SWORD_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT"]
+const SWORD_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "2H_SWORD"]
 const DAGGER_ARCHETYPES := ["DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN"]
 const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_SHIELD"]
 const HAMMER_ARCHETYPES := ["HAMMER_DEF", "HAMMER_ATTACK"]
 const SPEAR_ARCHETYPES := ["2H_SPEAR"]
-const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "HAMMER_DEF", "HAMMER_ATTACK", "2H_SPEAR"]
+const TWO_HAND_ARCHETYPES := ["2H_SPEAR","2H_SWORD"]
+const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "HAMMER_DEF", "HAMMER_ATTACK", "2H_SPEAR", "2H_SWORD"]
 const ACCEPTED_QUALITIES := ["white", "green", "blue", "purple"]
 
 static func generate_sword(archetype_id: String, level: int, quality: String, seed_value: int) -> Dictionary:
-	return generate_weapon(archetype_id, level, quality, seed_value, "MH")
+	return generate_weapon(archetype_id, level, quality, seed_value, "2H" if TWO_HAND_ARCHETYPES.has(archetype_id) else "MH")
 
 ## Canonical v1.2 rolls for approved physical weapons, including 2H spear.
 ## ABI are assigned only after their runtime implementation is ready.
 static func generate_weapon(archetype_id: String, level: int, quality: String, seed_value: int, hand: String = "MH") -> Dictionary:
-	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH"].has(hand):
+	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH", "2H"].has(hand):
+		return {}
+	if hand == "2H" and not TWO_HAND_ARCHETYPES.has(archetype_id):
 		return {}
 	if hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id):
 		return {}
 	var engine := ItemTemplateGeneratorV12.new()
 	var generated := engine.generate({
-		"archetypes": [archetype_id], "weapon_hand": "2H" if SPEAR_ARCHETYPES.has(archetype_id) else "MH",
+		"archetypes": [archetype_id], "weapon_hand": "2H" if TWO_HAND_ARCHETYPES.has(archetype_id) else "MH",
 		"min_level": level, "max_level": level,
 		"quality": quality, "count": 1, "seed": maxi(1, seed_value),
 		"group_qualities": false
@@ -43,7 +46,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var quality := String(row.get("quality", ""))
 	if not PHYSICAL_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
 		return {}
-	if not ["MH", "OH", "2H"].has(hand) or (hand == "2H" and not SPEAR_ARCHETYPES.has(archetype_id)) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
+	if not ["MH", "OH", "2H"].has(hand) or (hand == "2H" and not TWO_HAND_ARCHETYPES.has(archetype_id)) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
 		return {}
 	if not row.get("variant", null) is Dictionary:
 		return {}
@@ -90,7 +93,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 		"attack_power_balance_version": 2, # Canonical 10:1 ratings, not old 5:1 PAR232.
 		"slot": "main_hand",
 		"equip_slots": allowed_slots,
-		"slot_usage": ["main_hand","off_hand"] if SPEAR_ARCHETYPES.has(archetype_id) else [],
+		"slot_usage": ["main_hand","off_hand"] if TWO_HAND_ARCHETYPES.has(archetype_id) else [],
 		"icon_id": "ICON_0002", # Placeholder until visual templates/atlas binding stage.
 		"damage": {"min": int(damage[0]), "max": int(damage[1]), "type": _damage_type(family)},
 		"damage_type": _damage_type(family),
@@ -205,7 +208,7 @@ static func _archetype_name(archetype_id: String) -> String:
 		"DAGGER_ATTACK", "AXE_ATTACK", "HAMMER_ATTACK": return "атакующий"
 		"DAGGER_PEN": return "пробивающий"
 		"AXE_SHIELD": return "щитолом"
-		"2H_SPEAR": return "двуручное"
+		"2H_SPEAR", "2H_SWORD": return "двуручный"
 	return archetype_id
 
 static func _damage_type(family: String) -> String:
