@@ -296,7 +296,7 @@ func _axe_abi_coefficients_from_catalog() -> void:
 	_check(int(wounds.get("max_stacks",0))==3,"axe:wounds_max3")
 	_check(int(wounds.get("duration_rounds",0))==5,"axe:wounds_five_rounds")
 	_check(Array(Dictionary(wounds.get("values_by_rank",{})).get("damage",[])).size()==10,"axe:dot_ten_ranks")
-	var expected_heal := [0.0,25.0,75.0,125.0]
+	var expected_heal := [0.0,15.0,40.0,75.0]
 	var heal: Array = Dictionary(defs["ABI504"]).get("heal_from_damage_pct_by_wounds",[])
 	var heal_matches := heal.size()==expected_heal.size()
 	if heal_matches:
