@@ -608,7 +608,7 @@
   },
   "ABI601": {
     "name": "Дробящий удар",
-    "description": "Одиночный удар, +1 AP при успешном попадании.",
+    "description": "Дробящий удар: +1 AP при попадании. В текущем раунде каждый успешный ручной/автоматический блок даёт +1 AP (максимум +3 AP от блоков).",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -640,7 +640,10 @@
       167,
       200
     ],
-    "attack_power_coefficient": 0.75
+    "attack_power_coefficient": 0.75,
+    "effect_refs": {
+      "on_cast": "EFF607"
+    }
   },
   "ABI602": {
     "name": "Глухая защита",
