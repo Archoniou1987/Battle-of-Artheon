@@ -577,7 +577,7 @@ func _mace_abi_cross_integration() -> void:
 	_check(_active_effect(actor,"EFF601").is_empty(),"mace:ordinary_MH_no_charge")
 	var physical_damage := state.create_event(CombatEvent.Kind.DAMAGE,"right","left",{"amount":1000.0,"damage_type":"physical","source":"mace_defence_test"})
 	var unguarded_ctx := _pair("hammer","axe")
-	var normal_event := unguarded_ctx["state"].create_event(CombatEvent.Kind.DAMAGE,"right","left",{"amount":1000.0,"damage_type":"physical","source":"mace_defence_control"})
+	var normal_event: CombatEvent = unguarded_ctx["state"].create_event(CombatEvent.Kind.DAMAGE,"right","left",{"amount":1000.0,"damage_type":"physical","source":"mace_defence_control"})
 	unguarded_ctx["engine"].resolve_event(normal_event)
 	ctx["engine"].resolve_event(physical_damage)
 	_check(int(physical_damage.result.get("final_damage",0))<int(normal_event.result.get("final_damage",0)),"mace:physical_guard_reduces_damage")
