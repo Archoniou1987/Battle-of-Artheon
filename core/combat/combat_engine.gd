@@ -371,11 +371,6 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
 	var is_crit := CombatMath.roll_success(crit, int(rolls.get("crit", 100)))
 	var raw_damage := float(event.payload.get("raw_damage", 0.0))
-	if String(event.payload.get("hammer_abi_id","")) == HammerAbiCombatService.HEAVY:
-		var hammer_bonus := float(event.payload.get("hammer_mh_damage_bonus_pct",0.0))
-		if not event.payload.has("hammer_mh_damage_bonus_pct"):
-			hammer_bonus = float(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),HammerAbiCombatService.HEAVY).get("mh_damage_bonus_pct",0.0))
-		raw_damage *= 1.0 + hammer_bonus/100.0
 	# PAR053–056: physical damage bonus applies only to the matching damage type.
 	# Percent values are stored as percentages (e.g. 30 means +30%).
 	var physical_type := String(event.payload.get("damage_type", "")).to_lower()
@@ -435,14 +430,8 @@ func _resolve_attack(event: CombatEvent) -> void:
 		var def: Dictionary = Dictionary(debuff.get("definition",{}))
 		active_armour_cut += float(def.get("armour_reduction_pct_per_stack",0.0))*float(debuff.get("stacks",1)) + float(def.get("armour_reduction_raw_pct",0.0))
 	var after_breach_pct := maxf(0.0,raw_armour_pct-active_armour_cut)
-	var armour_before_dr := after_breach_pct+CombatModifierService.effect_stack_bonus(defender,HammerAbiCombatService.CHARGE,"armour_and_resistance_direct_pct_per_stack",state.round_number)
+	var armour_before_dr := after_breach_pct
 	var armour_percent := CombatRatingCurves.diminishing(armour_before_dr,"armour")
-	# Active zone fracture only reduces its named physical zone.
-	for fracture in CombatModifierService.active_effects(defender,state.round_number):
-		if String(fracture.get("effect_id","")) == HammerAbiCombatService.FRACTURE_EFF:
-			var fdef: Dictionary = fracture.get("definition",{})
-			if String(fdef.get("armour_zone","")) == String(event.payload.get("zone","chest")):
-				armour_percent *= 1.0-clampf(float(fdef.get("armour_reduction_pct",0.0))/100.0,0.0,1.0)
 	# Apply ABI408 to the FINAL armour percentage (including temporary
 	# charge buffs) so five breach stacks actually mean zero armour.
 	if String(event.payload.get("combo_abi_id","")) == "ABI412":
@@ -496,6 +485,9 @@ func _resolve_damage(event: CombatEvent) -> void:
 	if CombatDamagePayload.is_magic_damage_type(damage_type):
 		amount *= 1.0 - magic_resist
 		event.set_result("magic_resist", magic_resist)
+	# Physical-only resistance stays separate from generic incoming damage modifiers.
+	if damage_type in ["physical","piercing","slashing","chopping","blunt"]:
+		amount *= maxf(0.0,1.0+CombatModifierService.modifier(target,"incoming_damage_physical_direct_pct",state.round_number)/100.0)
 	amount *= maxf(0.0,1.0+CombatModifierService.modifier(target,"incoming_damage_direct_pct",state.round_number)/100.0)
 	var total_reduction := CombatModifierService.damage_reduction(target, state.round_number)
 	amount *= 1.0 - total_reduction
