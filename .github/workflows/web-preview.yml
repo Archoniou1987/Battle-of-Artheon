@@ -52,6 +52,9 @@ jobs:
       - name: Character UI smoke test
         run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
 
+      - name: NPC manual block and Arena log integration
+        run: timeout 120s godot --headless --path . --script res://tests/combat/arena_enemy_manual_block_runner.gd
+
       - name: Arena opening smoke test
         run: timeout 120s godot --headless --path . --script res://tests/ui/arena_open_smoke.gd
 
