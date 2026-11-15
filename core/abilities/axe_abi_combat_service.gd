@@ -1,207 +1,213 @@
 class_name AxeAbiCombatService
 extends RefCounted
 
-## Approved PHY axe ABI501–508. Uses CombatEngine ATTACK and EFFECT events:
-## hit/miss and armour persist even where dodge/block are explicitly bypassed.
-const RAGE_ABI := "ABI501"
-const CUT_ABI := "ABI502"
-const DEF_SWEEP := "ABI503"
-const DEF_STANCE := "ABI504"
-const ATTACK_BREAKER := "ABI505"
-const EXECUTE := "ABI506"
-const CRUSHER := "ABI507"
-const SHIELD_BREAK := "ABI508"
-const ABILITIES := [RAGE_ABI,CUT_ABI,DEF_SWEEP,DEF_STANCE,ATTACK_BREAKER,EXECUTE,CRUSHER,SHIELD_BREAK]
-const RAGE := "EFF501"
-const SWEEP_EFF := "EFF502"
-const STANCE_EFF := "EFF503"
-const BREAK_EFF := "EFF504"
-const CRUSHER_EFF := "EFF505"
+## Four approved axe families. ABI owns attacks, EFF501 owns wounds/DoT.
+## Physical hit, block, damage, mitigation and death remain with CombatEngine.
+const ABILITIES := ["ABI501","ABI502","ABI503","ABI504","ABI505","ABI506","ABI507","ABI508","ABI509","ABI510","ABI511","ABI512","ABI513","ABI514","ABI515","ABI516"]
+const WOUND := "EFF501"
 
-static func is_axe_ability(ability_id: String) -> bool:
-	return ABILITIES.has(ability_id)
+static func is_axe_ability(id: String) -> bool:
+	return ABILITIES.has(id)
 
-static func _weapon(source: CombatantState) -> Dictionary:
-	for raw_profile in WeaponAttackProfile.all(source):
-		var profile: Dictionary = raw_profile
-		if int(profile.get("weapon_index",-1))==0 and String(profile.get("weapon_class","")).to_lower()=="axe":
-			return profile
+static func _profile(source: CombatantState, id: String) -> Dictionary:
+	var two_handed := id in ["ABI505","ABI506","ABI507","ABI508","ABI509","ABI510","ABI511","ABI512","ABI513","ABI514","ABI515","ABI516"]
+	var weapons: Array = source.combat_stats.get("weapon_profiles",[])
+	if weapons.is_empty() or bool(Dictionary(weapons[0]).get("two_handed",false)) != two_handed:
+		return {}
+	for raw in WeaponAttackProfile.all(source):
+		var p: Dictionary = raw
+		if int(p.get("weapon_index",-1)) == 0 and String(p.get("weapon_class","")).to_lower()=="axe":
+			return p
 	return {}
 
-static func _average(profile: Dictionary) -> float:
-	return (float(profile.get("damage_min",0.0))+float(profile.get("damage_max",0.0)))*0.5
-
-static func rage_stacks(source: CombatantState, round_number: int) -> int:
-	var total := 0
-	var cap := 0
-	var effect_id := AbilityCatalog.effect_id(RAGE_ABI)
-	for record in CombatModifierService.active_effects(source,round_number):
-		if String(record.get("effect_id","")) == effect_id:
-			cap = EffectCatalog.stack_cap(effect_id,Dictionary(record.get("definition",{})))
-			total += int(record.get("stacks",1))
-	return mini(cap,total)
-
-static func _consume_rage(source: CombatantState) -> void:
-	for record in source.active_effects.duplicate():
-		if String(record.get("effect_id","")) == AbilityCatalog.effect_id(RAGE_ABI):
-			source.active_effects.erase(record)
-
-static func _enemy(engine: CombatEngine, source_id: String, target_id: String) -> bool:
-	var a := engine.state.get_combatant(source_id)
-	var b := engine.state.get_combatant(target_id)
-	if a == null or b == null or source_id == target_id or a.is_death_finalized() or b.is_death_finalized():
+static func _valid_enemy(engine: CombatEngine, source_id: String, target_id: String) -> bool:
+	var target := engine.state.get_combatant(target_id)
+	if source_id == target_id or target == null or target.is_death_finalized():
 		return false
-	if engine.group_state != null and engine.group_state.team_of(source_id) == engine.group_state.team_of(target_id):
+	if engine.group_state != null and engine.group_state.team_of(source_id)==engine.group_state.team_of(target_id):
 		return false
-	if engine.zone_state != null and engine.zone_state.distance(source_id,target_id) != 0:
+	if engine.zone_state != null and engine.zone_state.distance(source_id,target_id)!=0:
 		return false
 	return true
 
-## Checked by all manual/automatic Scheduler entry points BEFORE AP/CD spend.
-static func can_cast(state: CombatState, source_id: String, target_id: String, abi: String, planned_round: int = -1) -> bool:
+static func can_cast(state: CombatState, source_id: String, _target_id: String, abi: String, _planned_round: int = -1) -> bool:
 	if not is_axe_ability(abi):
 		return true
 	var source := state.get_combatant(source_id)
-	if source == null or _weapon(source).is_empty():
-		return false
-	# UI preflight checks the upcoming round; committed casts use the live round.
-	var evaluating_round := state.round_number if planned_round < 0 else planned_round
-	var n := rage_stacks(source,evaluating_round)
-	if abi == CRUSHER:
-		return n == int(AbilityCatalog.number(CRUSHER,"required_rage_stacks"))
-	if abi == EXECUTE:
-		var target := state.get_combatant(target_id)
-		return target != null and target.max_hp > 0 and float(target.hp) < AbilityCatalog.number(EXECUTE,"execute_hp_threshold_fraction") * float(target.max_hp) and n >= int(AbilityCatalog.number(EXECUTE,"min_rage_stacks"))
-	return true
+	return source != null and not _profile(source,abi).is_empty()
 
-static func _effect(engine: CombatEngine, source_id: String, target_id: String, parent_id: int, effect_id: String, pre: bool = false, extras: Dictionary = {}) -> void:
-	var payload := {"effect_id":effect_id,"source_type":"ability","base_chance":100.0,"effect_roll":1,"preparation_effect":pre}
+static func _effect(engine: CombatEngine, source: String, target: String, parent: int, id: String, extras: Dictionary = {}) -> void:
+	var payload := {"effect_id":id,"source_type":"ability","base_chance":100.0,"effect_roll":1}
+	var fighter := engine.state.get_combatant(source)
+	if fighter != null:
+		var weapons: Array = fighter.combat_stats.get("weapon_profiles",[])
+		if not weapons.is_empty():
+			payload["effect_rank"] = AbilityCatalog.rank_for_item_level(int(Dictionary(weapons[0]).get("item_level",fighter.level)))+1
 	for key in extras:
 		payload[key] = extras[key]
-	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source_id,target_id,payload,parent_id))
+	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source,target,payload,parent))
 
-## The attacker-breaking debuff affects all attacks of the current round,
-## independent of action ordering, like approved dagger pre-attack effects.
-static func prepare_action(engine: CombatEngine, action: CombatEvent) -> void:
-	if String(action.payload.get("ability_id","")) != ATTACK_BREAKER:
-		return
-	var source := engine.state.get_combatant(action.source_id)
-	if source == null or _weapon(source).is_empty() or not _enemy(engine,action.source_id,action.target_id):
-		return
-	_effect(engine,action.source_id,action.target_id,action.event_id,AbilityCatalog.effect_id(ATTACK_BREAKER,"pre_attack"),true)
+static func _wounds(target: CombatantState, source_id: String, round_number: int) -> int:
+	var result := 0
+	for record in CombatModifierService.active_effects(target,round_number):
+		if String(record.get("effect_id","")) == WOUND and String(record.get("source_id","")) == source_id:
+			result += int(record.get("stacks",1))
+	return mini(EffectCatalog.stack_cap(WOUND),result)
 
-static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, percent: float, extras: Dictionary = {}) -> int:
-	var component := {"damage_type":String(profile.get("damage_type","chopping")),"zone":String(action.payload.get("zone","chest"))}
-	var payload := CombatDamagePayload.ability_attack_payload(action,component,_average(profile)*percent/100.0,1.0)
+static func _consume_wounds(target: CombatantState, source_id: String, n: int) -> void:
+	var remaining := n
+	for record in target.active_effects.duplicate():
+		if remaining <= 0:
+			break
+		if String(record.get("effect_id","")) != WOUND or String(record.get("source_id","")) != source_id:
+			continue
+		var count := mini(remaining,int(record.get("stacks",1)))
+		remaining -= count
+		var rest := int(record.get("stacks",1))-count
+		if rest <= 0:
+			target.active_effects.erase(record)
+		else:
+			record["stacks"] = rest
+			record["active_stacks"] = mini(rest,int(record.get("active_stacks",0)))
+
+static func _targets(engine: CombatEngine, action: CombatEvent, limit: int) -> Array[String]:
+	var result: Array[String] = []
+	if _valid_enemy(engine,action.source_id,action.target_id):
+		result.append(action.target_id)
+	var others: Array[String] = []
+	for raw in engine.state.combatants.keys():
+		var id := String(raw)
+		if not result.has(id) and _valid_enemy(engine,action.source_id,id):
+			others.append(id)
+	others.sort()
+	while result.size() < limit and not others.is_empty():
+		var index := engine.combat_rng.randi_range(0,others.size()-1)
+		result.append(others[index])
+		others.remove_at(index)
+	return result
+
+static func _damage(source: CombatantState, profile: Dictionary, id: String, multiplier: float) -> float:
+	var base := AbilityCatalog.ranked_damage(id,int(profile.get("item_level",source.level)))
+	var attack_power := float(Dictionary(source.combat_stats.get("par_totals",{})).get("PAR232",0))
+	var two_handed := bool(profile.get("two_handed",false))
+	var bonus := AttackPowerService.damage_bonus(attack_power,"main_hand",two_handed)
+	return maxf(0.0,(base+AbilityCatalog.number(id,"attack_power_coefficient")*bonus)*multiplier)
+
+static func _queue_attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
+	var component := {"damage_type":"chopping","zone":String(action.payload.get("zone","chest"))}
+	var payload := CombatDamagePayload.ability_attack_payload(action,component,damage,1.0)
 	payload["rolls"] = engine.complete_attack_rolls(Dictionary(action.payload.get("rolls",{})))
 	payload["axe_abi_id"] = String(action.payload.get("ability_id",""))
 	for key in extras:
-		payload[key] = extras[key]
+		payload[key]=extras[key]
 	var attack := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,target_id,payload,action.event_id)
 	engine.state.queue_event(attack)
 	return attack.event_id
 
-static func _targets(engine: CombatEngine, action: CombatEvent, limit: int) -> Array[String]:
-	var ids: Array[String] = []
-	if _enemy(engine,action.source_id,action.target_id):
-		ids.append(action.target_id)
-	var others: Array[String] = []
-	for raw_id in engine.state.combatants:
-		var id := String(raw_id)
-		if ids.has(id) or not _enemy(engine,action.source_id,id):
-			continue
-		others.append(id)
-	others.sort()
-	while ids.size() < limit and not others.is_empty():
-		var index := engine.combat_rng.randi_range(0,others.size()-1)
-		ids.append(others[index])
-		others.remove_at(index)
-	return ids
+static func prepare_action(_engine: CombatEngine, _action: CombatEvent) -> void:
+	pass
 
 static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var id := String(action.payload.get("ability_id",""))
-	var source := engine.state.get_combatant(action.source_id)
-	if source == null or source.is_death_finalized():
+	var actor := engine.state.get_combatant(action.source_id)
+	if actor == null or actor.is_death_finalized():
 		action.set_result("outcome","invalid_combatant")
 		return
-	var profile := _weapon(source)
+	var profile := _profile(actor,id)
 	if profile.is_empty():
-		action.set_result("outcome","axe_mh_required")
+		action.set_result("outcome","wrong_axe_hand")
 		return
-	if id == RAGE_ABI:
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(RAGE_ABI))
-		action.set_result("outcome","rage_added")
+	if id == "ABI506":
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(id))
+		action.set_result("outcome","berserk")
 		return
-	if id == DEF_STANCE:
-		var rage_count := rage_stacks(source,engine.state.round_number)
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(DEF_STANCE),true,{"axe_rage_stacks":rage_count})
-		action.set_result("outcome","retaliation_stance")
-		return
-	if id == CRUSHER:
-		if rage_stacks(source,engine.state.round_number) != int(AbilityCatalog.number(CRUSHER,"required_rage_stacks",action.payload)):
-			action.set_result("outcome","needs_five_rage")
-			return
-		_consume_rage(source)
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(CRUSHER),true)
-		action.set_result("outcome","crusher_applied")
-		return
-	if not _enemy(engine,action.source_id,action.target_id):
+	if not _valid_enemy(engine,action.source_id,action.target_id):
 		action.set_result("outcome","invalid_target")
 		return
-	var rage := rage_stacks(source,engine.state.round_number)
+	var limit := maxi(1,int(action.payload.get("max_targets",AbilityCatalog.number(id,"max_targets"))))
 	var ids: Array[int] = []
-	if id == CUT_ABI:
-		ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(id,"attack_damage_pct",action.payload),{"skip_dodge_block":true}))
-	elif id == DEF_SWEEP or id == ATTACK_BREAKER:
-		ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(id,"attack_damage_pct",action.payload)))
-	elif id == EXECUTE:
-		var victim := engine.state.get_combatant(action.target_id)
-		if victim != null and victim.max_hp>0 and float(victim.hp)<AbilityCatalog.number(EXECUTE,"execute_hp_threshold_fraction",action.payload)*float(victim.max_hp) and rage>=int(AbilityCatalog.number(EXECUTE,"min_rage_stacks",action.payload)):
-			ids.append(_queue_attack(engine,action,action.target_id,profile,AbilityCatalog.number(EXECUTE,"damage_pct_per_rage_stack",action.payload)*float(rage)))
-	elif id == SHIELD_BREAK:
-		var targets := _targets(engine,action,maxi(1,int(action.payload.get("max_targets",AbilityCatalog.number(SHIELD_BREAK,"max_targets")))))
-		var base := AbilityCatalog.number(SHIELD_BREAK,"single_target_damage_pct",action.payload) if targets.size() == 1 else AbilityCatalog.number(SHIELD_BREAK,"multi_target_damage_pct",action.payload)
-		for target_id in targets:
-			ids.append(_queue_attack(engine,action,target_id,profile,base+AbilityCatalog.number(SHIELD_BREAK,"damage_pct_per_rage_stack",action.payload)*float(rage),{"skip_dodge_block":true}))
-	action.set_result("outcome","dispatched" if not ids.is_empty() else "unavailable")
+	for target_id in _targets(engine,action,limit):
+		var target := engine.state.get_combatant(target_id)
+		var wounds := _wounds(target,action.source_id,engine.state.round_number)
+		var mult := 1.0
+		var extra := {"axe_wounds_snapshot":wounds}
+		if id == "ABI508" or id == "ABI512" or id == "ABI516":
+			var values: Array = Array(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("bonus_damage_pct_by_wounds",[]))
+			if values.size()==4:
+				mult += float(values[clampi(wounds,0,3)])/100.0
+			extra["axe_consume_wounds"] = wounds
+		if id == "ABI508" and target.max_hp > 0 and float(target.hp)/float(target.max_hp)<AbilityCatalog.number(id,"execute_hp_threshold_fraction",action.payload):
+			mult *= AbilityCatalog.number(id,"execute_multiplier",action.payload)
+		if id == "ABI511" or id == "ABI512":
+			if target.can_auto_block():
+				mult += AbilityCatalog.number(id,"shield_damage_bonus_pct",action.payload)/100.0
+		if id == "ABI515":
+			mult += float(wounds)*AbilityCatalog.number(id,"bonus_damage_pct_per_wound",action.payload)/100.0
+		if id == "ABI510":
+			extra["axe_block_crush_bonus_pct"] = AbilityCatalog.number(id,"block_crush_bonus_pct",action.payload)
+		if id == "ABI512":
+			extra["skip_auto_block"] = bool(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("ignore_shield_auto_block",false))
+		if id == "ABI504":
+			var heal_values: Array = Array(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("heal_from_damage_pct_by_wounds",[]))
+			if heal_values.size()==4:
+				extra["axe_heal_from_damage_pct"]=float(heal_values[clampi(wounds,0,3)])
+				extra["axe_heal_max_hp_cap_pct"]=AbilityCatalog.number(id,"heal_max_hp_cap_pct",action.payload)
+			extra["axe_consume_wounds"] = wounds
+		ids.append(_queue_attack(engine,action,target_id,profile,_damage(actor,profile,id,mult),extra))
+	action.set_result("outcome","dispatched" if not ids.is_empty() else "no_targets")
 	action.set_result("child_event_ids",ids)
 
-static func on_connected_attack(engine: CombatEngine, attack: CombatEvent) -> void:
-	var abi := String(attack.payload.get("axe_abi_id",""))
-	if abi == DEF_SWEEP:
-		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(DEF_SWEEP,"on_hit"))
-	elif abi == EXECUTE or abi == SHIELD_BREAK:
-		# Miss/dodge/block never consume rage; any connected strike does.
-		var source := engine.state.get_combatant(attack.source_id)
-		if source != null:
-			_consume_rage(source)
+static func _gain_once(engine: CombatEngine, attack: CombatEvent, actor: CombatantState) -> void:
+	for event in engine.state.event_log:
+		if event.event_id == attack.parent_event_id and event.kind == CombatEvent.Kind.ACTION:
+			if bool(event.result.get("axe_ap_done",false)):
+				return
+			event.set_result("axe_ap_done",true)
+			event.set_result("ap_gained_on_hit",actor.gain_action_points(1))
+			return
+	actor.gain_action_points(1)
 
-static func on_dodge(engine: CombatEngine, incoming: CombatEvent, defender: CombatantState) -> void:
-	var stance: Dictionary = {}
-	for raw in CombatModifierService.active_effects(defender,engine.state.round_number):
-		var record: Dictionary = raw
-		if String(record.get("effect_id","")) == STANCE_EFF:
-			stance = record
-			break
-	if stance.is_empty():
+static func on_connected_attack(engine: CombatEngine, attack: CombatEvent) -> void:
+	var id := String(attack.payload.get("axe_abi_id",""))
+	if not is_axe_ability(id):
 		return
-	var counter_cap := maxi(0,int(Dictionary(stance.get("definition",{})).get("counterattack_cap",0)))
-	if int(stance.get("axe_counter_count",0)) >= counter_cap:
+	var actor := engine.state.get_combatant(attack.source_id)
+	var target := engine.state.get_combatant(attack.target_id)
+	if actor == null or target == null:
 		return
-	var profile := _weapon(defender)
-	if profile.is_empty() or not _enemy(engine,defender.combatant_id,incoming.source_id):
+	if id in ["ABI501","ABI505","ABI509","ABI513"]:
+		_gain_once(engine,attack,actor)
+	if id in ["ABI501","ABI503","ABI505","ABI507","ABI509","ABI511","ABI513","ABI514"]:
+		var stacks := 2 if id=="ABI507" or (id=="ABI514" and int(attack.payload.get("axe_wounds_snapshot",0))>0) else 1
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,WOUND,{"sword_stacks_to_apply":stacks})
+	if id == "ABI502":
+		var pct := AbilityCatalog.number(id,"heal_hp_pct_per_wound")
+		var healing := roundi(float(actor.max_hp)*float(int(attack.payload.get("axe_wounds_snapshot",0)))*pct/100.0)
+		if healing>0:
+			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,actor.combatant_id,actor.combatant_id,{"inline_heal":healing,"clamp_heal_to_max":true,"source_type":"ability","ability_id":id},attack.event_id))
+	if id == "ABI510":
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(id,"on_hit"))
+	if int(attack.payload.get("axe_consume_wounds",0))>0:
+		_consume_wounds(target,attack.source_id,int(attack.payload["axe_consume_wounds"]))
+
+static func on_damage(engine: CombatEngine, damage_event: CombatEvent, target: CombatantState) -> void:
+	if int(damage_event.result.get("final_damage",0))<=0:
 		return
-	stance["axe_counter_count"] = int(stance.get("axe_counter_count",0)) + 1
-	var base := CombatMath.roll_damage(float(profile.get("damage_min",0.0)),float(profile.get("damage_max",0.0)),engine.combat_rng.randf())
-	var payload := {
-		"raw_damage":base,
-		"damage_type":String(profile.get("damage_type","chopping")),
-		"zone":"chest",
-		"rolls":engine.complete_attack_rolls({}),
-		"hit_already_resolved":true,
-		"is_counterattack_abi":true,
-		"source_kind":"ability",
-		"uses_physical_block":false,
-		"axe_abi_id":DEF_STANCE
-	}
-	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.ATTACK,defender.combatant_id,incoming.source_id,payload,incoming.event_id))
+	for parent in engine.state.event_log:
+		if parent.event_id != damage_event.parent_event_id or parent.kind != CombatEvent.Kind.ATTACK:
+			continue
+		if String(parent.payload.get("axe_abi_id",""))!="ABI504":
+			return
+		var source := engine.state.get_combatant(damage_event.source_id)
+		if source == null or source.combatant_id == target.combatant_id:
+			return
+		var pct := float(parent.payload.get("axe_heal_from_damage_pct",0))
+		var cap_pct := float(parent.payload.get("axe_heal_max_hp_cap_pct",0))
+		var raw_heal := roundi(float(int(damage_event.result.get("final_damage",0)))*pct/100.0)
+		var bounded := mini(raw_heal,roundi(float(source.max_hp)*cap_pct/100.0))
+		if bounded>0:
+			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source.combatant_id,source.combatant_id,{"inline_heal":bounded,"clamp_heal_to_max":true,"source_type":"ability","ability_id":"ABI504"},damage_event.event_id))
+		return
+
+static func on_dodge(_engine: CombatEngine, _incoming: CombatEvent, _defender: CombatantState) -> void:
+	pass
