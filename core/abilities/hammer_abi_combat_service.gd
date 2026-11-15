@@ -1,104 +1,107 @@
 class_name HammerAbiCombatService
 extends RefCounted
 
-## PHY 1H hammers: charge-based defence/attack ABIs. CHARGE is a permanent
-## per-combatant EFF; no parallel damage pipeline or unconditional stun logic.
-const HEAVY := "ABI601"
-const REFLECT_ABI := "ABI602"
-const HEAL := "ABI603"
-const FRACTURE := "ABI604"
-const SURGE := "ABI605"
-const CRUSH := "ABI606"
-const ABILITIES := [HEAVY,REFLECT_ABI,HEAL,FRACTURE,SURGE,CRUSH]
-const CHARGE := "EFF601"
-const REFLECT_EFF := "EFF602"
-const FRACTURE_EFF := "EFF603"
-const SURGE_EFF := "EFF604"
+## One family, two independent kits: 1H defensive mace ABI601–604,
+## 2H heavy mace ABI605–608. EFF601 is target-owned concussion.
+## CombatEngine alone resolves hit, block, armour, Tempo, and end-of-round death.
+const ABILITIES := ["ABI601","ABI602","ABI603","ABI604","ABI605","ABI606","ABI607","ABI608"]
+const CONCUSSION := "EFF601"
 
 static func is_hammer_ability(ability_id: String) -> bool:
 	return ABILITIES.has(ability_id)
 
-static func _weapon(source: CombatantState) -> Dictionary:
+static func _weapon(source: CombatantState, id: String) -> Dictionary:
+	var two_handed := id in ["ABI605","ABI606","ABI607","ABI608"]
+	var weapons: Array = source.combat_stats.get("weapon_profiles",[])
+	if weapons.is_empty() or bool(Dictionary(weapons[0]).get("two_handed",false)) != two_handed:
+		return {}
 	for raw in WeaponAttackProfile.all(source):
 		var profile: Dictionary = raw
 		if int(profile.get("weapon_index",-1))==0 and String(profile.get("weapon_class","")).to_lower()=="hammer":
 			return profile
 	return {}
 
-static func _average(profile: Dictionary) -> float:
-	return (float(profile.get("damage_min",0.0))+float(profile.get("damage_max",0.0)))*0.5
+static func _valid_enemy(engine: CombatEngine, source_id: String, target_id: String) -> bool:
+	var target := engine.state.get_combatant(target_id)
+	if source_id == target_id or target == null or target.is_death_finalized():
+		return false
+	if engine.group_state != null and engine.group_state.team_of(source_id)==engine.group_state.team_of(target_id):
+		return false
+	if engine.zone_state != null and engine.zone_state.distance(source_id,target_id)!=0:
+		return false
+	return true
 
-static func charges(source: CombatantState, round_number: int) -> int:
-	var n := 0
-	var cap := 0
-	for record in CombatModifierService.active_effects(source,round_number):
-		if String(record.get("effect_id","")) == CHARGE:
-			cap = EffectCatalog.stack_cap(CHARGE,Dictionary(record.get("definition",{})))
-			n += int(record.get("stacks",0))
-	return mini(cap,n)
-
-static func _charge_record(source: CombatantState) -> Dictionary:
-	for raw in source.active_effects:
-		var record: Dictionary = raw
-		if String(record.get("effect_id","")) == CHARGE:
-			return record
-	return {}
-
-## EFF601 owns passive generation rules. Use the existing active EFF
-## definition when available so a saved combat snapshot remains authoritative.
-static func _charge_rule(engine: CombatEngine, source: CombatantState, field: String) -> int:
-	var record := _charge_record(source)
-	var definition: Dictionary = Dictionary(engine.canonical_effects.get(CHARGE,{})) if record.is_empty() else Dictionary(record.get("definition",{}))
-	return maxi(0,int(definition.get(field,0)))
-
-static func gain_charges(engine: CombatEngine, source: CombatantState, n: int) -> void:
-	if n <= 0 or source == null or source.is_death_finalized() or _weapon(source).is_empty():
-		return
-	var record := _charge_record(source)
-	var current_definition: Dictionary = Dictionary(engine.canonical_effects.get(CHARGE,{})) if record.is_empty() else Dictionary(record.get("definition",{}))
-	var cap := EffectCatalog.stack_cap(CHARGE,current_definition)
-	if record.is_empty():
-		source.active_effects.append({
-			"effect_id":CHARGE,
-			"definition":current_definition.duplicate(true),
-			"source_id":source.combatant_id,
-			"source_type":"hammer_passive",
-			"start_round":engine.state.round_number,
-			"remaining_rounds":1,
-			"stacks":mini(n,cap),
-			"revealed":true
-		})
-	else:
-		record["stacks"] = mini(cap,int(record.get("stacks",0))+n)
-
-static func _consume(source: CombatantState, n: int) -> void:
-	if source == null or n <= 0:
-		return
-	var record := _charge_record(source)
-	if record.is_empty():
-		return
-	var rest := maxi(0,int(record.get("stacks",0))-n)
-	if rest <= 0:
-		source.active_effects.erase(record)
-	else:
-		record["stacks"] = rest
+static func can_cast(state: CombatState, source_id: String, _target_id: String, abi: String, _planned_round: int = -1) -> bool:
+	if not is_hammer_ability(abi):
+		return true
+	var source := state.get_combatant(source_id)
+	return source != null and not _weapon(source,abi).is_empty()
 
 static func _effect(engine: CombatEngine, source_id: String, target_id: String, parent_id: int, eff_id: String, pre: bool = false, extras: Dictionary = {}) -> void:
+	if eff_id.is_empty():
+		return
 	var payload := {"effect_id":eff_id,"source_type":"ability","base_chance":100.0,"effect_roll":1,"preparation_effect":pre}
 	for key in extras:
 		payload[key] = extras[key]
 	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source_id,target_id,payload,parent_id))
 
-static func _queue_attack(engine: CombatEngine, action: CombatEvent, profile: Dictionary, multiplier: float, extras: Dictionary = {}) -> void:
-	var component := {"damage_type":String(profile.get("damage_type","blunt")),"zone":String(action.payload.get("zone","chest"))}
-	var payload := CombatDamagePayload.ability_attack_payload(action,component,_average(profile)*multiplier,1.0)
+static func _concussion(target: CombatantState, source_id: String, round_number: int) -> int:
+	var n := 0
+	for record in CombatModifierService.active_effects(target,round_number):
+		if String(record.get("effect_id",""))==CONCUSSION and String(record.get("source_id",""))==source_id:
+			n += int(record.get("stacks",1))
+	return mini(n,EffectCatalog.stack_cap(CONCUSSION))
+
+static func _consume_concussion(target: CombatantState, source_id: String, amount: int) -> void:
+	var remaining := amount
+	for record in target.active_effects.duplicate():
+		if remaining <= 0:
+			break
+		if String(record.get("effect_id",""))!=CONCUSSION or String(record.get("source_id",""))!=source_id:
+			continue
+		var spent := mini(remaining,int(record.get("stacks",1)))
+		remaining -= spent
+		var count := int(record.get("stacks",1))-spent
+		if count <= 0:
+			target.active_effects.erase(record)
+		else:
+			record["stacks"]=count
+			record["active_stacks"]=mini(count,int(record.get("active_stacks",0)))
+
+static func _targets(engine: CombatEngine, action: CombatEvent, limit: int) -> Array[String]:
+	var result: Array[String] = []
+	if _valid_enemy(engine,action.source_id,action.target_id):
+		result.append(action.target_id)
+	var others: Array[String] = []
+	for raw in engine.state.combatants.keys():
+		var id := String(raw)
+		if not result.has(id) and _valid_enemy(engine,action.source_id,id):
+			others.append(id)
+	others.sort()
+	while result.size() < limit and not others.is_empty():
+		var index := engine.combat_rng.randi_range(0,others.size()-1)
+		result.append(others[index])
+		others.remove_at(index)
+	return result
+
+static func _damage(source: CombatantState, profile: Dictionary, abi: String, multiplier: float) -> float:
+	var base := AbilityCatalog.ranked_damage(abi,int(profile.get("item_level",source.level)))
+	var rating := float(Dictionary(source.combat_stats.get("par_totals",{})).get("PAR232",0.0))
+	var weapons: Array = source.combat_stats.get("weapon_profiles",[])
+	var two_handed := not weapons.is_empty() and bool(Dictionary(weapons[0]).get("two_handed",false))
+	var ap_bonus := AttackPowerService.damage_bonus(rating,"main_hand",two_handed)
+	return maxf(0.0,(base+AbilityCatalog.number(abi,"attack_power_coefficient")*ap_bonus)*multiplier)
+
+static func _attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
+	var component := {"damage_type":"blunt","zone":String(action.payload.get("zone","chest"))}
+	var payload := CombatDamagePayload.ability_attack_payload(action,component,damage,1.0)
 	payload["rolls"] = engine.complete_attack_rolls(Dictionary(action.payload.get("rolls",{})))
 	payload["hammer_abi_id"] = String(action.payload.get("ability_id",""))
 	for key in extras:
 		payload[key] = extras[key]
-	var attack := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,action.target_id,payload,action.event_id)
-	engine.state.queue_event(attack)
-	action.set_result("child_event_ids",[attack.event_id])
+	var event := engine.state.create_event(CombatEvent.Kind.ATTACK,action.source_id,target_id,payload,action.event_id)
+	engine.state.queue_event(event)
+	return event.event_id
 
 static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	var id := String(action.payload.get("ability_id",""))
@@ -106,113 +109,75 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	if source == null or source.is_death_finalized():
 		action.set_result("outcome","invalid_combatant")
 		return
-	var profile := _weapon(source)
+	var profile := _weapon(source,id)
 	if profile.is_empty():
-		action.set_result("outcome","hammer_mh_required")
+		action.set_result("outcome","wrong_hammer_hand")
 		return
-	if id == HEAVY:
-		# 20% MH is attached to its ordinary locked attack in CombatRound.
-		action.set_result("outcome","linked_to_existing_mh")
+	if id == "ABI602":
+		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(id),true)
+		action.set_result("outcome","guard_active")
 		return
-	if id == REFLECT_ABI:
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(REFLECT_ABI),true)
-		action.set_result("outcome","reflect_active")
-		return
-	var n := charges(source,engine.state.round_number)
-	if id == HEAL:
-		var spent := roundi(float(n)*AbilityCatalog.number(HEAL,"charge_spend_fraction",action.payload))
-		_consume(source,spent)
-		var heal_value := roundi(float(source.max_hp)*float(spent)*AbilityCatalog.number(HEAL,"heal_hp_pct_per_spent_charge",action.payload)/100.0)
-		engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,action.source_id,action.source_id,{
-			"inline_heal":heal_value,"clamp_heal_to_max":true,
-			"source_type":"ability","ability_id":id
-		},action.event_id))
-		action.set_result("charges_consumed",spent)
-		action.set_result("outcome","healing")
-		return
-	if id == SURGE:
-		var spent := roundi(float(n)*AbilityCatalog.number(SURGE,"charge_spend_fraction",action.payload))
-		_consume(source,spent)
-		_effect(engine,action.source_id,action.source_id,action.event_id,AbilityCatalog.effect_id(SURGE),true,{"hammer_surge_spent_charges":spent})
-		action.set_result("charges_consumed",spent)
-		action.set_result("outcome","surge_active")
-		return
-	var target := engine.state.get_combatant(action.target_id)
-	if target == null or target.is_death_finalized() or target == source:
+	if not _valid_enemy(engine,action.source_id,action.target_id):
 		action.set_result("outcome","invalid_target")
 		return
-	if engine.group_state != null and engine.group_state.team_of(action.source_id)==engine.group_state.team_of(action.target_id):
-		action.set_result("outcome","friendly_target")
-		return
-	if engine.zone_state != null and engine.zone_state.distance(action.source_id,action.target_id)!=0:
-		action.set_result("outcome","out_of_range")
-		return
-	if id == FRACTURE:
-		_consume(source,n)
-		_queue_attack(engine,action,profile,AbilityCatalog.number(FRACTURE,"damage_multiplier",action.payload),{
-			"hammer_fracture_charges":n,
-			"hammer_fracture_zone":String(action.payload.get("zone","chest"))
-		})
-		# Charges are spent even if attack fails or produces no armour debuff.
-		action.set_result("charges_consumed",n)
-		action.set_result("outcome","dispatched")
-	elif id == CRUSH:
-		_consume(source,n)
-		_queue_attack(engine,action,profile,minf(AbilityCatalog.number(CRUSH,"max_damage_multiplier",action.payload),float(n)*AbilityCatalog.number(CRUSH,"damage_multiplier_per_charge",action.payload)),{
-			"hammer_formal_tempo_delta":-mini(int(AbilityCatalog.number(CRUSH,"max_tempo_control",action.payload)),int(float(n)*AbilityCatalog.number(CRUSH,"tempo_control_per_charge",action.payload)))
-		})
-		action.set_result("charges_consumed",n)
-		action.set_result("outcome","dispatched")
+	var ids: Array[int] = []
+	var count := maxi(1,int(action.payload.get("max_targets",AbilityCatalog.number(id,"max_targets"))))
+	for target_id in _targets(engine,action,count):
+		var target := engine.state.get_combatant(target_id)
+		var stacks := _concussion(target,action.source_id,engine.state.round_number)
+		var multiplier := 1.0
+		var extras := {"hammer_concussion_snapshot":stacks}
+		if id == "ABI608":
+			var definition := AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id)
+			var damage_bonus: Array = definition.get("bonus_damage_pct_by_concussion",[])
+			var tempo: Array = definition.get("tempo_control_by_concussion",[])
+			if damage_bonus.size()==4:
+				multiplier += float(damage_bonus[clampi(stacks,0,3)])/100.0
+			if tempo.size()==4:
+				extras["hammer_tempo_control_on_hit"]=float(tempo[clampi(stacks,0,3)])
+			extras["hammer_consume_concussion"]=stacks
+		if id == "ABI607":
+			extras["hammer_tempo_control_on_hit"]=AbilityCatalog.number(id,"tempo_control_on_hit",action.payload)
+		ids.append(_attack(engine,action,target_id,profile,_damage(source,profile,id,multiplier),extras))
+	action.set_result("outcome","dispatched" if not ids.is_empty() else "no_targets")
+	action.set_result("child_event_ids",ids)
+
+static func _gain_once(engine: CombatEngine, attack: CombatEvent, source: CombatantState) -> void:
+	for event in engine.state.event_log:
+		if event.kind==CombatEvent.Kind.ACTION and event.event_id==attack.parent_event_id:
+			if bool(event.result.get("hammer_ap_done",false)):
+				return
+			event.set_result("hammer_ap_done",true)
+			event.set_result("ap_gained_on_hit",source.gain_action_points(1))
+			return
+	source.gain_action_points(1)
 
 static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attacker: CombatantState) -> void:
-	var abi := String(attack.payload.get("hammer_abi_id",""))
-	if abi == HEAVY or abi == CRUSH:
-		# A connected hammer hit applies real Tempo debt; no control on misses,
-		# dodges or blocks. CombatTempoService owns delayed stun and immunity.
-		var target := engine.state.get_combatant(attack.target_id)
-		var control := float(attack.payload.get("hammer_tempo_control_on_hit",AbilityCatalog.number(HEAVY,"tempo_control_on_hit"))) if abi == HEAVY else float(-int(attack.payload.get("hammer_formal_tempo_delta",0)))
-		if target != null and control > 0.0:
-			CombatTempoService.apply_control(target,control)
-			attack.set_result("tempo_control_applied",control)
-	elif abi == FRACTURE:
-		var effect_id := AbilityCatalog.effect_id(FRACTURE,"on_hit")
-		var spent := int(attack.payload.get("hammer_fracture_charges",0))
-		var context := {"hammer_fracture_charges":spent}
-		if EffectCatalog.application_duration_rounds(EffectCatalog.definition(engine.canonical_effects,effect_id),context) > 0:
-			_effect(engine,attack.source_id,attack.target_id,attack.event_id,effect_id,false,{
-				"hammer_fracture_charges":spent,
-				"hammer_fracture_zone":String(attack.payload.get("hammer_fracture_zone","chest"))
-			})
-	# Ordinary MH autoattack is a source of charges, regardless of which ABI
-	# was activated in the same round. Never count standalone ABI attacks.
-	if bool(attack.payload.get("is_weapon_attack",false)) and String(attack.payload.get("source_kind","")) != "ability" and int(attack.payload.get("weapon_index",-1))==0 and String(attacker.combat_loadout.get("weapon_class","")).to_lower()=="hammer" and not _weapon(attacker).is_empty():
-		var gain := _charge_rule(engine,attacker,"charges_per_ordinary_mh_hit")
-		if bool(attack.result.get("critical",false)):
-			gain += _charge_rule(engine,attacker,"bonus_charges_on_ordinary_mh_crit")
-		gain_charges(engine,attacker,gain)
-
-static func on_damage(engine: CombatEngine, event: CombatEvent, target: CombatantState) -> void:
-	var dealt := int(event.result.get("final_damage",0))
-	if dealt <= 0:
+	var id := String(attack.payload.get("hammer_abi_id",""))
+	if not is_hammer_ability(id):
 		return
-	# Passive: 1 charge per nonzero damage EVENT. 5 separate DoTs = 5.
-	if String(target.combat_loadout.get("weapon_class","")).to_lower()=="hammer":
-		gain_charges(engine,target,_charge_rule(engine,target,"charges_per_positive_damage_event_taken"))
-	var attacker := engine.state.get_combatant(event.source_id)
-	if attacker != null and attacker.combatant_id != target.combatant_id:
-		var lifesteal := CombatModifierService.modifier(attacker,"damage_lifesteal_pct",engine.state.round_number)
-		var heal := int(floor(float(dealt)*maxf(0.0,lifesteal)/100.0))
-		if heal > 0:
-			engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,attacker.combatant_id,attacker.combatant_id,{
-				"inline_heal":heal,"clamp_heal_to_max":true,
-				"source_type":"ability","ability_id":SURGE
-			},event.event_id))
-	if String(event.payload.get("source","")) == "hammer_reflection" or attacker == null or attacker.combatant_id == target.combatant_id:
-		return # No reflection chain.
-	var reflect := CombatModifierService.modifier(target,"reflection_pct",engine.state.round_number)
-	if reflect > 0.0:
-		engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.DAMAGE,target.combatant_id,attacker.combatant_id,{
-			"amount":float(dealt)*reflect/100.0,
-			"damage_type":String(event.payload.get("damage_type","physical")),
-			"source":"hammer_reflection"
-		},event.event_id))
+	var target := engine.state.get_combatant(attack.target_id)
+	if target == null:
+		return
+	if id in ["ABI601","ABI605"]:
+		_gain_once(engine,attack,attacker)
+	if id in ["ABI605","ABI607"]:
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,CONCUSSION)
+	if id == "ABI603":
+		_effect(engine,attack.source_id,attack.source_id,attack.event_id,AbilityCatalog.effect_id(id,"on_hit"))
+	if id == "ABI604":
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(id,"on_hit"))
+		_effect(engine,attack.source_id,attack.source_id,attack.event_id,AbilityCatalog.effect_id(id,"self_on_hit"))
+	if id == "ABI606":
+		_effect(engine,attack.source_id,attack.target_id,attack.event_id,AbilityCatalog.effect_id(id,"on_hit"))
+	if id in ["ABI607","ABI608"]:
+		var tempo := float(attack.payload.get("hammer_tempo_control_on_hit",0.0))
+		if tempo>0.0:
+			CombatTempoService.apply_control(target,tempo)
+			attack.set_result("tempo_control_applied",tempo)
+	if id == "ABI608" and int(attack.payload.get("hammer_consume_concussion",0))>0:
+		_consume_concussion(target,attack.source_id,int(attack.payload["hammer_consume_concussion"]))
+
+static func on_damage(_engine: CombatEngine, _event: CombatEvent, _target: CombatantState) -> void:
+	# No passive healing, reflection or permanent charge generation.
+	pass
