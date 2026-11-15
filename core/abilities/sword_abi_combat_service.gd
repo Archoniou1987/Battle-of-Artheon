@@ -12,6 +12,11 @@ static func is_sword_ability(id: String) -> bool:
 
 static func _effect(engine: CombatEngine, source: String, target: String, parent: int, id: String, pre: bool = false, extra: Dictionary = {}) -> void:
 	var payload := {"effect_id":id,"source_type":"ability","base_chance":100.0,"effect_roll":1,"preparation_effect":pre}
+	var caster := engine.state.get_combatant(source)
+	if caster != null:
+		var weapons: Array = caster.combat_stats.get("weapon_profiles",[])
+		if not weapons.is_empty():
+			payload["effect_rank"] = AbilityCatalog.rank_for_item_level(int(Dictionary(weapons[0]).get("item_level",caster.level)))+1
 	for key in extra:
 		payload[key] = extra[key]
 	engine.state.queue_event(engine.state.create_event(CombatEvent.Kind.EFFECT,source,target,payload,parent))
