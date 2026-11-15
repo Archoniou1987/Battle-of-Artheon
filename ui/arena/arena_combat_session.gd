@@ -363,8 +363,11 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 			return player_abi_check
 	var npc_targets:Array[String]=[]
 	if not enemy_stunned:
+		# Training NPC no longer targets the player's chest forever.
+		# The attack pattern is independent of the player's selected defence.
 		for i in range(_fighter_attack_count(ENEMY_ID)):
-			npc_targets.append("chest")
+			var target_index := (maxi(1,next_round) + i) % CombatCommandApi.BODY_ZONES.size()
+			npc_targets.append(String(CombatCommandApi.BODY_ZONES[target_index]))
 		var enemy_plan:=_prepare_attacks(ENEMY_ID,npc_targets)
 		if not bool(enemy_plan.get("ok",false)):
 			return {"ok":false,"reason":String(enemy_plan.get("reason","enemy_attack_rejected"))}
