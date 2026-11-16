@@ -1315,9 +1315,12 @@ func _start_combat_session() -> void:
 	selected_ability = ""
 	pending_ability_id = ""
 	combat_session = ArenaCombatSession.new(character, repository)
-	# Test-only level override on combat snapshots; persistent character data is untouched.
-	combat_session.fighter(true).level = test_player_level
-	combat_session.fighter(false).level = test_enemy_level
+	# Test-only level override recalculates canonical rating percentages,
+	# not just the visible level label. Persistent character stays unchanged.
+	if not ArenaCombatSession.apply_test_level(combat_session.fighter(true),test_player_level):
+		push_error("Arena player test-level rating conversion failed")
+	if not ArenaCombatSession.apply_test_level(combat_session.fighter(false),test_enemy_level):
+		push_error("Arena enemy test-level rating conversion failed")
 	set_fighter_header(true, combat_session.fighter(true).display_name, test_player_level)
 	disclosed_enemy_equipment = combat_session.enemy_equipment_display.duplicate(true)
 	round_stunned = false
