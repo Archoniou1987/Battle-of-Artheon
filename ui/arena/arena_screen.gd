@@ -197,6 +197,12 @@ func _ready() -> void:
 	dummy_level_button.text = "Уровень манекена"
 	dummy_level_button.pressed.connect(func() -> void: _open_level_settings(false))
 	header.add_child(dummy_level_button)
+	var target_button := Button.new()
+	target_button.name = "TrainingTargetButton"
+	target_button.text = "Следующая цель"
+	target_button.tooltip_text = "Переключить активного манекена для обычных атак и направленных ABI"
+	target_button.pressed.connect(_cycle_training_enemy)
+	header.add_child(target_button)
 	_build_level_settings()
 	_build_visual_lab()
 	abi_lab_dialog = AbiTestLabDialog.new()
@@ -1337,6 +1343,18 @@ func _build_resource_display(is_player: bool) -> void:
 	ap_labels[key] = ap_text
 	set_fighter_resources(is_player, 0, 0, 5, 5)
 
+func _cycle_training_enemy() -> void:
+	if combat_session == null or combat_session.enemy_ids.size() <= 1 or combat_session.active_round != null:
+		return
+	var ids: Array[String] = combat_session.enemy_ids
+	var active := combat_session.focused_enemy_id()
+	var offset := ids.find(active)
+	for step in range(1,ids.size()+1):
+		var candidate := ids[(offset+step)%ids.size()]
+		if combat_session.select_training_enemy(candidate):
+			_sync_combat_session()
+			return
+
 func _start_combat_session() -> void:
 	if character == null or repository == null:
 		return
@@ -1548,6 +1566,13 @@ func _sync_combat_session() -> void:
 		return
 	var player := combat_session.fighter(true)
 	var enemy := combat_session.fighter(false)
+	var target_control := get_node_or_null("TrainingTargetButton") as Button
+	# Target button lives in the header flow rather than as a direct child.
+	if target_control == null:
+		target_control = find_child("TrainingTargetButton",true,false) as Button
+	if target_control != null:
+		target_control.visible = combat_session.enemy_ids.size()>1
+		target_control.disabled = combat_session.active_round != null or combat_session.living_enemy_count()<=1
 	var ready_round := combat_session.state.round_number if combat_session.active_round != null else combat_session.state.round_number + 1
 	round_stunned = CombatTempoService.is_stunned(player,ready_round)
 	if round_stunned:
