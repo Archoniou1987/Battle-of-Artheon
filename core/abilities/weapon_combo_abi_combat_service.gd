@@ -240,9 +240,13 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 			attacker.gain_action_points(int(AbilityCatalog.number(id,"ap_gain")))
 			# Apply only after a connected hit (never a miss or dodge).
 			# ABI701 damage already uses the target's pre-hit Slow snapshot.
-			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,SLOW)
+			# Refreshing an already-active Slow must not skip its current
+			# periodic Tempo tick by resetting start_round to next round.
+			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,SLOW,_has(target,SLOW,round_number))
 		"ABI702":
-			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,SLOW)
+			# Refreshing an already-active Slow must not skip its current
+			# periodic Tempo tick by resetting start_round to next round.
+			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,SLOW,_has(target,SLOW,round_number))
 		"ABI703":
 			if bool(attack.payload.get("combo_slow_snapshot",false)):
 				CombatTempoService.apply_control(target,AbilityCatalog.number(id,"control_on_slow"))
