@@ -2,15 +2,23 @@ class_name DeliveryDefenceCases
 extends RefCounted
 
 static func run(balance: Dictionary) -> bool:
-	return (
-		_case_projectile_can_dodge(balance)
-		and _case_projectile_magic_ignores_physical_block(balance)
-		and _case_melee_physical_can_block(balance)
-		and _case_manual_block_uses_explicit_shield_sector(balance)
-		and _case_bow_loadout_has_no_block(balance)
-		and _case_ability_attack_ignores_weapon_semantics(balance)
-		and _case_direct_bypasses_active_defence(balance)
-	)
+	# Evaluate every case independently: a failure must never hide the
+	# remaining defence regressions through short-circuiting.
+	var results := {
+		"projectile_dodge": _case_projectile_can_dodge(balance),
+		"projectile_magic_no_physical_block": _case_projectile_magic_ignores_physical_block(balance),
+		"physical_abi_manual_block_half_damage": _case_melee_physical_can_block(balance),
+		"manual_block_explicit_zones": _case_manual_block_uses_explicit_shield_sector(balance),
+		"bow_no_block": _case_bow_loadout_has_no_block(balance),
+		"abi_ignores_weapon_semantics": _case_ability_attack_ignores_weapon_semantics(balance),
+		"direct_no_active_defence": _case_direct_bypasses_active_defence(balance)
+	}
+	var ok := true
+	for case_id in results:
+		if not bool(results[case_id]):
+			print("DELIVERY_DEFENCE_FAIL=",case_id)
+			ok = false
+	return ok
 
 static func _state() -> CombatState:
 	var state := CombatState.new()
