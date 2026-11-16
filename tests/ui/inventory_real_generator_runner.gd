@@ -14,6 +14,10 @@ func _verify() -> void:
 	var game := packed.instantiate()
 	root.add_child(game)
 	await process_frame
+	# The real InventoryScreen is instantiated lazily when the town panel opens.
+	# Loading main.tscn alone does not create this node.
+	game.call("_open_panel","Инвентарь")
+	await process_frame
 	var screen := game.get_node_or_null("InventoryScreen") as InventoryScreen
 	if screen == null:
 		print("INVENTORY_REAL_GENERATOR=FAIL missing inventory")
