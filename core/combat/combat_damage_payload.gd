@@ -4,6 +4,14 @@ extends RefCounted
 const PHYSICAL_DAMAGE_TYPES := ["physical","slashing","piercing","chopping","blunt"]
 const MAGIC_DAMAGE_TYPES := ["fire","water","frost","air","earth","nature","dark","light","holy","lightning"]
 
+## Shared physical ABI defence policy. Ordinary attacks use normal rules.
+const PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER := 0.5
+const PHYSICAL_ABI_DODGE_CHANCE_MULTIPLIER := 0.5
+
+static func is_physical_abi_attack(payload: Dictionary) -> bool:
+	return String(payload.get("source_kind","")) == "ability" and not bool(payload.get("uses_magic_hit",false)) and is_physical_damage_type(String(payload.get("damage_type","")))
+
+
 static func is_physical_damage_type(damage_type:String) -> bool:
 	return PHYSICAL_DAMAGE_TYPES.has(damage_type.to_lower())
 
