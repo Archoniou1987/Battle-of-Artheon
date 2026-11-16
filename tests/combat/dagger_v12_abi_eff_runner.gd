@@ -64,6 +64,8 @@ func _session(archetype: String, seed_value: int) -> ArenaCombatSession:
 func _cast(session: ArenaCombatSession, id: String) -> bool:
 	session.fighter(true).action_points = 8
 	var result := session.play_round(["chest"],["head","arms"],id)
+	if not bool(result.get("ok",false)):
+		print("ABI_V2_CAST_REJECTED id=",id," reason=",String(result.get("reason","unknown"))," details=",result," round=",session.state.round_number," attack_count=",session._fighter_attack_count(session.player_id)," block_count=",CombatModifierService.manual_block_zone_capacity(session.fighter(true)))
 	_check(bool(result.get("ok",false)),id+"_cast")
 	return bool(result.get("ok",false))
 
