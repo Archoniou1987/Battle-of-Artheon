@@ -49,6 +49,9 @@ jobs:
       - name: Verify existing town saves with v1.2 one-handed equipment
         run: timeout 120s godot --headless --path . --script res://tests/map/solo_town_canonical_migration_runner.gd
 
+      - name: Verify real inventory generator Seed, spear and numeric keypad
+        run: timeout 120s godot --headless --path . --script res://tests/ui/inventory_real_generator_runner.gd
+
       - name: Character UI smoke test
         run: timeout 120s godot --headless --path . --script res://tests/ui/character_screen_runner.gd
 
