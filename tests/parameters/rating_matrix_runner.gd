@@ -9,6 +9,19 @@ func _initialize() -> void:
 	assert(is_equal_approx(RatingMatrix.to_percent(100.0, 50), 20.0 - 16.0 * 49.0 / 99.0))
 	assert(is_equal_approx(RatingMatrix.to_percent(-100.0, 1), -20.0)) # No invented universal cap.
 	assert(RatingMatrix.to_percent(0, 100) == 0)
+	# INT (PAR004) contributes no crit; INT hit/SP and intuition crit remain.
+	# This is the single primary-stat rule, not a Combat Engine special case.
+	var primary_base := {"PAR001":0,"PAR002":0,"PAR003":0,"PAR004":0,"PAR005":0,"PAR006":0}
+	var from_zero := PrimaryStatEffects.calculate(primary_base)
+	var from_int := primary_base.duplicate()
+	from_int["PAR004"] = 50
+	var int_effect := PrimaryStatEffects.calculate(from_int)
+	assert(is_equal_approx(float(int_effect.get("crit_chance_rating",0.0)),float(from_zero.get("crit_chance_rating",0.0))))
+	assert(is_equal_approx(float(int_effect.get("hit_chance_rating",0.0)),250.0))
+	assert(is_equal_approx(float(int_effect.get("magic_damage_rating",0.0)),250.0))
+	var from_intuition := primary_base.duplicate()
+	from_intuition["PAR003"] = 50
+	assert(is_equal_approx(float(PrimaryStatEffects.calculate(from_intuition).get("crit_chance_rating",0.0)),250.0))
 	# Editing just the config values changes the calculation without code changes.
 	var adjusted: Dictionary = config.duplicate(true)
 	adjusted["percent_at_level_1"] = 30
