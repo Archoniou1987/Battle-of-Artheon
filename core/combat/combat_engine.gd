@@ -376,7 +376,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 					event.set_result("outcome", "auto_block")
 					SwordAbiCombatService.on_block(self,event,defender)
 					HammerAbiCombatService.on_block(self,event,defender)
-					return
+					if not is_physical_abi:
+						return
+					partial_abi_block = "auto_block"
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
