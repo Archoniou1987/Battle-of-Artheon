@@ -161,7 +161,9 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 			var damage_bonus: Array = definition.get("bonus_damage_pct_by_concussion",[])
 			var tempo: Array = definition.get("tempo_control_by_concussion",[])
 			if damage_bonus.size()==4:
-				multiplier += float(damage_bonus[clampi(stacks,0,3)])/100.0
+				var bonus_pct := float(damage_bonus[clampi(stacks,0,3)])
+				multiplier += bonus_pct/100.0
+				extras["hammer_bonus_damage_pct"]=bonus_pct
 			if tempo.size()==4:
 				extras["hammer_tempo_control_on_hit"]=float(tempo[clampi(stacks,0,3)])
 			extras["hammer_consume_concussion"]=stacks
