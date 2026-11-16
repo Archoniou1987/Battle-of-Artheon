@@ -123,6 +123,11 @@ func focused_enemy_id() -> String:
 				return id
 	return ENEMY_ID
 
+func select_training_enemy(enemy_id: String) -> bool:
+	if active_round != null or not enemy_ids.has(enemy_id):
+		return false
+	return bool(commands.select_active_opponent(player_id,enemy_id).get("ok",false))
+
 func living_enemy_count() -> int:
 	var n := 0
 	for id in enemy_ids:
