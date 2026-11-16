@@ -144,7 +144,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				for raw_hit_id in hit_ids:
 					var hit: Dictionary = abi_hit_details.get(int(raw_hit_id),{})
 					var target_id := String(hit.get("target_id",""))
-					var target_label := _target(target_id,player_id)
+					var target_label := "манекена 1" if target_id=="arena_training_enemy" else _target(target_id,player_id)
 					var outcome := String(hit.get("outcome",""))
 					var detail := "%d урона" % int(hit.get("damage",0)) if outcome=="connected" else _attack_outcome(outcome)
 					if outcome=="connected":
@@ -159,7 +159,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 						var stacks := int(hit.get("concussion_stacks",0))
 						detail += "; Сотрясение %d → поглощено %d" % [stacks,int(hit.get("concussion_consumed",0))]
 						if outcome=="connected":
-							detail += "; бонус +%g%% урона; −%g Tempo" % [float(hit.get("bonus_damage_pct",0.0)),float(hit.get("tempo_applied",0.0))]
+							detail += "; бонус +%s%% урона; −%s Tempo" % [str(hit.get("bonus_damage_pct",0.0)),str(hit.get("tempo_applied",0.0))]
 					result.append("  %s: %s" % [target_label.capitalize(),detail])
 			if name_id == "ABI403":
 				# Display real resolved events, without rolling or applying damage again.
