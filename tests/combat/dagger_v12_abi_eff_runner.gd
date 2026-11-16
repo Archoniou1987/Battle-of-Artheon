@@ -69,6 +69,17 @@ func _cast(session: ArenaCombatSession, id: String) -> bool:
 	_check(bool(result.get("ok",false)),id+"_cast")
 	return bool(result.get("ok",false))
 
+## Respect production cooldowns; do not bypass the scheduler in tests.
+func _wait_for_ready(session: ArenaCombatSession, id: String) -> void:
+	var cooldowns: Dictionary = session.ability_scheduler.cooldowns_by_combatant.get(session.player_id,{})
+	var guard := 0
+	while not AbilityRuntime.can_use(id,cooldowns,session.state.round_number+1) and guard < 10:
+		var result := session.play_round(["chest"],["head","arms"])
+		_check(bool(result.get("ok",false)),id+"_cooldown_wait")
+		if not bool(result.get("ok",false)):
+			break
+		guard += 1
+
 func _count(session: ArenaCombatSession, id: String) -> int:
 	var n := 0
 	for event in session.state.event_log:
@@ -142,6 +153,7 @@ func _run() -> void:
 			_check(not _active(spear.fighter(false),"EFF412").is_empty(),"spear_sweep_reapplies_slow")
 		# EFF412 is periodic only: it must reduce live Tempo exactly 20
 		# in its active phase, never as a permanent stat overlay.
+		_wait_for_ready(spear,"ABI701")
 		var target := spear.fighter(false)
 		target.tempo = 0.0
 		target.tempo_regen = 0.0
@@ -156,6 +168,7 @@ func _run() -> void:
 		spear.fighter(true).combat_stats["hit_chance_rating_percent"]=0.0
 		target.combat_stats["dodge_rating_percent"]=100.0
 		spear.ability_scheduler.definitions["ABI701"]["rolls"]={"hit":1,"dodge":1,"auto_block":100,"crit":100}
+		_wait_for_ready(spear,"ABI701")
 		if _cast(spear,"ABI701"):
 			_check(_active(target,"EFF412").is_empty(),"spear_dodged_thrust_no_slow")
 	print("DAGGER_V12_ABI_EFF=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
