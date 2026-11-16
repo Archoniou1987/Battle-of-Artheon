@@ -80,6 +80,13 @@ func _wait_for_ready(session: ArenaCombatSession, id: String) -> void:
 			break
 		guard += 1
 
+func _last_combo_attack(session: ArenaCombatSession, id: String) -> Dictionary:
+	for i in range(session.state.event_log.size()-1,-1,-1):
+		var event: CombatEvent = session.state.event_log[i]
+		if event.kind == CombatEvent.Kind.ATTACK and String(event.payload.get("combo_abi_id","")) == id:
+			return event.result
+	return {}
+
 func _count(session: ArenaCombatSession, id: String) -> int:
 	var n := 0
 	for event in session.state.event_log:
@@ -163,13 +170,25 @@ func _run() -> void:
 		if _cast(spear,"ABI701"):
 			_check(is_equal_approx(target.tempo,before_tick-20.0),"spear_slow_tick_minus20")
 			_check(not _active(target,"EFF412").is_empty(),"spear_thrust_refreshes_slow")
-		# Misses and dodges must never grant a new Slow.
-		WeaponComboAbiCombatService._remove(target,"EFF412")
-		spear.fighter(true).combat_stats["hit_chance_rating_percent"]=0.0
-		target.combat_stats["dodge_rating_percent"]=100.0
-		spear.ability_scheduler.definitions["ABI701"]["rolls"]={"hit":1,"dodge":1,"auto_block":100,"crit":100}
+		# Miss and dodge are separate, observable outcomes. Do not assume
+		# setting dodge=100 guarantees a dodge after PAR anti-dodge and DR.
 		_wait_for_ready(spear,"ABI701")
+		WeaponComboAbiCombatService._remove(target,"EFF412")
+		spear.fighter(true).combat_stats["hit_chance_rating_percent"]=-1000.0
+		spear.ability_scheduler.definitions["ABI701"]["rolls"]={"hit":100,"dodge":100,"auto_block":100,"crit":100}
 		if _cast(spear,"ABI701"):
+			var missed := _last_combo_attack(spear,"ABI701")
+			_check(String(missed.get("outcome",""))=="miss","spear_thrust_forced_miss")
+			_check(_active(target,"EFF412").is_empty(),"spear_missed_thrust_no_slow")
+		_wait_for_ready(spear,"ABI701")
+		WeaponComboAbiCombatService._remove(target,"EFF412")
+		spear.fighter(true).combat_stats["hit_chance_rating_percent"]=100.0
+		spear.fighter(true).combat_stats["anti_dodge_rating_percent"]=0.0
+		target.combat_stats["dodge_rating_percent"]=10000.0
+		spear.ability_scheduler.definitions["ABI701"]["rolls"]={"hit":1,"dodge":1,"auto_block":100,"crit":100}
+		if _cast(spear,"ABI701"):
+			var dodged := _last_combo_attack(spear,"ABI701")
+			_check(String(dodged.get("outcome",""))=="dodge","spear_thrust_forced_dodge")
 			_check(_active(target,"EFF412").is_empty(),"spear_dodged_thrust_no_slow")
 	print("DAGGER_V12_ABI_EFF=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
