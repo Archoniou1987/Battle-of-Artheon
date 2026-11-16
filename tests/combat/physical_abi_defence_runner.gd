@@ -22,8 +22,8 @@ func _attack(arena: ArenaCombatSession, ability: bool, block_mode: String, zone:
 	}
 	if ability:
 		data["source_kind"] = "ability"
-		data["ability_id"] = "ABI409"
-		data["combo_abi_id"] = "ABI409"
+		data["ability_id"] = "ABI401"
+		data["combo_abi_id"] = "ABI401"
 	var event := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,data)
 	arena.engine.resolve_event(event)
 	arena.engine.resolve_pending_events()
@@ -51,6 +51,7 @@ func _run() -> void:
 	_check(String(baseline.result.get("outcome",""))=="connected" and baseline_damage>0.0,"unblocked_abi_damage")
 	var basic := _attack(arena,false,"none")
 	_check(is_equal_approx(float(baseline.result.get("dodge_chance",-1)),float(basic.result.get("dodge_chance",-2))*0.5),"abi_half_calculated_dodge")
+	arena.fighter(true).active_effects.clear()
 	var manual := _attack(arena,true,"manual")
 	_check(String(manual.result.get("partial_block",""))=="manual_block","abi_manual_block_marked")
 	_check(String(manual.result.get("outcome",""))=="connected","abi_manual_block_still_hits")
@@ -60,8 +61,8 @@ func _run() -> void:
 	_check(String(shield.result.get("partial_block",""))=="auto_block","abi_shield_block_marked")
 	_check(is_equal_approx(float(shield.result.get("after_armour_damage",0.0)),baseline_damage*0.5),"abi_shield_50pct_postarmour")
 	var effects := 0
-	for record in npc.active_effects:
-		if String(record.get("effect_id",""))=="EFF401":
+	for record in arena.fighter(true).active_effects:
+		if String(record.get("effect_id",""))=="EFF406":
 			effects+=1
 	_check(effects>0,"abi_on_hit_effect_survives_block")
 	var ordinary := _attack(arena,false,"manual")
