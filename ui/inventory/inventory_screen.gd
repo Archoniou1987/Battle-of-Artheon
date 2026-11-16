@@ -42,6 +42,8 @@ var v12_quality: OptionButton
 var v12_level: SpinBox
 var v12_seed: SpinBox
 var v12_keypad: ItemLabNumericKeypad
+var v12_keypad_layer: CanvasLayer
+var v12_seed_rng := RandomNumberGenerator.new()
 var v12_status_label: Label
 var discard_button: Button
 var discard_cancel: Button
@@ -300,8 +302,15 @@ func _ready() -> void:
 	generate_button.pressed.connect(_open_item_generator)
 	bag_heading.add_child(generate_button)
 	_build_item_generator()
+	# The generator is an AcceptDialog (its own Window/Viewport). A keypad
+	# added to InventoryScreen renders behind that Window on Web/mobile.
+	# Host it in a high CanvasLayer INSIDE the generator Window instead.
+	v12_keypad_layer = CanvasLayer.new()
+	v12_keypad_layer.layer = 20
+	generator_dialog.add_child(v12_keypad_layer)
 	v12_keypad = ItemLabNumericKeypad.new()
-	add_child(v12_keypad)
+	v12_keypad_layer.add_child(v12_keypad)
+	v12_seed_rng.randomize()
 	discard_button = Button.new()
 	discard_button.text = "Выкинуть"
 	discard_button.pressed.connect(_discard_button_pressed)
@@ -826,7 +835,8 @@ func _build_item_generator() -> void:
 		["Атакующий топор","AXE_ATTACK"],
 		["Топор щитолом","AXE_SHIELD"],
 		["Защитный молот","HAMMER_DEF"],
-		["Атакующий молот","HAMMER_ATTACK"]
+		["Атакующий молот","HAMMER_ATTACK"],
+		["Двуручное копьё","2H_SPEAR"]
 	]:
 		v12_archetype.add_item(String(spec[0]))
 		v12_archetype.set_item_metadata(v12_archetype.item_count - 1,String(spec[1]))
@@ -836,10 +846,12 @@ func _build_item_generator() -> void:
 	v12_hand.set_item_metadata(0, "MH")
 	v12_hand.add_item("Вторая рука (OH) · только кинжал")
 	v12_hand.set_item_metadata(1, "OH")
+	v12_hand.add_item("Двуручное (2H)")
+	v12_hand.set_item_metadata(2, "2H")
 	content.add_child(v12_hand)
 	v12_archetype.item_selected.connect(func(index: int) -> void:
-		if not String(v12_archetype.get_item_metadata(index)).begins_with("DAGGER_"):
-			v12_hand.select(0))
+		var archetype_id := String(v12_archetype.get_item_metadata(index))
+		v12_hand.select(2 if ItemV12InstanceFactory.TWO_HAND_ARCHETYPES.has(archetype_id) else 0))
 	v12_quality = OptionButton.new()
 	for spec in [
 		["Белое","white"],["Зелёное","green"],["Синее","blue"],["Эпическое","purple"]
@@ -852,6 +864,13 @@ func _build_item_generator() -> void:
 	content.add_child(v12_inputs)
 	v12_level = _v12_numeric(v12_inputs,"Уровень",40,1,100)
 	v12_seed = _v12_numeric(v12_inputs,"Seed",202611041,1,999999999)
+	var random_seed_button := Button.new()
+	random_seed_button.name = "InventoryRandomSeedButton"
+	random_seed_button.text = "🎲 Случайный"
+	random_seed_button.tooltip_text = "Новый случайный Seed для игрового предмета; создание остаётся отдельным действием"
+	random_seed_button.custom_minimum_size.y = 44
+	random_seed_button.pressed.connect(_v12_random_seed)
+	v12_inputs.add_child(random_seed_button)
 	v12_archetype.item_selected.connect(func(index: int) -> void:
 		v12_seed.value = float(202611041 + index))
 	var v12_create := Button.new()
@@ -958,6 +977,13 @@ func _v12_numeric(parent: Control, heading: String, initial: int, min_value: int
 	group.add_child(button)
 	return input
 
+func _v12_random_seed() -> void:
+	var next_seed := v12_seed_rng.randi_range(int(v12_seed.min_value),int(v12_seed.max_value))
+	if next_seed == int(v12_seed.value):
+		next_seed = 1 if next_seed >= int(v12_seed.max_value) else next_seed + 1
+	v12_seed.value = next_seed
+
+
 func _generator_v12_create() -> void:
 	v12_status_label.text = ""
 	if character == null or repository == null or v12_archetype.selected < 0 or v12_quality.selected < 0:
@@ -968,7 +994,8 @@ func _generator_v12_create() -> void:
 	var quality := String(v12_quality.get_selected_metadata())
 	var level := int(v12_level.value)
 	var seed_value := int(v12_seed.value)
-	var item := ItemV12InstanceFactory.grant_weapon(character,repository,archetype_id,level,quality,seed_value,String(v12_hand.get_selected_metadata()))
+	var hand := "2H" if ItemV12InstanceFactory.TWO_HAND_ARCHETYPES.has(archetype_id) else String(v12_hand.get_selected_metadata())
+	var item := ItemV12InstanceFactory.grant_weapon(character,repository,archetype_id,level,quality,seed_value,hand)
 	if item.is_empty():
 		generator_status.text = "Не удалось создать игровой предмет: проверьте уровень, редкость и свободное место в сумке."
 		v12_status_label.text = generator_status.text
