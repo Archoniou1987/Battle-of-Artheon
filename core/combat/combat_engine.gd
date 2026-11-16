@@ -332,10 +332,14 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("hit_roll",hit_roll)
 	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); return
+	var is_physical_abi := CombatDamagePayload.is_physical_abi_attack(event.payload)
+	var partial_abi_block := ""
 	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not bool(event.payload.get("skip_dodge_block",false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
 	if active_defence_available:
 		var dodge := CombatMath.effective_dodge(CombatModifierService.effective_percent(defender, "dodge_rating", state.round_number), CombatModifierService.effective_percent(attacker, "anti_dodge_rating", state.round_number))
+		if is_physical_abi:
+			dodge *= CombatDamagePayload.PHYSICAL_ABI_DODGE_CHANCE_MULTIPLIER
 		event.set_result("dodge_chance",dodge)
 		event.set_result("dodge_roll",int(rolls.get("dodge", 100)))
 		if CombatMath.roll_success(dodge, int(rolls.get("dodge", 100))):
@@ -354,20 +358,25 @@ func _resolve_attack(event: CombatEvent) -> void:
 				_trigger_manual_block_effects(event, defender, rolls)
 				SwordAbiCombatService.on_block(self,event,defender)
 				HammerAbiCombatService.on_block(self,event,defender)
-				return
-		var auto_block := CombatModifierService.block_chance(defender, state.round_number)
-		event.set_result("auto_block_chance",auto_block)
-		event.set_result("auto_block_roll",int(rolls.get("auto_block", 100)))
-		if _event_uses_physical_block(event) and defender.can_auto_block() and not bool(event.payload.get("skip_auto_block",false)) and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
-			event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
-			event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
-			var auto_block_crushed:=_block_crushed(attacker, rolls, float(event.payload.get("axe_block_crush_bonus_pct",0.0)))
-			event.set_result("auto_block_crushed",auto_block_crushed)
-			if not auto_block_crushed:
-				event.set_result("outcome", "auto_block")
-				SwordAbiCombatService.on_block(self,event,defender)
-				HammerAbiCombatService.on_block(self,event,defender)
-				return
+				if not is_physical_abi:
+					return
+				partial_abi_block = "manual_block"
+				# A partial ABI block still resolves the hit and its on-hit effects.
+
+		if partial_abi_block.is_empty():
+			var auto_block := CombatModifierService.block_chance(defender, state.round_number)
+			event.set_result("auto_block_chance",auto_block)
+			event.set_result("auto_block_roll",int(rolls.get("auto_block", 100)))
+			if _event_uses_physical_block(event) and defender.can_auto_block() and not bool(event.payload.get("skip_auto_block",false)) and CombatMath.roll_success(auto_block, int(rolls.get("auto_block", 100))):
+				event.set_result("block_crush_chance",CombatModifierService.block_crush_chance(attacker, state.round_number))
+				event.set_result("block_crush_roll",int(rolls.get("block_crush", 100)))
+				var auto_block_crushed:=_block_crushed(attacker, rolls, float(event.payload.get("axe_block_crush_bonus_pct",0.0)))
+				event.set_result("auto_block_crushed",auto_block_crushed)
+				if not auto_block_crushed:
+					event.set_result("outcome", "auto_block")
+					SwordAbiCombatService.on_block(self,event,defender)
+					HammerAbiCombatService.on_block(self,event,defender)
+					return
 
 	var active_crit_bonus := _active_effect_value(attacker, "crit_bonus")
 	var crit := CombatMath.effective_crit(CombatModifierService.effective_percent(attacker, "crit_chance_rating", state.round_number) + active_crit_bonus + float(event.payload.get("sword_crit_chance_pct",0.0)), CombatModifierService.effective_percent(defender, "anti_crit_rating", state.round_number))
@@ -441,6 +450,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 	var reduction := clampf(armour_percent / 100.0,0.0,1.0)
 	event.set_result("dagger_breach_stacks",dagger_breach_stacks)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
+	if not partial_abi_block.is_empty():
+		after_armour *= CombatDamagePayload.PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER
+		event.set_result("partial_block",partial_abi_block)
+		event.set_result("block_damage_multiplier",CombatDamagePayload.PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER)
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_raw_percent",raw_armour_pct); event.set_result("armour_after_breach_percent",after_breach_pct); event.set_result("armour_before_dr_percent",armour_before_dr); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
