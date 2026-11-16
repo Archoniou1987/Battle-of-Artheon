@@ -184,8 +184,7 @@ func _run() -> void:
 		var parent := wave.state.create_event(CombatEvent.Kind.ACTION,wave.player_id,ArenaCombatSession.ENEMY_ID,{"ability_id":"ABI607"})
 		wave.state.record_event(parent)
 		for hit_index in range(4):
-			var connected := wave.state.create_event(CombatEvent.Kind.ATTACK,wave.player_id,ArenaCombatSession.ENEMY_ID,{"hammer_abi_id":"ABI607"})
-			connected.parent_event_id = parent.event_id
+			var connected := wave.state.create_event(CombatEvent.Kind.ATTACK,wave.player_id,ArenaCombatSession.ENEMY_ID,{"hammer_abi_id":"ABI607"},parent.event_id)
 			HammerAbiCombatService.on_connected_attack(wave.engine,connected,hero)
 			_check(hero.action_points==mini(hit_index+1,3),"abi607_hit_"+str(hit_index+1)+"_refund")
 		_check(int(parent.result.get("hammer_wave_ap_awarded",0))==3,"abi607_refund_cap_per_cast")
