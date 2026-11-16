@@ -38,6 +38,11 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				var status: String = String(event.result.get("outcome", ""))
 				var hit: Dictionary = {
 					"event_id": event.event_id,
+					"target_id": event.target_id,
+					"concussion_stacks": int(event.payload.get("hammer_concussion_snapshot",0)),
+					"bonus_damage_pct": float(event.payload.get("hammer_bonus_damage_pct",0.0)),
+					"tempo_applied": float(event.result.get("tempo_control_applied",0.0)),
+					"concussion_consumed": int(event.payload.get("hammer_consume_concussion",0)) if status=="connected" else 0,
 					"index": int(event.payload.get("combo_strike_index", -1)),
 					"zone": String(event.payload.get("zone", "chest")),
 					"critical": bool(event.result.get("critical", false)),
@@ -132,6 +137,30 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				var reason: String = String(event.result.get("outcome", ""))
 				parts.append(_ability_outcome(reason))
 			result.append(prefix + ": " + "; ".join(parts))
+			if name_id in ["ABI607","ABI608"]:
+				# Detail each resolved target using the actual ATTACK->DAMAGE event
+				# ancestry: after mitigation, HP removal, crit, block and effects.
+				# Never estimate per-target damage from the ABI aggregate.
+				for raw_hit_id in hit_ids:
+					var hit: Dictionary = abi_hit_details.get(int(raw_hit_id),{})
+					var target_id := String(hit.get("target_id",""))
+					var target_label := _target(target_id,player_id)
+					var outcome := String(hit.get("outcome",""))
+					var detail := "%d урона" % int(hit.get("damage",0)) if outcome=="connected" else _attack_outcome(outcome)
+					if outcome=="connected":
+						if bool(hit.get("critical",false)):
+							detail += " (крит)"
+						var partial := String(hit.get("partial_block",""))
+						if partial=="manual_block":
+							detail += " (ручной блок −50%)"
+						elif partial=="auto_block":
+							detail += " (щит −50%)"
+					if name_id=="ABI608":
+						var stacks := int(hit.get("concussion_stacks",0))
+						detail += "; Сотрясение %d → поглощено %d" % [stacks,int(hit.get("concussion_consumed",0))]
+						if outcome=="connected":
+							detail += "; бонус +%g%% урона; −%g Tempo" % [float(hit.get("bonus_damage_pct",0.0)),float(hit.get("tempo_applied",0.0))]
+					result.append("  %s: %s" % [target_label.capitalize(),detail])
 			if name_id == "ABI403":
 				# Display real resolved events, without rolling or applying damage again.
 				for raw_hit_id in hit_ids:
