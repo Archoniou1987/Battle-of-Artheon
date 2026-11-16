@@ -56,7 +56,7 @@ static func _case_melee_physical_can_block(balance:Dictionary) -> bool:
 	var event := _action(state, "MELEE", "physical", {"hit":1,"dodge":100,"block_crush":100})
 	_resolve(state, balance, event)
 	var child:=_child_attack(state,event.event_id)
-	return state.get_combatant("target").hp == 100 and child!=null and child.result.get("outcome") == "manual_block" and bool(child.payload.get("uses_physical_block",false)) and not bool(child.payload.get("bypass_physical_mitigation",true))
+	return state.get_combatant("target").hp == 95 and child!=null and child.result.get("outcome") == "connected" and child.result.get("partial_block") == "manual_block" and is_equal_approx(float(child.result.get("block_damage_multiplier",0.0)),0.5) and bool(child.payload.get("uses_physical_block",false)) and not bool(child.payload.get("bypass_physical_mitigation",true))
 
 static func _case_direct_bypasses_active_defence(balance:Dictionary) -> bool:
 	var state := _state()
@@ -92,12 +92,13 @@ static func _case_manual_block_uses_explicit_shield_sector(balance:Dictionary)->
 	var blocked:=_action(state,"MELEE","physical",{"hit":1,"dodge":100,"block_crush":100})
 	blocked.payload["components"][0]["zone"]="head"
 	_resolve(state,balance,blocked)
-	if target.hp!=100 or _child_outcome(state,blocked.event_id)!="manual_block":
+	var blocked_attack:=_child_attack(state,blocked.event_id)
+	if target.hp!=95 or blocked_attack==null or blocked_attack.result.get("outcome")!="connected" or blocked_attack.result.get("partial_block")!="manual_block":
 		return false
 	var open_zone:=_action(state,"MELEE","physical",{"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100})
 	open_zone.payload["components"][0]["zone"]="arms"
 	_resolve(state,balance,open_zone)
-	return target.hp==90 and _child_outcome(state,open_zone.event_id)=="connected"
+	return target.hp==85 and _child_outcome(state,open_zone.event_id)=="connected" and not _child_attack(state,open_zone.event_id).result.has("partial_block")
 
 
 static func _case_ability_attack_ignores_weapon_semantics(balance:Dictionary)->bool:
