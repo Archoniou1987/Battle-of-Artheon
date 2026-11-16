@@ -45,7 +45,8 @@ func _init(character: CharacterState, repository: ItemRepository, enemy_count: i
 	for index in range(clampi(enemy_count,1,3)):
 		var enemy_id := ENEMY_ID if index==0 else ENEMY_ID+"_"+str(index+1)
 		enemy_ids.append(enemy_id)
-		var enemy_character := CharacterState.new(enemy_id, "Манекен %d" % (index+1), player.level)
+		var enemy_name := "Тренировочный противник" if enemy_count==1 else "Манекен %d" % (index+1)
+		var enemy_character := CharacterState.new(enemy_id, enemy_name, player.level)
 		var enemy_repository := ItemRepository.new()
 		# Keep original 1v1 instance IDs for legacy test fixtures and saves.
 		var sword_id := "arena_enemy_sword" if index==0 else "arena_enemy_sword_"+str(index)
