@@ -200,8 +200,8 @@ func _spin(parent: Control, caption: String, value: float, minimum: float, maxim
 ## to generate. Reuse the SpinBox value_changed signal to refresh its label.
 func _add_random_seed_button(parent: Control, seed_field: SpinBox) -> void:
 	var random_button := Button.new()
-	random_button.text = "🎲 Seed"
-	random_button.tooltip_text = "Случайное число Seed для новой генерации"
+	random_button.text = "🎲 Случайный"
+	random_button.tooltip_text = "Установить случайный Seed, не запуская генерацию"
 	random_button.custom_minimum_size.y = 46
 	random_button.pressed.connect(func() -> void:
 		var next_seed := seed_rng.randi_range(int(seed_field.min_value),int(seed_field.max_value))
