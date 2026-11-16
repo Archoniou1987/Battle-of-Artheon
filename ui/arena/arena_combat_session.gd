@@ -47,13 +47,17 @@ func _init(character: CharacterState, repository: ItemRepository, enemy_count: i
 		enemy_ids.append(enemy_id)
 		var enemy_character := CharacterState.new(enemy_id, "Манекен %d" % (index+1), player.level)
 		var enemy_repository := ItemRepository.new()
+		# Keep original 1v1 instance IDs for legacy test fixtures and saves.
+		var sword_id := "arena_enemy_sword" if index==0 else "arena_enemy_sword_"+str(index)
+		var shield_id := "arena_enemy_audit_shield" if index==0 else "arena_enemy_audit_shield_"+str(index)
+		var helmet_id := "arena_enemy_audit_helmet" if index==0 else "arena_enemy_audit_helmet_"+str(index)
 		if not training_dummy_clear_defaults:
-			var sword := {"instance_id":"arena_enemy_sword_"+str(index), "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
+			var sword := {"instance_id":sword_id, "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
 			ItemDurabilityService.initialize_item(sword, 100)
 			enemy_repository.add_item(sword)
-			enemy_character.receive_item("arena_enemy_sword_"+str(index), enemy_repository)
-			enemy_character.equip("main_hand", "arena_enemy_sword_"+str(index), enemy_repository)
-		var default_gear: Array = [] if training_dummy_clear_defaults else [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield_"+str(index),"slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet_"+str(index),"slot":"head"}]
+			enemy_character.receive_item(sword_id, enemy_repository)
+			enemy_character.equip("main_hand", sword_id, enemy_repository)
+		var default_gear: Array = [] if training_dummy_clear_defaults else [{"template_id":"audit_enemy_shield","instance_id":shield_id,"slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":helmet_id,"slot":"head"}]
 		for gear in default_gear:
 			var item: Dictionary = ItemTemplateService.resolve(gear)
 			if item.is_empty():
