@@ -20,6 +20,20 @@ static var training_dummy_items: Dictionary = {}
 static var training_dummy_clear_defaults := false
 var enemy_equipment_display: Dictionary = {}
 
+## Preview-only rating conversion: keep all equipment PAR and raw ratings
+## unchanged, recompute the same canonical rating % for the selected test level.
+## Never mutate the persistent CharacterState or overwrite EFF modifiers.
+static func apply_test_level(combatant: CombatantState, level: int) -> bool:
+	if combatant == null:
+		return false
+	var target_level := clampi(level,1,100)
+	var converted := CharacterStatsService.convert_ratings(combatant.combat_stats,target_level)
+	if converted.is_empty():
+		return false
+	combatant.combat_stats = converted
+	combatant.level = target_level
+	return true
+
 func _init(character: CharacterState, repository: ItemRepository) -> void:
 	self.character = character
 	self.repository = repository
