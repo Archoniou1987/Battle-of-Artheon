@@ -238,6 +238,9 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 			_remove(target,BREACH)
 		"ABI701":
 			attacker.gain_action_points(int(AbilityCatalog.number(id,"ap_gain")))
+			# Apply only after a connected hit (never a miss or dodge).
+			# ABI701 damage already uses the target's pre-hit Slow snapshot.
+			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,SLOW)
 		"ABI702":
 			_effect(engine,attacker.combatant_id,target.combatant_id,attack.event_id,SLOW)
 		"ABI703":
