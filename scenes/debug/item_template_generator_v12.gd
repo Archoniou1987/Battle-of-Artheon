@@ -107,7 +107,8 @@ func _build() -> void:
 	single_template_select = _option(single,"Шаблон / архетип",[
 		["Меч защитный Lv40","SWORD_DEF"],
 		["Меч уклонения Lv40","SWORD_DODGE"],
-		["Меч критический Lv40","SWORD_CRIT"]])
+		["Меч критический Lv40","SWORD_CRIT"],
+		["Копьё двуручное Lv40","2H_SPEAR"]])
 	single_quality_select = _option(single,"Качество",[
 		["Белое","white"],["Зелёное","green"],["Синее","blue"],["Эпическое (фиолетовое)","purple"]])
 	_select_value(single_quality_select,"purple")
@@ -122,7 +123,7 @@ func _build() -> void:
 	single_generate.custom_minimum_size.y = 52
 	single_generate.pressed.connect(_generate_single_template)
 	single.add_child(single_generate)
-	single.add_child(_label("Lv40 допускает эпик. Урон, требования, CORE и PAR рассчитываются ТОЛЬКО действующим генератором v1.2; ABI/EFF физического меча пока проектные записи Project 25, не выдача в инвентарь.",12,Color("#dfbd8e")))
+	single.add_child(_label("Lv40 допускает эпик. Урон, требования, CORE и PAR рассчитываются только действующим генератором v1.2. ABI оружия берутся из канонических правил архетипа.",12,Color("#dfbd8e")))
 	var output := _page("3 · Результаты")
 	result_status = _label("Генерация ещё не запускалась",13)
 	output.add_child(result_status)
