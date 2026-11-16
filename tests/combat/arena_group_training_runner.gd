@@ -65,6 +65,43 @@ func _run() -> void:
 			var target := test.state.get_combatant(enemy_id)
 			check(target.hp>0 and target.hp<target.max_hp,"wave_hits_live_"+enemy_id)
 		check(test.living_enemy_count()==count,"all_survive_"+str(count))
+		var per_target_lines := 0
+		for line in Array(result.get("lines",[])):
+			if String(line).begins_with("  "):
+				per_target_lines+=1
+		check(per_target_lines==count,"wave_log_per_target_"+str(count))
+	# Earthquake: distinct 1/2/3 stacks must produce three independent
+	# post-armour HP values, bonus percentages and Tempo audit entries.
+	var quake := session_for(3)
+	if quake != null:
+		var catalog := EffectCatalog.load_json()
+		for i in range(3):
+			var npc := quake.state.get_combatant(quake.enemy_ids[i])
+			npc.active_effects.append({
+				"effect_id":"EFF601",
+				"definition":Dictionary(catalog["EFF601"]).duplicate(true),
+				"source_id":quake.player_id,
+				"start_round":0,
+				"remaining_rounds":4,
+				"stacks":i+1,
+				"active_stacks":i+1
+			})
+		quake.ability_scheduler.definitions["ABI608"]["rolls"]={"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100}
+		var result := quake.play_round(["chest"],["head","arms"],"ABI608")
+		check(bool(result.get("ok",false)),"quake_round_3")
+		var detail_lines: Array[String] = []
+		for line in Array(result.get("lines",[])):
+			if String(line).begins_with("  "):
+				detail_lines.append(String(line))
+		check(detail_lines.size()==3,"quake_log_three_targets")
+		for n in [1,2,3]:
+			var target_line := "манекена %d" % n
+			var expected_stacks := "Сотрясение %d → поглощено %d" % [n,n]
+			var found := false
+			for detail in detail_lines:
+				if detail.to_lower().contains(target_line) and detail.contains(expected_stacks) and detail.contains("урона") and detail.contains("Tempo"):
+					found=true
+			check(found,"quake_target_"+str(n)+"_damage_stacks_tempo")
 	# Clamp invalid requested counts without changing production battle rules.
 	var clamped := session_for(4)
 	if clamped!=null:
