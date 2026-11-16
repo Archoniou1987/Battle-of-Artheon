@@ -103,6 +103,10 @@ func _run() -> void:
 		_check(int(Dictionary(effects["EFF607"]).get("ap_per_successful_block",0))==1,"stance_ap_per_block")
 		_check(int(Dictionary(effects["EFF607"]).get("max_ap_from_blocks_per_round",0))==3,"stance_max_3_block_ap")
 	_check(String(Dictionary(Dictionary(catalog["ABI601"]).get("effect_refs",{})).get("on_cast",""))=="EFF607","abi601_effect_reference")
+	_check(int(Dictionary(catalog["ABI606"]).get("ap_cost",-1))==2,"abi606_cost_2_ap")
+	_check(int(Dictionary(catalog["ABI607"]).get("ap_cost",-1))==3,"abi607_cost_3_ap")
+	_check(int(Dictionary(catalog["ABI607"]).get("ap_gain",-1))==3 and bool(Dictionary(catalog["ABI607"]).get("ap_gain_on_hit",false)),"abi607_on_hit_ap_cap_3")
+	_check(int(Dictionary(catalog["ABI607"]).get("ap_gain_per_connected_target",-1))==1,"abi607_one_ap_per_hit")
 	_check(int(Dictionary(effects["EFF601"]).get("max_stacks",0))==3,"concussion_max3")
 	_check(int(Dictionary(effects["EFF601"]).get("duration_rounds",0))==4,"concussion_duration4")
 	_check(not Dictionary(effects["EFF601"]).has("charges_per_ordinary_mh_hit"),"retired_100_charge_mechanic")
@@ -157,6 +161,36 @@ func _run() -> void:
 				_check(int(concussion.get("start_round",-1))==attack.state.round_number+1,"attack_q_concussion_next_round")
 		if _cast(attack,"ABI606"):
 			_check(not _effect(attack.fighter(false),"EFF606").is_empty(),"armour_debuff_on_hit")
+	# Live Arena level override must convert raw ratings through the same
+	# RatingMatrix; only the detached combatant is modified.
+	var level_check := _make_session("HAMMER_ATTACK",202611185)
+	if level_check != null:
+		var player := level_check.fighter(true)
+		var permanent_level := level_check.character.progression.level
+		var crit_rating := float(player.combat_stats.get("crit_chance_rating",0.0))
+		for level in [1,40,100]:
+			_check(ArenaCombatSession.apply_test_level(player,level),"arena_level_"+str(level)+"_converted")
+			_check(player.level==level,"arena_level_"+str(level)+"_applied")
+			_check(is_equal_approx(float(player.combat_stats.get("crit_chance_rating_percent",-999)),RatingMatrix.to_percent(crit_rating,level)+float(player.combat_stats.get("crit_chance_direct_pct",0.0))),"arena_level_"+str(level)+"_crit_percentage")
+			_check(is_equal_approx(float(player.combat_stats.get("crit_chance_rating",0.0)),crit_rating),"arena_level_"+str(level)+"_raw_rating_kept")
+		_check(level_check.character.progression.level==permanent_level,"arena_level_persistent_character_untouched")
+	# ABI607 refunds AP only for connected hits. Its parent ACTION owns
+	# the common 3 AP cap even when several target ATTACK events are resolved.
+	var wave := _make_session("HAMMER_ATTACK",202611186)
+	if wave != null:
+		var hero := wave.fighter(true)
+		wave.state.begin_round()
+		hero.action_points = 0
+		var parent := wave.state.create_event(CombatEvent.Kind.ACTION,wave.player_id,ArenaCombatSession.ENEMY_ID,{"ability_id":"ABI607"})
+		wave.state.record_event(parent)
+		for hit_index in range(4):
+			var connected := wave.state.create_event(CombatEvent.Kind.ATTACK,wave.player_id,ArenaCombatSession.ENEMY_ID,{"hammer_abi_id":"ABI607"})
+			connected.parent_event_id = parent.event_id
+			HammerAbiCombatService.on_connected_attack(wave.engine,connected,hero)
+			_check(hero.action_points==mini(hit_index+1,3),"abi607_hit_"+str(hit_index+1)+"_refund")
+		_check(int(parent.result.get("hammer_wave_ap_awarded",0))==3,"abi607_refund_cap_per_cast")
+		_check(int(parent.result.get("ap_gained_on_hit",0))==3,"abi607_parent_records_actual_ap")
+		_check(hero.action_points==3,"abi607_no_refund_for_miss_or_dodge_without_on_connected")
 	var execute := _make_session("HAMMER_ATTACK",202611182)
 	if execute != null:
 		_give_concussion(execute,3)
