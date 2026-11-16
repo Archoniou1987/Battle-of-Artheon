@@ -108,6 +108,13 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				parts.append("ручной блок: %d (50%% урона)" % partial_manual)
 			if partial_shield > 0:
 				parts.append("блок щитом: %d (50%% урона)" % partial_shield)
+			if name_id == "ABI607":
+				var connected_count := 0
+				for raw_hit_id in hit_ids:
+					if String(Dictionary(abi_hit_details.get(int(raw_hit_id),{})).get("outcome",""))=="connected":
+						connected_count += 1
+				parts.append("попаданий: %d/%d" % [connected_count,hit_ids.size()])
+				parts.append("+%d AP" % int(event.result.get("ap_gained_on_hit",0)))
 			if name_id != "ABI403" and critical_count > 0:
 				parts.append("крит: %d/%d" % [critical_count, hit_ids.size()])
 			if int(values.get("healing", 0)) > 0:
@@ -180,10 +187,18 @@ static func _ability_root_id(event: CombatEvent, by_id: Dictionary) -> int:
 	return -1
 
 static func _actor(combatant_id: String, player_id: String) -> String:
-	return "Игрок" if combatant_id == player_id else "Противник"
+	if combatant_id == player_id:
+		return "Игрок"
+	if combatant_id.begins_with(ArenaCombatSession.ENEMY_ID+"_"):
+		return "Манекен "+combatant_id.trim_prefix(ArenaCombatSession.ENEMY_ID+"_")
+	return "Противник"
 
 static func _target(combatant_id: String, player_id: String) -> String:
-	return "игрока" if combatant_id == player_id else "противника"
+	if combatant_id == player_id:
+		return "игрока"
+	if combatant_id.begins_with(ArenaCombatSession.ENEMY_ID+"_"):
+		return "манекена "+combatant_id.trim_prefix(ArenaCombatSession.ENEMY_ID+"_")
+	return "противника"
 
 static func _effect_name(effect_id: String, definitions: Dictionary) -> String:
 	var definition: Dictionary = EffectCatalog.definition(definitions, effect_id)
