@@ -29,7 +29,7 @@ static func previous_round_trigger_met(state: CombatState, source_id: String, tr
 	for event in state.event_log:
 		if int(event.payload.get("round",-1)) != evaluating_round - 1:
 			continue
-		if trigger == "block" and event.target_id == source_id and String(event.result.get("outcome","")) in ["manual_block","auto_block"]:
+		if trigger == "block" and event.target_id == source_id and (String(event.result.get("outcome","")) in ["manual_block","auto_block"] or String(event.result.get("partial_block","")) in ["manual_block","auto_block"]):
 			return true
 		if trigger == "dodge" and event.target_id == source_id and String(event.result.get("outcome","")) == "dodge":
 			return true
