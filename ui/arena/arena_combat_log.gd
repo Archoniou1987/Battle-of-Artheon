@@ -42,6 +42,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 					"zone": String(event.payload.get("zone", "chest")),
 					"critical": bool(event.result.get("critical", false)),
 					"outcome": status,
+					"partial_block": String(event.result.get("partial_block","")),
 					"damage": 0
 				}
 				abi_hit_details[event.event_id] = hit
@@ -96,6 +97,17 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				var hit: Dictionary = abi_hit_details.get(int(raw_hit_id), {})
 				if bool(hit.get("critical", false)):
 					critical_count += 1
+			var partial_manual := 0
+			var partial_shield := 0
+			for raw_hit_id in hit_ids:
+				var hit_block: Dictionary = abi_hit_details.get(int(raw_hit_id),{})
+				match String(hit_block.get("partial_block","")):
+					"manual_block": partial_manual += 1
+					"auto_block": partial_shield += 1
+			if partial_manual > 0:
+				parts.append("ручной блок: %d (50%% урона)" % partial_manual)
+			if partial_shield > 0:
+				parts.append("блок щитом: %d (50%% урона)" % partial_shield)
 			if name_id != "ABI403" and critical_count > 0:
 				parts.append("крит: %d/%d" % [critical_count, hit_ids.size()])
 			if int(values.get("healing", 0)) > 0:
@@ -122,6 +134,9 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 					var hand := "MH" # ABI403 performs three individual MH strikes.
 					var status: String = String(hit.get("outcome", ""))
 					var strike_result := "%d урона%s" % [int(hit.get("damage", 0)), " (крит)" if bool(hit.get("critical", false)) else ""] if status == "connected" else _attack_outcome(status)
+					var partial := String(hit.get("partial_block",""))
+					if not partial.is_empty():
+						strike_result += " (ручной блок −50%)" if partial=="manual_block" else " (щит −50%)"
 					result.append("  Удар %d (%s, %s): %s" % [strike_number, hand, _zone_name(String(hit.get("zone", "chest"))), strike_result])
 		elif event.kind == CombatEvent.Kind.ATTACK and root_id < 0:
 			var outcome: String = String(event.result.get("outcome", ""))
@@ -131,9 +146,11 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 			if outcome == "connected":
 				var amount: int = int(weapon_damage.get(event.event_id, 0))
 				var critical: String = " (крит)" if bool(event.result.get("critical", false)) else ""
+				var partial := String(event.result.get("partial_block",""))
+				var defence_label := " (ручной блок −50%)" if partial=="manual_block" else (" (щит −50%)" if partial=="auto_block" else "")
 				if String(event.payload.get("sword_abi_id", "")) == "ABI301":
 					var abi_def: Dictionary = AbilityCatalog.definition(ability_definitions, "ABI301")
-					result.append("%s — ABI «%s» атакует %s (%s): %d урона%s" % [from_name, String(abi_def.get("name", "Кровавый порез")), target_name, zone_name, amount, critical])
+					result.append("%s — ABI «%s» атакует %s (%s): %d урона%s" % [from_name, String(abi_def.get("name", "Кровавый порез")), target_name, zone_name, amount, critical + defence_label])
 				else:
 					result.append("%s атакует %s (%s): %d урона%s" % [from_name, target_name, zone_name, amount, critical])
 			else:
