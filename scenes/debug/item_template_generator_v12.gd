@@ -5,6 +5,8 @@ extends Control
 const COLOURS := {"white":"#d8d8d8","green":"#78d594","blue":"#83afff","purple":"#cba0fa"}
 var engine := ItemTemplateGeneratorV12.new()
 var numeric_keypad: ItemLabNumericKeypad
+var keypad_layer: CanvasLayer
+var seed_rng := RandomNumberGenerator.new()
 var tabs: TabContainer
 var kind_select: OptionButton
 var archetype_select: OptionButton
@@ -28,6 +30,7 @@ var single_level: SpinBox
 var single_seed: SpinBox
 
 func _ready() -> void:
+	seed_rng.randomize()
 	_build()
 	call_deferred("_generate")
 
@@ -54,8 +57,12 @@ func _build() -> void:
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(tabs)
+	# Keep the keypad above all tabs, panels and scroll containers.
+	keypad_layer = CanvasLayer.new()
+	keypad_layer.layer = 20
+	add_child(keypad_layer)
 	numeric_keypad = ItemLabNumericKeypad.new()
-	add_child(numeric_keypad)
+	keypad_layer.add_child(numeric_keypad)
 	var settings := _page("1 · Параметры")
 	settings.add_child(_label("Утверждённые правила Project 25 · 21 оружейный + 14 броневых архетипов", 13, Color("#c4d5e4")))
 	settings.add_child(_label("Калибровка: HP/мана — эталоны; СА/СЗ — интерполяция целей сборки; прочие PAR — предварительно.", 12, Color("#dfbd8e")))
@@ -80,6 +87,7 @@ func _build() -> void:
 	level_max = _spin(level_row,"Уровень до",30,1,100)
 	count_spin = _spin(level_row,"Количество",100,1,500)
 	seed_spin = _spin(level_row,"Seed",20261101,1,999999999)
+	_add_random_seed_button(level_row,seed_spin)
 	var start := Button.new()
 	start.text = "Сгенерировать по v1.2"
 	start.custom_minimum_size.y = 52
@@ -116,6 +124,7 @@ func _build() -> void:
 	single.add_child(single_inputs)
 	single_level = _spin(single_inputs,"Уровень предмета",40,1,100)
 	single_seed = _spin(single_inputs,"Seed варианта",202611041,1,999999999)
+	_add_random_seed_button(single_inputs,single_seed)
 	single_template_select.item_selected.connect(func(index: int) -> void:
 		single_seed.value = float(202611041 + index))
 	var single_generate := Button.new()
@@ -186,6 +195,21 @@ func _spin(parent: Control, caption: String, value: float, minimum: float, maxim
 	spin.value_changed.connect(func(v: float) -> void: edit.text = str(int(v)) + "  ⌨")
 	container.add_child(edit)
 	return spin
+
+## A new seed changes only the input field; the user still decides when
+## to generate. Reuse the SpinBox value_changed signal to refresh its label.
+func _add_random_seed_button(parent: Control, seed_field: SpinBox) -> void:
+	var random_button := Button.new()
+	random_button.text = "🎲 Seed"
+	random_button.tooltip_text = "Случайное число Seed для новой генерации"
+	random_button.custom_minimum_size.y = 46
+	random_button.pressed.connect(func() -> void:
+		var next_seed := seed_rng.randi_range(int(seed_field.min_value),int(seed_field.max_value))
+		if next_seed == int(seed_field.value):
+			next_seed = 1 if next_seed >= int(seed_field.max_value) else next_seed+1
+		seed_field.value = next_seed
+	)
+	parent.add_child(random_button)
 
 func _pick(option: OptionButton) -> String:
 	if option.selected < 0:
