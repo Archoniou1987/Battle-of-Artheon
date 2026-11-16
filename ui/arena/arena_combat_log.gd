@@ -152,7 +152,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 					var abi_def: Dictionary = AbilityCatalog.definition(ability_definitions, "ABI301")
 					result.append("%s — ABI «%s» атакует %s (%s): %d урона%s" % [from_name, String(abi_def.get("name", "Кровавый порез")), target_name, zone_name, amount, critical + defence_label])
 				else:
-					result.append("%s атакует %s (%s): %d урона%s" % [from_name, target_name, zone_name, amount, critical])
+					result.append("%s атакует %s (%s): %d урона%s" % [from_name, target_name, zone_name, amount, critical + defence_label])
 			else:
 				if String(event.payload.get("sword_abi_id", "")) == "ABI301":
 					result.append("%s — ABI «Кровавый порез» атакует %s (%s): %s" % [from_name, target_name, zone_name, _attack_outcome(outcome)])
