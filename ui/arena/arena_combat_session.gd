@@ -15,6 +15,7 @@ var ability_scheduler: AbilityScheduler
 var player_ability_slots: Array = []
 var player_id: String
 const ENEMY_ID := "arena_training_enemy"
+var enemy_ids: Array[String] = []
 # Preview-only loadout overrides selected in the inventory generator.
 static var training_dummy_items: Dictionary = {}
 static var training_dummy_clear_defaults := false
@@ -34,61 +35,67 @@ static func apply_test_level(combatant: CombatantState, level: int) -> bool:
 	combatant.level = target_level
 	return true
 
-func _init(character: CharacterState, repository: ItemRepository) -> void:
+func _init(character: CharacterState, repository: ItemRepository, enemy_count: int = 1) -> void:
 	self.character = character
 	self.repository = repository
 	state = CombatState.new()
 	var player := CharacterCombatBuilder.build(character, repository)
 	player_id = player.combatant_id
-	var enemy_character := CharacterState.new(ENEMY_ID, "Тренировочный противник", player.level)
-	var enemy_repository := ItemRepository.new()
-	if not training_dummy_clear_defaults:
-		var sword := {"instance_id":"arena_enemy_sword", "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
-		ItemDurabilityService.initialize_item(sword, 100)
-		enemy_repository.add_item(sword)
-		enemy_character.receive_item("arena_enemy_sword", enemy_repository)
-		enemy_character.equip("main_hand", "arena_enemy_sword", enemy_repository)
-	var default_gear: Array = [] if training_dummy_clear_defaults else [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield","slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet","slot":"head"}]
-	for gear in default_gear:
-		var item: Dictionary = ItemTemplateService.resolve(gear)
-		if item.is_empty():
-			push_error("Arena enemy test equipment template missing: " + String(gear["template_id"]))
-			continue
-		ItemDurabilityService.initialize_item(item, 100)
-		enemy_repository.add_item(item)
-		enemy_character.receive_item(String(gear["instance_id"]), enemy_repository)
-		if not enemy_character.equip(String(gear["slot"]), String(gear["instance_id"]), enemy_repository):
-			push_error("Arena enemy failed to equip: " + String(gear["template_id"]))
-	for slot in training_dummy_items:
-		var instance: Dictionary = Dictionary(training_dummy_items[slot]).duplicate(true)
-		var item: Dictionary = ItemTemplateService.resolve(instance)
-		if item.is_empty():
-			push_error("Invalid training dummy item for slot: " + String(slot))
-			continue
-		var old_id: Variant = enemy_character.equipment.get_equipped_instance_id(String(slot))
-		if old_id != null:
-			enemy_character.unequip(String(slot), enemy_repository)
-		ItemDurabilityService.initialize_item(instance, 100)
-		if enemy_repository.add_item(instance) and enemy_character.receive_item(String(instance["instance_id"]), enemy_repository):
-			if not enemy_character.equip(String(slot), String(instance["instance_id"]), enemy_repository):
-				push_error("Cannot equip training dummy item in: " + String(slot))
-	for slot in enemy_character.equipment.slots:
-		var equipped_id: Variant = enemy_character.equipment.get_equipped_instance_id(String(slot))
-		if equipped_id != null:
-			enemy_equipment_display[String(slot)] = ItemTemplateService.resolve(enemy_repository.get_item(String(equipped_id)))
-	var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":10000,"mana":0})
 	state.add_combatant(player)
-	state.add_combatant(enemy)
+	for index in range(clampi(enemy_count,1,3)):
+		var enemy_id := ENEMY_ID if index==0 else ENEMY_ID+"_"+str(index+1)
+		enemy_ids.append(enemy_id)
+		var enemy_character := CharacterState.new(enemy_id, "Манекен %d" % (index+1), player.level)
+		var enemy_repository := ItemRepository.new()
+		if not training_dummy_clear_defaults:
+			var sword := {"instance_id":"arena_enemy_sword_"+str(index), "equip_slots":["main_hand"], "slot_usage":["main_hand"], "par_stats":{"PAR057":1}, "damage":{"min":4.0,"max":7.0,"type":"slashing"}}
+			ItemDurabilityService.initialize_item(sword, 100)
+			enemy_repository.add_item(sword)
+			enemy_character.receive_item("arena_enemy_sword_"+str(index), enemy_repository)
+			enemy_character.equip("main_hand", "arena_enemy_sword_"+str(index), enemy_repository)
+		var default_gear: Array = [] if training_dummy_clear_defaults else [{"template_id":"audit_enemy_shield","instance_id":"arena_enemy_audit_shield_"+str(index),"slot":"off_hand"},{"template_id":"audit_enemy_fire_helmet","instance_id":"arena_enemy_audit_helmet_"+str(index),"slot":"head"}]
+		for gear in default_gear:
+			var item: Dictionary = ItemTemplateService.resolve(gear)
+			if item.is_empty():
+				push_error("Arena enemy test equipment template missing: " + String(gear["template_id"]))
+				continue
+			ItemDurabilityService.initialize_item(item, 100)
+			enemy_repository.add_item(item)
+			enemy_character.receive_item(String(gear["instance_id"]), enemy_repository)
+			if not enemy_character.equip(String(gear["slot"]), String(gear["instance_id"]), enemy_repository):
+				push_error("Arena enemy failed to equip: " + String(gear["template_id"]))
+		for slot in training_dummy_items:
+			var instance: Dictionary = Dictionary(training_dummy_items[slot]).duplicate(true)
+			var item: Dictionary = ItemTemplateService.resolve(instance)
+			if item.is_empty():
+				push_error("Invalid training dummy item for slot: " + String(slot))
+				continue
+			var old_id: Variant = enemy_character.equipment.get_equipped_instance_id(String(slot))
+			if old_id != null:
+				enemy_character.unequip(String(slot), enemy_repository)
+			ItemDurabilityService.initialize_item(instance, 100)
+			if enemy_repository.add_item(instance) and enemy_character.receive_item(String(instance["instance_id"]), enemy_repository):
+				if not enemy_character.equip(String(slot), String(instance["instance_id"]), enemy_repository):
+					push_error("Cannot equip training dummy item in: " + String(slot))
+		for slot in enemy_character.equipment.slots:
+			var equipped_id: Variant = enemy_character.equipment.get_equipped_instance_id(String(slot))
+			if equipped_id != null:
+				enemy_equipment_display[String(slot)] = ItemTemplateService.resolve(enemy_repository.get_item(String(equipped_id)))
+		var enemy := CharacterCombatBuilder.build(enemy_character, enemy_repository, {"health":10000,"mana":0})
+		state.add_combatant(enemy)
 	var group := GroupCombatState.new(state)
 	group.add_member("player", player_id)
-	group.add_member("enemy", ENEMY_ID)
+	for enemy_id in enemy_ids:
+		group.add_member("enemy",enemy_id)
 	var zones := CombatZoneState.new(group)
 	zones.set_team_flag("player", CombatZoneState.ZONE_1)
 	zones.set_team_flag("enemy", CombatZoneState.ZONE_3)
 	zones.set_zone(player_id, CombatZoneState.ZONE_2)
-	zones.set_zone(ENEMY_ID, CombatZoneState.ZONE_2)
+	for enemy_id in enemy_ids:
+		zones.set_zone(enemy_id, CombatZoneState.ZONE_2)
 	group.set_active_opponent(player_id, ENEMY_ID)
-	group.set_active_opponent(ENEMY_ID, player_id)
+	for enemy_id in enemy_ids:
+		group.set_active_opponent(enemy_id, player_id)
 	engine = CombatEngine.new(state)
 	orchestrator = RoundOrchestrator.new(state, engine, group, zones)
 	var equipment_slots := EquipmentAbilityLoadout.build(character, repository)
@@ -98,13 +105,34 @@ func _init(character: CharacterState, repository: ItemRepository) -> void:
 	# fixture IDs are never silently substituted for production definitions.
 	var combat_ability_loadouts: Dictionary = {}
 	combat_ability_loadouts[player_id] = Array(player.combat_stats.get("abilities", [])).duplicate()
-	combat_ability_loadouts[ENEMY_ID] = Array(enemy.combat_stats.get("abilities", [])).duplicate()
+	for enemy_id in enemy_ids:
+		combat_ability_loadouts[enemy_id] = Array(state.get_combatant(enemy_id).combat_stats.get("abilities", [])).duplicate()
 	ability_scheduler = AbilityScheduler.new(AbilityCatalog.load_json("res://data/abilities/catalog.json"), combat_ability_loadouts)
 	commands = CombatCommandApi.new(state, group, zones, orchestrator, ability_scheduler)
 	elixir_service = CombatElixirService.new(state, engine, character)
 
+## Keep primary target on a surviving enemy through the canonical group focus.
+func focused_enemy_id() -> String:
+	if commands != null:
+		var current := commands.group.active_opponent(player_id)
+		if not current.is_empty():
+			return current
+		for id in enemy_ids:
+			if commands.group.living_enemies(player_id).has(id):
+				commands.group.set_active_opponent(player_id,id)
+				return id
+	return ENEMY_ID
+
+func living_enemy_count() -> int:
+	var n := 0
+	for id in enemy_ids:
+		var actor := state.get_combatant(id)
+		if actor != null and not actor.is_death_finalized():
+			n += 1
+	return n
+
 func fighter(is_player: bool) -> CombatantState:
-	return state.get_combatant(player_id if is_player else ENEMY_ID)
+	return state.get_combatant(player_id if is_player else focused_enemy_id())
 
 ## View-only EFF snapshot. Newly applied instant ABI EFF stay hidden
 ## until end_round reveals them; this does NOT change active modifiers.
@@ -297,7 +325,7 @@ func _queue_attacks(id: String, targets: Array[String]) -> Dictionary:
 	return commands.queue_weapon_attack_sequence(id,Array(plan.get("attacks",[])))
 
 func _ability_target(source_id:String,definition:Dictionary) -> String:
-	return source_id if String(definition.get("target_team", "")).to_upper()=="ALLY" else (ENEMY_ID if source_id==player_id else player_id)
+	return source_id if String(definition.get("target_team", "")).to_upper()=="ALLY" else (focused_enemy_id() if source_id==player_id else player_id)
 
 func _validate_ability(source_id:String,ability_id:String,ready_round:int) -> Dictionary:
 	if ability_id.is_empty():
@@ -354,7 +382,6 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 	# Tempo or the round number. Failed ABI/block/attack does not consume a turn.
 	var next_round := state.round_number if active_round != null else state.round_number + 1
 	var player_stunned := CombatTempoService.is_stunned(fighter(true),next_round)
-	var enemy_stunned := CombatTempoService.is_stunned(fighter(false),next_round)
 	if not player_stunned:
 		var expected_blocks:=CombatModifierService.manual_block_zone_capacity(fighter(true))
 		var unique_blocks:Array[String]=[]
@@ -375,16 +402,19 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		var player_abi_check:=_validate_ability(player_id,ability_id,next_round)
 		if not bool(player_abi_check.get("ok",false)):
 			return player_abi_check
-	var npc_targets:Array[String]=[]
-	if not enemy_stunned:
-		# Training NPC no longer targets the player's chest forever.
-		# The attack pattern is independent of the player's selected defence.
-		for i in range(_fighter_attack_count(ENEMY_ID)):
+	var npc_plans: Dictionary = {}
+	for enemy_id in enemy_ids:
+		var npc := state.get_combatant(enemy_id)
+		if npc==null or npc.is_death_finalized() or CombatTempoService.is_stunned(npc,next_round):
+			continue
+		var npc_targets: Array[String] = []
+		for i in range(_fighter_attack_count(enemy_id)):
 			var target_index := (maxi(1,next_round) + i) % CombatCommandApi.BODY_ZONES.size()
 			npc_targets.append(String(CombatCommandApi.BODY_ZONES[target_index]))
-		var enemy_plan:=_prepare_attacks(ENEMY_ID,npc_targets)
+		var enemy_plan := _prepare_attacks(enemy_id,npc_targets)
 		if not bool(enemy_plan.get("ok",false)):
 			return {"ok":false,"reason":String(enemy_plan.get("reason","enemy_attack_rejected"))}
+		npc_plans[enemy_id]=npc_targets
 	# All inputs are snapshotted before any engine event is resolved. No subsequent
 	# UI selection can change this round's pending physical/ABI actions.
 	var round: CombatRound = active_round if active_round != null else orchestrator.begin_round()
@@ -403,24 +433,25 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 			var ability_result:=commands.cast_ability(player_id,target_id,ability_id)
 			if not bool(ability_result.get("ok",false)):
 				return {"ok":false,"reason":String(ability_result.get("reason","ability_rejected"))}
-	# Same canonical manual-block command used by the player. Commit NPC
-	# defence before any attack resolves; do not infer the player's selections.
-	if enemy_stunned:
-		commands.clear_manual_block(ENEMY_ID)
-	else:
-		var npc_blocks := enemy_manual_block_plan(fighter(false),next_round)
+	# Every surviving NPC acts independently in the same canonical group round.
+	for enemy_id in enemy_ids:
+		var npc := state.get_combatant(enemy_id)
+		if npc==null or npc.is_death_finalized():
+			continue
+		if CombatTempoService.is_stunned(npc,next_round):
+			commands.clear_manual_block(enemy_id)
+			continue
+		var npc_blocks := enemy_manual_block_plan(npc,next_round)
 		if npc_blocks.is_empty():
-			commands.clear_manual_block(ENEMY_ID)
+			commands.clear_manual_block(enemy_id)
 		else:
-			var npc_block_result := commands.set_manual_block(ENEMY_ID,npc_blocks)
+			var npc_block_result := commands.set_manual_block(enemy_id,npc_blocks)
 			if not bool(npc_block_result.get("ok",false)):
 				return {"ok":false,"reason":String(npc_block_result.get("reason","enemy_block_rejected"))}
-	if not enemy_stunned:
-		var enemy_result := _queue_attacks(ENEMY_ID, npc_targets)
-		if not bool(enemy_result.get("ok", false)):
-			return {"ok": false, "reason": String(enemy_result.get("reason", "enemy_attack_rejected"))}
-		# NPC uses the same one-ABI limit and canonical equipped loadout.
-		for enemy_ability in ability_scheduler.ready_events(state,ENEMY_ID,player_id):
+		var enemy_result := _queue_attacks(enemy_id,Array(npc_plans.get(enemy_id,[])))
+		if not bool(enemy_result.get("ok",false)):
+			return {"ok":false,"reason":String(enemy_result.get("reason","enemy_attack_rejected"))}
+		for enemy_ability in ability_scheduler.ready_events(state,enemy_id,player_id):
 			state.queue_event(enemy_ability)
 	# Commands queue immutable events. Transfer them into the shared round;
 	# preparation ABI are sorted into the early phase by CombatRound.
