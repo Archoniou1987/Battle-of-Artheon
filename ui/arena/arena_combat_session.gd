@@ -458,7 +458,8 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 			var npc_block_result := commands.set_manual_block(enemy_id,npc_blocks)
 			if not bool(npc_block_result.get("ok",false)):
 				return {"ok":false,"reason":String(npc_block_result.get("reason","enemy_block_rejected"))}
-		var enemy_result := _queue_attacks(enemy_id,Array(npc_plans.get(enemy_id,[])))
+		var planned_targets: Array[String] = npc_plans[enemy_id]
+		var enemy_result := _queue_attacks(enemy_id,planned_targets)
 		if not bool(enemy_result.get("ok",false)):
 			return {"ok":false,"reason":String(enemy_result.get("reason","enemy_attack_rejected"))}
 		for enemy_ability in ability_scheduler.ready_events(state,enemy_id,player_id):
