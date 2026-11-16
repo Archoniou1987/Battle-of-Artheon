@@ -190,6 +190,22 @@ static func on_connected_attack(engine: CombatEngine, attack: CombatEvent, attac
 		return
 	if id in ["ABI601","ABI605"]:
 		_gain_once(engine,attack,attacker)
+	if id == "ABI607":
+		# One AP per actual connected target, once per attack event.
+		# The parent action tracks the shared per-cast cap, not the targets.
+		for parent in engine.state.event_log:
+			if parent.event_id != attack.parent_event_id or parent.kind != CombatEvent.Kind.ACTION:
+				continue
+			var already := int(parent.result.get("hammer_wave_ap_awarded",0))
+			var cap := maxi(0,int(AbilityCatalog.number("ABI607","ap_gain")))
+			var per_hit := maxi(0,int(AbilityCatalog.number("ABI607","ap_gain_per_connected_target")))
+			if already < cap and per_hit > 0:
+				var eligible := mini(per_hit,cap-already)
+				parent.set_result("hammer_wave_ap_awarded",already+eligible)
+				var gained := attacker.gain_action_points(eligible)
+				parent.set_result("ap_gained_on_hit",int(parent.result.get("ap_gained_on_hit",0))+gained)
+				attack.set_result("hammer_wave_ap_gained",gained)
+			break
 	if id in ["ABI605","ABI607"]:
 		_effect(engine,attack.source_id,attack.target_id,attack.event_id,CONCUSSION)
 	if id == "ABI603":
