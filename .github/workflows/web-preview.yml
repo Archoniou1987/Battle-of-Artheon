@@ -57,6 +57,8 @@ jobs:
 
       - name: NPC manual block and Arena log integration
         run: timeout 120s godot --headless --path . --script res://tests/combat/arena_enemy_manual_block_runner.gd
+      - name: Arena 1v3 group training and ABI607 AP verification
+        run: timeout 120s godot --headless --path . --script res://tests/combat/arena_group_training_runner.gd
 
       - name: Arena opening smoke test
         run: timeout 120s godot --headless --path . --script res://tests/ui/arena_open_smoke.gd
