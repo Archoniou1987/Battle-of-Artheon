@@ -104,6 +104,7 @@ var test_player_level := 1
 var test_enemy_level := 1
 var test_enemy_count := 1
 var enemy_count_label: Label
+var enemy_group_summary: Label
 var level_settings_dialog: AcceptDialog
 var level_player_value: Label
 var level_enemy_value: Label
@@ -203,6 +204,10 @@ func _ready() -> void:
 	target_button.tooltip_text = "Переключить активного манекена для обычных атак и направленных ABI"
 	target_button.pressed.connect(_cycle_training_enemy)
 	header.add_child(target_button)
+	enemy_group_summary = Label.new()
+	enemy_group_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	enemy_group_summary.visible = false
+	log_column.add_child(enemy_group_summary)
 	_build_level_settings()
 	_build_visual_lab()
 	abi_lab_dialog = AbiTestLabDialog.new()
@@ -1573,6 +1578,16 @@ func _sync_combat_session() -> void:
 	if target_control != null:
 		target_control.visible = combat_session.enemy_ids.size()>1
 		target_control.disabled = combat_session.active_round != null or combat_session.living_enemy_count()<=1
+	if enemy_group_summary != null:
+		enemy_group_summary.visible = combat_session.enemy_ids.size()>1
+		if enemy_group_summary.visible:
+			var summaries: PackedStringArray = []
+			for id in combat_session.enemy_ids:
+				var npc := combat_session.state.get_combatant(id)
+				var focused_mark := "▶ " if id==combat_session.focused_enemy_id() else ""
+				var index := combat_session.enemy_ids.find(id)+1
+				summaries.append("%s%d: %d/%d HP%s" % [focused_mark,index,npc.visible_hp(),npc.max_hp," (побеждён)" if npc.is_death_finalized() else ""])
+			enemy_group_summary.text = "Манекены | " + "   ".join(summaries)
 	var ready_round := combat_session.state.round_number if combat_session.active_round != null else combat_session.state.round_number + 1
 	round_stunned = CombatTempoService.is_stunned(player,ready_round)
 	if round_stunned:
