@@ -123,15 +123,38 @@ func _run() -> void:
 			_check(not _active(pen.fighter(false),"EFF411").is_empty(),"pen_damage_weakening")
 		if _cast(pen,"ABI412"):
 			_check(_active(pen.fighter(false),"EFF401").is_empty(),"pen_finish_consumes_breach")
+	_check(is_equal_approx(float(Dictionary(effects.get("EFF412",{})).get("tempo_per_round",0.0)),-20.0),"spear_eff412_minus20_each_active_round")
 	var spear := _session("2H_SPEAR",202611134)
 	if spear != null:
 		_check(String(spear.fighter(true).combat_stats.weapon_profiles[0].weapon_class)=="spear","spear_combat_class")
-		if _cast(spear,"ABI702"):
-			_check(not _active(spear.fighter(false),"EFF412").is_empty(),"spear_slow")
+		# ABI701 is now a reliable single-target source of Slow, not
+		# dependent on ABI702's AoE cooldown.
+		if _cast(spear,"ABI701"):
+			_check(not _active(spear.fighter(false),"EFF412").is_empty(),"spear_thrust_applies_slow")
 		if _cast(spear,"ABI704"):
 			_check(not _active(spear.fighter(false),"EFF413").is_empty(),"spear_armour_fracture")
+			_check(not _active(spear.fighter(false),"EFF412").is_empty(),"spear_fracture_preserves_slow")
 		if _cast(spear,"ABI703"):
 			_check(_active(spear.fighter(false),"EFF412").is_empty(),"spear_impale_consumes_slow")
-		_check(_cast(spear,"ABI701"),"spear_thrust")
+		if _cast(spear,"ABI702"):
+			_check(not _active(spear.fighter(false),"EFF412").is_empty(),"spear_sweep_reapplies_slow")
+		# EFF412 is periodic only: it must reduce live Tempo exactly 20
+		# in its active phase, never as a permanent stat overlay.
+		var target := spear.fighter(false)
+		target.tempo = 0.0
+		target.tempo_regen = 0.0
+		target.tempo_stun_round = -1
+		target.tempo_immunity_until_round = 0
+		var before_tick := target.tempo
+		if _cast(spear,"ABI701"):
+			_check(is_equal_approx(target.tempo,before_tick-20.0),"spear_slow_tick_minus20")
+			_check(not _active(target,"EFF412").is_empty(),"spear_thrust_refreshes_slow")
+		# Misses and dodges must never grant a new Slow.
+		WeaponComboAbiCombatService._remove(target,"EFF412")
+		spear.fighter(true).combat_stats["hit_chance_rating_percent"]=0.0
+		target.combat_stats["dodge_rating_percent"]=100.0
+		spear.ability_scheduler.definitions["ABI701"]["rolls"]={"hit":1,"dodge":1,"auto_block":100,"crit":100}
+		if _cast(spear,"ABI701"):
+			_check(_active(target,"EFF412").is_empty(),"spear_dodged_thrust_no_slow")
 	print("DAGGER_V12_ABI_EFF=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
 	quit(0 if failures.is_empty() else 1)
