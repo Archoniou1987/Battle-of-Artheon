@@ -819,7 +819,7 @@
     ],
     "cooldown_rounds": 4,
     "mana_cost": 0,
-    "ap_cost": 3,
+    "ap_cost": 2,
     "ap_gain": 0,
     "ap_gain_on_hit": false,
     "application_timing": "standard",
@@ -2041,7 +2041,7 @@
   },
   "ABI607": {
     "name": "Ударная волна",
-    "description": "До 3 целей; при попадании −50 Tempo и +1 Сотрясение каждой цели.",
+    "description": "До 3 целей; при попадании −50 Tempo и +1 Сотрясение каждой цели. Возврат +1 AP за поражённую цель (до +3 AP).",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "target_team": "ENEMY",
@@ -2056,8 +2056,8 @@
     "cooldown_rounds": 4,
     "mana_cost": 0,
     "ap_cost": 3,
-    "ap_gain": 0,
-    "ap_gain_on_hit": false,
+    "ap_gain": 3,
+    "ap_gain_on_hit": true,
     "application_timing": "standard",
     "hammer_ability_mode": "attack_wave",
     "max_targets": 3,
@@ -2077,7 +2077,8 @@
     "effect_refs": {
       "on_hit": "EFF601"
     },
-    "tempo_control_on_hit": 50
+    "tempo_control_on_hit": 50,
+    "ap_gain_per_connected_target": 1
   },
   "ABI608": {
     "name": "Землетрясение",
