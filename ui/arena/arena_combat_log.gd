@@ -189,15 +189,15 @@ static func _ability_root_id(event: CombatEvent, by_id: Dictionary) -> int:
 static func _actor(combatant_id: String, player_id: String) -> String:
 	if combatant_id == player_id:
 		return "Игрок"
-	if combatant_id.begins_with(ArenaCombatSession.ENEMY_ID+"_"):
-		return "Манекен "+combatant_id.trim_prefix(ArenaCombatSession.ENEMY_ID+"_")
+	if combatant_id.begins_with("arena_training_enemy_"):
+		return "Манекен "+combatant_id.trim_prefix("arena_training_enemy_")
 	return "Противник"
 
 static func _target(combatant_id: String, player_id: String) -> String:
 	if combatant_id == player_id:
 		return "игрока"
-	if combatant_id.begins_with(ArenaCombatSession.ENEMY_ID+"_"):
-		return "манекена "+combatant_id.trim_prefix(ArenaCombatSession.ENEMY_ID+"_")
+	if combatant_id.begins_with("arena_training_enemy_"):
+		return "манекена "+combatant_id.trim_prefix("arena_training_enemy_")
 	return "противника"
 
 static func _effect_name(effect_id: String, definitions: Dictionary) -> String:
