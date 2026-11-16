@@ -102,6 +102,8 @@ var ability_scroll: ScrollContainer
 var combat_session: ArenaCombatSession
 var test_player_level := 1
 var test_enemy_level := 1
+var test_enemy_count := 1
+var enemy_count_label: Label
 var level_settings_dialog: AcceptDialog
 var level_player_value: Label
 var level_enemy_value: Label
@@ -461,6 +463,32 @@ func _build_level_settings() -> void:
 			plus.text = "+%d" % delta
 			row.add_child(plus)
 			plus.pressed.connect(_change_test_level.bind(is_player, delta))
+	var opponents := HBoxContainer.new()
+	content.add_child(opponents)
+	var opponents_title := Label.new()
+	opponents_title.text = "Противников"
+	opponents_title.custom_minimum_size.x = 100
+	opponents.add_child(opponents_title)
+	var fewer := Button.new()
+	fewer.text = "−"
+	opponents.add_child(fewer)
+	fewer.pressed.connect(func() -> void:
+		test_enemy_count = clampi(test_enemy_count-1,1,3)
+		enemy_count_label.text = str(test_enemy_count))
+	enemy_count_label = Label.new()
+	enemy_count_label.text = str(test_enemy_count)
+	enemy_count_label.custom_minimum_size.x = 34
+	enemy_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	opponents.add_child(enemy_count_label)
+	var more := Button.new()
+	more.text = "+"
+	opponents.add_child(more)
+	more.pressed.connect(func() -> void:
+		test_enemy_count = clampi(test_enemy_count+1,1,3)
+		enemy_count_label.text = str(test_enemy_count))
+	var hp_hint := Label.new()
+	hp_hint.text = "Каждый манекен: 10 000 HP"
+	content.add_child(hp_hint)
 	var apply := Button.new()
 	apply.text = "Начать бой с выбранными уровнями"
 	apply.pressed.connect(func() -> void:
@@ -1314,13 +1342,14 @@ func _start_combat_session() -> void:
 		return
 	selected_ability = ""
 	pending_ability_id = ""
-	combat_session = ArenaCombatSession.new(character, repository)
+	combat_session = ArenaCombatSession.new(character, repository, test_enemy_count)
 	# Test-only level override recalculates canonical rating percentages,
 	# not just the visible level label. Persistent character stays unchanged.
 	if not ArenaCombatSession.apply_test_level(combat_session.fighter(true),test_player_level):
 		push_error("Arena player test-level rating conversion failed")
-	if not ArenaCombatSession.apply_test_level(combat_session.fighter(false),test_enemy_level):
-		push_error("Arena enemy test-level rating conversion failed")
+	for enemy_id in combat_session.enemy_ids:
+		if not ArenaCombatSession.apply_test_level(combat_session.state.get_combatant(enemy_id),test_enemy_level):
+			push_error("Arena enemy test-level rating conversion failed: "+enemy_id)
 	set_fighter_header(true, combat_session.fighter(true).display_name, test_player_level)
 	disclosed_enemy_equipment = combat_session.enemy_equipment_display.duplicate(true)
 	round_stunned = false
@@ -1531,6 +1560,8 @@ func _sync_combat_session() -> void:
 	_update_zone_buttons()
 	set_fighter_hp(true, player.visible_hp(), player.max_hp)
 	set_fighter_hp(false, enemy.visible_hp(), enemy.max_hp)
+	if combat_session.enemy_ids.size()>1:
+		set_fighter_header(false,"%s (%d/%d живы)" % [enemy.display_name,combat_session.living_enemy_count(),combat_session.enemy_ids.size()],enemy.level)
 	set_fighter_resources(true, player.mana, player.max_mana, player.action_points, player.max_action_points)
 	set_fighter_resources(false, enemy.mana, enemy.max_mana, enemy.action_points, enemy.max_action_points)
 	# A confirmed end-of-round boundary can publish the next-round stats.
