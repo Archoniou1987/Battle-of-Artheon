@@ -378,10 +378,14 @@ static func enemy_manual_block_plan(enemy: CombatantState, round_number: int) ->
 	var capacity := CombatModifierService.manual_block_zone_capacity(enemy)
 	if capacity < 1 or capacity > 4:
 		return result
-	var zones := CombatCommandApi.BODY_ZONES
-	var first := (maxi(1,round_number) + 2) % zones.size()
-	for index in range(capacity):
-		result.append(String(zones[(first + index) % zones.size()]))
+	# Training-only block plan: head is always protected. The remaining
+	# zones are pseudo-random, distinct, and stable within the same round.
+	result.append("head")
+	var candidates: Array[String] = ["chest","arms","waist","legs"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%s:%d:arena_guard" % [enemy.combatant_id,maxi(1,round_number)])
+	while result.size() < capacity and not candidates.is_empty():
+		result.append(candidates.pop_at(rng.randi_range(0,candidates.size()-1)))
 	return result
 
 func play_round(attacks: Array[String], blocks: Array[String], ability_id: String = "") -> Dictionary:
