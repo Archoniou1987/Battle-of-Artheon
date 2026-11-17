@@ -127,6 +127,18 @@ func _test_multi_target() -> void:
 		return
 	var a := _extra_enemy(session,1)
 	var b := _extra_enemy(session,2)
+	_check(not bool(session.player_ability_options()[2].get("available",false)),"circle_unavailable_without_previous_dodge")
+	var rejected := session.play_round(["chest"],["head","arms"],"ABI307")
+	_check(not bool(rejected.get("ok",false)) and String(rejected.get("reason",""))=="abi_trigger_unavailable","circle_rejected_without_previous_dodge")
+	# An actual previous-round Dodge result is the sole source of eligibility.
+	# Record the historical outcome explicitly to keep the 3-target test
+	# independent of random enemy attack rolls.
+	session.state.begin_round()
+	var dodged := session.state.create_event(CombatEvent.Kind.ATTACK,ArenaCombatSession.ENEMY_ID,session.player_id,{"zone":"head"})
+	dodged.set_result("outcome","dodge")
+	session.state.record_event(dodged)
+	_check(AbilityRuntime.previous_round_trigger_met(session.state,session.player_id,"dodge",2),"circle_previous_round_dodge_seen")
+	_check(bool(session.player_ability_options()[2].get("available",false)),"circle_available_after_previous_dodge")
 	session.fighter(true).action_points=5
 	var result := session.play_round(["chest"],["head","arms"],"ABI307")
 	_check(bool(result.get("ok",false)),"circle_three_target_cast")
