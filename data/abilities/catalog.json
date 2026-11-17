@@ -317,16 +317,16 @@
     "axe_ability_mode": "def_q",
     "max_targets": 1,
     "base_damage_by_rank": [
-      12,
+      5,
+      10,
+      15,
       22,
-      34,
+      30,
+      39,
       49,
-      66,
-      86,
-      109,
-      137,
-      167,
-      200
+      62,
+      75,
+      90
     ],
     "attack_power_coefficient": 0.75,
     "effect_refs": {
@@ -356,16 +356,16 @@
     "axe_ability_mode": "def_w1",
     "max_targets": 1,
     "base_damage_by_rank": [
+      6,
       11,
-      20,
-      31,
-      44,
-      59,
-      77,
-      98,
-      123,
-      150,
-      180
+      17,
+      24,
+      32,
+      42,
+      54,
+      68,
+      83,
+      99
     ],
     "attack_power_coefficient": 0.75,
     "heal_hp_pct_per_wound": 1
@@ -393,16 +393,16 @@
     "axe_ability_mode": "def_w2",
     "max_targets": 3,
     "base_damage_by_rank": [
+      5,
       9,
-      17,
-      26,
-      37,
-      50,
-      65,
-      82,
-      103,
-      125,
-      150
+      14,
+      20,
+      28,
+      36,
+      45,
+      57,
+      69,
+      83
     ],
     "attack_power_coefficient": 0.75,
     "effect_refs": {
@@ -432,16 +432,16 @@
     "axe_ability_mode": "def_e",
     "max_targets": 1,
     "base_damage_by_rank": [
+      14,
       26,
-      48,
-      75,
-      108,
-      145,
-      189,
-      240,
-      301,
-      367,
-      440
+      41,
+      59,
+      80,
+      104,
+      132,
+      166,
+      202,
+      242
     ],
     "attack_power_coefficient": 0.75,
     "heal_from_damage_pct_by_wounds": [
