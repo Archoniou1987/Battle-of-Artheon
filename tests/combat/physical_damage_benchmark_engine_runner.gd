@@ -21,15 +21,13 @@ func _run() -> void:
 	# Level 40 exists in the benchmark only; progression currently clamps at 20.
 	hero.progression.level = LEVEL
 	hero.level = LEVEL
-	for primary in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
-		hero.progression.base_stats[primary]=90
 	var repository := ItemRepository.new()
-	var item := ItemV12InstanceFactory.grant_weapon(hero,repository,"SWORD_DEF",LEVEL,"purple",20261117,"MH")
+	var item := PhysicalDamageBenchmarkFixture.create_weapon(hero,repository,"SWORD_DEF",LEVEL,20261117)
 	_check(not item.is_empty(),"weapon_generated")
 	if item.is_empty():
 		_finish()
 		return
-	_check(hero.equip("main_hand",String(item["instance_id"]),repository),"weapon_equipped")
+	_check(not hero.equipment.get_equipped_instance_id("main_hand")==null,"weapon_equipped")
 	var previous_clear := ArenaCombatSession.training_dummy_clear_defaults
 	var previous_items: Dictionary = ArenaCombatSession.training_dummy_items.duplicate(true)
 	ArenaCombatSession.training_dummy_clear_defaults = true
@@ -43,7 +41,8 @@ func _run() -> void:
 	if player == null or dummy == null:
 		_finish()
 		return
-	PhysicalDamageBenchmarkParProfiles.apply(player,"SWORD_DEF")
+	PhysicalDamageBenchmarkFixture.prepare_actor(player,"SWORD_DEF",item)
+	PhysicalDamageBenchmarkFixture.prepare_dummy(dummy)
 	dummy.max_hp = DUMMY_HP
 	dummy.hp = DUMMY_HP
 	dummy.combat_stats["dodge_rating_percent"] = 0.0
@@ -88,6 +87,7 @@ func _run() -> void:
 				cursor = int(decision.get("cursor",cursor))
 				cast_count += 1
 		attacks.lock_basic_attack(round,player,dummy,["chest","chest"])
+		attacks.lock_basic_attack(round,dummy,player,["chest"])
 		session.orchestrator.resolve_locked_actions(round)
 		session.orchestrator.end_round()
 	var metrics := PhysicalDamageBenchmarkMetrics.collect(session.state.event_log,session.player_id,ArenaCombatSession.ENEMY_ID)
