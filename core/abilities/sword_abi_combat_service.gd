@@ -205,14 +205,14 @@ static func on_block(engine: CombatEngine, blocked: CombatEvent, defender: Comba
 	for record in CombatModifierService.active_effects(defender,engine.state.round_number):
 		if String(record.get("effect_id","")) != PARRY:
 			continue
-		# Each distinct attacker can provoke one counter after a real block.
-		# A second blocked swing by that same attacker cannot double-trigger.
-		var sources: Array = record.get("countered_sources",[]) if int(record.get("counter_used_round",-1)) == engine.state.round_number else []
-		if sources.has(blocked.source_id):
+		# Every distinct successfully blocked ATTACK event triggers a reply,
+		# even when the same enemy strikes twice (e.g. dual daggers).
+		var countered_events: Array = record.get("countered_event_ids",[]) if int(record.get("counter_used_round",-1)) == engine.state.round_number else []
+		if countered_events.has(blocked.event_id):
 			return
-		sources.append(blocked.source_id)
+		countered_events.append(blocked.event_id)
 		record["counter_used_round"] = engine.state.round_number
-		record["countered_sources"] = sources
+		record["countered_event_ids"] = countered_events
 		var profile := _profile(defender,"ABI303")
 		var mastery := _active_stacks(defender,MASTERY,engine.state.round_number)
 		var bonus := AbilityCatalog.number("ABI303","bonus_damage_pct_per_mastery_stack") * float(mastery) / 100.0
