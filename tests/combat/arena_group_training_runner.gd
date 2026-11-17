@@ -70,6 +70,29 @@ func _run() -> void:
 			if String(line).begins_with("  "):
 				per_target_lines+=1
 		check(per_target_lines==count,"wave_log_per_target_"+str(count))
+	# Simultaneous training dummies should not all swing at the same zone.
+	# Verify actual queued/resolved NPC attacks, not merely the plan formula.
+	var varied := session_for(3)
+	if varied != null:
+		var first_round := varied.play_round(["chest"],["head","arms"])
+		check(bool(first_round.get("ok",false)),"npc_distinct_zones_first_round_accepted")
+		var first_zones: Array[String] = []
+		for event in varied.state.event_log:
+			if event.kind == CombatEvent.Kind.ATTACK and varied.enemy_ids.has(event.source_id) and int(event.payload.get("round",-1)) == 1:
+				var zone := String(event.payload.get("zone",""))
+				if not first_zones.has(zone):
+					first_zones.append(zone)
+		check(first_zones.size()==3,"npc_three_distinct_attack_zones_round_one")
+		var second_round := varied.play_round(["chest"],["head","arms"])
+		check(bool(second_round.get("ok",false)),"npc_distinct_zones_second_round_accepted")
+		var second_zones: Array[String] = []
+		for event in varied.state.event_log:
+			if event.kind == CombatEvent.Kind.ATTACK and varied.enemy_ids.has(event.source_id) and int(event.payload.get("round",-1)) == 2:
+				var zone := String(event.payload.get("zone",""))
+				if not second_zones.has(zone):
+					second_zones.append(zone)
+		check(second_zones.size()==3,"npc_three_distinct_attack_zones_round_two")
+		check(first_zones!=second_zones,"npc_attack_zones_rotate_between_rounds")
 	# Regression: after finishing target 1, UI must derive the next hit count
 	# against a surviving focus before the player selects attack zones.
 	var switch_target := session_for(3)
