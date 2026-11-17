@@ -67,6 +67,7 @@ func _check_archetype(archetype: String, index: int) -> bool:
 	if actor==null or dummy==null:
 		_check(false,archetype+"_fighters")
 		return false
+	PhysicalDamageBenchmarkParProfiles.apply(actor,archetype)
 	dummy.max_hp=DUMMY_HP
 	dummy.hp=DUMMY_HP
 	dummy.combat_stats["dodge_rating_percent"]=0.0
