@@ -203,11 +203,20 @@ static func on_block(engine: CombatEngine, blocked: CombatEvent, defender: Comba
 	if not defender.can_auto_block() or _profile(defender,"ABI303").is_empty():
 		return
 	for record in CombatModifierService.active_effects(defender,engine.state.round_number):
-		if String(record.get("effect_id","")) != PARRY or int(record.get("counter_used_round",-1)) == engine.state.round_number:
+		if String(record.get("effect_id","")) != PARRY:
 			continue
+		# Each distinct attacker can provoke one counter after a real block.
+		# A second blocked swing by that same attacker cannot double-trigger.
+		var sources: Array = record.get("countered_sources",[]) if int(record.get("counter_used_round",-1)) == engine.state.round_number else []
+		if sources.has(blocked.source_id):
+			return
+		sources.append(blocked.source_id)
 		record["counter_used_round"] = engine.state.round_number
+		record["countered_sources"] = sources
 		var profile := _profile(defender,"ABI303")
-		var payload := CombatDamagePayload.ability_attack_payload(blocked,{"damage_type":"slashing","zone":String(blocked.payload.get("zone","chest"))},_damage(defender,profile,"ABI303"),1.0)
+		var mastery := _active_stacks(defender,MASTERY,engine.state.round_number)
+		var bonus := AbilityCatalog.number("ABI303","bonus_damage_pct_per_mastery_stack") * float(mastery) / 100.0
+		var payload := CombatDamagePayload.ability_attack_payload(blocked,{"damage_type":"slashing","zone":String(blocked.payload.get("zone","chest"))},_damage(defender,profile,"ABI303",1.0+bonus),1.0)
 		payload["rolls"] = engine.complete_attack_rolls({})
 		payload["sword_abi_id"] = "ABI303"
 		payload["is_counterattack_abi"] = true
