@@ -1,9 +1,10 @@
 class_name PhysicalDamageBenchmarkPolicy
 extends RefCounted
 
-## Benchmark-only choice policy; ordinary Combat Engine rules stay untouched.
-## AP generation is prioritised whenever its cooldown expires. Costly ABIs
-## rotate in slot order, and the rotation advances only after a real cast.
+## BENCHMARK ONLY. Generator ABI (zero AP cost) is cast on cooldown when AP
+## is not full. All other ABI form a STRICT cycle in their equipment order.
+## Never skip the next spender for an affordable later spender. If the next
+## one needs AP/CD, accumulate/wait; cursor advances only after a real cast.
 static func choose(abilities: Array, definitions: Dictionary, cooldowns: Dictionary, round_number: int, ap: int, max_ap: int, spend_cursor: int) -> Dictionary:
 	var generators: Array[String] = []
 	var spenders: Array[String] = []
@@ -12,7 +13,7 @@ static func choose(abilities: Array, definitions: Dictionary, cooldowns: Diction
 		var definition: Dictionary = definitions.get(id,{})
 		if definition.is_empty():
 			continue
-		if int(definition.get("ap_gain",0)) > 0 or bool(definition.get("ap_gain_on_hit",false)) and int(definition.get("ap_cost",0))==0:
+		if int(definition.get("ap_cost",0)) == 0 and not bool(definition.get("consume_all_ap",false)) and (int(definition.get("ap_gain",0)) > 0 or bool(definition.get("ap_gain_on_hit",false))):
 			generators.append(id)
 		else:
 			spenders.append(id)
@@ -22,15 +23,12 @@ static func choose(abilities: Array, definitions: Dictionary, cooldowns: Diction
 			return {"id":id,"cursor":spend_cursor,"mode":"gain"}
 	if spenders.is_empty():
 		return {"id":"","cursor":spend_cursor,"mode":"none"}
-	# Sequential cost ABI selection, scanning forward only when the current
-	# one is unavailable. A costly ABI never casts without sufficient AP.
-	for n in range(spenders.size()):
-		var index := (spend_cursor+n)%spenders.size()
-		var id := spenders[index]
-		var def: Dictionary = definitions.get(id,{})
-		if AbilityRuntime.can_use(id,cooldowns,round_number) and _can_pay(def,ap):
-			return {"id":id,"cursor":(index+1)%spenders.size(),"mode":"spend"}
-	return {"id":"","cursor":spend_cursor,"mode":"none"}
+	var index := posmod(spend_cursor,spenders.size())
+	var id := spenders[index]
+	var def: Dictionary = definitions.get(id,{})
+	if AbilityRuntime.can_use(id,cooldowns,round_number) and _can_pay(def,ap):
+		return {"id":id,"cursor":(index+1)%spenders.size(),"mode":"spend"}
+	return {"id":"","cursor":spend_cursor,"mode":"wait_next_spender","waiting_for":id}
 
 static func _can_pay(definition: Dictionary, ap: int) -> bool:
 	if bool(definition.get("consume_all_ap",false)):
