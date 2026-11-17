@@ -158,14 +158,17 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 	action.set_result("child_event_ids",ids)
 
 static func _gain_once(engine: CombatEngine, attack: CombatEvent, actor: CombatantState) -> void:
+	var ap_amount := 1
+	if String(attack.payload.get("axe_abi_id","")) == "ABI501" and int(attack.payload.get("axe_wounds_snapshot",0)) >= 3:
+		ap_amount += int(AbilityCatalog.number("ABI501","bonus_ap_at_three_wounds"))
 	for event in engine.state.event_log:
 		if event.event_id == attack.parent_event_id and event.kind == CombatEvent.Kind.ACTION:
 			if bool(event.result.get("axe_ap_done",false)):
 				return
 			event.set_result("axe_ap_done",true)
-			event.set_result("ap_gained_on_hit",actor.gain_action_points(1))
+			event.set_result("ap_gained_on_hit",actor.gain_action_points(ap_amount))
 			return
-	actor.gain_action_points(1)
+	actor.gain_action_points(ap_amount)
 
 static func on_connected_attack(engine: CombatEngine, attack: CombatEvent) -> void:
 	var id := String(attack.payload.get("axe_abi_id",""))
