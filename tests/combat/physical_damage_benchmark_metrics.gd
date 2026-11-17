@@ -32,14 +32,19 @@ static func collect(events: Array[CombatEvent], source_id: String, target_id: St
 			dot[effect_id] = int(dot.get(effect_id,0)) + dealt
 			dot_ticks[effect_id] = int(dot_ticks.get(effect_id,0)) + 1
 			continue
-		var root: CombatEvent = _root_action(by_id,event)
+		# For reaction/counterattack damage, the direct ATTACK parent identifies
+		# the ABI. Its ancestor may be the *opponent's* blocked action.
+		var parent: CombatEvent = by_id.get(event.parent_event_id)
 		var ability_id := String(event.payload.get("ability_id",""))
-		if ability_id.is_empty() and root != null:
-			ability_id = String(root.payload.get("ability_id",""))
+		if ability_id.is_empty() and parent != null and parent.kind == CombatEvent.Kind.ATTACK:
+			ability_id = String(parent.payload.get("ability_id",""))
+		if ability_id.is_empty():
+			var root: CombatEvent = _root_action(by_id,event)
+			if root != null and root.source_id == event.source_id:
+				ability_id = String(root.payload.get("ability_id",""))
 		if not ability_id.is_empty():
 			abi[ability_id] = int(abi.get(ability_id,0)) + dealt
 			continue
-		var parent: CombatEvent = by_id.get(event.parent_event_id)
 		if parent != null and parent.kind == CombatEvent.Kind.ATTACK and bool(parent.payload.get("is_weapon_attack",false)):
 			var bucket: Dictionary = weapon_oh if int(parent.payload.get("weapon_index",0)) > 0 else weapon_mh
 			bucket["damage"] = int(bucket["damage"]) + dealt
