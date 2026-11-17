@@ -62,6 +62,25 @@ func _run() -> void:
 	var shield := _attack(arena,true,"shield")
 	_check(String(shield.result.get("partial_block",""))=="auto_block","abi_shield_block_marked")
 	_check(is_equal_approx(float(shield.result.get("after_armour_damage",0.0)),baseline_damage*0.5),"abi_shield_50pct_postarmour")
+	# ABI512 is a precise exception: manual and shield blocks must not
+	# reduce its damage. Hit/dodge and armour are still processed normally.
+	for block_mode in ["manual","shield"]:
+		var bypass_npc := arena.fighter(false)
+		bypass_npc.combat_stats["manual_block_zones"] = ["waist"] if block_mode=="manual" else []
+		bypass_npc.combat_loadout["can_manual_block"] = block_mode=="manual"
+		bypass_npc.combat_loadout["can_auto_block"] = block_mode=="shield"
+		bypass_npc.combat_stats["shield_auto_block_rating_percent"] = 100.0 if block_mode=="shield" else 0.0
+		var bypass := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,{
+			"zone":"waist","damage_type":"slashing","raw_damage":200.0,
+			"source_kind":"ability","ability_id":"ABI512","axe_abi_id":"ABI512",
+			"uses_physical_block":false,"hit_already_resolved":true,
+			"rolls":{"hit":1,"dodge":100,"auto_block":1,"block_crush":100,"crit":100,"damage":0.5}
+		})
+		arena.engine.resolve_event(bypass)
+		arena.engine.resolve_pending_events()
+		_check(String(bypass.result.get("outcome",""))=="connected","abi512_"+block_mode+"_connected")
+		_check(not bypass.result.has("partial_block"),"abi512_"+block_mode+"_no_partial_block")
+		_check(is_equal_approx(float(bypass.result.get("after_armour_damage",0.0)),baseline_damage),"abi512_"+block_mode+"_full_damage")
 	var effects := 0
 	for record in arena.fighter(true).active_effects:
 		if String(record.get("effect_id",""))=="EFF406":
