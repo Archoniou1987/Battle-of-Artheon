@@ -108,6 +108,25 @@ func _verify() -> void:
 		if _cast(session,q):
 			_check(_attacks(session,q).size()>=1,String(kit)+"_q_attacks")
 			_check(int(_effect(session.fighter(false),"EFF501").get("stacks",0))>=1,String(kit)+"_q_applies_wound")
+	# ABI501 awards one normal AP plus one conditional AP only when
+	# three wounds already existed on the target before this hit.
+	var ap_case := _session("AXE_DEF",202611173)
+	if ap_case != null:
+		ap_case.state.begin_round()
+		var actor := ap_case.fighter(true)
+		actor.action_points = 0
+		var parent := ap_case.state.create_event(CombatEvent.Kind.ACTION,ap_case.player_id,ArenaCombatSession.ENEMY_ID,{"ability_id":"ABI501"})
+		ap_case.state.record_event(parent)
+		var connected := ap_case.state.create_event(CombatEvent.Kind.ATTACK,ap_case.player_id,ArenaCombatSession.ENEMY_ID,{"axe_abi_id":"ABI501","axe_wounds_snapshot":3},parent.event_id)
+		AxeAbiCombatService._gain_once(ap_case.engine,connected,actor)
+		_check(actor.action_points==2,"def_q_three_existing_wounds_give_two_ap")
+		AxeAbiCombatService._gain_once(ap_case.engine,connected,actor)
+		_check(actor.action_points==2,"def_q_ap_once_per_cast")
+		var parent_two := ap_case.state.create_event(CombatEvent.Kind.ACTION,ap_case.player_id,ArenaCombatSession.ENEMY_ID,{"ability_id":"ABI501"})
+		ap_case.state.record_event(parent_two)
+		var fewer := ap_case.state.create_event(CombatEvent.Kind.ATTACK,ap_case.player_id,ArenaCombatSession.ENEMY_ID,{"axe_abi_id":"ABI501","axe_wounds_snapshot":2},parent_two.event_id)
+		AxeAbiCombatService._gain_once(ap_case.engine,fewer,actor)
+		_check(actor.action_points==3,"def_q_two_wounds_give_one_ap")
 	var deep := _session("AXE_ATTACK",202611168)
 	if deep != null:
 		if _cast(deep,"ABI507"):
