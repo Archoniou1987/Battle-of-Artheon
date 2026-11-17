@@ -224,7 +224,7 @@
   },
   "ABI307": {
     "name": "Круговой удар",
-    "description": "Числовой круговой удар по 3 целям; при хотя бы одном попадании +2 AP один раз.",
+    "description": "AoE-контратака по 3 целям: доступна только после успешного уклонения в предыдущем раунде; при хотя бы одном попадании возвращает +2 AP один раз.",
     "delivery_type": "MELEE",
     "target_scope": "RANDOM_N",
     "uses_magic_hit": false,
@@ -240,6 +240,7 @@
     "ap_cost": 2,
     "ap_gain": 2,
     "ap_gain_on_hit": true,
+    "trigger_previous_round": "dodge",
     "application_timing": "standard",
     "sword_ability_mode": "dodge_aoe",
     "max_targets": 3,
