@@ -23,10 +23,10 @@ jobs:
           include-templates: false
       - name: Compile Godot scripts
         run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
-      - name: Smoke audit instrumentation
-        run: GODOT_TEST_TIMEOUT=180 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --battles=1
-      - name: Audit 15 physical archetypes, 50 battles each (MH)
-        run: GODOT_TEST_TIMEOUT=1800 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --battles=50
+      - name: Smoke audit instrumentation (10 single-weapon builds)
+        run: GODOT_TEST_TIMEOUT=180 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --battles=1
+      - name: Audit 10 single-weapon archetypes, 50 battles each
+        run: GODOT_TEST_TIMEOUT=1800 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --battles=50
       - name: Audit five dual-weapon archetypes, 50 battles each (MH + OH)
         run: GODOT_TEST_TIMEOUT=1800 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --dual-only --battles=50
       - name: Upload attribution and ABI/EFF reports
