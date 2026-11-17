@@ -70,6 +70,21 @@ func _run() -> void:
 			if String(line).begins_with("  "):
 				per_target_lines+=1
 		check(per_target_lines==count,"wave_log_per_target_"+str(count))
+	# Regression: after finishing target 1, UI must derive the next hit count
+	# against a surviving focus before the player selects attack zones.
+	var switch_target := session_for(3)
+	if switch_target != null:
+		var first_id := switch_target.enemy_ids[0]
+		var second_id := switch_target.enemy_ids[1]
+		var first := switch_target.state.get_combatant(first_id)
+		first.death_finalized = true
+		first.hp = 0
+		check(switch_target.commands.group.active_opponent(switch_target.player_id).is_empty(),"defeated_focus_is_invalid")
+		var needed := switch_target.player_attack_count()
+		check(needed == 1,"after_first_kill_one_attack_required")
+		check(switch_target.focused_enemy_id() == second_id,"after_first_kill_refocuses_second")
+		var continued := switch_target.play_round(["chest"],["head","arms"])
+		check(bool(continued.get("ok",false)),"after_first_kill_next_round_accepted")
 	# Earthquake: distinct 1/2/3 stacks must produce three independent
 	# post-armour HP values, bonus percentages and Tempo audit entries.
 	var quake := session_for(3)
