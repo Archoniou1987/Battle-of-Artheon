@@ -43,6 +43,7 @@ func _run() -> void:
 	if player == null or dummy == null:
 		_finish()
 		return
+	PhysicalDamageBenchmarkParProfiles.apply(player,"SWORD_DEF")
 	dummy.max_hp = DUMMY_HP
 	dummy.hp = DUMMY_HP
 	dummy.combat_stats["dodge_rating_percent"] = 0.0
