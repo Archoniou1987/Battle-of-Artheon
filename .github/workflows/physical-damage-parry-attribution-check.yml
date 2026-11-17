@@ -22,7 +22,7 @@ jobs:
       - name: SWORD_DEF smoke (one fight)
         run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --archetype=SWORD_DEF --battles=1
       - name: SWORD_DEF 50-fight attribution regression
-        run: GODOT_TEST_TIMEOUT=600 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --archetype=SWORD_DEF --battles=50
+        run: GODOT_TEST_TIMEOUT=600 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --archetype=SWORD_DEF --battles=50 --expect-parry-attribution
       - name: Upload report and execution log
         if: always()
         uses: actions/upload-artifact@v4
