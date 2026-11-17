@@ -92,6 +92,7 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	var ability_tally: Dictionary = {}
 	var definitions: Dictionary = {}
 	var effect_tally: Dictionary = {}
+	var effect_ticks: Dictionary = {}
 	var rounds_total := 0
 	var completed := 0
 	var total_damage := 0
@@ -167,6 +168,7 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 		for raw_eff in Dictionary(metrics.get("dot_damage",{})).keys():
 			var eff := String(raw_eff)
 			effect_tally[eff]=int(effect_tally.get(eff,0))+int(metrics["dot_damage"][eff])
+			effect_ticks[eff]=int(effect_ticks.get(eff,0))+int(Dictionary(metrics.get("dot_ticks",{})).get(eff,0))
 		completed+=1
 	ArenaCombatSession.training_dummy_clear_defaults=previous_clear
 	ArenaCombatSession.training_dummy_items=previous_items
@@ -190,5 +192,5 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 		effect_ids.append(String(raw))
 	effect_ids.sort()
 	for eff in effect_ids:
-		summary+="\n%s (EFF, суммарно за бой) — %d" % [eff,roundi(float(effect_tally[eff])/float(battles))]
+		summary+="\n%s (EFF) — %d за тик · %d за бой" % [eff,roundi(float(effect_tally[eff])/float(maxi(1,int(effect_ticks.get(eff,0))))),roundi(float(effect_tally[eff])/float(battles))]
 	return {"report":summary,"battles":completed,"rounds":rounds_total}
