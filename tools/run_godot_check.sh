@@ -14,6 +14,9 @@ elif [[ "$mode" == '--scene' ]]; then
 else
   name="$(basename "$mode")"
   args=(--headless --path . --script "res://${mode#res://}")
+  if [[ "$#" -gt 1 ]]; then
+    args+=(-- "${@:2}")
+  fi
 fi
 log="test-results/final-par/$name.log"
 data_dir="$(mktemp -d)"
