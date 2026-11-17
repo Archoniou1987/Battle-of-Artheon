@@ -164,6 +164,7 @@
     },
     {
       "id": "SWORD_CRIT",
+      "damage_balance_factor": 0.82,
       "abilities": [
         "ABI309",
         "ABI310",
@@ -288,6 +289,7 @@
     },
     {
       "id": "AXE_DEF",
+      "damage_balance_factor": 0.90,
       "abilities": [
         "ABI501",
         "ABI502",
@@ -313,6 +315,7 @@
     },
     {
       "id": "AXE_ATTACK",
+      "damage_balance_factor": 0.78,
       "abilities": [
         "ABI505",
         "ABI506",
@@ -337,6 +340,7 @@
     },
     {
       "id": "AXE_SHIELD",
+      "damage_balance_factor": 0.91,
       "abilities": [
         "ABI509",
         "ABI510",
@@ -424,6 +428,7 @@
     },
     {
       "id": "2H_SWORD",
+      "damage_balance_factor": 0.80,
       "name": "2H меч",
       "kind": "weapon",
       "family": "sword",
@@ -471,6 +476,7 @@
     },
     {
       "id": "2H_AXE",
+      "damage_balance_factor": 0.76,
       "name": "Топор · массовый двуручный",
       "kind": "weapon",
       "family": "axe",
