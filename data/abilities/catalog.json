@@ -76,7 +76,7 @@
   },
   "ABI303": {
     "name": "Парирование",
-    "description": "Щит: после первого успешного ручного или автоматического блока в текущем раунде одна числовая контратака.",
+    "description": "Щит: после успешного ручного или автоматического блока контратакует каждого атакующего один раз за раунд; +10% урона за каждый активный заряд Мастерства клинка (до +30%), без расходования зарядов.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "uses_magic_hit": false,
@@ -91,6 +91,7 @@
     "ap_cost": 2,
     "ap_gain": 0,
     "ap_gain_on_hit": false,
+    "bonus_damage_pct_per_mastery_stack": 10,
     "application_timing": "standard",
     "sword_ability_mode": "def_parry",
     "max_targets": 1,
