@@ -1,0 +1,39 @@
+name: Physical Damage Dual Wield Benchmark (5 x 1000)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: physical-damage-dual-wield-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dual-wield-benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import project and compile Godot scripts
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
+      - name: Smoke test five dual-wield archetypes
+        run: GODOT_TEST_TIMEOUT=180 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --dual-only --battles=1
+      - name: Run 1000 real MH+OH fights per dual-wield archetype
+        run: GODOT_TEST_TIMEOUT=10200 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --dual-only --battles=1000
+      - name: Upload hand-separated benchmark report and execution log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-damage-dual-wield-results
+          path: |
+            test-results/physical-damage-benchmark/dual-report.txt
+            test-results/final-par/physical_damage_benchmark_full_runner.gd.log
+          if-no-files-found: warn
+          retention-days: 30
