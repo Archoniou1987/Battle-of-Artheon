@@ -184,7 +184,7 @@ func _test_defensive_parry_multiple_attackers() -> void:
 		var blocked := session.state.create_event(CombatEvent.Kind.ATTACK,enemy_id,session.player_id,{"zone":"head"})
 		blocked.set_result("outcome","manual_block")
 		SwordAbiCombatService.on_block(session.engine,blocked,actor)
-	# A second blocked attack by the same enemy is not an extra counter.
+	# A second blocked attack from the same dual-wield enemy must trigger another counter.
 	var duplicate := session.state.create_event(CombatEvent.Kind.ATTACK,attackers[0],session.player_id,{"zone":"head"})
 	duplicate.set_result("outcome","auto_block")
 	SwordAbiCombatService.on_block(session.engine,duplicate,actor)
@@ -192,12 +192,19 @@ func _test_defensive_parry_multiple_attackers() -> void:
 	for pending in session.state.pending_events:
 		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id","")) == "ABI303":
 			replies.append(pending)
-	_check(replies.size()==3,"parry_three_distinct_blocked_attackers")
+	_check(replies.size()==4,"parry_four_blocked_attacks_four_counters")
 	for enemy_id in attackers:
 		var count := 0
 		for reply in replies:
 			if reply.target_id == enemy_id:
 				count += 1
 				_check(is_equal_approx(float(reply.payload.get("raw_damage",0.0)),base_damage*1.3),"parry_three_mastery_adds_30_percent")
-		_check(count==1,"parry_one_counter_per_attacker_"+enemy_id)
+		_check(count==(2 if enemy_id==attackers[0] else 1),"parry_counter_per_blocked_hit_"+enemy_id)
+	# Resolving the same ATTACK event twice must not create extra replies.
+	SwordAbiCombatService.on_block(session.engine,duplicate,actor)
+	var counter_count := 0
+	for pending in session.state.pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id",""))=="ABI303":
+			counter_count += 1
+	_check(counter_count==4,"parry_same_event_not_double_processed")
 	_check(SwordAbiCombatService._active_stacks(actor,"EFF314",session.state.round_number)==3,"parry_does_not_consume_mastery")
