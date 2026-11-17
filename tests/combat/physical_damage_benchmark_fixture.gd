@@ -26,6 +26,28 @@ static func create_weapon(hero: CharacterState, repo: ItemRepository, archetype:
 		return {}
 	return item
 
+
+## Equip a distinct real OH instance of the same v1.2 archetype and seed.
+## Same base damage roll as MH makes the paired vs single comparison controlled;
+## the canonical equipment snapshot applies the OH penalty.
+static func create_offhand_weapon(hero: CharacterState, repo: ItemRepository, archetype: String, level: int, seed: int) -> Dictionary:
+	if not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype) or ItemV12InstanceFactory.TWO_HAND_ARCHETYPES.has(archetype):
+		return {}
+	var item := ItemV12InstanceFactory.generate_weapon(archetype,level,"purple",seed,"OH")
+	if item.is_empty():
+		return {}
+	item["par_bonuses"]={}
+	item["requirements"]={}
+	item["v12_core_rolls"]=[]
+	item["v12_rarity_rolls"]=[]
+	if not repo.add_item(item):
+		return {}
+	if not hero.receive_item(String(item["instance_id"]),repo):
+		return {}
+	if not hero.equip("off_hand",String(item["instance_id"]),repo):
+		return {}
+	return item
+
 static func prepare_actor(actor: CombatantState, archetype: String, weapon: Dictionary) -> void:
 	PhysicalDamageBenchmarkParProfiles.apply(actor,archetype)
 	actor.max_hp=HERO_HP
