@@ -17,6 +17,7 @@ var scroll: ScrollContainer
 var actions: HBoxContainer
 var status_label: Label
 var abi_info_popup: AcceptDialog
+var abi_info_text: RichTextLabel
 
 func _init(p_character: CharacterState = null, p_repository: ItemRepository = null) -> void:
 	character = p_character
@@ -55,8 +56,18 @@ func _ready() -> void:
 	call_deferred("_update_dialog_size")
 	abi_info_popup = AcceptDialog.new()
 	abi_info_popup.title = "Описание ABI"
-	abi_info_popup.min_size = Vector2i(320, 220)
+	abi_info_popup.min_size = Vector2i(220, 160)
+	abi_info_popup.ok_button_text = "Закрыть"
 	add_child(abi_info_popup)
+	# Keep the dialog compact: a scrollable body, not the auto-growing dialog_text.
+	abi_info_text = RichTextLabel.new()
+	abi_info_text.name = "AbiDescription"
+	abi_info_text.bbcode_enabled = false
+	abi_info_text.fit_content = false
+	abi_info_text.scroll_active = true
+	abi_info_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	abi_info_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	abi_info_popup.get_vbox().add_child(abi_info_text)
 	visible = false
 
 func show_item(instance_id: String, slot: String = "", target: Control = null) -> void:
@@ -158,8 +169,14 @@ func _show_ability_info(ability_id: String) -> void:
 	var catalog := AbilityCatalog.load_json("res://data/abilities/catalog.json")
 	var definition: Dictionary = Dictionary(catalog.get(ability_id, {}))
 	abi_info_popup.title = AbilityCardText.title(ability_id, definition)
-	abi_info_popup.dialog_text = AbilityCardText.describe(ability_id, definition)
-	abi_info_popup.popup_centered()
+	abi_info_text.text = AbilityCardText.describe(ability_id, definition)
+	var viewport_size := get_viewport().get_visible_rect().size
+	# Leave space for the title, Close button and OS/window chrome.
+	var dialog_width := maxi(220, mini(420, int(viewport_size.x) - 32))
+	var dialog_height := maxi(160, mini(440, int(viewport_size.y) - 64))
+	abi_info_popup.max_size = Vector2i(dialog_width, dialog_height)
+	abi_info_popup.popup_centered(Vector2i(dialog_width, dialog_height))
+	abi_info_text.scroll_to_line(0)
 
 func _update_dialog_size() -> void:
 	if panel == null or scroll == null:
