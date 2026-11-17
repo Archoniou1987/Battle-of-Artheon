@@ -44,16 +44,10 @@ func _check_archetype(archetype: String, index: int) -> bool:
 	# Level 40 exists in the benchmark only; progression currently clamps at 20.
 	hero.progression.level = LEVEL
 	hero.level = LEVEL
-	for primary in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
-		hero.progression.base_stats[primary]=90
 	var repository := ItemRepository.new()
-	var hand := "2H" if ItemV12InstanceFactory.TWO_HAND_ARCHETYPES.has(archetype) else "MH"
-	var item := ItemV12InstanceFactory.grant_weapon(hero,repository,archetype,LEVEL,"purple",202611170+index,hand)
+	var item := PhysicalDamageBenchmarkFixture.create_weapon(hero,repository,archetype,LEVEL,202611170+index)
 	if item.is_empty():
 		_check(false,archetype+"_weapon")
-		return false
-	if not hero.equip("main_hand",String(item["instance_id"]),repository):
-		_check(false,archetype+"_equip")
 		return false
 	var previous_clear := ArenaCombatSession.training_dummy_clear_defaults
 	var previous_items: Dictionary = ArenaCombatSession.training_dummy_items.duplicate(true)
@@ -67,7 +61,8 @@ func _check_archetype(archetype: String, index: int) -> bool:
 	if actor==null or dummy==null:
 		_check(false,archetype+"_fighters")
 		return false
-	PhysicalDamageBenchmarkParProfiles.apply(actor,archetype)
+	PhysicalDamageBenchmarkFixture.prepare_actor(actor,archetype,item)
+	PhysicalDamageBenchmarkFixture.prepare_dummy(dummy)
 	dummy.max_hp=DUMMY_HP
 	dummy.hp=DUMMY_HP
 	dummy.combat_stats["dodge_rating_percent"]=0.0
@@ -108,6 +103,7 @@ func _check_archetype(archetype: String, index: int) -> bool:
 				cursor=int(decision.get("cursor",cursor))
 				casts[chosen]=int(casts.get(chosen,0))+1
 		pipeline.lock_basic_attack(round,actor,dummy,["chest","chest"])
+		pipeline.lock_basic_attack(round,dummy,actor,["chest"])
 		session.orchestrator.resolve_locked_actions(round)
 		session.orchestrator.end_round()
 	var metrics := PhysicalDamageBenchmarkMetrics.collect(session.state.event_log,session.player_id,ArenaCombatSession.ENEMY_ID)
