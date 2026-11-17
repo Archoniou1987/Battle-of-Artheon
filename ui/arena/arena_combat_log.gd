@@ -48,6 +48,7 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 					"critical": bool(event.result.get("critical", false)),
 					"outcome": status,
 					"partial_block": String(event.result.get("partial_block","")),
+					"crushed_block": _crushed_block_label(event.result),
 					"damage": 0
 				}
 				abi_hit_details[event.event_id] = hit
@@ -104,11 +105,20 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 					critical_count += 1
 			var partial_manual := 0
 			var partial_shield := 0
+			var crushed_manual := 0
+			var crushed_shield := 0
 			for raw_hit_id in hit_ids:
 				var hit_block: Dictionary = abi_hit_details.get(int(raw_hit_id),{})
 				match String(hit_block.get("partial_block","")):
 					"manual_block": partial_manual += 1
 					"auto_block": partial_shield += 1
+				match String(hit_block.get("crushed_block","")):
+					"ручной блок пробит": crushed_manual += 1
+					"блок щитом пробит": crushed_shield += 1
+			if crushed_manual > 0:
+				parts.append("ручной блок пробит: %d" % crushed_manual)
+			if crushed_shield > 0:
+				parts.append("блок щитом пробит: %d" % crushed_shield)
 			if partial_manual > 0:
 				parts.append("ручной блок: %d (50%% урона)" % partial_manual)
 			if partial_shield > 0:
@@ -155,6 +165,9 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 							detail += " (ручной блок −50%)"
 						elif partial=="auto_block":
 							detail += " (щит −50%)"
+						var crushed := String(hit.get("crushed_block",""))
+						if not crushed.is_empty():
+							detail += " (" + crushed + ")"
 					if name_id=="ABI608":
 						var stacks := int(hit.get("concussion_stacks",0))
 						detail += "; Сотрясение %d → поглощено %d" % [stacks,int(hit.get("concussion_consumed",0))]
@@ -173,6 +186,9 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 					var partial := String(hit.get("partial_block",""))
 					if not partial.is_empty():
 						strike_result += " (ручной блок −50%)" if partial=="manual_block" else " (щит −50%)"
+					var crushed := String(hit.get("crushed_block",""))
+					if not crushed.is_empty():
+						strike_result += " (" + crushed + ")"
 					result.append("  Удар %d (%s, %s): %s" % [strike_number, hand, _zone_name(String(hit.get("zone", "chest"))), strike_result])
 		elif event.kind == CombatEvent.Kind.ATTACK and root_id < 0:
 			var outcome: String = String(event.result.get("outcome", ""))
@@ -184,6 +200,9 @@ static func lines_for_round(events: Array[CombatEvent], round_number: int, playe
 				var critical: String = " (крит)" if bool(event.result.get("critical", false)) else ""
 				var partial := String(event.result.get("partial_block",""))
 				var defence_label := " (ручной блок −50%)" if partial=="manual_block" else (" (щит −50%)" if partial=="auto_block" else "")
+				var crushed := _crushed_block_label(event.result)
+				if not crushed.is_empty():
+					defence_label += " (" + crushed + ")"
 				if String(event.payload.get("sword_abi_id", "")) == "ABI301":
 					var abi_def: Dictionary = AbilityCatalog.definition(ability_definitions, "ABI301")
 					result.append("%s — ABI «%s» атакует %s (%s): %d урона%s" % [from_name, String(abi_def.get("name", "Кровавый порез")), target_name, zone_name, amount, critical + defence_label])
@@ -233,6 +252,15 @@ static func _effect_name(effect_id: String, definitions: Dictionary) -> String:
 	var definition: Dictionary = EffectCatalog.definition(definitions, effect_id)
 	var effect_name: String = String(definition.get("name", effect_id))
 	return effect_name if effect_name == effect_id else "%s (%s)" % [effect_name, effect_id]
+
+## These flags are produced only by CombatEngine after a successful block-crush roll.
+## Deliberate ABI block bypass does not set either flag.
+static func _crushed_block_label(hit_result: Dictionary) -> String:
+	if bool(hit_result.get("manual_block_crushed",false)):
+		return "ручной блок пробит"
+	if bool(hit_result.get("auto_block_crushed",false)):
+		return "блок щитом пробит"
+	return ""
 
 static func _attack_outcome(outcome: String) -> String:
 	match outcome:
