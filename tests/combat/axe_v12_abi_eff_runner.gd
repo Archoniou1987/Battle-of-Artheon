@@ -150,6 +150,25 @@ func _verify() -> void:
 			var hits := _attacks(execute,"ABI508")
 			_check(hits.size()==1,"execute_one_attack")
 			_check(AxeAbiCombatService._wounds(execute.fighter(false),execute.player_id,execute.state.round_number)==0,"execute_wounds_spent")
+	# Execute threshold uses target HP before the attack. Compare identical
+	# fighters, wound stacks and deterministic rolls; do not compare UI damage
+	# from unrelated crit/block outcomes.
+	var above := _session("AXE_ATTACK",202611174)
+	var below := _session("AXE_ATTACK",202611174)
+	if above != null and below != null:
+		_wound_fixture(above,3)
+		_wound_fixture(below,3)
+		above.fighter(false).hp = 60000
+		below.fighter(false).hp = 30000
+		if _cast(above,"ABI508") and _cast(below,"ABI508"):
+			var normal_hits := _attacks(above,"ABI508")
+			var execute_hits := _attacks(below,"ABI508")
+			_check(normal_hits.size()==1 and execute_hits.size()==1,"execute_hp_threshold_both_attacks")
+			if normal_hits.size()==1 and execute_hits.size()==1:
+				var normal_raw := float(normal_hits[0].payload.get("raw_damage",0.0))
+				var execute_raw := float(execute_hits[0].payload.get("raw_damage",0.0))
+				_check(normal_raw>0.0,"execute_baseline_positive_damage")
+				_check(is_equal_approx(execute_raw,normal_raw*1.25),"execute_below_35_percent_multiplier_1_25")
 	var shield := _session("AXE_SHIELD",202611171)
 	if shield != null:
 		_wound_fixture(shield,3)
