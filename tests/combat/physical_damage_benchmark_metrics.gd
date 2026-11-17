@@ -13,6 +13,7 @@ static func collect(events: Array[CombatEvent], source_id: String, target_id: St
 	var dot: Dictionary = {}
 	var dot_ticks: Dictionary = {}
 	var total := 0
+	var unattributed := 0
 	for event in events:
 		if event.source_id != source_id or event.target_id != target_id:
 			continue
@@ -42,7 +43,9 @@ static func collect(events: Array[CombatEvent], source_id: String, target_id: St
 		if parent != null and parent.kind == CombatEvent.Kind.ATTACK and bool(parent.payload.get("is_weapon_attack",false)):
 			var bucket: Dictionary = weapon_oh if int(parent.payload.get("weapon_index",0)) > 0 else weapon_mh
 			bucket["damage"] = int(bucket["damage"]) + dealt
-	return {"mh":weapon_mh,"oh":weapon_oh,"abi_damage":abi,"dot_damage":dot,"dot_ticks":dot_ticks,"total_damage":total}
+		else:
+			unattributed += dealt
+	return {"mh":weapon_mh,"oh":weapon_oh,"abi_damage":abi,"dot_damage":dot,"dot_ticks":dot_ticks,"total_damage":total,"unattributed_damage":unattributed}
 
 static func _root_action(by_id: Dictionary, event: CombatEvent) -> CombatEvent:
 	var cursor: CombatEvent = event
