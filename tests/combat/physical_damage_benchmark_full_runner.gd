@@ -42,7 +42,7 @@ func _run() -> void:
 	var effect_catalog := EffectCatalog.load_json()
 	var rows: Array[String] = []
 	rows.append("Physical damage benchmark | level=40 battles=%d armour=20%% dummy_hp=%d" % [battles,DUMMY_HP])
-	rows.append("One target; real post-mitigation damage; seeded independent combats")
+	rows.append("One target; real post-mitigation damage; generated weapon DMG + ABI only; no random item PAR; hero HP=2000, dummy hits 1-5")
 	var completed := 0
 	for raw_archetype in ItemV12InstanceFactory.PHYSICAL_ARCHETYPES:
 		var archetype := String(raw_archetype)
@@ -74,12 +74,9 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	# CharacterProgression currently clamps 40 to 20; benchmark-only override.
 	hero.progression.level=LEVEL
 	hero.level=LEVEL
-	for primary in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
-		hero.progression.base_stats[primary]=90
 	var repo := ItemRepository.new()
-	var hand := "2H" if ItemV12InstanceFactory.TWO_HAND_ARCHETYPES.has(archetype) else "MH"
-	var item := ItemV12InstanceFactory.grant_weapon(hero,repo,archetype,LEVEL,"purple",BASE_SEED+index,hand)
-	if item.is_empty() or not hero.equip("main_hand",String(item.get("instance_id","")),repo):
+	var item := PhysicalDamageBenchmarkFixture.create_weapon(hero,repo,archetype,LEVEL,BASE_SEED+index)
+	if item.is_empty():
 		return {}
 	var abilities: Array = item.get("abilities",[])
 	if abilities.size()!=4:
@@ -104,8 +101,8 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 		var dummy := session.fighter(false)
 		if actor==null or dummy==null:
 			break
-		PhysicalDamageBenchmarkParProfiles.apply(actor,archetype)
-		dummy.level=LEVEL
+		PhysicalDamageBenchmarkFixture.prepare_actor(actor,archetype,item)
+		PhysicalDamageBenchmarkFixture.prepare_dummy(dummy)
 		dummy.max_hp=DUMMY_HP
 		dummy.hp=DUMMY_HP
 		dummy.combat_stats["dodge_rating_percent"]=0.0
@@ -144,6 +141,7 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 						cursor=int(decision.get("cursor",cursor))
 						casts_this_battle[chosen]=int(casts_this_battle.get(chosen,0))+1
 			pipeline.lock_basic_attack(round,actor,dummy,["chest","chest"])
+			pipeline.lock_basic_attack(round,dummy,actor,["chest"])
 			session.orchestrator.resolve_locked_actions(round)
 			session.orchestrator.end_round()
 			if dummy.is_death_finalized():
