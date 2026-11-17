@@ -239,6 +239,11 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	if classified_total+unattributed_total!=total_damage:
 		push_error("Benchmark attribution mismatch: "+archetype+" total="+str(total_damage)+" classified="+str(classified_total)+" unattributed="+str(unattributed_total))
 		return {}
+	# Optional strict diagnostic for the known parry counterattack attribution bug.
+	if archetype == "SWORD_DEF" and OS.get_cmdline_user_args().has("--expect-parry-attribution"):
+		if unattributed_total != 0 or int(Dictionary(ability_tally.get("ABI303",{})).get("damage",0)) <= 0:
+			push_error("ABI303 attribution regression: unattributed="+str(unattributed_total)+" ABI303="+str(Dictionary(ability_tally.get("ABI303",{})).get("damage",0)))
+			return {}
 	if dual_only and (int(mh_tally["attempts"]) == 0 or int(oh_tally["attempts"]) == 0):
 		push_error("Dual-wield benchmark did not record both hands: "+archetype)
 		return {}
