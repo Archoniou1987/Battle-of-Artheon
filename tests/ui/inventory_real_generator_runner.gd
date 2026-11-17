@@ -38,6 +38,33 @@ func _verify() -> void:
 		screen.v12_archetype.item_selected.emit(found_spear)
 		if String(screen.v12_hand.get_selected_metadata()) != "2H":
 			failures.append("spear must auto-select both hands")
+	# Both approved 2H archetypes are playable ITEM v1.2 instances, not
+	# preview-only templates. Selection must reserve both hands.
+	for entry in [
+		["2H_SWORD",["ABI313","ABI314","ABI315","ABI316"]],
+		["2H_AXE",["ABI513","ABI514","ABI515","ABI516"]]
+	]:
+		var archetype_id := String(entry[0])
+		var found := -1
+		for i in range(screen.v12_archetype.item_count):
+			if String(screen.v12_archetype.get_item_metadata(i)) == archetype_id:
+				found = i
+				break
+		if found < 0:
+			failures.append("real inventory generator does not offer "+archetype_id)
+			continue
+		screen.v12_archetype.select(found)
+		screen.v12_archetype.item_selected.emit(found)
+		if String(screen.v12_hand.get_selected_metadata()) != "2H":
+			failures.append(archetype_id+" must auto-select 2H")
+		var item := ItemV12InstanceFactory.generate_weapon(archetype_id,40,"purple",202611175+found,"2H")
+		if item.is_empty():
+			failures.append(archetype_id+" failed to generate actual v1.2 item")
+		else:
+			if Array(item.get("abilities",[])) != Array(entry[1]):
+				failures.append(archetype_id+" generated wrong ABI")
+			if Array(item.get("slot_usage",[])) != ["main_hand","off_hand"]:
+				failures.append(archetype_id+" did not reserve both hands")
 	var random_button := screen.find_child("InventoryRandomSeedButton",true,false) as Button
 	if random_button == null:
 		failures.append("random seed button missing from inventory")
