@@ -293,7 +293,7 @@
   },
   "ABI501": {
     "name": "Рваный удар",
-    "description": "Удар, +1 рваная рана и +1 AP при попадании.",
+    "description": "Удар, +1 рваная рана и +1 AP при попадании; если до удара на цели 3 раны — ещё +1 AP.",
     "delivery_type": "MELEE",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -310,6 +310,7 @@
     "ap_cost": 0,
     "ap_gain": 1,
     "ap_gain_on_hit": true,
+    "bonus_ap_at_three_wounds": 1,
     "application_timing": "standard",
     "axe_ability_mode": "def_q",
     "max_targets": 1,
