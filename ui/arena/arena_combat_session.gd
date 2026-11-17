@@ -425,8 +425,11 @@ func play_round(attacks: Array[String], blocks: Array[String], ability_id: Strin
 		if npc==null or npc.is_death_finalized() or CombatTempoService.is_stunned(npc,next_round):
 			continue
 		var npc_targets: Array[String] = []
+		# Arena training: spread simultaneous NPC strikes across different
+		# zones instead of sending every dummy to the same round-based zone.
+		# Include the strike index for enemies with more than one attack.
 		for i in range(_fighter_attack_count(enemy_id)):
-			var target_index := (maxi(1,next_round) + i) % CombatCommandApi.BODY_ZONES.size()
+			var target_index := (maxi(1,next_round) + enemy_ids.find(enemy_id) + i) % CombatCommandApi.BODY_ZONES.size()
 			npc_targets.append(String(CombatCommandApi.BODY_ZONES[target_index]))
 		var enemy_plan := _prepare_attacks(enemy_id,npc_targets)
 		if not bool(enemy_plan.get("ok",false)):
