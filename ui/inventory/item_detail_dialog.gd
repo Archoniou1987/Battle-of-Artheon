@@ -67,7 +67,10 @@ func _ready() -> void:
 	abi_info_text.scroll_active = true
 	abi_info_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	abi_info_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	abi_info_popup.get_vbox().add_child(abi_info_text)
+	# AcceptDialog automatically lays out direct Control children between its label and OK button.
+	# Godot 4.5 does not expose get_vbox() on AcceptDialog.
+	abi_info_text.custom_minimum_size = Vector2(180, 90)
+	abi_info_popup.add_child(abi_info_text)
 	visible = false
 
 func show_item(instance_id: String, slot: String = "", target: Control = null) -> void:
