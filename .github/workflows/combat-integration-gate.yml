@@ -43,6 +43,7 @@ jobs:
           bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_policy_runner.gd
           bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_engine_runner.gd
           bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_coverage_runner.gd
+          bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_conditions_runner.gd
 
       - name: Verify Arena and Solo ability confirmation, item ABI cards and EFF stack badges
         shell: bash
