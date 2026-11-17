@@ -27,7 +27,7 @@ func _run() -> void:
 	if item.is_empty():
 		_finish()
 		return
-	_check(not hero.equipment.get_equipped_instance_id("main_hand")==null,"weapon_equipped")
+	_check(hero.equipment.get_equipped_instance_id("main_hand") != null,"weapon_equipped")
 	var previous_clear := ArenaCombatSession.training_dummy_clear_defaults
 	var previous_items: Dictionary = ArenaCombatSession.training_dummy_items.duplicate(true)
 	ArenaCombatSession.training_dummy_clear_defaults = true
