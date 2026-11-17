@@ -218,6 +218,9 @@ static func on_block(engine: CombatEngine, blocked: CombatEvent, defender: Comba
 		var bonus := AbilityCatalog.number("ABI303","bonus_damage_pct_per_mastery_stack") * float(mastery) / 100.0
 		var payload := CombatDamagePayload.ability_attack_payload(blocked,{"damage_type":"slashing","zone":String(blocked.payload.get("zone","chest"))},_damage(defender,profile,"ABI303",1.0+bonus),1.0)
 		payload["rolls"] = engine.complete_attack_rolls({})
+		# The blocked enemy ATTACK is only the trigger; the counter belongs to ABI303.
+		# Preserve the actual ability identity for event attribution without changing damage.
+		payload["ability_id"] = "ABI303"
 		payload["sword_abi_id"] = "ABI303"
 		payload["is_counterattack_abi"] = true
 		var reply := engine.state.create_event(CombatEvent.Kind.ATTACK,defender.combatant_id,blocked.source_id,payload,blocked.event_id)
