@@ -32,7 +32,7 @@ func _initialize() -> void:
 	var second := ArenaCombatSession.enemy_manual_block_plan(npc,2)
 	_check(first.size()==capacity and second.size()==capacity,"npc_plan_respects_capacity")
 	_check(first.has("head") and second.has("head"),"npc_head_always_blocked")
-	_check(first.size()==first.duplicate().size() and first.count("head")==1,"npc_head_once")
+	_check(first.count("head")==1,"npc_head_once")
 	_check(ArenaCombatSession.enemy_manual_block_plan(npc,1)==first,"npc_same_round_plan_stable")
 	for zone in first:
 		_check(CombatCommandApi.BODY_ZONES.has(zone),"npc_first_round_valid_zone")
@@ -44,7 +44,7 @@ func _initialize() -> void:
 	for round_number in range(1,21):
 		var plan := ArenaCombatSession.enemy_manual_block_plan(npc,round_number)
 		_check(plan.size()==capacity and plan[0]=="head","npc_round_head_and_capacity_"+str(round_number))
-		var signature := ",".join(plan)
+		var signature := ",".join(PackedStringArray(plan))
 		if not variants.has(signature):
 			variants.append(signature)
 	if capacity > 1:
