@@ -34,11 +34,18 @@ static func _tally_damage(bucket: Dictionary, damage: int, attempts: int) -> voi
 func _run() -> void:
 	var battles := DEFAULT_BATTLES
 	var dual_only := false
+	var single_only := false
 	for argument in OS.get_cmdline_user_args():
 		if String(argument) == "--dual-only":
 			dual_only = true
+		if String(argument) == "--single-only":
+			single_only = true
 		if String(argument).begins_with("--battles="):
 			battles = int(String(argument).trim_prefix("--battles="))
+	if dual_only and single_only:
+		push_error("Choose either --dual-only or --single-only")
+		quit(1)
+		return
 	if battles < 1 or battles > DEFAULT_BATTLES:
 		push_error("Benchmark battle count must be between 1 and 1000")
 		quit(1)
@@ -46,15 +53,20 @@ func _run() -> void:
 	var armour := _armour_rating()
 	var effect_catalog := EffectCatalog.load_json()
 	var rows: Array[String] = []
-	rows.append("Physical damage benchmark | loadout=%s level=40 battles=%d armour=20%% dummy_hp=%d" % ["MH+OH" if dual_only else "MH",battles,DUMMY_HP])
+	rows.append("Physical damage benchmark | loadout=%s level=40 battles=%d armour=20%% dummy_hp=%d" % ["MH+OH" if dual_only else ("single-weapon-only" if single_only else "MH"),battles,DUMMY_HP])
 	rows.append("One target; real post-mitigation damage; generated weapon DMG + ABI only; no random item PAR; hero HP=2000, dummy hits 1-5")
 	if dual_only:
 		rows.append("Dual wield: identical v1.2 archetype/seed damage rolls; canonical OH penalty; only MH ABI active")
 	var completed := 0
-	var archetypes: Array = DUAL_ARCHETYPES if dual_only else ItemV12InstanceFactory.PHYSICAL_ARCHETYPES
+	var archetypes: Array = DUAL_ARCHETYPES if dual_only else ItemV12InstanceFactory.PHYSICAL_ARCHETYPES.duplicate()
+	if single_only:
+		for dual_archetype in DUAL_ARCHETYPES:
+			archetypes.erase(dual_archetype)
 	for raw_archetype in archetypes:
 		var archetype := String(raw_archetype)
-		var result := _measure_archetype(archetype,completed,battles,armour,effect_catalog,dual_only)
+		# Preserve original per-archetype seed allocation in diagnostic subsets.
+		var canonical_index := ItemV12InstanceFactory.PHYSICAL_ARCHETYPES.find(archetype)
+		var result := _measure_archetype(archetype,canonical_index,battles,armour,effect_catalog,dual_only)
 		if result.is_empty():
 			failures.append(archetype)
 		else:
