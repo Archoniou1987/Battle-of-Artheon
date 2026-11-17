@@ -79,6 +79,7 @@ func _check_archetype(archetype: String, index: int) -> bool:
 	session.engine.combat_rng.seed=seed
 	var pipeline := CombatAttackPipeline.new(session.state,seed,session.engine)
 	var abilities: Array = item.get("abilities",[])
+	var effect_catalog := EffectCatalog.load_json()
 	var cursor := 0
 	var casts: Dictionary = {}
 	for raw_id in abilities:
@@ -93,7 +94,11 @@ func _check_archetype(archetype: String, index: int) -> bool:
 		if not chosen.is_empty():
 			var definition: Dictionary = session.ability_scheduler.definitions.get(chosen,{})
 			var target_id := session.player_id if String(definition.get("target_team","")).to_upper()=="ALLY" else ArenaCombatSession.ENEMY_ID
-			var event := session.ability_scheduler.cast_event(session.state,session.player_id,target_id,chosen)
+			var trigger := String(definition.get("trigger_previous_round",""))
+			var eligible := PhysicalDamageBenchmarkConditions.prime_previous_round(session.state,session.player_id,trigger)
+			if eligible:
+				eligible = PhysicalDamageBenchmarkConditions.prime_charges(chosen,actor,dummy,effect_catalog,session.state.round_number)
+			var event: CombatEvent = session.ability_scheduler.cast_event(session.state,session.player_id,target_id,chosen) if eligible else null
 			if event!=null:
 				round.lock_action(event)
 				cursor=int(decision.get("cursor",cursor))
