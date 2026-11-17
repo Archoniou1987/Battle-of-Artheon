@@ -35,11 +35,14 @@ func _run() -> void:
 	var battles := DEFAULT_BATTLES
 	var dual_only := false
 	var single_only := false
+	var selected_archetype := ""
 	for argument in OS.get_cmdline_user_args():
 		if String(argument) == "--dual-only":
 			dual_only = true
 		if String(argument) == "--single-only":
 			single_only = true
+		if String(argument).begins_with("--archetype="):
+			selected_archetype = String(argument).trim_prefix("--archetype=")
 		if String(argument).begins_with("--battles="):
 			battles = int(String(argument).trim_prefix("--battles="))
 	if dual_only and single_only:
@@ -62,6 +65,12 @@ func _run() -> void:
 	if single_only:
 		for dual_archetype in DUAL_ARCHETYPES:
 			archetypes.erase(dual_archetype)
+	if not selected_archetype.is_empty():
+		if not archetypes.has(selected_archetype):
+			push_error("Selected archetype is unavailable for this benchmark loadout: "+selected_archetype)
+			quit(1)
+			return
+		archetypes = [selected_archetype]
 	for raw_archetype in archetypes:
 		var archetype := String(raw_archetype)
 		# Preserve original per-archetype seed allocation in diagnostic subsets.
