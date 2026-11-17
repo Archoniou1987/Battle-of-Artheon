@@ -31,21 +31,37 @@ func _initialize() -> void:
 	var first := ArenaCombatSession.enemy_manual_block_plan(npc,1)
 	var second := ArenaCombatSession.enemy_manual_block_plan(npc,2)
 	_check(first.size()==capacity and second.size()==capacity,"npc_plan_respects_capacity")
-	_check(first!=second,"npc_plan_changes_between_rounds")
-	_check(first.has("waist"),"npc_first_round_waist_guard")
+	_check(first.has("head") and second.has("head"),"npc_head_always_blocked")
+	_check(first.size()==first.duplicate().size() and first.count("head")==1,"npc_head_once")
+	_check(ArenaCombatSession.enemy_manual_block_plan(npc,1)==first,"npc_same_round_plan_stable")
+	for zone in first:
+		_check(CombatCommandApi.BODY_ZONES.has(zone),"npc_first_round_valid_zone")
+	for i in range(first.size()):
+		_check(first.find(first[i])==i,"npc_first_round_distinct_zones")
+	# Verify random secondary guards across several rounds without
+	# requiring any particular second-round permutation.
+	var variants: Array[String] = []
+	for round_number in range(1,21):
+		var plan := ArenaCombatSession.enemy_manual_block_plan(npc,round_number)
+		_check(plan.size()==capacity and plan[0]=="head","npc_round_head_and_capacity_"+str(round_number))
+		var signature := ",".join(plan)
+		if not variants.has(signature):
+			variants.append(signature)
+	if capacity > 1:
+		_check(variants.size()>1,"npc_secondary_guards_vary")
 	_check(CombatModifierService.manual_block_zones(npc).is_empty(),"npc_has_no_pre_round_guard")
 	var blocks: Array[String] = []
 	for z in ["chest","arms","waist","legs"]:
 		if blocks.size()<CombatModifierService.manual_block_zone_capacity(player):
 			blocks.append(z)
-	var result := arena.play_round(["waist"],blocks)
+	var result := arena.play_round(["head"],blocks)
 	_check(bool(result.get("ok",false)),"round_executes")
 	if bool(result.get("ok",false)):
 		_check(CombatModifierService.manual_block_zones(npc)==first,"npc_guard_selected_in_real_round")
 		# Check a block through the unmodified shared CombatEngine with
 		# deterministic hit/dodge/block-crush rolls (no made-up NPC damage).
 		var event := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,{
-			"zone":"waist","damage_type":"slashing","raw_damage":10.0,"hit_already_resolved":true,
+			"zone":"head","damage_type":"slashing","raw_damage":10.0,"hit_already_resolved":true,
 			"rolls":{"hit":1,"dodge":100,"auto_block":100,"block_crush":100,"crit":100,"damage":0.5}
 		})
 		arena.engine.resolve_event(event)
@@ -63,7 +79,7 @@ func _initialize() -> void:
 	var second_round := arena.play_round(["chest"],blocks)
 	_check(bool(second_round.get("ok",false)),"second_round_executes")
 	if bool(second_round.get("ok",false)):
-		_check(CombatModifierService.manual_block_zones(npc)==second,"npc_guard_changes_in_real_round")
+		_check(CombatModifierService.manual_block_zones(npc)==second,"npc_guard_matches_round_two_plan")
 		var npc_zones: Array[String] = []
 		for combat_event in arena.state.event_log:
 			if combat_event.kind == CombatEvent.Kind.ATTACK and combat_event.source_id == ArenaCombatSession.ENEMY_ID and bool(combat_event.payload.get("is_weapon_attack",false)):
