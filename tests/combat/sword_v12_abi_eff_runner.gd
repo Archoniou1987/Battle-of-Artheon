@@ -127,6 +127,9 @@ func _test_multi_target() -> void:
 		return
 	var a := _extra_enemy(session,1)
 	var b := _extra_enemy(session,2)
+	# The trigger is the only missing condition: the actor must already
+	# have enough AP for both availability and rejection assertions.
+	session.fighter(true).action_points=5
 	_check(not bool(session.player_ability_options()[2].get("available",false)),"circle_unavailable_without_previous_dodge")
 	var rejected := session.play_round(["chest"],["head","arms"],"ABI307")
 	_check(not bool(rejected.get("ok",false)) and String(rejected.get("reason",""))=="abi_trigger_unavailable","circle_rejected_without_previous_dodge")
