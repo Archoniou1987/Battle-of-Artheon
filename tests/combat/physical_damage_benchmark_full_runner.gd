@@ -9,6 +9,8 @@ const DEFAULT_BATTLES := 1000
 const MAX_ROUNDS := 400
 const BASE_SEED := 202611170
 const REPORT_PATH := "res://test-results/physical-damage-benchmark/report.txt"
+const DUAL_REPORT_PATH := "res://test-results/physical-damage-benchmark/dual-report.txt"
+const DUAL_ARCHETYPES := ["DAGGER_DEF","DAGGER_ATTACK","DAGGER_PEN","SWORD_DODGE","SWORD_CRIT"]
 var failures: Array[String] = []
 
 func _initialize() -> void:
@@ -31,7 +33,10 @@ static func _tally_damage(bucket: Dictionary, damage: int, attempts: int) -> voi
 
 func _run() -> void:
 	var battles := DEFAULT_BATTLES
+	var dual_only := false
 	for argument in OS.get_cmdline_user_args():
+		if String(argument) == "--dual-only":
+			dual_only = true
 		if String(argument).begins_with("--battles="):
 			battles = int(String(argument).trim_prefix("--battles="))
 	if battles < 1 or battles > DEFAULT_BATTLES:
@@ -41,21 +46,24 @@ func _run() -> void:
 	var armour := _armour_rating()
 	var effect_catalog := EffectCatalog.load_json()
 	var rows: Array[String] = []
-	rows.append("Physical damage benchmark | level=40 battles=%d armour=20%% dummy_hp=%d" % [battles,DUMMY_HP])
+	rows.append("Physical damage benchmark | loadout=%s level=40 battles=%d armour=20%% dummy_hp=%d" % ["MH+OH" if dual_only else "MH",battles,DUMMY_HP])
 	rows.append("One target; real post-mitigation damage; generated weapon DMG + ABI only; no random item PAR; hero HP=2000, dummy hits 1-5")
+	if dual_only:
+		rows.append("Dual wield: identical v1.2 archetype/seed damage rolls; canonical OH penalty; only MH ABI active")
 	var completed := 0
-	for raw_archetype in ItemV12InstanceFactory.PHYSICAL_ARCHETYPES:
+	var archetypes: Array = DUAL_ARCHETYPES if dual_only else ItemV12InstanceFactory.PHYSICAL_ARCHETYPES
+	for raw_archetype in archetypes:
 		var archetype := String(raw_archetype)
-		var result := _measure_archetype(archetype,completed,battles,armour,effect_catalog)
+		var result := _measure_archetype(archetype,completed,battles,armour,effect_catalog,dual_only)
 		if result.is_empty():
 			failures.append(archetype)
 		else:
 			rows.append(String(result["report"]))
 			completed += 1
-			print("PHYSICAL_DAMAGE_BENCHMARK_COMPLETE=",archetype," battles=",result["battles"]," rounds=",result["rounds"])
+			print("PHYSICAL_DAMAGE_BENCHMARK_COMPLETE=",archetype," loadout=","MH+OH" if dual_only else "MH"," battles=",result["battles"]," rounds=",result["rounds"])
 	# A generated report is a human-readable artifact, not evidence that the
 	# full 1000-battle protocol ran if --battles=1 was passed.
-	var path := ProjectSettings.globalize_path(REPORT_PATH)
+	var path := ProjectSettings.globalize_path(DUAL_REPORT_PATH if dual_only else REPORT_PATH)
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file := FileAccess.open(path,FileAccess.WRITE)
 	if file==null:
@@ -65,11 +73,11 @@ func _run() -> void:
 		file.close()
 	for row in rows:
 		print(row)
-	print("PHYSICAL_DAMAGE_BENCHMARK=","PASS" if failures.is_empty() else "FAIL",
+	print("PHYSICAL_DAMAGE_BENCHMARK=","PASS" if failures.is_empty() else "FAIL"," loadout=","MH+OH" if dual_only else "MH",
 		" battles_per_archetype=",battles," archetypes=",completed," failures=",JSON.stringify(failures))
 	quit(0 if failures.is_empty() else 1)
 
-func _measure_archetype(archetype: String, index: int, battles: int, armour: float, effects: Dictionary) -> Dictionary:
+func _measure_archetype(archetype: String, index: int, battles: int, armour: float, effects: Dictionary, dual_only: bool) -> Dictionary:
 	var hero := CharacterState.new("BENCHMARK_"+archetype,archetype,LEVEL)
 	# CharacterProgression currently clamps 40 to 20; benchmark-only override.
 	hero.progression.level=LEVEL
@@ -78,6 +86,10 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	var item := PhysicalDamageBenchmarkFixture.create_weapon(hero,repo,archetype,LEVEL,BASE_SEED+index)
 	if item.is_empty():
 		return {}
+	if dual_only:
+		var offhand := PhysicalDamageBenchmarkFixture.create_offhand_weapon(hero,repo,archetype,LEVEL,BASE_SEED+index)
+		if offhand.is_empty() or hero.equipment.get_equipped_instance_id("off_hand") == null:
+			return {}
 	var abilities: Array = item.get("abilities",[])
 	if abilities.size()!=4:
 		return {}
@@ -86,6 +98,8 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	ArenaCombatSession.training_dummy_clear_defaults=true
 	ArenaCombatSession.training_dummy_items={}
 	var attack_tally := {"damage":0,"attempts":0}
+	var mh_tally := {"damage":0,"attempts":0}
+	var oh_tally := {"damage":0,"attempts":0}
 	var ability_tally: Dictionary = {}
 	var definitions: Dictionary = {}
 	var effect_tally: Dictionary = {}
@@ -154,6 +168,8 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 		var metrics := PhysicalDamageBenchmarkMetrics.collect(session.state.event_log,session.player_id,ArenaCombatSession.ENEMY_ID)
 		var mh: Dictionary = metrics.get("mh",{})
 		var oh: Dictionary = metrics.get("oh",{})
+		_tally_damage(mh_tally,int(mh.get("damage",0)),int(mh.get("attempts",0)))
+		_tally_damage(oh_tally,int(oh.get("damage",0)),int(oh.get("attempts",0)))
 		_tally_damage(attack_tally,int(mh.get("damage",0))+int(oh.get("damage",0)),
 			int(mh.get("attempts",0))+int(oh.get("attempts",0)))
 		total_damage += int(metrics.get("total_damage",0))
@@ -172,6 +188,9 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	ArenaCombatSession.training_dummy_items=previous_items
 	if completed!=battles:
 		return {}
+	if dual_only and (int(mh_tally["attempts"]) == 0 or int(oh_tally["attempts"]) == 0):
+		push_error("Dual-wield benchmark did not record both hands: "+archetype)
+		return {}
 	var formatted: Dictionary = {}
 	for id in abilities:
 		var key := String(id)
@@ -183,6 +202,9 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 				deals_damage=true
 		formatted[key]={"damage":int(record["damage"]),"casts":int(record["casts"]),"no_damage":not deals_damage}
 	var summary := PhysicalDamageBenchmarkReport.format_archetype(archetype,battles,attack_tally,formatted,definitions)
+	if dual_only:
+		summary+="\nMH обычные атаки — %d всего / %d попыток / %.1f за попытку" % [int(mh_tally["damage"]),int(mh_tally["attempts"]),float(mh_tally["damage"])/float(maxi(1,int(mh_tally["attempts"])))]
+		summary+="\nOH обычные атаки — %d всего / %d попыток / %.1f за попытку" % [int(oh_tally["damage"]),int(oh_tally["attempts"]),float(oh_tally["damage"])/float(maxi(1,int(oh_tally["attempts"])))]
 	summary+="\nСредний урон/раунд — %d" % roundi(float(total_damage)/float(maxi(1,rounds_total)))
 	summary+="\nСреднее число раундов — %.1f" % (float(rounds_total)/float(battles))
 	var effect_ids: Array[String] = []
