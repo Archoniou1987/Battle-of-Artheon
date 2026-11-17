@@ -1,0 +1,37 @@
+name: Physical Damage Benchmark (15 x 1000)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: physical-damage-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  physical-benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import project and compile Godot scripts
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
+      - name: Run 1000 real fights per physical archetype
+        run: GODOT_TEST_TIMEOUT=10200 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --battles=1000
+      - name: Upload damage report and execution log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-damage-benchmark-results
+          path: |
+            test-results/physical-damage-benchmark/report.txt
+            test-results/final-par/physical_damage_benchmark_full_runner.gd.log
+          if-no-files-found: warn
+          retention-days: 30
