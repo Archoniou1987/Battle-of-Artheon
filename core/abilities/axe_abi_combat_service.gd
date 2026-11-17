@@ -147,7 +147,7 @@ static func dispatch(engine: CombatEngine, action: CombatEvent) -> void:
 		if id == "ABI510":
 			extra["axe_block_crush_bonus_pct"] = AbilityCatalog.number(id,"block_crush_bonus_pct",action.payload)
 		if id == "ABI512":
-			extra["skip_auto_block"] = bool(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("ignore_shield_auto_block",false))
+			extra["uses_physical_block"] = not bool(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("ignore_all_blocks",false))
 		if id == "ABI504":
 			var heal_values: Array = Array(AbilityCatalog.definition(AbilityCatalog.load_json(AbilityCatalog.CANONICAL_PATH),id).get("heal_from_damage_pct_by_wounds",[]))
 			if heal_values.size()==4:
