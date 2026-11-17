@@ -55,5 +55,6 @@ func _verify() -> void:
 	_assert(int(result["oh"]["damage"])==20 and int(result["oh"]["hits"])==1,"oh_separate")
 	_assert(int(result["abi_damage"].get("ABI307",0))==120,"abi_parent_lineage")
 	_assert(int(result["dot_damage"].get("EFF501",0))==15,"dot_separate")
+	_assert(int(result["dot_ticks"].get("EFF501",0))==1,"dot_tick_count")
 	print("PHYSICAL_DAMAGE_BENCHMARK_METRICS=", "PASS" if errors.is_empty() else "FAIL", " errors=",errors)
 	quit(0 if errors.is_empty() else 1)
