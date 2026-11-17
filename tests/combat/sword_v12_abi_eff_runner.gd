@@ -116,6 +116,7 @@ func _verify() -> void:
 		_check(int(_effect(actor,"EFF314").get("stacks",0))>=1,archetype+"_mastery_on_q")
 		print("SWORD_V12_ARCHETYPE=",archetype," attacks=",hits.size()," mastery=",_effect(actor,"EFF314").get("stacks",0))
 	_test_multi_target()
+	_test_defensive_parry_multiple_attackers()
 	_test_rating_debuff_ranks()
 	print("SWORD_V12_ABI_EFF=","PASS" if problems.is_empty() else "FAIL"," problems=",problems)
 	quit(0 if problems.is_empty() else 1)
@@ -152,3 +153,51 @@ func _test_rating_debuff_ranks() -> void:
 			var resolved := EffectCatalog.application_modifiers(rule,{"effect_rank":4})
 			var key := "anti_crit_rating_delta" if id=="EFF319" else "hit_chance_rating_delta"
 			_check(is_equal_approx(float(resolved.get(key,0)),float(magnitudes[3])),id+"_level_four_effect")
+
+## ABI303 is a prepared shield counter: one reply per distinct blocked
+## attacker, and its damage uses the current EFF314 count without consuming it.
+func _test_defensive_parry_multiple_attackers() -> void:
+	var session := _session("SWORD_DEF",202611176)
+	if session == null:
+		return
+	var actor := session.fighter(true)
+	actor.combat_loadout["can_auto_block"] = true
+	var second := _extra_enemy(session,21)
+	var third := _extra_enemy(session,22)
+	session.state.begin_round()
+	var effects := EffectCatalog.load_json()
+	actor.active_effects.append({
+		"effect_id":"EFF316","definition":Dictionary(effects["EFF316"]).duplicate(true),
+		"source_id":session.player_id,"start_round":session.state.round_number,
+		"remaining_rounds":1,"stacks":1
+	})
+	actor.active_effects.append({
+		"effect_id":"EFF314","definition":Dictionary(effects["EFF314"]).duplicate(true),
+		"source_id":session.player_id,"start_round":session.state.round_number,
+		"remaining_rounds":3,"stacks":3,"active_stacks":3
+	})
+	var profile := SwordAbiCombatService._profile(actor,"ABI303")
+	_check(not profile.is_empty(),"parry_real_sword_profile")
+	var base_damage := SwordAbiCombatService._damage(actor,profile,"ABI303")
+	var attackers := [ArenaCombatSession.ENEMY_ID,second.combatant_id,third.combatant_id]
+	for enemy_id in attackers:
+		var blocked := session.state.create_event(CombatEvent.Kind.ATTACK,enemy_id,session.player_id,{"zone":"head"})
+		blocked.set_result("outcome","manual_block")
+		SwordAbiCombatService.on_block(session.engine,blocked,actor)
+	# A second blocked attack by the same enemy is not an extra counter.
+	var duplicate := session.state.create_event(CombatEvent.Kind.ATTACK,attackers[0],session.player_id,{"zone":"head"})
+	duplicate.set_result("outcome","auto_block")
+	SwordAbiCombatService.on_block(session.engine,duplicate,actor)
+	var replies: Array[CombatEvent] = []
+	for pending in session.state.pending_events:
+		if pending.kind == CombatEvent.Kind.ATTACK and String(pending.payload.get("sword_abi_id","")) == "ABI303":
+			replies.append(pending)
+	_check(replies.size()==3,"parry_three_distinct_blocked_attackers")
+	for enemy_id in attackers:
+		var count := 0
+		for reply in replies:
+			if reply.target_id == enemy_id:
+				count += 1
+				_check(is_equal_approx(float(reply.payload.get("raw_damage",0.0)),base_damage*1.3),"parry_three_mastery_adds_30_percent")
+		_check(count==1,"parry_one_counter_per_attacker_"+enemy_id)
+	_check(SwordAbiCombatService._active_stacks(actor,"EFF314",session.state.round_number)==3,"parry_does_not_consume_mastery")
