@@ -281,7 +281,7 @@ func _axe_abi_coefficients_from_catalog() -> void:
 	_check(execute_matches,"ABI508:execute_bonus")
 	_check(is_equal_approx(float(Dictionary(defs["ABI508"]).get("execute_hp_threshold_fraction",0)),0.35),"ABI508:execute_threshold")
 	_check(int(Dictionary(defs["ABI512"]).get("max_targets",0))==1,"ABI512:one_target")
-	_check(bool(Dictionary(defs["ABI512"]).get("ignore_shield_auto_block",false)),"ABI512:shield_auto_bypass")
+	_check(bool(Dictionary(defs["ABI512"]).get("ignore_all_blocks",false)),"ABI512:manual_and_shield_block_bypass")
 	_check(int(Dictionary(defs["ABI516"]).get("max_targets",0))==5,"ABI516:five_targets")
 	var ctx := _pair("axe","dagger")
 	var state: CombatState = ctx["state"]
