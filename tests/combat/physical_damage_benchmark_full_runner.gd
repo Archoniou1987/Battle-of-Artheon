@@ -107,6 +107,13 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	var rounds_total := 0
 	var completed := 0
 	var total_damage := 0
+	var unattributed_total := 0
+	var ap_gained_total := 0
+	var ap_spent_total := 0
+	var idle_rounds := 0
+	var denied_conditions := 0
+	var denied_charges := 0
+	var cast_rejected := 0
 	for raw_id in abilities:
 		ability_tally[String(raw_id)]={"damage":0,"casts":0}
 	for battle_index in range(battles):
@@ -140,24 +147,38 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 				break
 			var round: CombatRound = session.orchestrator.begin_round()
 			var cooldowns: Dictionary = session.ability_scheduler.cooldowns_by_combatant.get(session.player_id,{})
+			var ap_before := actor.action_points
 			var decision := PhysicalDamageBenchmarkPolicy.choose(abilities,definitions,cooldowns,session.state.round_number,actor.action_points,actor.max_action_points,cursor)
 			var chosen := String(decision.get("id",""))
 			if not chosen.is_empty():
 				var definition: Dictionary = definitions.get(chosen,{})
 				var target_id := session.player_id if String(definition.get("target_team","")).to_upper()=="ALLY" else ArenaCombatSession.ENEMY_ID
 				var eligible := PhysicalDamageBenchmarkConditions.prime_previous_round(session.state,session.player_id,String(definition.get("trigger_previous_round","")))
+				if not eligible:
+					denied_conditions+=1
 				if eligible:
 					eligible = PhysicalDamageBenchmarkConditions.prime_charges(chosen,actor,dummy,effects,session.state.round_number)
+					if not eligible:
+						denied_charges+=1
 				if eligible:
 					var action: CombatEvent = session.ability_scheduler.cast_event(session.state,session.player_id,target_id,chosen)
 					if action!=null:
 						round.lock_action(action)
 						cursor=int(decision.get("cursor",cursor))
 						casts_this_battle[chosen]=int(casts_this_battle.get(chosen,0))+1
+					else:
+						cast_rejected+=1
+			else:
+				idle_rounds+=1
 			pipeline.lock_basic_attack(round,actor,dummy,["chest","chest"])
 			pipeline.lock_basic_attack(round,dummy,actor,["chest"])
 			session.orchestrator.resolve_locked_actions(round)
 			session.orchestrator.end_round()
+			var ap_delta := actor.action_points-ap_before
+			if ap_delta > 0:
+				ap_gained_total+=ap_delta
+			elif ap_delta < 0:
+				ap_spent_total-=ap_delta
 			if dummy.is_death_finalized():
 				ended=true
 				break
@@ -173,6 +194,7 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 		_tally_damage(attack_tally,int(mh.get("damage",0))+int(oh.get("damage",0)),
 			int(mh.get("attempts",0))+int(oh.get("attempts",0)))
 		total_damage += int(metrics.get("total_damage",0))
+		unattributed_total += int(metrics.get("unattributed_damage",0))
 		rounds_total += session.state.round_number
 		for id in abilities:
 			var key := String(id)
@@ -187,6 +209,14 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	ArenaCombatSession.training_dummy_clear_defaults=previous_clear
 	ArenaCombatSession.training_dummy_items=previous_items
 	if completed!=battles:
+		return {}
+	var classified_total := int(mh_tally["damage"])+int(oh_tally["damage"])
+	for value in ability_tally.values():
+		classified_total+=int(Dictionary(value).get("damage",0))
+	for value in effect_tally.values():
+		classified_total+=int(value)
+	if classified_total+unattributed_total!=total_damage:
+		push_error("Benchmark attribution mismatch: "+archetype+" total="+str(total_damage)+" classified="+str(classified_total)+" unattributed="+str(unattributed_total))
 		return {}
 	if dual_only and (int(mh_tally["attempts"]) == 0 or int(oh_tally["attempts"]) == 0):
 		push_error("Dual-wield benchmark did not record both hands: "+archetype)
@@ -205,6 +235,16 @@ func _measure_archetype(archetype: String, index: int, battles: int, armour: flo
 	if dual_only:
 		summary+="\nMH обычные атаки — %d всего / %d попыток / %.1f за попытку" % [int(mh_tally["damage"]),int(mh_tally["attempts"]),float(mh_tally["damage"])/float(maxi(1,int(mh_tally["attempts"])))]
 		summary+="\nOH обычные атаки — %d всего / %d попыток / %.1f за попытку" % [int(oh_tally["damage"]),int(oh_tally["attempts"]),float(oh_tally["damage"])/float(maxi(1,int(oh_tally["attempts"])))]
+	summary+="\nАУДИТ · общий урон=%d · классифицирован=%d · неатрибутирован=%d · доля=%.2f%%" % [total_damage,classified_total,unattributed_total,100.0*float(unattributed_total)/float(maxi(1,total_damage))]
+	summary+="\nAP · положительная дельта/бой=%.2f · отрицательная дельта/бой=%.2f (срезы по итогам раундов, не валовый оборот)" % [float(ap_gained_total)/float(battles),float(ap_spent_total)/float(battles)]
+	summary+="\nABI выбор · нет кандидата=%d · отказ условий=%d · отказ зарядов=%d · cast_event null=%d" % [idle_rounds,denied_conditions,denied_charges,cast_rejected]
+	for raw_id in abilities:
+		var key := String(raw_id)
+		var rec: Dictionary = ability_tally[key]
+		summary+="\nABI_DETAIL %s casts=%d total=%d avg=%.2f share=%.2f%%" % [key,int(rec["casts"]),int(rec["damage"]),float(rec["damage"])/float(maxi(1,int(rec["casts"]))),100.0*float(rec["damage"])/float(maxi(1,total_damage))]
+	for raw_eff in effect_tally.keys():
+		var key := String(raw_eff)
+		summary+="\nEFF_DETAIL %s ticks=%d total=%d share=%.2f%%" % [key,int(effect_ticks.get(key,0)),int(effect_tally[key]),100.0*float(effect_tally[key])/float(maxi(1,total_damage))]
 	summary+="\nСредний урон/раунд — %d" % roundi(float(total_damage)/float(maxi(1,rounds_total)))
 	summary+="\nСреднее число раундов — %.1f" % (float(rounds_total)/float(battles))
 	var effect_ids: Array[String] = []
