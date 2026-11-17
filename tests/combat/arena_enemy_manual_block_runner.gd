@@ -68,6 +68,19 @@ func _initialize() -> void:
 		_check(String(event.result.get("outcome",""))=="manual_block","npc_real_manual_block_outcome")
 		var lines := ArenaCombatLog.lines_for_round(arena.state.event_log,arena.state.round_number,arena.player_id,arena.ability_scheduler.definitions)
 		_check(" ".join(PackedStringArray(lines)).contains("ручной блок"),"npc_block_visible_in_arena_log")
+		# Guaranteed block crush on the protected head must be recorded
+		# separately from an unblocked hit or the ABI512 block bypass.
+		var crush := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,{
+			"zone":"head","damage_type":"slashing","raw_damage":10.0,"hit_already_resolved":true,
+			"axe_block_crush_bonus_pct":100.0,
+			"rolls":{"hit":1,"dodge":100,"auto_block":100,"block_crush":1,"crit":100,"damage":0.5}
+		})
+		arena.engine.resolve_event(crush)
+		arena.engine.resolve_pending_events()
+		_check(String(crush.result.get("outcome",""))=="connected","npc_head_crush_hit_connected")
+		_check(bool(crush.result.get("manual_block_crushed",false)),"npc_head_block_crushed_by_engine")
+		var crush_log := ArenaCombatLog.lines_for_round(arena.state.event_log,arena.state.round_number,arena.player_id,arena.ability_scheduler.definitions)
+		_check(" ".join(PackedStringArray(crush_log)).contains("ручной блок пробит"),"npc_head_block_crush_visible_in_journal")
 		var miss := arena.state.create_event(CombatEvent.Kind.ATTACK,arena.player_id,ArenaCombatSession.ENEMY_ID,{
 			"zone":_unprotected(first),
 			"damage_type":"slashing","raw_damage":10.0,"hit_already_resolved":true,
