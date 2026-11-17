@@ -41,6 +41,9 @@ func _run() -> void:
 
 func _check_archetype(archetype: String, index: int) -> bool:
 	var hero := CharacterState.new("BENCH_DIAG_"+archetype,archetype,LEVEL)
+	# Level 40 exists in the benchmark only; progression currently clamps at 20.
+	hero.progression.level = LEVEL
+	hero.level = LEVEL
 	for primary in ["PAR001","PAR002","PAR003","PAR004","PAR005","PAR006"]:
 		hero.progression.base_stats[primary]=90
 	var repository := ItemRepository.new()
