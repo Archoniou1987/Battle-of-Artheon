@@ -25,7 +25,9 @@ static func format_archetype(archetype: String, battles: int, attacks: Dictionar
 		var target_count := maxi(1,int(def.get("max_targets",1)))
 		var aoe_note := " (×%d)" % target_count if target_count > 1 else ""
 		var ability_label := "%s%s" % [id,aoe_note]
-		if bool(tally.get("no_damage",false)):
+		if int(tally.get("casts",0)) == 0:
+			lines.append("%s — нет применений" % ability_label)
+		elif bool(tally.get("no_damage",false)):
 			lines.append("%s — без урона" % ability_label)
 		else:
 			lines.append("%s — %s" % [ability_label,_format_average(float(tally.get("damage",0)),int(tally.get("casts",0)))])
