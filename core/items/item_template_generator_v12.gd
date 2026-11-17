@@ -389,9 +389,8 @@ func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_f
 		return []
 	var base := reference_weapon_damage(level)
 	var avg := base*float(WEAPON_FACTOR.get(family,1.0))*damage_quality_factor
-	# AXE_DEF balance is archetype-specific: do not weaken other axe families.
-	if String(spec.get("id","")) == "AXE_DEF":
-		avg *= 0.90
+	# Canonical per-archetype balance, stored only in v1.2 item rules.
+	avg *= float(spec.get("damage_balance_factor",1.0))
 	if slot == "2H":
 		avg *= 1.65
 	# No OH-only item variant or generation-time damage penalty.
