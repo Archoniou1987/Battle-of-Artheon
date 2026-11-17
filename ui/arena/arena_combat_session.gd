@@ -188,6 +188,9 @@ func effect_view(is_player: bool) -> Dictionary:
 	return {"buffs":beneficial,"debuffs":harmful}
 
 func player_attack_count() -> int:
+	# After end-round death finalization, the previous focus may no longer
+	# exist in the group. Repair focus before deriving the next attack count.
+	focused_enemy_id()
 	return _fighter_attack_count(player_id)
 
 func _fighter_attack_count(fighter_id: String) -> int:
