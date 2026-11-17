@@ -176,7 +176,7 @@ func _verify() -> void:
 			var hits := _attacks(shield,"ABI512")
 			_check(hits.size()==1,"shieldbreaker_one_attack")
 			if not hits.is_empty():
-				_check(bool(hits[0].payload.get("skip_auto_block",false)),"shieldbreaker_skips_auto_block_only")
+				_check(not bool(hits[0].payload.get("uses_physical_block",true)),"shieldbreaker_bypasses_both_block_types")
 	var aoe := _session("2H_AXE",202611172)
 	if aoe != null:
 		for i in range(4):
