@@ -7,6 +7,7 @@ on:
       - feature/character-inventory-ui-v1
     paths:
       - .github/workflows/physical-damage-benchmark.yml
+      - tests/combat/physical_damage_benchmark_full_runner.gd
 
 permissions:
   contents: read
