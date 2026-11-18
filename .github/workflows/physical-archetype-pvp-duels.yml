@@ -30,9 +30,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { start: 0, end: 35, smoke_end: 1 }
-          - { start: 35, end: 70, smoke_end: 36 }
-          - { start: 70, end: 105, smoke_end: 71 }
+          - { start: 0, end: 31, smoke_end: 1 }
+          - { start: 31, end: 61, smoke_end: 32 }
+          - { start: 61, end: 91, smoke_end: 62 }
     steps:
       - uses: actions/checkout@v4
       - uses: chickensoft-games/setup-godot@v2
@@ -67,7 +67,7 @@ jobs:
           pattern: physical-archetype-pvp-duels-*
           merge-multiple: true
           path: test-results/physical-archetype-duels
-      - name: Validate 105 pairs and build combined statistics
+      - name: Validate 91 pairs and build combined statistics
         run: python3 tools/aggregate_physical_duels.py test-results/physical-archetype-duels test-results/physical-archetype-duels
       - name: Publish ranking, matchup matrix and full pair statistics
         uses: actions/upload-artifact@v4
