@@ -8,6 +8,7 @@ on:
     paths:
       - tests/combat/physical_diagnostic_duels.gd
       - .github/workflows/physical-diagnostic-duels.yml
+      - tools/analyze_physical_diagnostic_duels.py
 
 permissions:
   contents: read
@@ -27,6 +28,8 @@ jobs:
         run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
       - name: Run 2 detailed PvP duels using real Combat Engine
         run: GODOT_TEST_TIMEOUT=900 bash tools/run_godot_check.sh tests/combat/physical_diagnostic_duels.gd
+      - name: Explain all attacks, blocks, armour, heals and ABI round by round
+        run: python3 tools/analyze_physical_diagnostic_duels.py
       - name: Archive full round-by-round JSON traces
         if: always()
         uses: actions/upload-artifact@v4
