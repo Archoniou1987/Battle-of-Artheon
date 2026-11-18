@@ -6,6 +6,7 @@ const MAGIC_DAMAGE_TYPES := ["fire","water","frost","air","earth","nature","dark
 
 ## Shared physical ABI defence policy. Ordinary attacks use normal rules.
 const PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER := 0.5
+const DAGGER_SHIELD_BLOCK_DAMAGE_MULTIPLIER := 0.75
 const PHYSICAL_ABI_DODGE_CHANCE_MULTIPLIER := 0.5
 
 static func is_physical_abi_attack(payload: Dictionary) -> bool:
