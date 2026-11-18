@@ -138,7 +138,7 @@
         "PAR001",
         "PAR003"
       ],
-      "damage_balance_factor": 0.419904
+      "damage_balance_factor": 0.42830208
     },
     {
       "id": "SWORD_DODGE",
@@ -294,7 +294,7 @@
     },
     {
       "id": "AXE_DEF",
-      "damage_balance_factor": 0.19970803125,
+      "damage_balance_factor": 0.1697518265625,
       "abilities": [
         "ABI501",
         "ABI502",
@@ -504,7 +504,7 @@
         "ABI607",
         "ABI608"
       ],
-      "damage_balance_factor": 0.88704,
+      "damage_balance_factor": 0.931392,
       "abi_damage_balance_factor": 1.1
     },
     {
