@@ -137,7 +137,8 @@
       "requirements": [
         "PAR001",
         "PAR003"
-      ]
+      ],
+      "damage_balance_factor": 0.9
     },
     {
       "id": "SWORD_DODGE",
@@ -222,7 +223,8 @@
       "requirements": [
         "PAR002",
         "PAR006"
-      ]
+      ],
+      "damage_balance_factor": 1.15
     },
     {
       "id": "DAGGER_ATTACK",
@@ -245,7 +247,8 @@
       "requirements": [
         "PAR002",
         "PAR003"
-      ]
+      ],
+      "damage_balance_factor": 1.15
     },
     {
       "id": "DAGGER_MAGIC",
@@ -285,11 +288,12 @@
       "requirements": [
         "PAR002",
         "PAR003"
-      ]
+      ],
+      "damage_balance_factor": 1.15
     },
     {
       "id": "AXE_DEF",
-      "damage_balance_factor": 0.90,
+      "damage_balance_factor": 0.765,
       "abilities": [
         "ABI501",
         "ABI502",
@@ -383,7 +387,8 @@
       "requirements": [
         "PAR001",
         "PAR006"
-      ]
+      ],
+      "damage_balance_factor": 0.9
     },
     {
       "id": "HAMMER_ATTACK",
@@ -428,7 +433,7 @@
     },
     {
       "id": "2H_SWORD",
-      "damage_balance_factor": 0.80,
+      "damage_balance_factor": 0.8,
       "name": "2H меч",
       "kind": "weapon",
       "family": "sword",
@@ -520,7 +525,8 @@
         "ABI606",
         "ABI607",
         "ABI608"
-      ]
+      ],
+      "damage_balance_factor": 1.1
     },
     {
       "id": "STAFF_SUPPORT",
