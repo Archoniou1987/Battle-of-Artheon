@@ -9,7 +9,7 @@ from collections import defaultdict
 ARCHETYPES = [
     "SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT",
     "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN",
-    "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "2H_AXE",
+    "AXE_DEF", "AXE_ATTACK", "AXE_CRUSHER", "2H_AXE",
     "HAMMER_DEF", "2H_HAMMER",
     "2H_SPEAR", "2H_SWORD",
 ]
