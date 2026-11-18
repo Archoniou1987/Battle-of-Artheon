@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/physical-archetype-pvp-duels.yml
       - tests/combat/physical_archetype_duel_runner.gd
+      - tools/aggregate_physical_duels.py
 
 permissions:
   contents: read
@@ -47,4 +48,29 @@ jobs:
           name: physical-archetype-pvp-duels-${{ matrix.start }}-${{ matrix.end }}
           path: test-results/physical-archetype-duels/*.csv
           if-no-files-found: warn
+          retention-days: 30
+
+  aggregate:
+    name: PvP ranking and matchup matrix
+    needs: duel-audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all three duel CSV reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: physical-archetype-pvp-duels-*
+          merge-multiple: true
+          path: test-results/physical-archetype-duels
+      - name: Validate 105 pairs and build combined statistics
+        run: python3 tools/aggregate_physical_duels.py test-results/physical-archetype-duels test-results/physical-archetype-duels
+      - name: Publish ranking, matchup matrix and full pair statistics
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-archetype-pvp-combined-statistics
+          path: |
+            test-results/physical-archetype-duels/pvp_rankings.csv
+            test-results/physical-archetype-duels/pvp_matchup_matrix.csv
+            test-results/physical-archetype-duels/pvp_pairs.csv
+            test-results/physical-archetype-duels/pvp_summary.json
           retention-days: 30
