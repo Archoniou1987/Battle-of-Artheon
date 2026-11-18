@@ -154,7 +154,15 @@ func ready_for_generation() -> bool:
 			total += float(weights[key])
 		if absf(total - 100.0) > 0.001:
 			return false
-	return archetypes().size() == 45
+	# Archetype catalogue length changes when a duplicate is retired.
+	# Validate unique IDs and required configuration instead of fixed count.
+	var ids: Dictionary = {}
+	for raw in archetypes():
+		var id := String(Dictionary(raw).get("id",""))
+		if id.is_empty() or ids.has(id):
+			return false
+		ids[id] = true
+	return not ids.is_empty()
 
 func archetypes() -> Array:
 	var result: Array = []
