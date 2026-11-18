@@ -224,7 +224,7 @@
         "PAR002",
         "PAR006"
       ],
-      "damage_balance_factor": 0.991875
+      "damage_balance_factor": 1.19025
     },
     {
       "id": "DAGGER_ATTACK",
