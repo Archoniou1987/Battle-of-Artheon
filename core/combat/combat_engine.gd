@@ -333,6 +333,14 @@ func _resolve_attack(event: CombatEvent) -> void:
 	if not bool(event.payload.get("hit_already_resolved", false)) and not CombatMath.roll_success(clampf(hit_chance,0.0,100.0),hit_roll):
 		event.set_result("outcome", "magic_miss" if uses_magic_hit else "miss"); return
 	var is_physical_abi := CombatDamagePayload.is_physical_abi_attack(event.payload)
+	# Apply the established ABI 50% blocked-damage policy to ordinary dagger hits.
+	# Identify the actual attacking MH/OH weapon, not all piercing damage.
+	var is_dagger_weapon_attack := false
+	if is_weapon_attack and not uses_magic_hit:
+		var weapons: Array = attacker.combat_stats.get("weapon_profiles", [])
+		var weapon_index := int(event.payload.get("weapon_index", -1))
+		if weapon_index >= 0 and weapon_index < weapons.size():
+			is_dagger_weapon_attack = String(Dictionary(weapons[weapon_index]).get("weapon_class", "")).to_lower() == "dagger"
 	var partial_abi_block := ""
 	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not bool(event.payload.get("skip_dodge_block",false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
@@ -358,10 +366,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 				_trigger_manual_block_effects(event, defender, rolls)
 				SwordAbiCombatService.on_block(self,event,defender)
 				HammerAbiCombatService.on_block(self,event,defender)
-				if not is_physical_abi:
+				if not (is_physical_abi or is_dagger_weapon_attack):
 					return
 				partial_abi_block = "manual_block"
-				# A partial ABI block still resolves the hit and its on-hit effects.
+				# ABI or ordinary dagger hit resolves through 50% block and normal armour.
 
 		if partial_abi_block.is_empty():
 			var auto_block := CombatModifierService.block_chance(defender, state.round_number)
@@ -376,7 +384,7 @@ func _resolve_attack(event: CombatEvent) -> void:
 					event.set_result("outcome", "auto_block")
 					SwordAbiCombatService.on_block(self,event,defender)
 					HammerAbiCombatService.on_block(self,event,defender)
-					if not is_physical_abi:
+					if not (is_physical_abi or is_dagger_weapon_attack):
 						return
 					partial_abi_block = "auto_block"
 
