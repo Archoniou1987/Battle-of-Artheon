@@ -12,6 +12,9 @@ on:
       - data/items/item_generator_v12_rules.json
       - data/abilities/catalog.json
       - core/items/item_v12_instance_factory.gd
+      - core/items/item_template_generator_v12.gd
+      - tests/items/item_template_generator_v12_runner.gd
+      - tests/items/physical_weapon_v12_factory_runner.gd
       - core/items/equipment_builder.gd
       - core/abilities/hammer_abi_combat_service.gd
 
