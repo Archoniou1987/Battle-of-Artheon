@@ -273,7 +273,7 @@ func _run() -> void:
 			"level":LEVEL,"pair_index":pair_index,"battle_index":0,
 			"seed":BASE_SEED+pair_index*100003,"builds":{"A":BUILD_PROFILES["AXE_DEF"],"B":BUILD_PROFILES[opponent]},
 			"result":result,"totals":totals,"rounds":trace_rows.duplicate(true)}
-		var filename := "res://test-results/physical-diagnostic/axe_def_vs_"+opponent.to_lower()+".json"
+		var filename: String = "res://test-results/physical-diagnostic/axe_def_vs_"+String(opponent).to_lower()+".json"
 		var file := FileAccess.open(ProjectSettings.globalize_path(filename),FileAccess.WRITE)
 		if file==null:
 			failures.append("write_"+opponent)
