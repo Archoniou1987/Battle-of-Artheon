@@ -80,6 +80,9 @@ func _runtime(prepared: Dictionary, archetype: String, armour_ratings: Dictionar
 	if actor==null:
 		return null
 	PhysicalDamageBenchmarkFixture.prepare_actor(actor,archetype,prepared["weapon"])
+	# Fixture resets all fighters to 2000 HP; PvP profile must win over fixture.
+	actor.max_hp = int(build["hp"])
+	actor.hp = actor.max_hp
 	# The build table is the sole PvP role owner. It does not replace
 	# offensive CRIT/PEN specialisation or canonical ABI/EFF definitions.
 	var armour := float(armour_ratings.get(build["armour"],0.0))
