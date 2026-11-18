@@ -121,6 +121,7 @@ static func build(character:CharacterState, repository:ItemRepository, base:Dict
 		"equipment_slots":character.equipment.slots.duplicate(true),
 		"main_hand_instance_id":String(main_hand_id) if main_hand_id!=null else "",
 		"weapon_class":weapon_class,
+		"has_shield":bool(combatant.combat_stats.get("has_equipped_shield",false)),
 		"can_manual_block":int(primary["PAR073"]) > 0,
 		"can_auto_block":not is_bow,
 		"abilities":combatant.combat_stats["abilities"].duplicate(true)
