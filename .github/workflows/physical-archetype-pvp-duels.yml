@@ -9,6 +9,11 @@ on:
       - .github/workflows/physical-archetype-pvp-duels.yml
       - tests/combat/physical_archetype_duel_runner.gd
       - tools/aggregate_physical_duels.py
+      - data/items/item_generator_v12_rules.json
+      - data/abilities/catalog.json
+      - core/items/item_v12_instance_factory.gd
+      - core/items/equipment_builder.gd
+      - core/abilities/hammer_abi_combat_service.gd
 
 permissions:
   contents: read
