@@ -4,7 +4,14 @@ extends SceneTree
 ## Test only: canonical CombatEngine, actual ABI/EFF/AP/CD and real item rolls.
 ## No artificial charge priming, previous-round trigger markers, or damage buffs.
 const LEVEL := 40
-const HP := 2000
+const DEF_HP := 2000
+const ATTACK_HP := 1000
+const DEF_ARMOUR_PCT := 45.0
+const ATTACK_ARMOUR_PCT := 20.0
+const BASE_DODGE_PCT := 5.0
+const DEF_BLOCK_PCT := 10.0
+const ATTACK_BLOCK_PCT := 0.0
+const DEF_ARCHETYPES := ["SWORD_DEF","DAGGER_DEF","AXE_DEF","HAMMER_DEF"]
 const DEFAULT_BATTLES := 50
 const MAX_ROUNDS := 300
 const BASE_SEED := 202611180
@@ -16,12 +23,12 @@ var failures: Array[String] = []
 func _initialize() -> void:
 	call_deferred("_run")
 
-func _armour_rating() -> float:
+func _armour_rating(target_percent: float) -> float:
 	var low := 0.0
 	var high := 10000.0
 	for _step in range(35):
 		var mid := (low+high)*0.5
-		if CombatRatingCurves.diminishing(CombatRatingCurves.armour_raw_pct(mid,LEVEL),"armour") < 20.0:
+		if CombatRatingCurves.diminishing(CombatRatingCurves.armour_raw_pct(mid,LEVEL),"armour") < target_percent:
 			low=mid
 		else:
 			high=mid
@@ -54,24 +61,29 @@ func _prepare(character_id: String, archetype: String, index: int) -> Dictionary
 	return {"character":character,"repository":repository,"weapon":weapon,
 		"abilities":Array(weapon.get("abilities",[])).duplicate()}
 
-func _runtime(prepared: Dictionary, archetype: String, armour: float) -> CombatantState:
-	var actor := CharacterCombatBuilder.build(prepared["character"],prepared["repository"],{"health":HP})
+func _runtime(prepared: Dictionary, archetype: String, defence_armour: float, attack_armour: float) -> CombatantState:
+	var is_def := DEF_ARCHETYPES.has(archetype)
+	var actor := CharacterCombatBuilder.build(prepared["character"],prepared["repository"],{"health":DEF_HP if is_def else ATTACK_HP})
 	if actor==null:
 		return null
 	PhysicalDamageBenchmarkFixture.prepare_actor(actor,archetype,prepared["weapon"])
-	# The armour baseline is controlled, so equipment item rolls cannot
-	# quietly give one opponent a stronger armour rating.
+	# Explicit PvP role baselines. Offensive CRIT/PEN bonuses and all ABI
+	# definitions remain unchanged; only HP, armour, dodge, block are specified.
+	var armour := defence_armour if is_def else attack_armour
 	for zone in DEFENCE_ZONES:
 		actor.armour[zone]={"slashing":armour,"piercing":armour,"chopping":armour,"blunt":armour}
-	actor.combat_stats["manual_block_zones"]=[]
+	actor.combat_stats["dodge_rating_percent"]=BASE_DODGE_PCT
+	actor.combat_stats["shield_auto_block_rating_percent"]=DEF_BLOCK_PCT if is_def else ATTACK_BLOCK_PCT
+	actor.combat_loadout["can_auto_block"]=is_def
+	# Respect the existing PAR073 manual-block capacity and actual shield
+	# availability. A dual-wield dagger does not acquire a virtual shield.
 	actor.combat_loadout["can_manual_block"]=SHIELD_ARCHETYPES.has(archetype)
-	actor.combat_loadout["can_auto_block"]=SHIELD_ARCHETYPES.has(archetype)
 	return actor
 
 func _duel(left: Dictionary, right: Dictionary, left_name: String, right_name: String,
-		pair_index: int, battle_index: int, armour: float) -> Dictionary:
-	var a := _runtime(left,left_name,armour)
-	var b := _runtime(right,right_name,armour)
+		pair_index: int, battle_index: int, defence_armour: float, attack_armour: float) -> Dictionary:
+	var a := _runtime(left,left_name,defence_armour,attack_armour)
+	var b := _runtime(right,right_name,defence_armour,attack_armour)
 	if a==null or b==null:
 		return {"outcome":"setup_failed"}
 	var state := CombatState.new()
@@ -109,10 +121,14 @@ func _duel(left: Dictionary, right: Dictionary, left_name: String, right_name: S
 		for actor in order:
 			var fighter: CombatantState = actor
 			var target: CombatantState = b if fighter==a else a
-			# Changing the manual block zone each round prevents a deterministic
-			# hard counter to one static hit zone. Only shield users can block.
+			# Existing PAR073, not this benchmark, determines the number of
+			# manual block zones. Vary only the selected zones across rounds.
 			if fighter.can_manual_block():
-				fighter.combat_stats["manual_block_zones"]=[DEFENCE_ZONES[(turn+pair_index+battle_index)%DEFENCE_ZONES.size()]]
+				var zones_to_block: Array[String] = []
+				var block_count := mini(DEFENCE_ZONES.size(),CombatModifierService.manual_block_zone_capacity(fighter))
+				for block_index in range(block_count):
+					zones_to_block.append(DEFENCE_ZONES[(turn+pair_index+battle_index+block_index)%DEFENCE_ZONES.size()])
+				fighter.combat_stats["manual_block_zones"]=zones_to_block
 			var actor_id := fighter.combatant_id
 			var decision := PhysicalDamageBenchmarkPolicy.choose(
 				loadouts[actor_id],scheduler.definitions,
@@ -161,7 +177,8 @@ func _run() -> void:
 		push_error("Invalid physical duel benchmark arguments")
 		quit(1)
 		return
-	var armour := _armour_rating()
+	var defence_armour := _armour_rating(DEF_ARMOUR_PCT)
+	var attack_armour := _armour_rating(ATTACK_ARMOUR_PCT)
 	var pair_index := 0
 	var finished_pairs := 0
 	var completed_duels := 0
@@ -189,7 +206,7 @@ func _run() -> void:
 			var casts_a := 0
 			var casts_b := 0
 			for k in range(battles):
-				var result := _duel(left,right,name_a,name_b,pair_index,k,armour)
+				var result := _duel(left,right,name_a,name_b,pair_index,k,defence_armour,attack_armour)
 				var outcome := String(result.get("outcome","setup_failed"))
 				if outcome=="setup_failed":
 					failures.append("combat_setup_"+name_a+"_"+name_b)
@@ -216,6 +233,7 @@ func _run() -> void:
 			csv+=row+"\n"
 			print("PHYSICAL_DUEL_PAIR=",row)
 			pair_index+=1
+	print("PHYSICAL_DUEL_RULES=DEF 45pct armour 10pct auto-block 5pct dodge 2000HP; ATTACK 20pct armour 0pct auto-block 5pct dodge 1000HP; canonical attack/block counts")
 	var output := REPORT_PATH+"/duels_%03d_%03d.csv" % [start_pair,end_pair]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REPORT_PATH))
 	var file := FileAccess.open(ProjectSettings.globalize_path(output),FileAccess.WRITE)
