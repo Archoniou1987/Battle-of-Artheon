@@ -341,6 +341,9 @@ func _resolve_attack(event: CombatEvent) -> void:
 		var weapon_index := int(event.payload.get("weapon_index", -1))
 		if weapon_index >= 0 and weapon_index < weapons.size():
 			is_dagger_weapon_attack = String(Dictionary(weapons[weapon_index]).get("weapon_class", "")).to_lower() == "dagger"
+	# All physical ABI retain their usual 50% blocked damage, except dagger
+	# ABI against an actually equipped shield. Basic dagger strikes share this rule.
+	var dagger_shield_pierce := bool(defender.combat_loadout.get("has_shield", false)) and (is_dagger_weapon_attack or (is_physical_abi and String(attacker.combat_loadout.get("weapon_class","")).to_lower()=="dagger"))
 	var partial_abi_block := ""
 	var active_defence_available := not uses_magic_hit and not bool(event.payload.get("is_counterattack_abi", false)) and not bool(event.payload.get("skip_dodge_block",false)) and not CombatTempoService.is_stunned(defender, state.round_number) and not _effect_flag(defender, "active_defence_locked")
 	event.set_result("active_defence_available",active_defence_available)
@@ -461,9 +464,10 @@ func _resolve_attack(event: CombatEvent) -> void:
 	event.set_result("dagger_breach_stacks",dagger_breach_stacks)
 	var after_armour := raw_damage * (1.0 - clampf(reduction, 0.0, 1.0))
 	if not partial_abi_block.is_empty():
-		after_armour *= CombatDamagePayload.PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER
+		var block_multiplier := CombatDamagePayload.DAGGER_SHIELD_BLOCK_DAMAGE_MULTIPLIER if dagger_shield_pierce else CombatDamagePayload.PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER
+		after_armour *= block_multiplier
 		event.set_result("partial_block",partial_abi_block)
-		event.set_result("block_damage_multiplier",CombatDamagePayload.PHYSICAL_ABI_BLOCK_DAMAGE_MULTIPLIER)
+		event.set_result("block_damage_multiplier",block_multiplier)
 	var damage_event := state.create_event(CombatEvent.Kind.DAMAGE, event.source_id, event.target_id, {"amount": after_armour, "damage_type": damage_type, "zone": zone, "source": "attack"}, event.event_id)
 	state.queue_event(damage_event)
 	event.set_result("outcome", "connected"); event.set_result("critical", is_crit); event.set_result("crit_chance",crit); event.set_result("crit_roll",int(rolls.get("crit", 100))); event.set_result("raw_damage", raw_damage); event.set_result("base_armour",base_armour); event.set_result("armour_penetration_flat",armour_penetration_flat); event.set_result("armour_penetration_percent",armour_penetration_percent); event.set_result("typed_armour_penetration_percent",typed_armour_penetration_percent); event.set_result("effective_armour",effective_armour); event.set_result("armour_raw_percent",raw_armour_pct); event.set_result("armour_after_breach_percent",after_breach_pct); event.set_result("armour_before_dr_percent",armour_before_dr); event.set_result("armour_reduction",reduction); event.set_result("after_armour_damage",after_armour); event.set_result("damage_event_id", damage_event.event_id)
