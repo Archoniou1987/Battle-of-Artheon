@@ -138,7 +138,7 @@
         "PAR001",
         "PAR003"
       ],
-      "damage_balance_factor": 0.9
+      "damage_balance_factor": 0.81
     },
     {
       "id": "SWORD_DODGE",
@@ -224,7 +224,7 @@
         "PAR002",
         "PAR006"
       ],
-      "damage_balance_factor": 1.15
+      "damage_balance_factor": 1.3225
     },
     {
       "id": "DAGGER_ATTACK",
@@ -248,7 +248,7 @@
         "PAR002",
         "PAR003"
       ],
-      "damage_balance_factor": 1.15
+      "damage_balance_factor": 1.3225
     },
     {
       "id": "DAGGER_MAGIC",
@@ -289,11 +289,11 @@
         "PAR002",
         "PAR003"
       ],
-      "damage_balance_factor": 1.15
+      "damage_balance_factor": 1.3225
     },
     {
       "id": "AXE_DEF",
-      "damage_balance_factor": 0.765,
+      "damage_balance_factor": 0.65025,
       "abilities": [
         "ABI501",
         "ABI502",
@@ -319,7 +319,7 @@
     },
     {
       "id": "AXE_ATTACK",
-      "damage_balance_factor": 0.78,
+      "damage_balance_factor": 0.819,
       "abilities": [
         "ABI505",
         "ABI506",
@@ -344,7 +344,7 @@
     },
     {
       "id": "AXE_SHIELD",
-      "damage_balance_factor": 0.91,
+      "damage_balance_factor": 0.9555,
       "abilities": [
         "ABI509",
         "ABI510",
@@ -388,7 +388,7 @@
         "PAR001",
         "PAR006"
       ],
-      "damage_balance_factor": 0.9
+      "damage_balance_factor": 0.81
     },
     {
       "id": "HAMMER_MAGIC",
