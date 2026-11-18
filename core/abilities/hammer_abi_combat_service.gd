@@ -119,7 +119,8 @@ static func _damage(source: CombatantState, profile: Dictionary, abi: String, mu
 	var weapons: Array = source.combat_stats.get("weapon_profiles",[])
 	var two_handed := not weapons.is_empty() and bool(Dictionary(weapons[0]).get("two_handed",false))
 	var ap_bonus := AttackPowerService.damage_bonus(rating,"main_hand",two_handed)
-	return maxf(0.0,(base+AbilityCatalog.number(abi,"attack_power_coefficient")*ap_bonus)*multiplier)
+	var item_balance_factor := maxf(0.0,float(profile.get("abi_damage_balance_factor",1.0)))
+	return maxf(0.0,(base+AbilityCatalog.number(abi,"attack_power_coefficient")*ap_bonus)*multiplier*item_balance_factor)
 
 static func _attack(engine: CombatEngine, action: CombatEvent, target_id: String, profile: Dictionary, damage: float, extras: Dictionary = {}) -> int:
 	var component := {"damage_type":"blunt","zone":String(action.payload.get("zone","chest"))}
