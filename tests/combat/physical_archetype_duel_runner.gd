@@ -12,7 +12,7 @@ const BUILD_PROFILES := {
 	"DAGGER_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
 	"AXE_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
 	"HAMMER_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
-	"SWORD_DODGE": {"armour":30.0,"block":0.0,"dodge":15.0,"hp":1400},
+	"SWORD_DODGE": {"armour":20.0,"block":0.0,"dodge":40.0,"hp":1400},
 	"SWORD_CRIT": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
 	"2H_SWORD": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
 	"DAGGER_ATTACK": {"armour":20.0,"block":0.0,"dodge":10.0,"hp":1100},
