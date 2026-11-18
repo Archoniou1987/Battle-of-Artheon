@@ -391,30 +391,6 @@
       "damage_balance_factor": 0.9
     },
     {
-      "id": "HAMMER_ATTACK",
-      "abilities": [
-        "ABI605",
-        "ABI606",
-        "ABI607",
-        "ABI608"
-      ],
-      "name": "Булава · атакующая двуручная",
-      "kind": "weapon",
-      "family": "hammer",
-      "slot": "2H",
-      "weights": {
-        "hp": 30,
-        "attack": 35,
-        "crit": 15,
-        "crit_damage": 15,
-        "anti_dodge": 5
-      },
-      "requirements": [
-        "PAR001",
-        "PAR006"
-      ]
-    },
-    {
       "id": "HAMMER_MAGIC",
       "name": "Молот · магический",
       "kind": "weapon",
@@ -506,7 +482,7 @@
     },
     {
       "id": "2H_HAMMER",
-      "name": "Двуручная булава · базовый шаблон",
+      "name": "2H молот · атакующий",
       "kind": "weapon",
       "family": "hammer",
       "slot": "2H",
