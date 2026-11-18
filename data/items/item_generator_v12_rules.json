@@ -343,7 +343,7 @@
       ]
     },
     {
-      "id": "AXE_SHIELD",
+      "id": "AXE_CRUSHER",
       "damage_balance_factor": 0.9555,
       "abilities": [
         "ABI509",
@@ -351,7 +351,7 @@
         "ABI511",
         "ABI512"
       ],
-      "name": "Топор · щитолом",
+      "name": "Топор · Crusher",
       "kind": "weapon",
       "family": "axe",
       "slot": "2H",
