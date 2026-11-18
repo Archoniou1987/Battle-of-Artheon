@@ -1,7 +1,12 @@
-name: Physical Damage Benchmark (15 x 1000)
+name: Physical Damage Benchmark (14 x 1000)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - .github/workflows/physical-damage-benchmark.yml
 
 permissions:
   contents: read
@@ -23,7 +28,7 @@ jobs:
           include-templates: false
       - name: Import project and compile Godot scripts
         run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
-      - name: Run 1000 real fights per physical archetype
+      - name: Run 1000 real fights per each of 14 physical archetypes
         run: GODOT_TEST_TIMEOUT=10200 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --battles=1000
       - name: Upload damage report and execution log
         if: always()
