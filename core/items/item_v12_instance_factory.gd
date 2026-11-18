@@ -10,7 +10,7 @@ const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "2H_AXE"]
 const HAMMER_ARCHETYPES := ["HAMMER_DEF", "HAMMER_ATTACK", "2H_HAMMER"]
 const SPEAR_ARCHETYPES := ["2H_SPEAR"]
 const TWO_HAND_ARCHETYPES := ["2H_SPEAR","2H_SWORD","AXE_ATTACK","AXE_SHIELD","2H_AXE","HAMMER_ATTACK","2H_HAMMER"]
-const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "2H_AXE", "HAMMER_DEF", "HAMMER_ATTACK", "2H_HAMMER", "2H_SPEAR", "2H_SWORD"]
+const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_SHIELD", "2H_AXE", "HAMMER_DEF", "2H_HAMMER", "2H_SPEAR", "2H_SWORD"]
 const ACCEPTED_QUALITIES := ["white", "green", "blue", "purple"]
 
 static func generate_sword(archetype_id: String, level: int, quality: String, seed_value: int) -> Dictionary:
@@ -164,7 +164,7 @@ static func grant_generated_row(character: CharacterState, repository: ItemRepos
 ## The item archetype is the only owner of its ABI references.
 ## OH retains these IDs; EquipmentAbilityLoadout activates only MH.
 ## Balance factor belongs to the canonical archetype rule, not to ABI catalog.
-## Shared ABI605-608 remain unmodified for HAMMER_ATTACK.
+## Shared ABI605-608 stay canonical; HAMMER_ATTACK remains legacy-only.
 static func _physical_weapon_abi_damage_factor(archetype_id: String) -> float:
 	if not FileAccess.file_exists(ItemTemplateGeneratorV12.RULE_PATH):
 		return 1.0
