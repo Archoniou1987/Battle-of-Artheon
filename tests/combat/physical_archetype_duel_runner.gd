@@ -4,14 +4,26 @@ extends SceneTree
 ## Test only: canonical CombatEngine, actual ABI/EFF/AP/CD and real item rolls.
 ## No artificial charge priming, previous-round trigger markers, or damage buffs.
 const LEVEL := 40
-const DEF_HP := 2000
-const ATTACK_HP := 1000
-const DEF_ARMOUR_PCT := 45.0
-const ATTACK_ARMOUR_PCT := 20.0
-const BASE_DODGE_PCT := 5.0
-const DEF_BLOCK_PCT := 10.0
-const ATTACK_BLOCK_PCT := 0.0
-const DEF_ARCHETYPES := ["SWORD_DEF","DAGGER_DEF","AXE_DEF","HAMMER_DEF"]
+## Synthetic duel builds, not permanent character statistics.
+## DEF and pure-attack endpoints are explicit; hybrids interpolate by role.
+## Existing attack counts, manual block-zone limits, ABI and EFF remain canonical.
+const BUILD_PROFILES := {
+	"SWORD_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
+	"DAGGER_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
+	"AXE_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
+	"HAMMER_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
+	"SWORD_DODGE": {"armour":30.0,"block":0.0,"dodge":15.0,"hp":1400},
+	"SWORD_CRIT": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
+	"2H_SWORD": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
+	"DAGGER_ATTACK": {"armour":20.0,"block":0.0,"dodge":10.0,"hp":1100},
+	"DAGGER_PEN": {"armour":25.0,"block":0.0,"dodge":10.0,"hp":1200},
+	"AXE_ATTACK": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
+	"AXE_SHIELD": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1300},
+	"2H_AXE": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
+	"HAMMER_ATTACK": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1400},
+	"2H_HAMMER": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1400},
+	"2H_SPEAR": {"armour":25.0,"block":0.0,"dodge":10.0,"hp":1200}
+}
 const DEFAULT_BATTLES := 50
 const MAX_ROUNDS := 300
 const BASE_SEED := 202611180
@@ -61,29 +73,32 @@ func _prepare(character_id: String, archetype: String, index: int) -> Dictionary
 	return {"character":character,"repository":repository,"weapon":weapon,
 		"abilities":Array(weapon.get("abilities",[])).duplicate()}
 
-func _runtime(prepared: Dictionary, archetype: String, defence_armour: float, attack_armour: float) -> CombatantState:
-	var is_def := DEF_ARCHETYPES.has(archetype)
-	var actor := CharacterCombatBuilder.build(prepared["character"],prepared["repository"],{"health":DEF_HP if is_def else ATTACK_HP})
+func _runtime(prepared: Dictionary, archetype: String, armour_ratings: Dictionary) -> CombatantState:
+	var build: Dictionary = BUILD_PROFILES.get(archetype,{})
+	if build.is_empty():
+		return null
+	var actor := CharacterCombatBuilder.build(prepared["character"],prepared["repository"],{"health":int(build["hp"])})
 	if actor==null:
 		return null
 	PhysicalDamageBenchmarkFixture.prepare_actor(actor,archetype,prepared["weapon"])
-	# Explicit PvP role baselines. Offensive CRIT/PEN bonuses and all ABI
-	# definitions remain unchanged; only HP, armour, dodge, block are specified.
-	var armour := defence_armour if is_def else attack_armour
+	# The build table is the sole PvP role owner. It does not replace
+	# offensive CRIT/PEN specialisation or canonical ABI/EFF definitions.
+	var armour := float(armour_ratings.get(build["armour"],0.0))
 	for zone in DEFENCE_ZONES:
 		actor.armour[zone]={"slashing":armour,"piercing":armour,"chopping":armour,"blunt":armour}
-	actor.combat_stats["dodge_rating_percent"]=BASE_DODGE_PCT
-	actor.combat_stats["shield_auto_block_rating_percent"]=DEF_BLOCK_PCT if is_def else ATTACK_BLOCK_PCT
-	actor.combat_loadout["can_auto_block"]=is_def
+	actor.combat_stats["dodge_rating_percent"]=float(build["dodge"])
+	actor.combat_stats["shield_auto_block_rating_percent"]=float(build["block"])
+	# Block is only actionable with an actual shield. No virtual shields.
+	actor.combat_loadout["can_auto_block"]=SHIELD_ARCHETYPES.has(archetype)
 	# Respect the existing PAR073 manual-block capacity and actual shield
 	# availability. A dual-wield dagger does not acquire a virtual shield.
 	actor.combat_loadout["can_manual_block"]=SHIELD_ARCHETYPES.has(archetype)
 	return actor
 
 func _duel(left: Dictionary, right: Dictionary, left_name: String, right_name: String,
-		pair_index: int, battle_index: int, defence_armour: float, attack_armour: float) -> Dictionary:
-	var a := _runtime(left,left_name,defence_armour,attack_armour)
-	var b := _runtime(right,right_name,defence_armour,attack_armour)
+		pair_index: int, battle_index: int, armour_ratings: Dictionary) -> Dictionary:
+	var a := _runtime(left,left_name,armour_ratings)
+	var b := _runtime(right,right_name,armour_ratings)
 	if a==null or b==null:
 		return {"outcome":"setup_failed"}
 	var state := CombatState.new()
@@ -177,8 +192,20 @@ func _run() -> void:
 		push_error("Invalid physical duel benchmark arguments")
 		quit(1)
 		return
-	var defence_armour := _armour_rating(DEF_ARMOUR_PCT)
-	var attack_armour := _armour_rating(ATTACK_ARMOUR_PCT)
+	if BUILD_PROFILES.size()!=archetypes.size():
+		push_error("PvP build coverage is incomplete")
+		quit(1)
+		return
+	var armour_ratings := {}
+	for raw_name in archetypes:
+		var build: Dictionary = BUILD_PROFILES.get(String(raw_name),{})
+		if build.is_empty():
+			push_error("Missing PvP build: "+String(raw_name))
+			quit(1)
+			return
+		var armour_pct: float = float(build["armour"])
+		if not armour_ratings.has(armour_pct):
+			armour_ratings[armour_pct]=_armour_rating(armour_pct)
 	var pair_index := 0
 	var finished_pairs := 0
 	var completed_duels := 0
@@ -206,7 +233,7 @@ func _run() -> void:
 			var casts_a := 0
 			var casts_b := 0
 			for k in range(battles):
-				var result := _duel(left,right,name_a,name_b,pair_index,k,defence_armour,attack_armour)
+				var result := _duel(left,right,name_a,name_b,pair_index,k,armour_ratings)
 				var outcome := String(result.get("outcome","setup_failed"))
 				if outcome=="setup_failed":
 					failures.append("combat_setup_"+name_a+"_"+name_b)
@@ -233,7 +260,11 @@ func _run() -> void:
 			csv+=row+"\n"
 			print("PHYSICAL_DUEL_PAIR=",row)
 			pair_index+=1
-	print("PHYSICAL_DUEL_RULES=DEF 45pct armour 10pct auto-block 5pct dodge 2000HP; ATTACK 20pct armour 0pct auto-block 5pct dodge 1000HP; canonical attack/block counts")
+	print("PHYSICAL_DUEL_RULES=role-specific formal builds; canonical attack/block counts and ABI/EFF")
+	for archetype in archetypes:
+		var build: Dictionary = BUILD_PROFILES[String(archetype)]
+		print("PHYSICAL_DUEL_BUILD=",archetype," armour=",build["armour"],
+			" block=",build["block"]," dodge=",build["dodge"]," hp=",build["hp"])
 	var output := REPORT_PATH+"/duels_%03d_%03d.csv" % [start_pair,end_pair]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REPORT_PATH))
 	var file := FileAccess.open(ProjectSettings.globalize_path(output),FileAccess.WRITE)
