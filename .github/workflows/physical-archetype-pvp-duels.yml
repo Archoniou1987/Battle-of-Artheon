@@ -1,0 +1,44 @@
+name: Physical Archetype PvP Duels (50 per pair)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: physical-archetype-duels-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  duel-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { start: 0, end: 35, smoke_end: 1 }
+          - { start: 35, end: 70, smoke_end: 36 }
+          - { start: 70, end: 105, smoke_end: 71 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import and check Godot project
+        run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
+      - name: Smoke first pairing with canonical Combat Engine
+        run: GODOT_TEST_TIMEOUT=150 bash tools/run_godot_check.sh tests/combat/physical_archetype_duel_runner.gd --battles=2 --pair-start=${{ matrix.start }} --pair-end=${{ matrix.smoke_end }}
+      - name: Run 50 PvP duels per pairing
+        run: GODOT_TEST_TIMEOUT=2100 bash tools/run_godot_check.sh tests/combat/physical_archetype_duel_runner.gd --battles=50 --pair-start=${{ matrix.start }} --pair-end=${{ matrix.end }}
+      - name: Upload pairing results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-archetype-pvp-duels-${{ matrix.start }}-${{ matrix.end }}
+          path: test-results/physical-archetype-duels/*.csv
+          if-no-files-found: warn
+          retention-days: 30
