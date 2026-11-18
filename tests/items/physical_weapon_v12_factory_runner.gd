@@ -18,7 +18,7 @@ func _run() -> void:
 		"SWORD_DEF","SWORD_DODGE","SWORD_CRIT",
 		"DAGGER_DEF","DAGGER_ATTACK","DAGGER_PEN",
 		"AXE_DEF","AXE_ATTACK","AXE_SHIELD","2H_AXE",
-		"HAMMER_DEF","HAMMER_ATTACK","2H_HAMMER", "2H_SPEAR"
+		"HAMMER_DEF","2H_HAMMER", "2H_SPEAR"
 	]
 	var families := {"SWORD_":"sword","DAGGER_":"dagger","AXE_":"axe","HAMMER_":"hammer","2H_":"spear"}
 	var seed_value := 20261104
@@ -33,7 +33,7 @@ func _run() -> void:
 		_check(String(item.get("slot",""))=="main_hand",archetype_id+"_slot")
 		_check(item.get("equip_slots",[]) == WeaponHandPolicy.allowed_slots(archetype_id),archetype_id+"_hand_compatibility")
 		_check(Array(item.get("abilities",[])).size()==4,archetype_id+"_runtime_abi_gate")
-		if archetype_id in ["2H_SPEAR","AXE_ATTACK","AXE_SHIELD","2H_AXE","HAMMER_ATTACK","2H_HAMMER"]:
+		if archetype_id in ["2H_SPEAR","AXE_ATTACK","AXE_SHIELD","2H_AXE","2H_HAMMER"]:
 			_check(Array(item.get("slot_usage",[])) == ["main_hand","off_hand"],archetype_id+"_reserves_both_hands")
 		for rule in Array(rules.get("weapon_archetypes", [])):
 			var definition: Dictionary = rule
@@ -123,7 +123,7 @@ func _run() -> void:
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_ATTACK",40,"purple",1,"OH").is_empty(),"axe_attack_not_oh")
 	_check(ItemV12InstanceFactory.generate_weapon("AXE_SHIELD",40,"purple",1,"OH").is_empty(),"axe_shield_not_oh")
 	_check(not ItemV12InstanceFactory.generate_weapon("2H_AXE",40,"purple",1,"2H").is_empty(),"axe_aoe_2h")
-	_check(ItemV12InstanceFactory.generate_weapon("HAMMER_ATTACK",40,"purple",1,"OH").is_empty(),"hammer_attack_not_oh")
+	_check(ItemV12InstanceFactory.generate_weapon("HAMMER_ATTACK",40,"purple",1,"2H").is_empty(),"retired_hammer_attack_not_generated")
 	_check(not ItemV12InstanceFactory.generate_weapon("2H_HAMMER",40,"purple",1,"2H").is_empty(),"hammer_old_2h_template_works")
 	_check(ItemV12InstanceFactory.generate_weapon("HAMMER_MAGIC",40,"purple",1).is_empty(),"magic_not_implemented")
 	print("PHYSICAL_WEAPON_V12_FACTORY=",("PASS" if failures.is_empty() else "FAIL")," failures=",failures)
