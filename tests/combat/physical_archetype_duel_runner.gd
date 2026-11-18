@@ -1,6 +1,6 @@
 extends SceneTree
 
-## 15 physical v1.2 archetypes, unique 1v1 pairs (105), 50 duels per pair.
+## 14 unique physical v1.2 archetypes, 91 unique 1v1 pairs, 50 duels per pair.
 ## Test only: canonical CombatEngine, actual ABI/EFF/AP/CD and real item rolls.
 ## No artificial charge priming, previous-round trigger markers, or damage buffs.
 const LEVEL := 40
@@ -20,7 +20,6 @@ const BUILD_PROFILES := {
 	"AXE_ATTACK": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
 	"AXE_SHIELD": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1300},
 	"2H_AXE": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
-	"HAMMER_ATTACK": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1700},
 	"2H_HAMMER": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1700},
 	"2H_SPEAR": {"armour":25.0,"block":0.0,"dodge":10.0,"hp":1200}
 }
@@ -177,7 +176,7 @@ func _duel(left: Dictionary, right: Dictionary, left_name: String, right_name: S
 func _run() -> void:
 	var battles := DEFAULT_BATTLES
 	var start_pair := 0
-	var end_pair := 105
+	var end_pair := 91
 	for raw in OS.get_cmdline_user_args():
 		var argument := String(raw)
 		if argument.begins_with("--battles="):
@@ -188,7 +187,7 @@ func _run() -> void:
 			end_pair=int(argument.trim_prefix("--pair-end="))
 	var archetypes: Array = ItemV12InstanceFactory.PHYSICAL_ARCHETYPES.duplicate()
 	var expected := archetypes.size()*(archetypes.size()-1)/2
-	if archetypes.size()!=15 or expected!=105 or battles<1 or battles>50 or start_pair<0 or end_pair>105 or start_pair>=end_pair:
+	if archetypes.size()!=14 or expected!=91 or battles<1 or battles>50 or start_pair<0 or end_pair>91 or start_pair>=end_pair:
 		push_error("Invalid physical duel benchmark arguments")
 		quit(1)
 		return
