@@ -2,6 +2,12 @@ name: Physical Archetype PvP Duels (50 per pair)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - .github/workflows/physical-archetype-pvp-duels.yml
+      - tests/combat/physical_archetype_duel_runner.gd
 
 permissions:
   contents: read
