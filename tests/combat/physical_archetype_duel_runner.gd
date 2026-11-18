@@ -18,7 +18,7 @@ const BUILD_PROFILES := {
 	"DAGGER_ATTACK": {"armour":20.0,"block":0.0,"dodge":10.0,"hp":1100},
 	"DAGGER_PEN": {"armour":25.0,"block":0.0,"dodge":10.0,"hp":1200},
 	"AXE_ATTACK": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
-	"AXE_SHIELD": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1300},
+	"AXE_CRUSHER": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1300},
 	"2H_AXE": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
 	"2H_HAMMER": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1700},
 	"2H_SPEAR": {"armour":25.0,"block":0.0,"dodge":10.0,"hp":1200}
