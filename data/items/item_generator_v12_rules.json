@@ -138,7 +138,7 @@
         "PAR001",
         "PAR003"
       ],
-      "damage_balance_factor": 0.3888
+      "damage_balance_factor": 0.419904
     },
     {
       "id": "SWORD_DODGE",
@@ -162,7 +162,7 @@
         "PAR001",
         "PAR002"
       ],
-      "damage_balance_factor": 0.855
+      "damage_balance_factor": 0.89775
     },
     {
       "id": "SWORD_CRIT",
@@ -225,7 +225,7 @@
         "PAR002",
         "PAR006"
       ],
-      "damage_balance_factor": 1.071225
+      "damage_balance_factor": 1.156923
     },
     {
       "id": "DAGGER_ATTACK",
@@ -249,7 +249,7 @@
         "PAR002",
         "PAR003"
       ],
-      "damage_balance_factor": 1.4283
+      "damage_balance_factor": 1.499715
     },
     {
       "id": "DAGGER_MAGIC",
@@ -290,11 +290,11 @@
         "PAR002",
         "PAR003"
       ],
-      "damage_balance_factor": 1.4878125
+      "damage_balance_factor": 1.562203125
     },
     {
       "id": "AXE_DEF",
-      "damage_balance_factor": 0.2218978125,
+      "damage_balance_factor": 0.19970803125,
       "abilities": [
         "ABI501",
         "ABI502",
@@ -345,7 +345,7 @@
     },
     {
       "id": "AXE_CRUSHER",
-      "damage_balance_factor": 1.05105,
+      "damage_balance_factor": 1.0195185,
       "abilities": [
         "ABI509",
         "ABI510",
@@ -389,7 +389,7 @@
         "PAR001",
         "PAR006"
       ],
-      "damage_balance_factor": 0.3402
+      "damage_balance_factor": 0.367416
     },
     {
       "id": "HAMMER_MAGIC",
@@ -410,7 +410,7 @@
     },
     {
       "id": "2H_SWORD",
-      "damage_balance_factor": 0.96,
+      "damage_balance_factor": 0.9312,
       "name": "2H меч",
       "kind": "weapon",
       "family": "sword",
@@ -455,11 +455,11 @@
         "ABI703",
         "ABI704"
       ],
-      "damage_balance_factor": 1.15
+      "damage_balance_factor": 1.0925
     },
     {
       "id": "2H_AXE",
-      "damage_balance_factor": 0.874,
+      "damage_balance_factor": 0.84778,
       "name": "Топор · массовый двуручный",
       "kind": "weapon",
       "family": "axe",
@@ -504,7 +504,7 @@
         "ABI607",
         "ABI608"
       ],
-      "damage_balance_factor": 0.792,
+      "damage_balance_factor": 0.88704,
       "abi_damage_balance_factor": 1.1
     },
     {
