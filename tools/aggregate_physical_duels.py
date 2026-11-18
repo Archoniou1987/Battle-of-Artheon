@@ -34,7 +34,9 @@ def main():
             reader = csv.DictReader(stream)
             if reader.fieldnames != FIELDS:
                 raise ValueError(f"Unexpected CSV schema in {path}: {reader.fieldnames}")
-            rows.extend(dict(row) for row in reader)
+            # Each shard uploads its 2-fight smoke CSV alongside 50-fight output.
+            # Ignore smoke rows rather than counting them as tournament matchups.
+            rows.extend(dict(row) for row in reader if int(row["battles"]) == EXPECTED_BATTLES)
     if len(rows) != EXPECTED_PAIRS:
         raise ValueError(f"Expected {EXPECTED_PAIRS} pairing rows, found {len(rows)}")
     by_pair = {}
