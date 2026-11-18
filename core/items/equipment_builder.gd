@@ -10,6 +10,9 @@ static func equip(combatant:CombatantState,item:Dictionary)->void:
 	if not item_type.is_empty() and not equipped_types.has(item_type):
 		equipped_types.append(item_type)
 		combatant.combat_stats["equipped_item_types"]=equipped_types
+	# Equipment identity for shield-specific combat interactions.
+	if String(item.get("type","")).to_lower()=="shield" and String(item.get("slot",""))=="off_hand":
+		combatant.combat_stats["has_equipped_shield"]=true
 	var damage:Dictionary=item.get("damage",{}); var is_weapon:=not damage.is_empty()
 	if is_weapon:
 		var weapon_profiles:Array=combatant.combat_stats.get("weapon_profiles",[])
