@@ -6,7 +6,7 @@ extends SceneTree
 const LEVEL := 40
 const DUMMY_HP := 10000
 const DEFAULT_BATTLES := 1000
-const MAX_ROUNDS := 400
+const MAX_ROUNDS := 1000
 const BASE_SEED := 202611170
 const REPORT_PATH := "res://test-results/physical-damage-benchmark/report.txt"
 const DUAL_REPORT_PATH := "res://test-results/physical-damage-benchmark/dual-report.txt"
