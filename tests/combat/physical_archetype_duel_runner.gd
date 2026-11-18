@@ -9,9 +9,9 @@ const LEVEL := 40
 ## Existing attack counts, manual block-zone limits, ABI and EFF remain canonical.
 const BUILD_PROFILES := {
 	"SWORD_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
-	"DAGGER_DEF": {"armour":25.0,"block":10.0,"dodge":30.0,"hp":2000},
+	"DAGGER_DEF": {"armour":25.0,"block":10.0,"dodge":30.0,"hp":1500},
 	"AXE_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
-	"HAMMER_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2000},
+	"HAMMER_DEF": {"armour":45.0,"block":10.0,"dodge":5.0,"hp":2300},
 	"SWORD_DODGE": {"armour":20.0,"block":0.0,"dodge":30.0,"hp":1400},
 	"SWORD_CRIT": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
 	"2H_SWORD": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
@@ -20,8 +20,8 @@ const BUILD_PROFILES := {
 	"AXE_ATTACK": {"armour":20.0,"block":0.0,"dodge":5.0,"hp":1000},
 	"AXE_SHIELD": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1300},
 	"2H_AXE": {"armour":25.0,"block":0.0,"dodge":5.0,"hp":1200},
-	"HAMMER_ATTACK": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1400},
-	"2H_HAMMER": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1400},
+	"HAMMER_ATTACK": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1700},
+	"2H_HAMMER": {"armour":30.0,"block":0.0,"dodge":5.0,"hp":1700},
 	"2H_SPEAR": {"armour":25.0,"block":0.0,"dodge":10.0,"hp":1200}
 }
 const DEFAULT_BATTLES := 50
