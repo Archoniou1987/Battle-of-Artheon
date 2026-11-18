@@ -17,6 +17,8 @@ on:
       - tests/items/physical_weapon_v12_factory_runner.gd
       - core/items/equipment_builder.gd
       - core/abilities/hammer_abi_combat_service.gd
+      - core/combat/combat_engine.gd
+      - tests/combat/dagger_basic_partial_block_runner.gd
 
 permissions:
   contents: read
@@ -45,6 +47,8 @@ jobs:
           include-templates: false
       - name: Import and check Godot project
         run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
+      - name: Verify dagger MH/OH partial blocks and non-dagger full blocks
+        run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh tests/combat/dagger_basic_partial_block_runner.gd
       - name: Smoke first pairing with canonical Combat Engine
         run: GODOT_TEST_TIMEOUT=150 bash tools/run_godot_check.sh tests/combat/physical_archetype_duel_runner.gd --battles=2 --pair-start=${{ matrix.start }} --pair-end=${{ matrix.smoke_end }}
       - name: Run 50 PvP duels per pairing
