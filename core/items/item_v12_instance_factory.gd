@@ -76,6 +76,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var family := _weapon_family(archetype_id)
 	var allowed_slots := WeaponHandPolicy.allowed_slots(archetype_id)
 	var abi_ids := _physical_weapon_abilities(archetype_id)
+	var abi_damage_balance_factor := _physical_weapon_abi_damage_factor(archetype_id)
 	if abi_ids.size() != 4:
 		push_error("Missing canonical ITEM -> ABI references: " + archetype_id)
 		return {}
@@ -83,6 +84,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var result := {
 		"id": template_id,
 		"generated_from_template": archetype_id,
+		"abi_damage_balance_factor": abi_damage_balance_factor,
 		"instance_id": _new_instance_id(),
 		"name": "%s · %s · Lv%d" % [_family_name(family), _archetype_name(archetype_id), level],
 		"type": "weapon",
@@ -161,6 +163,19 @@ static func grant_generated_row(character: CharacterState, repository: ItemRepos
 
 ## The item archetype is the only owner of its ABI references.
 ## OH retains these IDs; EquipmentAbilityLoadout activates only MH.
+## Balance factor belongs to the canonical archetype rule, not to ABI catalog.
+## Shared ABI605-608 remain unmodified for HAMMER_ATTACK.
+static func _physical_weapon_abi_damage_factor(archetype_id: String) -> float:
+	if not FileAccess.file_exists(ItemTemplateGeneratorV12.RULE_PATH):
+		return 1.0
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(ItemTemplateGeneratorV12.RULE_PATH))
+	if not parsed is Dictionary:
+		return 1.0
+	for raw in parsed.get("weapon_archetypes", []):
+		if raw is Dictionary and String(raw.get("id","")) == archetype_id:
+			return maxf(0.0,float(raw.get("abi_damage_balance_factor",1.0)))
+	return 1.0
+
 static func _physical_weapon_abilities(archetype_id: String) -> Array[String]:
 	if not FileAccess.file_exists(ItemTemplateGeneratorV12.RULE_PATH):
 		return []
