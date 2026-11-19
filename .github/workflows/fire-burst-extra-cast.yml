@@ -10,6 +10,7 @@ on:
       - core/items/item_v12_instance_factory.gd
       - core/items/item_template_generator_v12.gd
       - tests/items/fire_burst_staff_factory_runner.gd
+      - tests/combat/fire_burst_arena_live_runner.gd
       - data/abilities/catalog.json
       - core/abilities/ability_catalog.gd
       - tests/combat/approved_abi_catalog_runner.gd
@@ -46,5 +47,7 @@ jobs:
           bash tools/run_godot_check.sh tests/combat/fire_burst_abi_contract_runner.gd
       - name: Verify real generated fire staff item
         run: bash tools/run_godot_check.sh tests/items/fire_burst_staff_factory_runner.gd
+      - name: Verify real equipped staff and double cast in Arena
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh tests/combat/fire_burst_arena_live_runner.gd
       - name: Verify existing physical round contract
         run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh tests/combat/arena_ability_integration_runner.gd
