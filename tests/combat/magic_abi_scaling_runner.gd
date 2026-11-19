@@ -69,7 +69,7 @@ func _initialize() -> void:
 			if not String(ability_id).begins_with("ABI8"):
 				valid = valid and not Dictionary(component).has("spell_power_scale")
 			else:
-				valid = valid and String(component.get("kind",""))!="damage" or String(component.get("damage_type",""))=="fire"
+				valid = valid and (String(component.get("kind",""))!="damage" or String(component.get("damage_type",""))=="fire")
 
 	print("MAGIC_ABI_SCALING_TEST=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
