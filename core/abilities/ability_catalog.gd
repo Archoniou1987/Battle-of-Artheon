@@ -67,6 +67,7 @@ static func is_retired_numbered_abi(ability_id: String) -> bool:
 		or (index>=501 and index<=516)
 		or (index>=601 and index<=608)
 		or (index>=701 and index<=704)
+		or (index>=801 and index<=804)
 	)
 
 ## A stale numbered ABI can remain in a save/checkpoint, but may never
