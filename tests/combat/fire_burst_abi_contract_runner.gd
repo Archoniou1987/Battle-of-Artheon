@@ -49,6 +49,18 @@ func _initialize() -> void:
 		if not is_equal_approx(float(hit.payload.get("amount",-1.0)),raw):
 			print("FIRE_ABI_DAMAGE_MISMATCH id=",id," expected=",raw," actual=",hit.payload.get("amount",-1.0))
 		valid = valid and is_equal_approx(float(hit.payload.get("amount",-1.0)),raw)
+	# The Fire synergy must only see active Burning and never affect unrelated spells.
+	var ignite: Dictionary = defs["ABI803"]
+	var ignite_parent := AbilityRuntime.build_action_event(state,"caster","target","ABI803",ignite)
+	var ignite_damage: Dictionary = ignite["components"][0]
+	var unburned := engine._make_action_component_event(ignite_parent,ignite_damage,"target",1.0)
+	valid = valid and is_equal_approx(float(unburned.payload.get("amount",-1.0)),230.0)
+	target.active_effects.append({"effect_id":"EFF003","definition":{"kind":"dot","damage_type":"fire"},"start_round":state.round_number+1,"remaining_rounds":3})
+	var not_yet_burning := engine._make_action_component_event(ignite_parent,ignite_damage,"target",1.0)
+	valid = valid and is_equal_approx(float(not_yet_burning.payload.get("amount",-1.0)),230.0)
+	target.active_effects[0]["start_round"]=state.round_number
+	var burning := engine._make_action_component_event(ignite_parent,ignite_damage,"target",1.0)
+	valid = valid and is_equal_approx(float(burning.payload.get("amount",-1.0)),299.0)
 	# Verify rank comes from the equipped staff level, not character level.
 	caster.combat_stats["weapon_profiles"]=[{"weapon_class":"staff","item_level":20,"damage_min":1,"damage_max":1}]
 	var rank20 := AbilityRuntime.build_action_event(state,"caster","target","ABI801",defs["ABI801"])
