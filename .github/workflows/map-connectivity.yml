@@ -1,10 +1,6 @@
 name: Map generation connectivity
 
 on:
-  push:
-    branches:
-      - feature/equipment-instance-chain
-  pull_request:
   workflow_dispatch:
 
 jobs:

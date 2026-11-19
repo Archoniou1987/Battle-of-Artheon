@@ -1,0 +1,42 @@
+name: Item Template Generator v1.2
+
+on:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - "data/items/item_generator_v12_rules.json"
+      - "core/items/item_template_generator_v12.gd"
+      - "scenes/debug/item_template_generator_v12.*"
+      - "scenes/main/main.gd"
+      - "tests/items/item_template_generator_v12_runner.gd"
+      - ".github/workflows/item-template-generator-v12.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: item-template-v12-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  template-v12:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.5.1
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import scripts and scenes
+        run: timeout 120s godot --headless --editor --path . --quit
+      - name: Check v1.2 engine script syntax
+        run: timeout 120s godot --headless --path . --check-only --script res://core/items/item_template_generator_v12.gd
+      - name: Check v1.2 screen script syntax
+        run: timeout 120s godot --headless --path . --check-only --script res://scenes/debug/item_template_generator_v12.gd
+      - name: Verify v1.2 rules and UI
+        run: timeout 120s godot --headless --path . --script res://tests/items/item_template_generator_v12_runner.gd

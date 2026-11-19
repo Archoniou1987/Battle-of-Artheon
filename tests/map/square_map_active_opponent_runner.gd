@@ -12,7 +12,7 @@ func _initialize()->void:
 	for npc_id in ids:
 		valid=valid and bridge.register_npc(map,NpcInstance.new(npc_id,repo.get_npc("NPC003")),cell)
 	valid=valid and bool(map.move_player(cell).get("ok",false))
-	var player:=CombatantState.new("PLAYER","Artheon Hero",5,150,0)
+	var player:=TestFixtureLoader.new_combatant("PLAYER","Artheon Hero",5,150,0)
 	var session:=MapEncounterCombatService.begin(bridge.encounter_at(map,cell),repo,player)
 	var state:CombatState=session.get("state") as CombatState
 	var group:GroupCombatState=session.get("group") as GroupCombatState

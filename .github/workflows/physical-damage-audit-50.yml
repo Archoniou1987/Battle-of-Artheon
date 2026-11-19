@@ -1,0 +1,44 @@
+name: Physical Damage Audit (50 fights each)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: physical-damage-audit-50-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit-50:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Compile Godot scripts
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh --import
+      - name: Validate strict ABI spender rotation
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_policy_smoke.gd
+      - name: Smoke audit instrumentation (10 single-weapon builds)
+        run: GODOT_TEST_TIMEOUT=180 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --battles=1
+      - name: Audit 10 single-weapon archetypes, 50 battles each
+        run: GODOT_TEST_TIMEOUT=1800 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --single-only --battles=50
+      - name: Audit five dual-weapon archetypes, 50 battles each (MH + OH)
+        run: GODOT_TEST_TIMEOUT=1800 bash tools/run_godot_check.sh tests/combat/physical_damage_benchmark_full_runner.gd --dual-only --battles=50
+      - name: Upload attribution and ABI/EFF reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-damage-audit-50-results
+          path: |
+            test-results/physical-damage-benchmark/report.txt
+            test-results/physical-damage-benchmark/dual-report.txt
+            test-results/final-par/physical_damage_benchmark_full_runner.gd.log
+          if-no-files-found: warn
+          retention-days: 30

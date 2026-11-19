@@ -13,10 +13,10 @@ func _init() -> void:
 	var resolved: Dictionary = ItemResolver.resolve_equipped("main_hand", hero.equipment, repository)
 
 	var state := CombatState.new()
-	var fighter := CombatantState.new("EFF_HERO", "EFF Hero", 50, 100, 0)
-	var enemy := CombatantState.new("EFF_ENEMY", "EFF Enemy", 50, 200, 0)
+	var fighter := TestFixtureLoader.new_combatant("EFF_HERO", "EFF Hero", 50, 100, 0)
+	var enemy := TestFixtureLoader.new_combatant("EFF_ENEMY", "EFF Enemy", 50, 200, 0)
 	EquipmentBuilder.equip(fighter, resolved)
-	enemy.combat_stats = {"main_hand_damage_min":1.0,"main_hand_damage_max":1.0,"main_hand_damage_type":"slashing"}
+	enemy.combat_stats.merge({"weapon_profiles":[{"damage_min":1.0,"damage_max":1.0,"damage_type":"slashing"}]}, true)
 	state.add_combatant(fighter)
 	state.add_combatant(enemy)
 
@@ -26,7 +26,7 @@ func _init() -> void:
 	for effect in effect_data.get("effects", []):
 		effect_map[String(effect.get("id", ""))] = effect
 	balance["effects"] = effect_map
-	var simulator := CombatSimulator.new(state, balance, 1001)
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), balance, 1001)
 	simulator.max_rounds = 6
 	var result: Dictionary = simulator.run_duel("EFF_HERO", "EFF_ENEMY")
 
@@ -34,14 +34,16 @@ func _init() -> void:
 	var bleed_ticks := 0
 	var bleed_damage := 0
 	var source_ok := true
+	var target_ok := true
 	for event in state.event_log:
 		if event.kind == CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id", "")) == "EFF001":
 			effect_events += 1
+			target_ok = target_ok and event.target_id == "EFF_ENEMY"
 		if event.kind == CombatEvent.Kind.DAMAGE and String(event.payload.get("effect_id", "")) == "EFF001":
 			bleed_ticks += 1
 			bleed_damage += int(event.result.get("hp_removed", 0))
 			source_ok = source_ok and event.source_id == "EFF_HERO"
-	var ok: bool = equipped and effect_events > 0 and bleed_ticks > 0 and bleed_damage > 0 and source_ok
+	var ok: bool = equipped and effect_events > 0 and bleed_ticks > 0 and bleed_damage > 0 and source_ok and target_ok
 	print("GENERATED_EFF001_COMBAT effects=", effect_events, " bleed_ticks=", bleed_ticks, " bleed_damage=", bleed_damage, " source_ok=", source_ok, " rounds=", result.get("rounds", 0))
 	print("GENERATED_EFF001_COMBAT_TEST=", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)

@@ -1,0 +1,88 @@
+name: Physical Archetype PvP Duels (50 per pair)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - .github/workflows/physical-archetype-pvp-duels.yml
+      - tests/combat/physical_archetype_duel_runner.gd
+      - tools/aggregate_physical_duels.py
+      - data/items/item_generator_v12_rules.json
+      - data/abilities/catalog.json
+      - core/items/item_v12_instance_factory.gd
+      - core/items/item_template_generator_v12.gd
+      - tests/items/item_template_generator_v12_runner.gd
+      - tests/items/physical_weapon_v12_factory_runner.gd
+      - core/items/equipment_builder.gd
+      - core/abilities/hammer_abi_combat_service.gd
+      - core/combat/combat_engine.gd
+      - tests/combat/dagger_basic_partial_block_runner.gd
+
+permissions:
+  contents: read
+
+concurrency:
+  group: physical-archetype-duels-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  duel-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { start: 0, end: 31, smoke_end: 1 }
+          - { start: 31, end: 61, smoke_end: 32 }
+          - { start: 61, end: 91, smoke_end: 62 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import and check Godot project
+        run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
+      - name: Verify dagger MH/OH partial blocks and non-dagger full blocks
+        run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh tests/combat/dagger_basic_partial_block_runner.gd
+      - name: Smoke first pairing with canonical Combat Engine
+        run: GODOT_TEST_TIMEOUT=150 bash tools/run_godot_check.sh tests/combat/physical_archetype_duel_runner.gd --battles=2 --pair-start=${{ matrix.start }} --pair-end=${{ matrix.smoke_end }}
+      - name: Run 50 PvP duels per pairing
+        run: GODOT_TEST_TIMEOUT=2100 bash tools/run_godot_check.sh tests/combat/physical_archetype_duel_runner.gd --battles=50 --pair-start=${{ matrix.start }} --pair-end=${{ matrix.end }}
+      - name: Upload pairing results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-archetype-pvp-duels-${{ matrix.start }}-${{ matrix.end }}
+          path: test-results/physical-archetype-duels/*.csv
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate:
+    name: PvP ranking and matchup matrix
+    needs: duel-audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all three duel CSV reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: physical-archetype-pvp-duels-*
+          merge-multiple: true
+          path: test-results/physical-archetype-duels
+      - name: Validate 91 pairs and build combined statistics
+        run: python3 tools/aggregate_physical_duels.py test-results/physical-archetype-duels test-results/physical-archetype-duels
+      - name: Publish ranking, matchup matrix and full pair statistics
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-archetype-pvp-combined-statistics
+          path: |
+            test-results/physical-archetype-duels/pvp_rankings.csv
+            test-results/physical-archetype-duels/pvp_matchup_matrix.csv
+            test-results/physical-archetype-duels/pvp_pairs.csv
+            test-results/physical-archetype-duels/pvp_summary.json
+          retention-days: 30

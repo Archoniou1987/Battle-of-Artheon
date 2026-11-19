@@ -6,9 +6,9 @@ static func run(balance:Dictionary) -> bool:
 
 static func _state(enemy_count:int)->CombatState:
 	var state:=CombatState.new()
-	state.add_combatant(CombatantState.new("player","Player",10,100))
+	state.add_combatant(TestFixtureLoader.new_combatant("player","Player",10,100))
 	for i in range(enemy_count):
-		state.add_combatant(CombatantState.new("e%d"%i,"Enemy",10,100))
+		state.add_combatant(TestFixtureLoader.new_combatant("e%d"%i,"Enemy",10,100))
 	return state
 
 static func _group(state:CombatState,enemy_count:int)->GroupCombatState:
@@ -29,7 +29,7 @@ static func _pending_death_stays_until_end_round(balance:Dictionary)->bool:
 	var state:=_state(2)
 	var group:=_group(state,2)
 	group.set_active_opponent("player","e0")
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"player","e0",{"amount":150.0,"damage_type":"physical"}))
@@ -44,7 +44,7 @@ static func _active_replacement_after_death(balance:Dictionary)->bool:
 	var group:=_group(state,3)
 	group.set_active_opponent("player","e0")
 	var controller:=GroupCombatController.new(group)
-	var engine:=CombatEngine.new(state,balance)
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),balance)
 	var orchestrator:=RoundOrchestrator.new(state,engine)
 	orchestrator.begin_round()
 	engine.resolve_event(state.create_event(CombatEvent.Kind.DAMAGE,"player","e0",{"amount":150.0,"damage_type":"physical"}))

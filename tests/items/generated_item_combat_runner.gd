@@ -25,21 +25,26 @@ func _init() -> void:
 	var resolved: Dictionary = ItemResolver.resolve_equipped("main_hand", equipment, repository)
 	var resolved_ok: bool = not resolved.is_empty() and String(resolved.get("instance_id")) == String(item.get("instance_id"))
 
-	var hero := CombatantState.new("GEN_HERO", "Generated Sword Hero", 50, 100, 25)
-	var enemy := CombatantState.new("GEN_ENEMY", "Training Enemy", 50, 100, 25)
-	EquipmentBuilder.equip(hero, resolved)
+	var character := CharacterState.new("GEN_HERO", "Generated Sword Hero", 20)
+	character.receive_item(String(item.instance_id), repository)
+	character.equip("main_hand", String(item.instance_id), repository)
+	var hero := CharacterCombatBuilder.build(character, repository, {"health":100,"mana":25})
+	var enemy := TestFixtureLoader.new_combatant("GEN_ENEMY", "Training Enemy", 50, 100, 25)
 	var dummy: Dictionary = {"damage":{"min":1,"max":1,"type":"slashing"}, "manual_block_zones_added":1}
 	EquipmentBuilder.equip(enemy, dummy)
 
 	var state := CombatState.new()
 	state.add_combatant(hero)
 	state.add_combatant(enemy)
-	var simulator := CombatSimulator.new(state, {}, 5050)
+	var simulator := CombatSimulator.new(TestFixtureLoader.canonicalize_state(state), {}, 5050)
 	simulator.max_rounds = 100
 	var result: Dictionary = simulator.run_duel(hero.combatant_id, enemy.combatant_id)
 
-	var equipped_ok: bool = int(hero.combat_stats.get("main_hand_damage_min", 0)) == int(item.get("damage_min", 0)) and int(hero.combat_stats.get("main_hand_damage_max", 0)) == int(item.get("damage_max", 0))
-	var stats_ok: bool = _numeric_dictionary_equal(hero.stats, item.get("final_stats", {}))
+	var hero_profiles:Array = hero.combat_stats.get("weapon_profiles", [])
+	var expected := ParCalculationService.calculate(character, repository)
+	var bonus := float(expected.totals.PAR052)
+	var equipped_ok: bool = hero_profiles.size() == 1 and is_equal_approx(float(hero_profiles[0].damage_min), float(item.damage_min) + bonus) and is_equal_approx(float(hero_profiles[0].damage_max), float(item.damage_max) + bonus)
+	var stats_ok := _numeric_dictionary_equal(hero.stats, expected.totals)
 	var damage_events: int = 0
 	var rounds_ok: bool = true
 
@@ -48,7 +53,12 @@ func _init() -> void:
 	print("=== GENERATED ITEM ===")
 	print(JSON.stringify(item))
 	print("=== EQUIPPED CHARACTER ===")
-	print("MainHand damage: ", hero.combat_stats.get("main_hand_damage_min"), "-", hero.combat_stats.get("main_hand_damage_max"))
+	var profile_min:Variant = "?"
+	var profile_max:Variant = "?"
+	if not hero_profiles.is_empty():
+		profile_min = hero_profiles[0].get("damage_min", "?")
+		profile_max = hero_profiles[0].get("damage_max", "?")
+	print("Weapon profile damage: ", profile_min, "-", profile_max)
 	print("Stats: ", JSON.stringify(hero.stats))
 	print("=== COMBAT LOG ===")
 	for event in state.event_log:

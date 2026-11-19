@@ -16,7 +16,7 @@ func _initialize()->void:
 		npcs.append(npc)
 		valid=valid and bridge.register_npc(map,npc,cell)
 		var item_id:="GROUP_ITEM_%03d"%(i+1)
-		var item:Dictionary={"instance_id":item_id,"template_id":"TEST_DAGGER","quality":"common","durability":{"current":15,"max":20}}
+		var item:Dictionary={"instance_id":item_id,"generated_from_template":"TEST_DAGGER","quality":"common","durability":{"current":15,"max":20}}
 		item_repo.add_item(item)
 		valid=valid and npc.receive_item(item_id,item_repo)
 	var player:=CharacterState.new("PLAYER","Artheon Hero",5)

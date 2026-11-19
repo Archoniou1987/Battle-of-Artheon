@@ -4,7 +4,7 @@ extends RefCounted
 static func run()->bool:
 	var state:=CombatState.new()
 	for id in ["player","companion","enemy_a","enemy_b"]:
-		state.add_combatant(CombatantState.new(id,id,10,100))
+		state.add_combatant(TestFixtureLoader.new_combatant(id,id,10,100))
 	var group:=GroupCombatState.new(state)
 	group.add_member("party","player")
 	group.add_member("party","companion")

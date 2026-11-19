@@ -17,7 +17,7 @@ func has_item(instance_id: String) -> bool:
 func get_item(instance_id: String) -> Dictionary:
 	if not _items.has(instance_id):
 		return {}
-	return (_items[instance_id] as Dictionary).duplicate(true)
+	return ItemTemplateService.resolve(_items[instance_id] as Dictionary)
 
 func update_item(item: Dictionary) -> bool:
 	var instance_id := String(item.get("instance_id", ""))

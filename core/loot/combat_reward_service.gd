@@ -1,6 +1,8 @@
 class_name CombatRewardService
 extends RefCounted
 
+## LEGACY test duel reward adapter, fed by LootService + ItemGenerator v1.
+## Real map combat rewards use NpcPossessionLootService instead.
 ## A completed duel may create one shared loot pool, but never awards inventory.
 ## The caller retains the pool for manual claim and expedition persistence.
 static func create_duel_loot_pool(result:Dictionary,defeated_source_id:String,winner:CharacterState,loot_table:Dictionary,templates_by_id:Dictionary,generator:ItemGenerator,repository:ItemRepository,loot_service:LootService)->EncounterLootPool:

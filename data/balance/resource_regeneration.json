@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "interval_seconds": 10,
+  "base_hp_percent_per_minute": 10,
+  "base_mana_per_interval": 5
+}

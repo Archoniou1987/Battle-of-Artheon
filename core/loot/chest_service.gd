@@ -1,6 +1,8 @@
 class_name ChestService
 extends RefCounted
 
+## LEGACY test chest adapter. It consumes LootService + ItemGenerator v1,
+## not the canonical v1.2 item factory. It is retained for historical tests.
 ## Opening a chest generates drops once; ownership changes only through claim().
 static func open_chest(chest:ChestState,opener:CharacterState,loot_table:Dictionary,templates_by_id:Dictionary,generator:ItemGenerator,repository:ItemRepository,loot_service:LootService)->EncounterLootPool:
 	var pool:=EncounterLootPool.new()

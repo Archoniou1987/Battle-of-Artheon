@@ -1,0 +1,34 @@
+name: Fire Burst Extra Cast Contract
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - core/abilities/ability_runtime.gd
+      - core/abilities/ability_scheduler.gd
+      - ui/arena/arena_combat_session.gd
+      - tests/combat/fire_burst_extra_cast_runner.gd
+      - .github/workflows/fire-burst-extra-cast.yml
+
+permissions:
+  contents: read
+
+jobs:
+  fire-burst-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import project and compile
+        run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
+      - name: Verify ordered second cast rules
+        run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/combat/fire_burst_extra_cast_runner.gd
+      - name: Verify existing physical round contract
+        run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh tests/combat/arena_ability_integration_runner.gd

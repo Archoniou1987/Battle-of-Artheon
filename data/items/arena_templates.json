@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "purpose": "Canonical mutable item cores. Instances reference template_id; PAR definitions remain locked.",
+  "templates": [
+    {
+      "id": "sword_mh",
+      "name": "Тестовый меч",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 10,
+        "max": 14,
+        "type": "slashing"
+      },
+      "slot": "main_hand",
+      "weapon_class": "sword",
+      "par_stats": {
+        "PAR033": 200,
+        "PAR031": 200,
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "dagger_oh",
+      "name": "Тестовый кинжал",
+      "type": "weapon",
+      "equip_slots": [
+        "off_hand"
+      ],
+      "icon_id": "ICON_0015",
+      "damage": {
+        "min": 6,
+        "max": 9,
+        "type": "piercing"
+      },
+      "slot": "off_hand",
+      "weapon_class": "dagger",
+      "par_stats": {
+        "PAR031": 200,
+        "PAR030": 500,
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "ring_attributes",
+      "name": "Кольцо характеристик",
+      "type": "ring",
+      "equip_slots": [
+        "ring1",
+        "ring2"
+      ],
+      "icon_id": "ICON_0051",
+      "par_stats": {
+        "PAR010": 2000,
+        "PAR001": 50,
+        "PAR002": 45,
+        "PAR003": 40,
+        "PAR004": 35,
+        "PAR005": 30,
+        "PAR006": 25
+      }
+    },
+    {
+      "id": "ring_defense",
+      "name": "Кольцо защиты",
+      "type": "ring",
+      "equip_slots": [
+        "ring1",
+        "ring2"
+      ],
+      "icon_id": "ICON_0052",
+      "par_stats": {
+        "PAR034": 600,
+        "PAR032": 600
+      }
+    },
+    {
+      "id": "shield",
+      "name": "Тестовый щит",
+      "type": "shield",
+      "equip_slots": [
+        "off_hand"
+      ],
+      "icon_id": "ICON_0017",
+      "par_stats": {
+        "PAR070": 400,
+        "PAR073": 1,
+        "PAR100": 200,
+        "PAR101": 200
+      }
+    },
+    {
+      "id": "ring_empty",
+      "name": "Пустое тестовое кольцо",
+      "type": "ring",
+      "equip_slots": [
+        "ring1",
+        "ring2"
+      ],
+      "icon_id": "ICON_0051",
+      "par_stats": {}
+    },
+    {
+      "id": "audit_axe_100",
+      "name": "Тестовый топор 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "axe",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "chopping"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_sword_100",
+      "name": "Тестовый меч 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "sword",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "slashing"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_dagger_100",
+      "name": "Тестовый кинжал 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "dagger",
+      "icon_id": "ICON_0015",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "piercing"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_hammer_100",
+      "name": "Тестовый молот 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "hammer",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "blunt"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    },
+    {
+      "id": "audit_enemy_shield",
+      "name": "Щит проверки зональной брони",
+      "type": "shield",
+      "equip_slots": [
+        "off_hand"
+      ],
+      "icon_id": "ICON_0017",
+      "par_stats": {
+        "PAR105": 200,
+        "PAR111": 200,
+        "PAR120": 200,
+        "PAR122": 200
+      }
+    },
+    {
+      "id": "audit_enemy_fire_helmet",
+      "name": "Шлем проверки огненного сопротивления",
+      "type": "helmet",
+      "equip_slots": [
+        "head"
+      ],
+      "icon_id": "ICON_0002",
+      "par_stats": {
+        "PAR191": 200
+      }
+    },
+    {
+      "id": "audit_fire_staff_100",
+      "name": "Тестовый огненный посох 100–100",
+      "type": "weapon",
+      "equip_slots": [
+        "main_hand"
+      ],
+      "slot": "main_hand",
+      "weapon_class": "staff",
+      "icon_id": "ICON_0002",
+      "damage": {
+        "min": 100,
+        "max": 100,
+        "type": "fire"
+      },
+      "par_stats": {
+        "PAR057": 1
+      }
+    }
+  ]
+}

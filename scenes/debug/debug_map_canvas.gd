@@ -27,7 +27,8 @@ func remember_visible()->void:
 	if generated.is_empty() or player_hex.x<0: return
 	var map:TacticalMapState=generated.map
 	for pos in map.cells.keys():
-		if _is_visible_hex(pos):
+		# Test-only full reveal MUST NOT expand persisted exploration.
+		if HexGrid.distance(pos,player_hex)<=effective_visibility_radius():
 			explored_hexes[pos]=true
 			map.cell(pos).discovered=true
 	queue_redraw()
@@ -46,8 +47,9 @@ func set_loot_markers(cells:Array[Vector2i])->void:
 	queue_redraw()
 
 func set_debug_reveal_all(enabled:bool)->void:
+	# A visual diagnostic must NEVER change the permanent explored map.
+	# Reveal only during drawing; real movement uses remember_visible().
 	debug_reveal_all=enabled
-	remember_visible()
 	queue_redraw()
 
 func set_generated(value:Dictionary)->void:
@@ -56,6 +58,13 @@ func set_generated(value:Dictionary)->void:
 	player_hex=Vector2i(-1,-1)
 	_build_entity_roles()
 	custom_minimum_size=_map_pixel_size()
+	queue_redraw()
+
+## Optional live-world role mapping. The same renderer is used by the
+## diagnostic viewer and the real Solo map without inventing NPC state.
+func set_live_entity_roles(roles: Dictionary) -> void:
+	for raw_id in roles.keys():
+		_entity_roles[String(raw_id)] = String(roles[raw_id])
 	queue_redraw()
 
 func _gui_input(event:InputEvent)->void:
@@ -192,7 +201,7 @@ func _draw_markers(map:TacticalMapState)->void:
 	var grouped:Dictionary={}
 	for entity_id in map.entity_positions.keys():
 		var pos:Vector2i=map.entity_positions[entity_id]
-		if entity_id=="PLAYER":
+		if entity_id=="PLAYER" or entity_id==String(generated.get("live_player_id","PLAYER")):
 			continue
 		if not grouped.has(pos):
 			grouped[pos]=[]

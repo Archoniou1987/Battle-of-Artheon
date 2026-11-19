@@ -17,21 +17,24 @@
       "equipment": [
         "TEST_DAGGER",
         "TEST_DAGGER"
-      ]
+      ],
+      "manual_block_zone_capacity": 1
     },
     {
       "id": "TEST_SWORD_FIGHTER",
       "name": "Sword Fighter",
       "equipment": [
         "TEST_SWORD"
-      ]
+      ],
+      "manual_block_zone_capacity": 1
     },
     {
       "id": "TEST_AXE_FIGHTER",
       "name": "Axe Fighter",
       "equipment": [
         "TEST_AXE"
-      ]
+      ],
+      "manual_block_zone_capacity": 1
     },
     {
       "id": "TEST_SHIELD_FIGHTER",
@@ -39,7 +42,8 @@
       "equipment": [
         "TEST_SHIELD_SWORD",
         "TEST_SHIELD"
-      ]
+      ],
+      "manual_block_zone_capacity": 2
     },
     {
       "id": "TEST_MIXED_WEAPON_FIGHTER",
@@ -47,14 +51,16 @@
       "equipment": [
         "TEST_DAGGER",
         "TEST_AXE"
-      ]
+      ],
+      "manual_block_zone_capacity": 1
     },
     {
       "id": "TEST_BOW_NO_QUIVER",
       "name": "Bow No Quiver",
       "equipment": [
         "TEST_BOW"
-      ]
+      ],
+      "manual_block_zone_capacity": 1
     },
     {
       "id": "TEST_BOW_WITH_QUIVER",
@@ -62,7 +68,8 @@
       "equipment": [
         "TEST_BOW",
         "TEST_QUIVER"
-      ]
+      ],
+      "manual_block_zone_capacity": 1
     }
   ]
 }

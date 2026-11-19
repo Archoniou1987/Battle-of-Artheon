@@ -1,0 +1,39 @@
+name: Physical PvP Full Diagnostic Logs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/character-inventory-ui-v1
+    paths:
+      - tests/combat/physical_diagnostic_duels.gd
+      - .github/workflows/physical-diagnostic-duels.yml
+      - tools/analyze_physical_diagnostic_duels.py
+
+permissions:
+  contents: read
+
+jobs:
+  full-logs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: false
+          include-templates: false
+      - name: Import Godot 4.5.1 project
+        run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
+      - name: Run 2 detailed PvP duels using real Combat Engine
+        run: GODOT_TEST_TIMEOUT=900 bash tools/run_godot_check.sh tests/combat/physical_diagnostic_duels.gd
+      - name: Explain all attacks, blocks, armour, heals and ABI round by round
+        run: python3 tools/analyze_physical_diagnostic_duels.py
+      - name: Archive full round-by-round JSON traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-pvp-two-full-duel-traces
+          path: test-results/physical-diagnostic/*.json
+          retention-days: 30

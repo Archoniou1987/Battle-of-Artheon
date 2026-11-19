@@ -50,7 +50,7 @@ func _initialize()->void:
 	var encounter:=bridge.encounter_with_neighbors(map,Vector2i(4,4),RandomNumberGenerator.new())
 	valid=valid and bool(encounter.get("ok",false))
 	valid=valid and encounter.get("npc_instance_ids",[]).size()==2
-	var player:=CombatantState.new("PLAYER","Test Hero",5,200)
+	var player:=TestFixtureLoader.new_combatant("PLAYER","Test Hero",5,200)
 	var session:=MapEncounterCombatService.begin(encounter,npc_repo,player)
 	valid=valid and bool(session.get("ok",false))
 	var combat_state:CombatState=session.get("state") as CombatState

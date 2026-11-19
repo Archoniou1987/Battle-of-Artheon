@@ -1,0 +1,309 @@
+{
+  "version": "design-2026-11-04",
+  "runtime_status": "historical_design_only",
+  "note": "HISTORICAL DESIGN SNAPSHOT ONLY (2026-11-04). Not a runtime, UI, generator or balance source. Stored numeric values, effect descriptions, runtime ID maps and integration notes may be outdated. The canonical ABI/EFF catalogs and current Gate tests alone govern implemented behavior. Never import these historical values into gameplay without an explicit approved balance change.",
+  "abilities": {
+    "DAGGER_01": {
+      "name": "Быстрая атака",
+      "archetypes": [
+        "DAGGER_DEF",
+        "DAGGER_ATTACK",
+        "DAGGER_PEN"
+      ],
+      "ap_gain": 1,
+      "cooldown_rounds": 2,
+      "damage": "separate 0.20 x average MH; does not replace autoattack",
+      "on_hit": "target ARMOR_BREACH +1 stack"
+    },
+    "DAGGER_02": {
+      "name": "Отравленные клинки",
+      "archetypes": [
+        "DAGGER_DEF",
+        "DAGGER_ATTACK",
+        "DAGGER_PEN"
+      ],
+      "ap_gain": 1,
+      "cooldown_rounds": 3,
+      "duration_rounds": 5,
+      "effect": "weapon coating; each connected ordinary MH/OH applies POISON +1; independent 5% chance to gain 1 AP per poison application, not per tick; AP cap 8"
+    },
+    "DAGGER_DEF_03": {
+      "name": "Веер клинков",
+      "ap_cost": 2,
+      "cooldown_rounds": 4,
+      "trigger_previous_round": "dodge",
+      "damage": "average MH + average OH per target (OH absent=0)",
+      "target_count_max": 5,
+      "notes": "independent combat checks per surrounding target"
+    },
+    "DAGGER_DEF_04": {
+      "name": "Смертельная комбинация",
+      "ap_cost": 5,
+      "cooldown_rounds": 5,
+      "damage": "one MH plus one OH attack; +10% outgoing damage per target POISON stack, up to 100%",
+      "buff": "DODGE +5% per target ARMOR_BREACH stack, max +25%, 2 rounds, standard DR",
+      "notes": "consumes all target POISON stacks on cast (including failed hits), does not consume ARMOR_BREACH; missing OH=0",
+      "consume": "all target POISON stacks on cast, after reading damage multiplier; never consumes ARMOR_BREACH"
+    },
+    "DAGGER_ATTACK_03": {
+      "name": "Сокрушительный выпад",
+      "ap_cost": 2,
+      "cooldown_rounds": 5,
+      "damage": "average MH + average OH",
+      "pre_attack_effect": "target DODGE -50%, ANTI_CRIT -50% for current and following rounds",
+      "notes": "pre-attack applies even if weapon strike misses; missing OH=0"
+    },
+    "DAGGER_ATTACK_04": {
+      "name": "Шквал клинков",
+      "ap_cost": 3,
+      "cooldown_rounds": 7,
+      "damage": "N separate attacks, N=target POISON stacks snapshotted before cast, max 10; alternating MH/OH, 60% average damage of corresponding dagger; OH absent=0",
+      "notes": "independent hit,dodge,block,crit,armour per nonzero attack; consumes all target POISON on cast even if every strike fails",
+      "consume": "all target POISON stacks on cast after snapshotting N"
+    },
+    "DAGGER_PEN_03": {
+      "name": "Глубокий прокол",
+      "ap_cost": 2,
+      "cooldown_rounds": 5,
+      "damage": "50% average MH per existing target ARMOR_BREACH stack, max 250% at 5; use pre-conversion breach snapshot",
+      "on_hit": "convert floor(consumed POISON stacks / 2) into ARMOR_BREACH stacks (max 5 total); no breach added on miss/dodge/block",
+      "consume": "all target POISON stacks at cast, even when strike misses; existing ARMOR_BREACH preserved",
+      "notes": "odd POISON count rounds down (1 -> 0, 3 -> 1, 5 -> 2, 10 -> 5)"
+    },
+    "DAGGER_PEN_04": {
+      "name": "Абсолютное пробитие",
+      "ap_cost": 5,
+      "cooldown_rounds": 7,
+      "damage": "MH+OH; temporary target armour reduction 20% per consumed ARMOR_BREACH stack, max full armour bypass at 5",
+      "consume": "all ARMOR_BREACH stacks only if at least one blade connects past hit,dodge,autoblock",
+      "notes": "if all strikes fail keep stacks while AP and cooldown spent; other defenses and checks retained"
+    },
+    "AXE_01": {
+      "name": "Ярость",
+      "archetypes": [
+        "AXE_DEF",
+        "AXE_ATTACK",
+        "AXE_SHIELD"
+      ],
+      "ap_gain": 1,
+      "cooldown_rounds": 2,
+      "damage": "ordinary MH attack +20%",
+      "self_effect": "RAGE +1, max 5, shared 5-round duration, +2% block penetration per stack"
+    },
+    "AXE_02": {
+      "name": "Рубящий удар",
+      "archetypes": [
+        "AXE_DEF",
+        "AXE_ATTACK",
+        "AXE_SHIELD"
+      ],
+      "ap_gain": 2,
+      "cooldown_rounds": 2,
+      "trigger_previous_round": "own critical hit OR own successful block penetration",
+      "damage": "separate 120% MH, cannot be dodged or blocked, hit/miss and armour still checked"
+    },
+    "AXE_DEF_03": {
+      "name": "Подсекающий удар",
+      "ap_cost": 2,
+      "cooldown_rounds": 4,
+      "damage": "120% MH",
+      "on_hit": "target CRIT -25% and ANTI_DODGE -25% for 2 rounds"
+    },
+    "AXE_DEF_04": {
+      "name": "Стойка возмездия",
+      "ap_cost": 4,
+      "cooldown_rounds": 5,
+      "duration_rounds": 1,
+      "self_effect": "DODGE +5% per RAGE stack up to +25%, standard dodge DR",
+      "counter": "each successful dodge in that round triggers a guaranteed-hit 100% MH counterattack against the attacker, max 5 counters total",
+      "notes": "counter bypasses miss/dodge/block but retains armour, critical and resistance"
+    },
+    "AXE_ATTACK_03": {
+      "name": "Разрушительный удар",
+      "ap_cost": 2,
+      "cooldown_rounds": 5,
+      "damage": "120% MH",
+      "pre_attack_effect": "target DODGE -25% and ANTI_CRIT -25% for every attack of current round"
+    },
+    "AXE_ATTACK_04": {
+      "name": "Смертельный удар",
+      "ap_cost": 5,
+      "cooldown_rounds": 7,
+      "cast_condition": "target current HP strictly below 20% max and RAGE stacks >=1",
+      "damage": "75% MH per snapshotted RAGE stack, max 375%",
+      "consume": "all RAGE only on successful strike; miss,dodge,block keep RAGE"
+    },
+    "AXE_SHIELD_03": {
+      "name": "Крушитель",
+      "ap_cost": 3,
+      "cooldown_rounds": 5,
+      "cast_condition": "RAGE exactly 5 stacks",
+      "consume": "all 5 RAGE on cast",
+      "self_effect": "CRUSHER for 20 rounds, +20% CRIT, +20% penetration of ALL blocks (not merely shield), +10% incoming damage",
+      "notes": "reapplication does not stack"
+    },
+    "AXE_SHIELD_04": {
+      "name": "Удар щитолома",
+      "ap_cost": 5,
+      "cooldown_rounds": 7,
+      "damage": "one target 150% MH +20% per RAGE stack (250% max); OR three targets each 50% MH +20% per stack (150% each max)",
+      "defense": "cannot dodge or block; ordinary hit/miss and armour remain",
+      "consume": "RAGE on successful connection; at least one hit in 3-target mode"
+    },
+    "HAMMER_01": {
+      "name": "Тяжёлый удар",
+      "archetypes": [
+        "HAMMER_DEF",
+        "HAMMER_ATTACK"
+      ],
+      "ap_gain": 1,
+      "cooldown_rounds": 2,
+      "damage": "ordinary MH +20%",
+      "effect": "target tempo -25% (formal tempo control placeholder; no new stun engine yet)"
+    },
+    "HAMMER_02": {
+      "name": "Отражение",
+      "archetypes": [
+        "HAMMER_DEF",
+        "HAMMER_ATTACK"
+      ],
+      "ap_gain": 1,
+      "cooldown_rounds": 4,
+      "duration_rounds": 1,
+      "effect": "reflect 20% incoming damage to attacker in current round",
+      "passive": "each damage event received gives +1 CHARGE (5 separate DoT ticks =5 charges); each connected own ordinary MH gives +5 CHARGE, additional +5 on own MH critical; max CHARGE 100"
+    },
+    "HAMMER_DEF_03": {
+      "name": "Восстановление",
+      "ap_cost": 3,
+      "cooldown_rounds": 7,
+      "consume": "50% of current CHARGE stacks",
+      "heal": "restore n/2 % maximum HP where n is number of charges consumed"
+    },
+    "HAMMER_DEF_04": {
+      "name": "Разрушающий удар",
+      "ap_cost": 5,
+      "cooldown_rounds": 7,
+      "damage": "ordinary MH +100%",
+      "consume": "all CHARGE stacks",
+      "effect": "target chosen body-zone armour -n% for mathematically rounded n/10 rounds (half-up); if rounded rounds=0, no armour debuff; debuff does not stack"
+    },
+    "HAMMER_ATTACK_03": {
+      "name": "Боевой прилив",
+      "ap_cost": 3,
+      "cooldown_rounds": 5,
+      "consume": "25% of current CHARGE stacks",
+      "effect": "outgoing damage +n% for 2 rounds; 20% of damage dealt restored as HP, where n=consumed charges"
+    },
+    "HAMMER_ATTACK_04": {
+      "name": "Сокрушение",
+      "ap_cost": 5,
+      "cooldown_rounds": 5,
+      "consume": "all CHARGE stacks",
+      "damage": "3% MH per consumed stack, max 300% at 100 stacks",
+      "tempo": "-2 tempo per charge, max -200; future stun semantics not implemented"
+    }
+  },
+  "effects": {
+    "ARMOR_BREACH": {
+      "max_stacks": 5,
+      "duration_rounds": 5,
+      "shared_duration": true,
+      "armour_reduction_per_stack_pct": 3,
+      "expiry": "all stacks removed together after timer"
+    },
+    "POISON_COATING": {
+      "duration_rounds": 5,
+      "trigger": "ordinary MH/OH hit",
+      "ap_per_application_chance_pct": 5
+    },
+    "POISON": {
+      "max_stacks": 10,
+      "duration_rounds": 1,
+      "shared_duration": true,
+      "damage_per_stack_per_round": 1,
+      "timing": "tick beginning-of-round stack snapshot BEFORE applying new hits/stacks; final tick on expiry round; new application refreshes all-stacks timer"
+    },
+    "RAGE": {
+      "max_stacks": 5,
+      "duration_rounds": 5,
+      "shared_duration": true,
+      "block_penetration_pct_per_stack": 2,
+      "expiry": "all stacks together"
+    },
+    "CRUSHER": {
+      "duration_rounds": 20,
+      "crit_pct": 20,
+      "block_penetration_pct": 20,
+      "incoming_damage_pct": 10,
+      "stacking": "unique"
+    },
+    "CHARGE": {
+      "max_stacks": 100,
+      "duration_rounds": null,
+      "shared_duration": false,
+      "armour_and_resistance_pct_per_stack": 0.25,
+      "expiry": "only explicit ABI consumption; persists otherwise"
+    },
+    "PHYSICAL_HAMMER_REFLECT": {
+      "duration_rounds": 1,
+      "reflected_damage_pct": 20
+    },
+    "NOTES": "Physical dagger, axe and hammer EFF are design-only; runtime IDs are not allocated. All ordinary physical block types count for axe shield penetration."
+  },
+  "runtime_id_map": {
+    "DAGGER_01": "ABI401",
+    "DAGGER_02": "ABI402",
+    "DAGGER_DEF_03": "ABI403",
+    "DAGGER_DEF_04": "ABI404",
+    "DAGGER_ATTACK_03": "ABI405",
+    "DAGGER_ATTACK_04": "ABI406",
+    "DAGGER_PEN_03": "ABI407",
+    "DAGGER_PEN_04": "ABI408",
+    "AXE_01": "ABI501",
+    "AXE_02": "ABI502",
+    "AXE_DEF_03": "ABI503",
+    "AXE_DEF_04": "ABI504",
+    "AXE_ATTACK_03": "ABI505",
+    "AXE_ATTACK_04": "ABI506",
+    "AXE_SHIELD_03": "ABI507",
+    "AXE_SHIELD_04": "ABI508",
+    "HAMMER_01": "ABI601",
+    "HAMMER_02": "ABI602",
+    "HAMMER_DEF_03": "ABI603",
+    "HAMMER_DEF_04": "ABI604",
+    "HAMMER_ATTACK_03": "ABI605",
+    "HAMMER_ATTACK_04": "ABI606"
+  },
+  "runtime_effect_ids": {
+    "ARMOR_BREACH": "EFF401",
+    "POISON_COATING": "EFF402",
+    "POISON": "EFF403",
+    "DAGGER_DODGE_BUFF": "EFF404",
+    "DAGGER_OPEN_GUARD": "EFF405",
+    "RAGE": "EFF501",
+    "AXE_SWEEP": "EFF502",
+    "AXE_RETALIATION": "EFF503",
+    "AXE_WEAK_GUARD": "EFF504",
+    "CRUSHER": "EFF505",
+    "CHARGE": "EFF601",
+    "PHYSICAL_HAMMER_REFLECT": "EFF602",
+    "HAMMER_ARMOUR_FRACTURE": "EFF603",
+    "HAMMER_SURGE": "EFF604"
+  },
+  "runtime_notes": [
+    "One active ABI per round, up to four ABIs assigned by MH v1.2 item; OH daggers do not add duplicate ABI slots.",
+    "Dagger armour break -3 percentage points per stack after armour rating conversion; dodge/anti-crit debuff is instant before locked attacks.",
+    "Axe universal block penetration applies to both manual and automatic blocks; execute/crusher prerequisites checked before AP/CD.",
+    "Hammer charge has no ticking timer; all damage events and successful ordinary MH criticals add stacks as approved.",
+    "Hammer DEF03 and ATTACK03 fractional charge consumption uses mathematical rounding; DEF04 duration rounds uses mathematical rounding.",
+    "Hammer tempo debuffs are metadata-only until the future stun/control contract is approved.",
+    "All new combat runners included only in manually-dispatched Combat Integration Gate, NOT automatically executed."
+  ],
+  "runtime_authoritative": false,
+  "canonical_runtime_sources": [
+    "res://data/abilities/catalog.json",
+    "res://data/effects/catalog.json"
+  ],
+  "historical_original_note": "Physical dagger/axe/hammer runtime ABI/EFF integrated into shared Combat Engine; manual Combat Integration Gate regression still pending. Sword ABI301-308 unchanged; magic archetypes deferred."
+}

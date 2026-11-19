@@ -7,7 +7,7 @@ func _initialize()->void:
 	var pool:=EncounterLootPool.new()
 	for i in range(2):
 		var item_id:="PERSIST_ITEM_%d"%i
-		valid=valid and repository.add_item({"instance_id":item_id,"template_id":"TEST","quality":"common"})
+		valid=valid and repository.add_item({"instance_id":item_id,"generated_from_template":"TEST","quality":"common"})
 		valid=valid and pool.add_drop(item_id,"PERSIST_NPC")
 	pool.assign_all(player.character_id)
 	valid=valid and pool.claim("PERSIST_ITEM_0",player,repository)
@@ -34,7 +34,7 @@ func _initialize()->void:
 	valid=valid and restored_inventory.size()==2 and restored_pool.item_ids().is_empty()
 	# Exercise the expedition-level claim API and persist the resulting state.
 	var second_pool:=EncounterLootPool.new()
-	valid=valid and restored_repository.add_item({"instance_id":"RESTART_CLAIM","template_id":"TEST"})
+	valid=valid and restored_repository.add_item({"instance_id":"RESTART_CLAIM","generated_from_template":"TEST"})
 	valid=valid and second_pool.add_drop("RESTART_CLAIM","NPC")
 	second_pool.assign_all(restored_player.character_id)
 	second_pool.place_on_hex(Vector2i(2,3),1000)

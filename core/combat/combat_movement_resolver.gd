@@ -21,9 +21,6 @@ func navigation_result(combatant_id:String,to_zone:int,tempo:float,tempo_roll:in
 	if not bypass_front and not zones.ordinary_navigation_allowed(combatant_id,to_zone):
 		result["reason"]="front_blocked"
 		return result
-	if not _tempo_allows(tempo,tempo_roll):
-		result["reason"]="tempo_failed"
-		return result
 	result["moved"]=true
 	result["reason"]="ok"
 	return result
@@ -33,12 +30,6 @@ func apply_result(result:Dictionary)->bool:
 		return false
 	return zones.set_zone(String(result.get("source_id","")),int(result.get("to_zone",-1)))
 
-func _tempo_allows(tempo:float,roll:int)->bool:
-	if tempo<=-100.0:
-		return false
-	if tempo>=0.0:
-		return true
-	return CombatMath.roll_success(100.0+tempo,roll)
 
 
 func resolve_simultaneous(requests:Array[Dictionary])->Array[Dictionary]:

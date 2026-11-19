@@ -1,0 +1,617 @@
+{
+  "EFF003": {
+    "id": "EFF003",
+    "name": "Burning",
+    "kind": "dot",
+    "damage": 10,
+    "damage_type": "fire",
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3
+  },
+  "EFF004": {
+    "id": "EFF004",
+    "name": "Regeneration",
+    "kind": "hot",
+    "healing": 10,
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3
+  },
+  "EFF005": {
+    "id": "EFF005",
+    "name": "Fire Ward",
+    "kind": "buff",
+    "fire_resist_direct_pct": 90,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF006": {
+    "id": "EFF006",
+    "name": "Guardian Ward",
+    "kind": "buff",
+    "damage_reduction": 0.2,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF007": {
+    "id": "EFF007",
+    "name": "Focus",
+    "kind": "buff",
+    "crit_chance_direct_pct": 20,
+    "duration_rounds": 2,
+    "stacking": "unique"
+  },
+  "EFF301": {
+    "id": "EFF301",
+    "name": "Кровотечение",
+    "kind": "dot",
+    "damage": 1,
+    "max_effect_level": 10,
+    "damage_type": "physical",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "tags": [
+      "BLEEDING",
+      "DOT"
+    ],
+    "polarity": "DEBUFF",
+    "application_scaling": {
+      "fields": [
+        "damage"
+      ],
+      "level_field": "sword_eff_level",
+      "use_level": true
+    },
+    "periodic_armour": {
+      "zone": "chest",
+      "damage_type": "slashing",
+      "apply_source_physical_outgoing": true
+    }
+  },
+  "EFF302": {
+    "id": "EFF302",
+    "name": "Калека",
+    "kind": "debuff",
+    "physical_damage_outgoing_direct_pct": -5,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "CRIPPLE"
+    ],
+    "snapshot_from": "EFF301",
+    "application_scaling": {
+      "fields": [
+        "physical_damage_outgoing_direct_pct"
+      ],
+      "use_snapshot_stacks": true
+    },
+    "snapshot_result_key": "sword_bleed_snapshot"
+  },
+  "EFF303": {
+    "id": "EFF303",
+    "name": "Медлительность",
+    "kind": "debuff",
+    "anti_dodge_direct_pct": -1,
+    "max_effect_level": 5,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SLOWNESS"
+    ],
+    "snapshot_from": "EFF301",
+    "application_scaling": {
+      "fields": [
+        "anti_dodge_direct_pct"
+      ],
+      "level_field": "sword_eff_level",
+      "use_level": true,
+      "use_snapshot_stacks": true
+    },
+    "snapshot_result_key": "sword_bleed_snapshot"
+  },
+  "EFF304": {
+    "id": "EFF304",
+    "name": "Потерянность",
+    "kind": "debuff",
+    "anti_crit_direct_pct": -1,
+    "max_effect_level": 5,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "LOST"
+    ],
+    "snapshot_from": "EFF301",
+    "application_scaling": {
+      "fields": [
+        "anti_crit_direct_pct"
+      ],
+      "level_field": "sword_eff_level",
+      "use_level": true,
+      "use_snapshot_stacks": true
+    },
+    "snapshot_result_key": "sword_bleed_snapshot"
+  },
+  "EFF401": {
+    "id": "EFF401",
+    "name": "Пробитая броня",
+    "kind": "debuff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "DEBUFF",
+    "tags": [
+      "ARMOR_BREACH"
+    ],
+    "armour_reduction_pct_per_stack": 3
+  },
+  "EFF402": {
+    "id": "EFF402",
+    "name": "Отравленные клинки",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_POISON_COATING"
+    ]
+  },
+  "EFF403": {
+    "id": "EFF403",
+    "name": "Яд кинжалов",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "physical",
+    "duration_rounds": 1,
+    "stacking": "shared_duration",
+    "max_stacks": 10,
+    "ap_gain_on_apply": 1,
+    "ap_gain_on_apply_chance_pct": 5,
+    "polarity": "DEBUFF",
+    "tags": [
+      "POISON",
+      "DOT"
+    ],
+    "values_by_rank": {
+      "damage": [
+        1,
+        2,
+        4,
+        7,
+        11,
+        16,
+        22,
+        29,
+        37,
+        46
+      ]
+    },
+    "rank_balance_status": "PROVISIONAL - numerical tuning needed"
+  },
+  "EFF404": {
+    "id": "EFF404",
+    "name": "Уклонение смертоносной комбинации",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_DEF_COMBO"
+    ],
+    "dodge_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "dagger_breach_stacks",
+      "legacy_value_field": "dagger_dodge_pct",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": [
+        "dodge_direct_pct"
+      ]
+    }
+  },
+  "EFF405": {
+    "id": "EFF405",
+    "name": "Открытая защита",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "DAGGER_ATTACK_HEAVY"
+    ],
+    "dodge_direct_pct": -50,
+    "anti_crit_direct_pct": -50
+  },
+  "EFF501": {
+    "id": "EFF501",
+    "name": "Рваная рана",
+    "kind": "dot",
+    "damage": 1,
+    "damage_type": "physical",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 3,
+    "polarity": "DEBUFF",
+    "tags": [
+      "AXE_WOUND",
+      "BLEED",
+      "DOT"
+    ],
+    "values_by_rank": {
+      "damage": [
+        1,
+        2,
+        4,
+        7,
+        11,
+        16,
+        22,
+        29,
+        37,
+        46
+      ]
+    },
+    "rank_balance_status": "PROVISIONAL - tune via BoA balance"
+  },
+  "EFF502": {
+    "id": "EFF502",
+    "name": "Боевой азарт топора",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "AXE_BERSERK"
+    ],
+    "physical_damage_outgoing_direct_pct": 20,
+    "incoming_damage_direct_pct": 10
+  },
+  "EFF601": {
+    "id": "EFF601",
+    "name": "Сотрясение",
+    "kind": "debuff",
+    "stacking": "shared_duration",
+    "max_stacks": 3,
+    "duration_rounds": 4,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_CONCUSSION"
+    ],
+    "unique_group": "hammer_concussion"
+  },
+  "EFF602": {
+    "id": "EFF602",
+    "name": "Глухая защита",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_DEFENCE"
+    ],
+    "incoming_damage_physical_direct_pct": -15,
+    "shield_auto_block_direct_pct": 10
+  },
+  "EFF603": {
+    "id": "EFF603",
+    "name": "Стойкость после блока",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_COUNTER_GUARD"
+    ],
+    "incoming_damage_physical_direct_pct": -10
+  },
+  "EFF604": {
+    "id": "EFF604",
+    "name": "Подавленный удар",
+    "kind": "debuff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_DAMAGE_WEAKEN"
+    ],
+    "physical_damage_outgoing_direct_pct": -25
+  },
+  "EFF406": {
+    "id": "EFF406",
+    "name": "Точность",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_ACCURACY"
+    ]
+  },
+  "EFF407": {
+    "id": "EFF407",
+    "name": "Сосредоточение убийцы",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_FOCUS"
+    ],
+    "crit_chance_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "combo_accuracy_stacks",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": [
+        "crit_chance_direct_pct"
+      ]
+    }
+  },
+  "EFF408": {
+    "id": "EFF408",
+    "name": "Заряды контратаки",
+    "kind": "buff",
+    "duration_rounds": 5,
+    "stacking": "shared_duration",
+    "max_stacks": 5,
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_COUNTER"
+    ]
+  },
+  "EFF409": {
+    "id": "EFF409",
+    "name": "Танец теней",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_DANCE"
+    ],
+    "dodge_direct_pct": 15
+  },
+  "EFF410": {
+    "id": "EFF410",
+    "name": "Защитная комбинация",
+    "kind": "buff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "DAGGER_COMBO"
+    ],
+    "dodge_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "combo_counter_stacks",
+      "per_unit": 5,
+      "minimum": 0,
+      "maximum": 25,
+      "fields": [
+        "dodge_direct_pct"
+      ]
+    }
+  },
+  "EFF411": {
+    "id": "EFF411",
+    "name": "Ослабление удара",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "DAGGER_WEAKEN"
+    ],
+    "physical_damage_outgoing_direct_pct": 0,
+    "contextual_modifier": {
+      "input_field": "combo_breach_stacks",
+      "per_unit": -5,
+      "minimum": -25,
+      "maximum": 0,
+      "fields": [
+        "physical_damage_outgoing_direct_pct"
+      ]
+    }
+  },
+  "EFF412": {
+    "id": "EFF412",
+    "name": "Замедление копья",
+    "kind": "debuff",
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SPEAR_SLOW"
+    ],
+    "tempo_per_round": -20
+  },
+  "EFF413": {
+    "id": "EFF413",
+    "name": "Раскол брони копья",
+    "kind": "debuff",
+    "duration_rounds": 3,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "tags": [
+      "SPEAR_ARMOUR_FRACTURE"
+    ],
+    "armour_reduction_raw_pct": 15
+  },
+  "EFF314": {
+    "id": "EFF314",
+    "name": "Мастерство клинка",
+    "kind": "buff",
+    "hit_chance_direct_pct": 3,
+    "damage_reduction": 0.02,
+    "duration_rounds": 3,
+    "stacking": "shared_duration",
+    "max_stacks": 3,
+    "polarity": "BUFF",
+    "tags": [
+      "SWORD_MASTERY"
+    ],
+    "unique_group": "sword_mastery",
+    "apply_stacks_to_modifiers": true
+  },
+  "EFF315": {
+    "id": "EFF315",
+    "name": "Железная воля",
+    "kind": "buff",
+    "shield_auto_block_direct_pct": 10,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "unique_group": "shield_auto_block"
+  },
+  "EFF316": {
+    "id": "EFF316",
+    "name": "Парирование щитом",
+    "kind": "buff",
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "tags": [
+      "PARRY"
+    ],
+    "unique_group": "sword_parry"
+  },
+  "EFF317": {
+    "id": "EFF317",
+    "name": "Танец клинков",
+    "kind": "buff",
+    "dodge_direct_pct": 10,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "unique_group": "dodge"
+  },
+  "EFF318": {
+    "id": "EFF318",
+    "name": "Слепая ярость",
+    "kind": "buff",
+    "crit_chance_direct_pct": 20,
+    "incoming_damage_direct_pct": 15,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "BUFF",
+    "unique_group": "sword_blind_fury"
+  },
+  "EFF319": {
+    "id": "EFF319",
+    "name": "Уязвимое место",
+    "kind": "debuff",
+    "anti_crit_rating_delta": -50,
+    "rating_delta_by_rank": [
+      -50,
+      -54,
+      -60,
+      -66,
+      -74,
+      -84,
+      -97,
+      -115,
+      -141,
+      -183
+    ],
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "anti_crit_rating"
+  },
+  "EFF320": {
+    "id": "EFF320",
+    "name": "Ослабление урона",
+    "kind": "debuff",
+    "physical_damage_outgoing_direct_pct": -15,
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "physical_damage_outgoing"
+  },
+  "EFF321": {
+    "id": "EFF321",
+    "name": "Рассекающая волна",
+    "kind": "debuff",
+    "hit_chance_rating_delta": -50,
+    "rating_delta_by_rank": [
+      -50,
+      -54,
+      -60,
+      -66,
+      -74,
+      -84,
+      -97,
+      -115,
+      -141,
+      -183
+    ],
+    "duration_rounds": 2,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "hit_chance_rating"
+  },
+  "EFF322": {
+    "id": "EFF322",
+    "name": "Прерывающий удар",
+    "kind": "debuff",
+    "tempo_modifier": -50,
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "sword_tempo_control"
+  },
+  "EFF323": {
+    "id": "EFF323",
+    "name": "Сокрушительный размах: контроль",
+    "kind": "debuff",
+    "tempo_modifier": -50,
+    "duration_rounds": 1,
+    "stacking": "unique",
+    "polarity": "DEBUFF",
+    "unique_group": "sword_tempo_control"
+  },
+  "EFF605": {
+    "id": "EFF605",
+    "name": "Боевой подъём",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_DAMAGE_BUFF"
+    ],
+    "physical_damage_outgoing_direct_pct": 15
+  },
+  "EFF606": {
+    "id": "EFF606",
+    "name": "Разрушенная броня",
+    "kind": "debuff",
+    "stacking": "unique",
+    "duration_rounds": 2,
+    "polarity": "DEBUFF",
+    "tags": [
+      "HAMMER_ARMOUR_BREAK"
+    ],
+    "armour_reduction_raw_pct": 15
+  },
+  "EFF607": {
+    "id": "EFF607",
+    "name": "Стойка защитника",
+    "kind": "buff",
+    "stacking": "unique",
+    "duration_rounds": 1,
+    "polarity": "BUFF",
+    "tags": [
+      "HAMMER_BLOCK_AP"
+    ],
+    "ap_per_successful_block": 1,
+    "max_ap_from_blocks_per_round": 3
+  }
+}

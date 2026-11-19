@@ -20,12 +20,13 @@ static func _run_case(seed:int)->bool:
 		var team_id:="A" if team_index==0 else "B"
 		for index in range(3):
 			var id:="%s%d" % [team_id,index]
-			var combatant:=CombatantState.new(id,id,10,100,20)
-			combatant.combat_stats["main_hand_damage"]=float(rng.randi_range(5,15))
+			var combatant:=TestFixtureLoader.new_combatant(id,id,10,100,20)
+			var damage:=float(rng.randi_range(5,15))
+			TestFixtureLoader.set_weapon_profiles(combatant, [{"damage_min":damage,"damage_max":damage,"damage_type":"slashing"}])
 			state.add_combatant(combatant)
 			group.add_member(team_id,id)
 			zones.set_zone(id,CombatZoneState.ZONE_1 if team_id=="A" else CombatZoneState.ZONE_3)
-	var engine:=CombatEngine.new(state,{})
+	var engine:=CombatEngine.new(TestFixtureLoader.canonicalize_state(state),{})
 	var orchestrator:=RoundOrchestrator.new(state,engine,group,zones)
 	for round_index in range(999):
 		orchestrator.begin_round()
@@ -48,7 +49,8 @@ static func _run_case(seed:int)->bool:
 				group.set_active_opponent(source_id,target_id)
 				var distance:=zones.distance(source_id,target_id)
 				if distance==0:
-					var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{"raw_damage":source.combat_stats.get("main_hand_damage",5.0),"zone":"chest","damage_type":"slashing","rolls":{"hit":rng.randi_range(1,100),"dodge":rng.randi_range(1,100),"crit":rng.randi_range(1,100)}})
+					var profile:Dictionary=WeaponAttackProfile.all(TestFixtureLoader.canonicalize_combatant(source))[0]
+					var event:=state.create_event(CombatEvent.Kind.ATTACK,source_id,target_id,{"raw_damage":profile.get("damage_min",5.0),"zone":"chest","damage_type":profile.get("damage_type","slashing"),"rolls":{"hit":rng.randi_range(1,100),"dodge":rng.randi_range(1,100),"crit":rng.randi_range(1,100)}})
 					state.queue_event(event)
 				elif distance>0:
 					var source_zone:=zones.zone_of(source_id)

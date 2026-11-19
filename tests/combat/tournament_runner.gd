@@ -25,7 +25,7 @@ func _run_pair(first_id:String,second_id:String,balance:Dictionary)->Dictionary:
 	for n in range(FIGHTS_PER_PAIR):
 		var state:=CombatState.new(); var first:=TestFixtureLoader.build_combatant(first_id); var second:=TestFixtureLoader.build_combatant(second_id)
 		_randomize_block_zones(first,50000+n*2); _randomize_block_zones(second,50001+n*2); state.add_combatant(first); state.add_combatant(second)
-		var result:=CombatSimulator.new(state,balance,1000+n).run_duel(first_id,second_id); var outcome:=String(result.get("outcome","timeout"))
+		var result:=CombatSimulator.new(TestFixtureLoader.canonicalize_state(state),balance,1000+n).run_duel(first_id,second_id); var outcome:=String(result.get("outcome","timeout"))
 		if wins.has(outcome): wins[outcome]+=1
 		else: wins["timeout"]+=1
 		total_rounds+=int(result.get("rounds",0)); _count_events(state,stats)

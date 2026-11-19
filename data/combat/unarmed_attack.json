@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "unarmed": {
+    "damage_type": "blunt",
+    "min_damage": 2,
+    "max_damage": 4,
+    "notes": "Fallback basic attack when no weapon is equipped; apply normal character modifiers after base damage."
+  }
+}

@@ -21,7 +21,7 @@ func _run() -> void:
 	if area == null:
 		# Main scene creates its UI dynamically; verify through recursive search.
 		area = _find_named(instance, "Кузнец")
-	var names := ["Кузнец", "Рынок", "Главное здание", "Тренировочное поле"]
+	var names := ["Кузнец", "Рынок", "Главное здание", "Арена"]
 	for name in names:
 		var control := _find_named(instance, name)
 		if control == null or not (control is Button):
