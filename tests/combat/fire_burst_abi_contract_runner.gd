@@ -9,7 +9,10 @@ func _initialize() -> void:
 	for id in expected:
 		var d: Dictionary = defs.get(id,{})
 		valid = valid and AbilityCatalog.is_executable_id(id)
-		valid = valid and AbilityRuntime.validate_definition(id,d).is_empty()
+		var definition_errors := AbilityRuntime.validate_definition(id,d)
+		if not definition_errors.is_empty():
+			print("FIRE_ABI_DEF_ERRORS id=",id," errors=",JSON.stringify(definition_errors))
+		valid = valid and definition_errors.is_empty()
 		valid = valid and String(d.get("magic_school",""))=="fire"
 		valid = valid and String(d.get("magic_archetype",""))=="STAFF_FIRE_BURST"
 		valid = valid and Array(d.get("base_damage_by_rank",[])).size()==10
@@ -19,6 +22,7 @@ func _initialize() -> void:
 				valid = valid and String(component.get("damage_type",""))=="fire"
 				valid = valid and float(component.get("spell_power_scale",-1)) > 0.0
 		valid = valid and (AbilityRuntime.extra_cast_eligible(d) == (id=="ABI802"))
+	print("FIRE_EFFECT_REF=",AbilityCatalog.effect_id("ABI801"))
 	valid = valid and AbilityCatalog.effect_id("ABI801")=="EFF003"
 	valid = valid and AbilityCatalog.ranked_damage("ABI801",40)==155.0
 	valid = valid and AbilityCatalog.ranked_damage("ABI802",40)==90.0
@@ -41,6 +45,8 @@ func _initialize() -> void:
 				damage=component
 		var hit := engine._make_action_component_event(parent,damage,"target",1.0)
 		var raw := float(damage.get("amount",0.0))+100.0*float(damage.get("spell_power_scale",0.0))
+		if not is_equal_approx(float(hit.payload.get("amount",-1.0)),raw):
+			print("FIRE_ABI_DAMAGE_MISMATCH id=",id," expected=",raw," actual=",hit.payload.get("amount",-1.0))
 		valid = valid and is_equal_approx(float(hit.payload.get("amount",-1.0)),raw)
 	print("FIRE_BURST_ABI_CONTRACT=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
