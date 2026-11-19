@@ -49,5 +49,13 @@ func _initialize() -> void:
 		if not is_equal_approx(float(hit.payload.get("amount",-1.0)),raw):
 			print("FIRE_ABI_DAMAGE_MISMATCH id=",id," expected=",raw," actual=",hit.payload.get("amount",-1.0))
 		valid = valid and is_equal_approx(float(hit.payload.get("amount",-1.0)),raw)
+	# Verify rank comes from the equipped staff level, not character level.
+	caster.combat_stats["weapon_profiles"]=[{"weapon_class":"staff","item_level":20,"damage_min":1,"damage_max":1}]
+	var rank20 := AbilityRuntime.build_action_event(state,"caster","target","ABI801",defs["ABI801"])
+	valid = valid and is_equal_approx(float(Dictionary(rank20.payload.get("components",[])[0]).get("amount",-1.0)),39.0)
+	caster.combat_stats["weapon_profiles"]=[{"weapon_class":"staff","item_level":75,"damage_min":1,"damage_max":1}]
+	var rank75 := AbilityRuntime.build_action_event(state,"caster","target","ABI801",defs["ABI801"])
+	valid = valid and is_equal_approx(float(Dictionary(rank75.payload.get("components",[])[0]).get("amount",-1.0)),344.0)
+	valid = valid and is_equal_approx(float(Dictionary(defs["ABI801"]["components"][0]).get("amount",-1)),155.0)
 	print("FIRE_BURST_ABI_CONTRACT=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
