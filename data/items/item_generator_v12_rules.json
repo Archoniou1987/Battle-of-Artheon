@@ -562,6 +562,33 @@
         "PAR004",
         "PAR005"
       ]
+    },
+    {
+      "id": "STAFF_FIRE_BURST",
+      "name": "Огненный посох · урон",
+      "kind": "weapon",
+      "family": "staff",
+      "slot": "2H",
+      "weights": {
+        "spell": 45,
+        "crit": 25,
+        "crit_damage": 20,
+        "magic_pen": 10
+      },
+      "school_required": true,
+      "requirements": [
+        "PAR004",
+        "PAR003"
+      ],
+      "school_id": "fire",
+      "abilities": [
+        "ABI801",
+        "ABI802",
+        "ABI803",
+        "ABI804"
+      ],
+      "damage_balance_factor": 1,
+      "abi_damage_balance_factor": 1
     }
   ],
   "armor_archetypes": [
