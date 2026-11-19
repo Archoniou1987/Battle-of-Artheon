@@ -141,11 +141,11 @@ func available_actions(source_id:String,ability_definitions:Dictionary={})->Dict
 		if ability_scheduler!=null:
 			var cooldowns:Dictionary=ability_scheduler.cooldowns_by_combatant.get(source_id,{})
 			cooldown_ready=AbilityRuntime.can_use(ability_id,cooldowns,state.round_number)
-		var mana_cost:=int(definition.get("mana_cost",0))
+		var mana_cost:=ability_scheduler.mana_cost_for_cast(source_id,state.round_number,ability_id) if ability_scheduler!=null else int(definition.get("mana_cost",0))
 		var ap_ready:=AbilityRuntime.can_pay_action_points(definition,combatant)
 		var trigger_ready:=AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round","")))
 		var resource_ready:=combatant.mana>=mana_cost and ap_ready
-		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number)
+		var round_budget_ready := ability_scheduler == null or ability_scheduler.can_cast_this_round(source_id, state.round_number, ability_id)
 		var equipped := ability_scheduler == null or AbilityCatalog.assigned_abilities(ability_scheduler.loadouts,source_id).has(ability_id)
 		var conditional_ready := not AxeAbiCombatService.is_axe_ability(ability_id) or AxeAbiCombatService.can_cast(state,source_id,String(targets[0]) if not targets.is_empty() else "",ability_id)
 		abilities[ability_id]={
@@ -223,7 +223,7 @@ func cast_ability(source_id:String,target_id:String,ability_id:String)->Dictiona
 	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
 		return {"ok":false,"reason":"cooldown"}
 	var source:=state.get_combatant(source_id)
-	var mana_cost:=int(definition.get("mana_cost",0))
+	var mana_cost:=ability_scheduler.mana_cost_for_cast(source_id,state.round_number,ability_id)
 	if source==null or source.mana<mana_cost:
 		return {"ok":false,"reason":"insufficient_resource"}
 	var event:=ability_scheduler.cast_event(state,source_id,target_id,ability_id)
