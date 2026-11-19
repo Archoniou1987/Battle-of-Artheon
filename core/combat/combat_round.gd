@@ -60,7 +60,27 @@ func resolve(engine: CombatEngine) -> void:
 		if event.kind == CombatEvent.Kind.ACTION and HammerAbiCombatService.is_hammer_ability(String(event.payload.get("ability_id",""))):
 			HammerAbiCombatService.prepare_action(engine,event)
 	engine.resolve_pending_events()
-	for event in locked_actions:
-		engine.state.queue_event(event)
-	engine.resolve_pending_events()
+	# Two selected spells resolve their own damage/EFF children before the next
+	# selected ABI. This preserves player-selected order for chained mechanics.
+	# No change for legacy one-ABI physical rounds.
+	var magic_casts_by_source: Dictionary = {}
+	for action in locked_actions:
+		if action.kind != CombatEvent.Kind.ACTION or String(action.payload.get("source_kind",""))!="ability":
+			continue
+		if not AbilityRuntime.extra_cast_eligible(AbilityCatalog.definition(AbilityCatalog.load_json(),String(action.payload.get("ability_id","")))) and not String(action.payload.get("ability_id","")).begins_with("ABI8"):
+			continue
+		magic_casts_by_source[action.source_id]=int(magic_casts_by_source.get(action.source_id,0))+1
+	var ordered_dual_cast := false
+	for source_id in magic_casts_by_source:
+		if int(magic_casts_by_source[source_id])>=2:
+			ordered_dual_cast=true
+			break
+	if ordered_dual_cast:
+		for action in locked_actions:
+			engine.state.queue_event(action)
+			engine.resolve_pending_events()
+	else:
+		for action in locked_actions:
+			engine.state.queue_event(action)
+		engine.resolve_pending_events()
 	resolved = true
