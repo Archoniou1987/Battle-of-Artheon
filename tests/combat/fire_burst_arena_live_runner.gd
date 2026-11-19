@@ -79,7 +79,21 @@ func _initialize() -> void:
 			direct_damage+=1
 		if event.kind==CombatEvent.Kind.EFFECT and String(event.payload.get("effect_id",""))=="EFF003":
 			effect_count+=1
-	var ok := casts==["ABI801","ABI802"] and direct_damage==2 and effect_count>=1
+	var first_action_log := -1
+	var first_damage_log := -1
+	var second_action_log := -1
+	for i in range(session.state.event_log.size()):
+		var event: CombatEvent=session.state.event_log[i]
+		if event.source_id!=session.player_id or int(event.payload.get("round",-1))!=1:
+			continue
+		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI801":
+			first_action_log=i
+		if event.kind==CombatEvent.Kind.ACTION and String(event.payload.get("ability_id",""))=="ABI802":
+			second_action_log=i
+		if first_damage_log<0 and event.kind==CombatEvent.Kind.DAMAGE and String(event.payload.get("source",""))=="ability":
+			first_damage_log=i
+	var order_ok := first_action_log>=0 and first_damage_log>first_action_log and second_action_log>first_damage_log
+	var ok := casts==["ABI801","ABI802"] and direct_damage==2 and effect_count>=1 and order_ok
 	_finish(ok,"casts="+JSON.stringify(casts)+" direct="+str(direct_damage)+" effects="+str(effect_count))
 
 func _finish(ok:bool,detail:String)->void:
