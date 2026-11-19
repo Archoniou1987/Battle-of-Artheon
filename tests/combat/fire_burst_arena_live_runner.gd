@@ -43,9 +43,16 @@ func _initialize() -> void:
 	if bool(Dictionary(options[2]).get("available",false)) or not bool(Dictionary(options[1]).get("available",false)) or int(Dictionary(options[1]).get("mana_cost",-1))!=38:
 		_finish(false,"second_selection_ui_price")
 		return
+	if int(Dictionary(options[0]).get("selection_order",0))!=1 or not ArenaScreen.abi_button_label(Dictionary(options[0])).begins_with("1. "):
+		_finish(false,"first_selected_number")
+		return
 	var second:=session.activate_ability("ABI802")
 	if not bool(second.get("ok",false)) or actor.mana!=427:
 		_finish(false,"blast_immediate_spend_"+str(actor.mana))
+		return
+	options=session.player_ability_options()
+	if int(Dictionary(options[0]).get("selection_order",0))!=1 or int(Dictionary(options[1]).get("selection_order",0))!=2 or not ArenaScreen.abi_button_label(Dictionary(options[1])).begins_with("2. "):
+		_finish(false,"dual_selected_numbers")
 		return
 	var third:=session.activate_ability("ABI803")
 	if bool(third.get("ok",true)) or actor.mana!=427:
