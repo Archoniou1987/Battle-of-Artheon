@@ -4,14 +4,44 @@ extends RefCounted
 var definitions: Dictionary
 var loadouts: Dictionary
 var cooldowns_by_combatant: Dictionary = {}
-## One active ABI per combatant per round across all cast entry points.
+## A normal actor has one ABI per round. A second player-selected cast is
+## permitted only when one of the two ABI is bonus-eligible.
+## Entries are the ordered, immediately-paid casts for the current round.
 var cast_round_by_combatant: Dictionary = {}
+var cast_history_by_combatant: Dictionary = {}
 
-func can_cast_this_round(source_id: String, round_number: int) -> bool:
-	return int(cast_round_by_combatant.get(source_id, -1)) != round_number
+func _cast_history(source_id: String, round_number: int) -> Array:
+	if int(cast_round_by_combatant.get(source_id,-1)) != round_number:
+		return []
+	return Array(cast_history_by_combatant.get(source_id,[]))
 
-func _record_cast(source_id: String, round_number: int) -> void:
-	cast_round_by_combatant[source_id] = round_number
+func can_cast_this_round(source_id: String, round_number: int, ability_id: String = "") -> bool:
+	var history := _cast_history(source_id,round_number)
+	if history.is_empty():
+		return true
+	if ability_id.is_empty() or history.size()!=1:
+		return false
+	var first_id := String(history[0])
+	if first_id==ability_id:
+		return false
+	var first := AbilityCatalog.definition(definitions,first_id)
+	var second := AbilityCatalog.definition(definitions,ability_id)
+	if first.is_empty() or second.is_empty():
+		return false
+	var first_instant := AbilityRuntime.extra_cast_eligible(first)
+	var second_instant := AbilityRuntime.extra_cast_eligible(second)
+	return first_instant != second_instant
+
+func mana_cost_for_cast(source_id: String, round_number: int, ability_id: String) -> int:
+	var definition := AbilityCatalog.definition(definitions,ability_id)
+	var base := maxi(0,int(definition.get("mana_cost",0)))
+	return int(ceili(float(base)*1.25)) if not _cast_history(source_id,round_number).is_empty() else base
+
+func _record_cast(source_id: String, round_number: int, ability_id: String) -> void:
+	var history := _cast_history(source_id,round_number).duplicate()
+	history.append(ability_id)
+	cast_history_by_combatant[source_id]=history
+	cast_round_by_combatant[source_id]=round_number
 
 func _init(ability_definitions: Dictionary = {}, ability_loadouts: Dictionary = {}) -> void:
 	definitions = ability_definitions
@@ -43,7 +73,7 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 		event.payload["ap_gained"]=(0 if bool(definition.get("ap_gain_on_hit",false)) else source.gain_action_points(maxi(0,int(definition.get("ap_gain",0)))))
 		events.append(event)
 		AbilityRuntime.start_cooldown(ability_id, cooldowns, state.round_number, int(definition.get("cooldown_rounds", 0)))
-		_record_cast(source_id, state.round_number)
+		_record_cast(source_id, state.round_number, ability_id)
 		break # The automatic policy picks at most one ready ABI.
 	cooldowns_by_combatant[source_id] = cooldowns
 	return events
@@ -52,13 +82,13 @@ func ready_events(state: CombatState, source_id: String, target_id: String) -> A
 
 func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
-	if source==null or not _source_ready(source, state.round_number) or not can_cast_this_round(source_id,state.round_number) or not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
+	if source==null or not _source_ready(source, state.round_number) or not can_cast_this_round(source_id,state.round_number,ability_id) or not AbilityCatalog.assigned_abilities(loadouts,source_id).has(ability_id):
 		return null
 	var definition:=AbilityCatalog.definition(definitions,ability_id)
 	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
 	if definition.is_empty() or not AbilityRuntime.validate_definition(ability_id,definition).is_empty() or not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
 		return null
-	var mana_cost:=int(definition.get("mana_cost",0))
+	var mana_cost:=mana_cost_for_cast(source_id,state.round_number,ability_id)
 	if source.mana<mana_cost or not AbilityRuntime.can_pay_action_points(definition,source):
 		return null
 	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
@@ -73,14 +103,14 @@ func cast_zone_event(state:CombatState,source_id:String,zone_id:int,ability_id:S
 	var event:=AbilityRuntime.build_action_event(state,source_id,"",ability_id,cast_definition)
 	event.payload["ap_spent"]=ap_spent
 	event.payload["ap_gained"]=(0 if bool(definition.get("ap_gain_on_hit",false)) else source.gain_action_points(maxi(0,int(definition.get("ap_gain",0)))))
-	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
+	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)) + (1 if _cast_history(source_id,state.round_number).size()==1 else 0))
 	cooldowns_by_combatant[source_id]=cooldowns
-	_record_cast(source_id,state.round_number)
+	_record_cast(source_id,state.round_number,ability_id)
 	return event
 
 func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:String)->CombatEvent:
 	var source:=state.get_combatant(source_id)
-	if source==null or not _source_ready(source, state.round_number) or not can_cast_this_round(source_id,state.round_number):
+	if source==null or not _source_ready(source, state.round_number) or not can_cast_this_round(source_id,state.round_number,ability_id):
 		return null
 	# Check target finalization before spending mana or starting cooldown.
 	# Provisional HP <= 0 is still legal until the round's death phase.
@@ -95,7 +125,7 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	var cooldowns:Dictionary=cooldowns_by_combatant.get(source_id,{})
 	if not AbilityRuntime.can_use(ability_id,cooldowns,state.round_number):
 		return null
-	var mana_cost:=int(definition.get("mana_cost",0))
+	var mana_cost:=mana_cost_for_cast(source_id,state.round_number,ability_id)
 	if source.mana<mana_cost or not AbilityRuntime.can_pay_action_points(definition,source):
 		return null
 	if not AbilityRuntime.previous_round_trigger_met(state,source_id,String(definition.get("trigger_previous_round",""))):
@@ -108,9 +138,9 @@ func cast_event(state:CombatState,source_id:String,target_id:String,ability_id:S
 	var event:=AbilityRuntime.build_action_event(state,source_id,target_id,ability_id,definition)
 	event.payload["ap_spent"]=ap_spent
 	event.payload["ap_gained"]=(0 if bool(definition.get("ap_gain_on_hit",false)) else source.gain_action_points(maxi(0,int(definition.get("ap_gain",0)))))
-	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)))
+	AbilityRuntime.start_cooldown(ability_id,cooldowns,state.round_number,int(definition.get("cooldown_rounds",0)) + (1 if _cast_history(source_id,state.round_number).size()==1 else 0))
 	cooldowns_by_combatant[source_id]=cooldowns
-	_record_cast(source_id,state.round_number)
+	_record_cast(source_id,state.round_number,ability_id)
 	return event
 
 func _source_ready(source: CombatantState, round_number: int) -> bool:
