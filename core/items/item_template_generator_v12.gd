@@ -239,6 +239,8 @@ func generate(config: Dictionary) -> Dictionary:
 			if chosen_school != "any" and not bool(entry.get("school_required",false)):
 				continue
 			for school in school_options:
+				if not String(entry.get("school_id","")).is_empty() and String(school["id"]) != String(entry.get("school_id","")):
+					continue
 				if chosen_school != "any" and String(school["id"]) != chosen_school:
 					continue
 				for level in range(minimum, maximum + 1):
@@ -393,8 +395,9 @@ func attack_rating_to_damage(rating: float) -> float:
 func _weapon_damage(spec: Dictionary, level: int, slot: String, damage_quality_factor: float = 1.0) -> Array:
 	var family := String(spec.get("family","staff"))
 	if family == "staff":
-		# Staff physical base damage has not been approved yet.
-		return []
+		# Minimal physical placeholder to keep the staff a valid v1.2 weapon.
+		# Magic damage comes from ABI + PAR150, never from this value.
+		return [1, 1]
 	var base := reference_weapon_damage(level)
 	var avg := base*float(WEAPON_FACTOR.get(family,1.0))*damage_quality_factor
 	# Canonical per-archetype balance, stored only in v1.2 item rules.
