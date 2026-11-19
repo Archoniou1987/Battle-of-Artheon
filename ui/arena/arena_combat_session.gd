@@ -209,6 +209,7 @@ func player_ability_options() -> Array[Dictionary]:
 	var ready_round := state.round_number if active_round != null else state.round_number + 1
 	var player := fighter(true)
 	var cooldowns: Dictionary = ability_scheduler.cooldowns_by_combatant.get(player_id, {})
+	var selected_this_round: Array = ability_scheduler._cast_history(player_id,ready_round)
 	for raw_id in player_ability_slots:
 		var ability_id := "" if raw_id == null else String(raw_id)
 		var definition := AbilityCatalog.definition(ability_scheduler.definitions, ability_id)
@@ -226,7 +227,7 @@ func player_ability_options() -> Array[Dictionary]:
 		if available and AxeAbiCombatService.is_axe_ability(ability_id):
 			available = AxeAbiCombatService.can_cast(state,player_id,target_id,ability_id,ready_round)
 		var target_label:="Себя" if String(definition.get("target_team","")).to_upper()=="ALLY" else "Противник"
-		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":ability_scheduler.mana_cost_for_cast(player_id,ready_round,ability_id),"cooldown_until":int(cooldowns.get(ability_id,0)),"cooldown_remaining":AbilityRuntime.remaining_cooldown(ability_id,cooldowns,ready_round),"defined":not definition.is_empty(),"target_id":target_id,"target_label":target_label})
+		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":ability_scheduler.mana_cost_for_cast(player_id,ready_round,ability_id),"cooldown_until":int(cooldowns.get(ability_id,0)),"cooldown_remaining":AbilityRuntime.remaining_cooldown(ability_id,cooldowns,ready_round),"selection_order":selected_this_round.find(ability_id)+1,"defined":not definition.is_empty(),"target_id":target_id,"target_label":target_label})
 	return result
 
 ## Current Mind Game round opens on the first instant action, not on End Turn.
