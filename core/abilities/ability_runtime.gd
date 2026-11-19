@@ -17,6 +17,11 @@ static func start_cooldown(ability_id: String, cooldowns: Dictionary, round_numb
 static func application_timing(definition: Dictionary) -> String:
 	return String(definition.get("application_timing", "standard")).to_lower()
 
+## Additional-cast eligibility is distinct from application_timing (resolution phase).
+## Old ABI have no flag and are never eligible for two casts in a round.
+static func extra_cast_eligible(definition: Dictionary) -> bool:
+	return bool(definition.get("instant_bonus_eligible",false))
+
 ## A trigger is a historical eligibility check; it never creates an attack by itself.
 static func previous_round_trigger_met(state: CombatState, source_id: String, trigger: String, planned_round: int = -1) -> bool:
 	if trigger.is_empty():
@@ -88,6 +93,8 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 	var normalized:=normalized_definition(ability_id,definition)
 	if ability_id.is_empty(): errors.append("ability_id_required")
 	if not ["instant","standard"].has(application_timing(definition)): errors.append("invalid_application_timing")
+	if definition.has("instant_bonus_eligible") and not definition["instant_bonus_eligible"] is bool:
+		errors.append("instant_bonus_eligible_must_be_bool")
 	if not ["MELEE","PROJECTILE","DIRECT","AREA","CHAIN"].has(String(normalized.get("delivery_type",""))): errors.append("invalid_delivery_type")
 	if not ["SINGLE","ALL_MELEE","ALL_RANGED","ALL_ENEMIES","RANDOM_N","TARGET_ADJACENT"].has(String(normalized.get("target_scope",""))): errors.append("invalid_target_scope")
 	var components:Array=normalized.get("components",[])
@@ -144,6 +151,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		"ability_id": ability_id,
 		"source_kind": "ability",
 		"application_timing": normalized["application_timing"],
+		"instant_bonus_eligible": extra_cast_eligible(definition),
 		"delivery_type": normalized["delivery_type"],
 		"target_scope": normalized["target_scope"],
 		"max_targets": maxi(1,int(definition.get("max_targets",1))),
