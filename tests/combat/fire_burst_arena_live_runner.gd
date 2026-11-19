@@ -4,6 +4,9 @@ extends SceneTree
 func _initialize() -> void:
 	var repo := ItemRepository.new()
 	var hero := CharacterState.new("FIRE_ARENA_HERO","Fire Arena Hero",40)
+	# The live equip check must use a character that meets the staff requirements.
+	hero.progression.base_stats["PAR003"]=100
+	hero.progression.base_stats["PAR004"]=100
 	var staff := ItemV12InstanceFactory.generate_weapon("STAFF_FIRE_BURST",40,"blue",442,"2H")
 	if staff.is_empty():
 		_finish(false,"staff_empty")
