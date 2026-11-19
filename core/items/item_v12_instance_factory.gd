@@ -9,8 +9,10 @@ const DAGGER_ARCHETYPES := ["DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN"]
 const AXE_ARCHETYPES := ["AXE_DEF", "AXE_ATTACK", "AXE_CRUSHER", "2H_AXE"]
 const HAMMER_ARCHETYPES := ["HAMMER_DEF", "HAMMER_ATTACK", "2H_HAMMER"]
 const SPEAR_ARCHETYPES := ["2H_SPEAR"]
-const TWO_HAND_ARCHETYPES := ["2H_SPEAR","2H_SWORD","AXE_ATTACK","AXE_CRUSHER","2H_AXE","HAMMER_ATTACK","2H_HAMMER"]
+const STAFF_ARCHETYPES := ["STAFF_FIRE_BURST"]
+const TWO_HAND_ARCHETYPES := ["2H_SPEAR","2H_SWORD","AXE_ATTACK","AXE_CRUSHER","2H_AXE","HAMMER_ATTACK","2H_HAMMER","STAFF_FIRE_BURST"]
 const PHYSICAL_ARCHETYPES := ["SWORD_DEF", "SWORD_DODGE", "SWORD_CRIT", "DAGGER_DEF", "DAGGER_ATTACK", "DAGGER_PEN", "AXE_DEF", "AXE_ATTACK", "AXE_CRUSHER", "2H_AXE", "HAMMER_DEF", "2H_HAMMER", "2H_SPEAR", "2H_SWORD"]
+const LIVE_ARCHETYPES := PHYSICAL_ARCHETYPES + STAFF_ARCHETYPES
 const ACCEPTED_QUALITIES := ["white", "green", "blue", "purple"]
 
 static func generate_sword(archetype_id: String, level: int, quality: String, seed_value: int) -> Dictionary:
@@ -19,7 +21,7 @@ static func generate_sword(archetype_id: String, level: int, quality: String, se
 ## Canonical v1.2 rolls for approved physical weapons, including 2H spear.
 ## ABI are assigned only after their runtime implementation is ready.
 static func generate_weapon(archetype_id: String, level: int, quality: String, seed_value: int, hand: String = "MH") -> Dictionary:
-	if not PHYSICAL_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH", "2H"].has(hand):
+	if not LIVE_ARCHETYPES.has(archetype_id) or level < 1 or level > 100 or not ACCEPTED_QUALITIES.has(quality) or not ["MH", "OH", "2H"].has(hand):
 		return {}
 	if TWO_HAND_ARCHETYPES.has(archetype_id) and hand == "MH":
 		hand = "2H"
@@ -46,7 +48,7 @@ static func instance_from_v12_row(row: Dictionary, seed_value: int = 1) -> Dicti
 	var hand := String(row.get("slot", ""))
 	var level := int(row.get("level", 0))
 	var quality := String(row.get("quality", ""))
-	if not PHYSICAL_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
+	if not LIVE_ARCHETYPES.has(archetype_id) or not ACCEPTED_QUALITIES.has(quality) or level < 1 or level > 100:
 		return {}
 	if not ["MH", "OH", "2H"].has(hand) or (TWO_HAND_ARCHETYPES.has(archetype_id) != (hand == "2H")) or (hand == "OH" and not WeaponHandPolicy.DUAL_ARCHETYPES.has(archetype_id)):
 		return {}
@@ -206,6 +208,7 @@ static func _weapon_family(archetype_id: String) -> String:
 	if AXE_ARCHETYPES.has(archetype_id): return "axe"
 	if HAMMER_ARCHETYPES.has(archetype_id): return "hammer"
 	if SPEAR_ARCHETYPES.has(archetype_id): return "spear"
+	if STAFF_ARCHETYPES.has(archetype_id): return "staff"
 	return ""
 
 static func _family_name(family: String) -> String:
@@ -215,6 +218,7 @@ static func _family_name(family: String) -> String:
 		"axe": return "Топор"
 		"hammer": return "Молот"
 		"spear": return "Копьё"
+		"staff": return "Посох"
 	return family
 
 static func _archetype_name(archetype_id: String) -> String:
@@ -226,13 +230,14 @@ static func _archetype_name(archetype_id: String) -> String:
 		"DAGGER_PEN": return "пробивающий"
 		"AXE_CRUSHER": return "Axe_Crusher"
 		"2H_SPEAR", "2H_SWORD", "2H_AXE", "2H_HAMMER": return "двуручный"
+		"STAFF_FIRE_BURST": return "огненный · урон"
 	return archetype_id
 
 static func _damage_type(family: String) -> String:
 	match family:
 		"dagger", "spear": return "piercing"
 		"axe": return "chopping"
-		"hammer": return "blunt"
+		"hammer", "staff": return "blunt"
 	return "slashing"
 
 static func _new_instance_id() -> String:
