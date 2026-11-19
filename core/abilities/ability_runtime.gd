@@ -131,6 +131,15 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 				errors.append("invalid_spell_power_scale")
 			elif not (kind=="heal" or (kind=="damage" and CombatDamagePayload.is_magic_damage_type(String(raw_component.get("damage_type","physical"))))):
 				errors.append("spell_power_scale_requires_magic_damage_or_heal")
+		if raw_component.has("bonus_if_target_effect"):
+			var conditional: Variant = raw_component["bonus_if_target_effect"]
+			if kind!="damage" or not conditional is Dictionary:
+				errors.append("invalid_damage_effect_bonus")
+			else:
+				var spec: Dictionary = conditional
+				var effect_id := String(spec.get("effect_id",""))
+				if effect_id.is_empty() or EffectCatalog.definition(EffectCatalog.load_json(),effect_id).is_empty() or not RatingMatrix._number(spec.get("damage_pct",null)) or float(spec.get("damage_pct",0.0))<0.0:
+					errors.append("invalid_damage_effect_bonus")
 		if kind=="effect" and String(raw_component.get("effect_id","")).is_empty(): errors.append("effect_id_required")
 		# Timings are hand-authored. Reject an incompatible instant ABI rather
 		# than silently rewriting it; periodic damage/healing still means Standard.
