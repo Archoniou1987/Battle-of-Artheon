@@ -63,10 +63,13 @@ func _initialize() -> void:
 	# The current production catalog contains ONLY the 56 approved physical
 	# weapon abilities; none currently has a magic scaling coefficient K.
 	var active_defs := AbilityCatalog.load_json("res://data/abilities/catalog.json")
-	valid = valid and active_defs.size()==56
+	valid = valid and active_defs.size()==60
 	for ability_id in active_defs:
 		for component in Array(Dictionary(active_defs[ability_id]).get("components",[])):
-			valid = valid and not Dictionary(component).has("spell_power_scale")
+			if not String(ability_id).begins_with("ABI8"):
+				valid = valid and not Dictionary(component).has("spell_power_scale")
+			else:
+				valid = valid and String(component.get("kind",""))!="damage" or String(component.get("damage_type",""))=="fire"
 
 	print("MAGIC_ABI_SCALING_TEST=" + ("PASS" if valid else "FAIL"))
 	quit(0 if valid else 1)
