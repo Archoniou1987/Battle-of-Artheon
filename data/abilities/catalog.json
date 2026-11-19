@@ -2130,5 +2130,162 @@
       50,
       75
     ]
+  },
+  "ABI801": {
+    "name": "Огненный шар",
+    "description": "Прямой огненный удар. Накладывает EFF003 Горение.",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": true,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 155,
+        "damage_type": "fire",
+        "spell_power_scale": 0.45
+      },
+      {
+        "kind": "effect",
+        "effect_id": "EFF003",
+        "base_chance": 100
+      }
+    ],
+    "cooldown_rounds": 1,
+    "mana_cost": 35,
+    "ap_cost": 0,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "instant_bonus_eligible": false,
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      16,
+      39,
+      73,
+      155,
+      193,
+      240,
+      289,
+      344,
+      403,
+      467
+    ],
+    "magic_school": "fire",
+    "magic_archetype": "STAFF_FIRE_BURST",
+    "balance_status": "PROVISIONAL_L40"
+  },
+  "ABI802": {
+    "name": "Огненный взрыв",
+    "description": "Быстрый огненный удар. Разрешает вторую ABI в том же раунде.",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": true,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 90,
+        "damage_type": "fire",
+        "spell_power_scale": 0.25
+      }
+    ],
+    "cooldown_rounds": 2,
+    "mana_cost": 30,
+    "ap_cost": 0,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "instant_bonus_eligible": true,
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      10,
+      25,
+      45,
+      90,
+      113,
+      140,
+      171,
+      202,
+      239,
+      277
+    ],
+    "magic_school": "fire",
+    "magic_archetype": "STAFF_FIRE_BURST",
+    "balance_status": "PROVISIONAL_L40"
+  },
+  "ABI803": {
+    "name": "Воспламенение",
+    "description": "Прямой огненный удар по горящей цели. Бонус к горящей цели требует отдельного проверенного условия.",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": true,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 175,
+        "damage_type": "fire",
+        "spell_power_scale": 0.55
+      }
+    ],
+    "cooldown_rounds": 3,
+    "mana_cost": 45,
+    "ap_cost": 0,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "instant_bonus_eligible": false,
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      19,
+      45,
+      87,
+      175,
+      220,
+      273,
+      330,
+      394,
+      460,
+      530
+    ],
+    "magic_school": "fire",
+    "magic_archetype": "STAFF_FIRE_BURST",
+    "balance_status": "PROVISIONAL_L40"
+  },
+  "ABI804": {
+    "name": "Пиробласт",
+    "description": "Мощный одиночный огненный удар с высокой стоимостью маны.",
+    "delivery_type": "DIRECT",
+    "target_scope": "SINGLE",
+    "target_team": "ENEMY",
+    "uses_magic_hit": true,
+    "components": [
+      {
+        "kind": "damage",
+        "amount": 300,
+        "damage_type": "fire",
+        "spell_power_scale": 0.85
+      }
+    ],
+    "cooldown_rounds": 5,
+    "mana_cost": 75,
+    "ap_cost": 0,
+    "ap_gain": 0,
+    "application_timing": "standard",
+    "instant_bonus_eligible": false,
+    "max_targets": 1,
+    "base_damage_by_rank": [
+      32,
+      78,
+      143,
+      300,
+      377,
+      468,
+      568,
+      676,
+      791,
+      918
+    ],
+    "magic_school": "fire",
+    "magic_archetype": "STAFF_FIRE_BURST",
+    "balance_status": "PROVISIONAL_L40"
   }
 }
