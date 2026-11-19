@@ -9,8 +9,8 @@ func _verify() -> void:
 	var generator := ItemTemplateGeneratorV12.new()
 	if not generator.ready_for_generation():
 		problems.append("v1.2 catalog is incomplete or probabilities do not sum to 100")
-	if generator.archetypes().size() != 44:
-		problems.append("Expected 44 canonical archetypes after retiring duplicate attacking hammer")
+	if generator.archetypes().size() != 45:
+		problems.append("Expected 44 earlier canonical archetypes plus FIRE_BURST staff")
 	if generator.schools().size() != 6:
 		problems.append("Expected exactly six staff schools")
 	for raw in generator.archetypes():
