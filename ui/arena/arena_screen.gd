@@ -1166,7 +1166,8 @@ static func abi_button_label(option: Dictionary) -> String:
 	if id.is_empty():
 		return ""
 	var remaining := maxi(0,int(option.get("cooldown_remaining",0)))
-	return id + ("\nКД %d" % remaining if remaining > 0 else "")
+	var order := int(option.get("selection_order",0))
+	return ("%d. " % order if order>0 else "") + id + ("\nКД %d" % remaining if remaining > 0 else "")
 
 static func abi_button_tooltip(option: Dictionary, base: String) -> String:
 	var remaining := maxi(0,int(option.get("cooldown_remaining",0)))
@@ -1183,15 +1184,15 @@ func _refresh_ability_buttons() -> void:
 		var option:Dictionary=options[index] if index<options.size() else {}
 		var ability_id:=String(option.get("id",""))
 		var available:=bool(option.get("available",false))
-		if (selected_ability==ability_id and available and not ability_id.is_empty()) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty():
+		if (selected_ability==ability_id and available and not ability_id.is_empty()) or int(option.get("selection_order",0))>0:
 			selected_still_valid=true
 		button.disabled=not available
 		button.text=abi_button_label(option)
 		button.add_theme_font_size_override("font_size",8)
 		var source := SquareUiGeometry.abi_source(index)
 		button.tooltip_text=abi_button_tooltip(option,("%s | %s — %s | Мана: %d | Цель: %s" % [source, ability_id, String(option.get("name",ability_id)),int(option.get("mana_cost",0)),String(option.get("target_label","—"))]) if bool(option.get("defined",false)) else (source + ": ABI не определена — " + ability_id if not ability_id.is_empty() else source + " — пусто"))
-		button.set_pressed_no_signal((available and selected_ability==ability_id) or combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
-		SquareSlotFeedback.set_selected(button, combat_session.locked_ability_id==ability_id and not ability_id.is_empty())
+		button.set_pressed_no_signal((available and selected_ability==ability_id) or int(option.get("selection_order",0))>0)
+		SquareSlotFeedback.set_selected(button, int(option.get("selection_order",0))>0)
 	if not selected_still_valid:
 		selected_ability=""
 
