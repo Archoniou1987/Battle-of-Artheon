@@ -145,8 +145,32 @@ static func validate_definition(ability_id: String, definition: Dictionary) -> A
 		errors.append("cleanse_target_team_required")
 	return errors
 
+## The equipped main-hand staff's item level selects the existing ten-rank ABI curve.
+## No duplicate scaling table or new magic damage formula.
+static func ranked_magic_components(source: CombatantState, ability_id: String, definition: Dictionary, components: Array) -> Array:
+	var output := components.duplicate(true)
+	if source == null or String(definition.get("magic_school","")).is_empty():
+		return output
+	var item_level := 0
+	for raw_weapon in Array(source.combat_stats.get("weapon_profiles",[])):
+		if not raw_weapon is Dictionary:
+			continue
+		var weapon: Dictionary = raw_weapon
+		if String(weapon.get("weapon_class","")) == "staff":
+			item_level = maxi(1,int(weapon.get("item_level",1)))
+			break
+	if item_level <= 0:
+		return output # Legacy and equipment-free test fixtures retain catalog amount.
+	var ranked := AbilityCatalog.ranked_damage(ability_id,item_level)
+	for i in range(output.size()):
+		if output[i] is Dictionary and String(Dictionary(output[i]).get("kind",""))=="damage":
+			output[i]["amount"]=ranked
+	return output
+
 static func build_action_event(state: CombatState, source_id: String, target_id: String, ability_id: String, definition: Dictionary) -> CombatEvent:
 	var normalized := normalized_definition(ability_id, definition)
+	var cast_source := state.get_combatant(source_id)
+	var cast_components := ranked_magic_components(cast_source,ability_id,definition,normalized["components"])
 	var event := state.create_event(CombatEvent.Kind.ACTION, source_id, target_id, {
 		"ability_id": ability_id,
 		"source_kind": "ability",
@@ -172,7 +196,7 @@ static func build_action_event(state: CombatState, source_id: String, target_id:
 		# Zero requests a seeded roll from CombatEngine; explicit 1..100 is a test override.
 		"magic_hit_roll": int(definition.get("magic_hit_roll",0)),
 		"target_zone_id": int(definition.get("target_zone_id", definition.get("zone_id",-1))),
-		"components": normalized["components"],
+		"components": cast_components,
 		"target_ids": [target_id]
 	})
 	if not String(definition.get("sword_ability_mode","")).is_empty():
