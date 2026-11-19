@@ -2214,7 +2214,7 @@
   },
   "ABI803": {
     "name": "Воспламенение",
-    "description": "Прямой огненный удар по горящей цели. Бонус к горящей цели требует отдельного проверенного условия.",
+    "description": "Наносит прямой огненный урон; по цели с действующим EFF003 Горение наносит +30% прямого урона.",
     "delivery_type": "DIRECT",
     "target_scope": "SINGLE",
     "target_team": "ENEMY",
@@ -2224,7 +2224,11 @@
         "kind": "damage",
         "amount": 175,
         "damage_type": "fire",
-        "spell_power_scale": 0.55
+        "spell_power_scale": 0.55,
+        "bonus_if_target_effect": {
+          "effect_id": "EFF003",
+          "damage_pct": 30
+        }
       }
     ],
     "cooldown_rounds": 3,
