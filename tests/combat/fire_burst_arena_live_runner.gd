@@ -5,8 +5,17 @@ func _initialize() -> void:
 	var repo := ItemRepository.new()
 	var hero := CharacterState.new("FIRE_ARENA_HERO","Fire Arena Hero",40)
 	var staff := ItemV12InstanceFactory.generate_weapon("STAFF_FIRE_BURST",40,"blue",442,"2H")
-	if staff.is_empty() or not repo.add_item(staff) or not hero.receive_item(String(staff.get("instance_id","")),repo) or not hero.equip("main_hand",String(staff.get("instance_id","")),repo):
-		_finish(false,"equip_real_staff")
+	if staff.is_empty():
+		_finish(false,"staff_empty")
+		return
+	if not repo.add_item(staff):
+		_finish(false,"repo_add")
+		return
+	if not hero.receive_item(String(staff.get("instance_id","")),repo):
+		_finish(false,"bag_receive")
+		return
+	if not hero.equip("main_hand",String(staff.get("instance_id","")),repo):
+		_finish(false,"equip_failed_"+JSON.stringify(staff.get("requirements",{}))+" slots="+JSON.stringify(staff.get("equip_slots",[])))
 		return
 	var session := ArenaCombatSession.new(hero,repo)
 	if Array(session.player_ability_slots).slice(0,4)!=["ABI801","ABI802","ABI803","ABI804"]:
