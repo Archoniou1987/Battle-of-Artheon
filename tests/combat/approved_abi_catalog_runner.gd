@@ -4,7 +4,7 @@ extends SceneTree
 ## ABI test laboratory uses LAB_* IDs, not the production catalog.
 func _initialize() -> void:
 	var defs := AbilityCatalog.load_json("res://data/abilities/catalog.json")
-	var ranges := [[301,316],[401,412],[501,516],[601,608],[701,704]]
+	var ranges := [[301,316],[401,412],[501,516],[601,608],[701,704],[801,804]]
 	var expected: Dictionary = {}
 	for limits in ranges:
 		for n in range(int(limits[0]),int(limits[1])+1):
@@ -23,6 +23,8 @@ func _initialize() -> void:
 	# all referenced EFF definitions must exist before runtime application.
 	var effect_defs := EffectCatalog.load_json()
 	for id in expected:
+		if String(id).begins_with("ABI8"):
+			continue # Magic ABI use generic component dispatch, never physical-family modes.
 		var approved: Dictionary = defs.get(id,{})
 		var family_field := "sword_ability_mode"
 		if String(id).begins_with("ABI7") or String(id).begins_with("ABI4"):
