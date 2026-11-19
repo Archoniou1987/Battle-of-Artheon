@@ -214,9 +214,9 @@ func player_ability_options() -> Array[Dictionary]:
 		var definition := AbilityCatalog.definition(ability_scheduler.definitions, ability_id)
 		var available := not definition.is_empty() and player != null and player.hp > 0 and not player.is_death_finalized() and orchestrator.battle_outcome()=="ongoing"
 		available = available and not CombatTempoService.is_stunned(player,ready_round)
-		available = available and ability_scheduler.can_cast_this_round(player_id,ready_round)
+		available = available and ability_scheduler.can_cast_this_round(player_id,ready_round,ability_id)
 		available = available and AbilityRuntime.can_use(ability_id,cooldowns,ready_round)
-		available = available and player.mana >= int(definition.get("mana_cost",0))
+		available = available and player.mana >= ability_scheduler.mana_cost_for_cast(player_id,ready_round,ability_id)
 		available = available and AbilityRuntime.can_pay_action_points(definition,player)
 		available = available and AbilityRuntime.previous_round_trigger_met(state,player_id,String(definition.get("trigger_previous_round","")),ready_round)
 		available = available and AbilityRuntime.validate_definition(ability_id,definition).is_empty()
@@ -226,7 +226,7 @@ func player_ability_options() -> Array[Dictionary]:
 		if available and AxeAbiCombatService.is_axe_ability(ability_id):
 			available = AxeAbiCombatService.can_cast(state,player_id,target_id,ability_id,ready_round)
 		var target_label:="Себя" if String(definition.get("target_team","")).to_upper()=="ALLY" else "Противник"
-		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":int(definition.get("mana_cost",0)),"cooldown_until":int(cooldowns.get(ability_id,0)),"cooldown_remaining":AbilityRuntime.remaining_cooldown(ability_id,cooldowns,ready_round),"defined":not definition.is_empty(),"target_id":target_id,"target_label":target_label})
+		result.append({"id":ability_id,"name":String(definition.get("name",ability_id)),"available":available,"mana_cost":ability_scheduler.mana_cost_for_cast(player_id,ready_round,ability_id),"cooldown_until":int(cooldowns.get(ability_id,0)),"cooldown_remaining":AbilityRuntime.remaining_cooldown(ability_id,cooldowns,ready_round),"defined":not definition.is_empty(),"target_id":target_id,"target_label":target_label})
 	return result
 
 ## Current Mind Game round opens on the first instant action, not on End Turn.
@@ -235,9 +235,7 @@ func _ensure_round() -> void:
 		active_round = orchestrator.begin_round()
 
 func activate_ability(ability_id: String) -> Dictionary:
-	if active_round != null and not locked_ability_id.is_empty():
-		return {"ok":false, "reason":"abi_limit_reached"}
-	var target_round := state.round_number if active_round != null else state.round_number + 1
+		var target_round := state.round_number if active_round != null else state.round_number + 1
 	var check := _validate_ability(player_id,ability_id,target_round)
 	if not bool(check.get("ok",false)) or ability_id.is_empty():
 		return {"ok":false,"reason":String(check.get("reason","ability_unavailable"))}
@@ -351,11 +349,11 @@ func _validate_ability(source_id:String,ability_id:String,ready_round:int) -> Di
 		return {"ok":false,"reason":"ability_actor_unavailable"}
 	if not AbilityRuntime.validate_definition(ability_id,definition).is_empty():
 		return {"ok":false,"reason":"invalid_ability_definition"}
-	if not ability_scheduler.can_cast_this_round(source_id,ready_round):
+	if not ability_scheduler.can_cast_this_round(source_id,ready_round,ability_id):
 		return {"ok":false,"reason":"abi_limit_reached"}
 	if not AbilityRuntime.can_use(ability_id,ability_scheduler.cooldowns_by_combatant.get(source_id,{}),ready_round):
 		return {"ok":false,"reason":"ability_cooldown"}
-	if actor.mana < int(definition.get("mana_cost",0)):
+	if actor.mana < ability_scheduler.mana_cost_for_cast(source_id,ready_round,ability_id):
 		return {"ok":false,"reason":"insufficient_mana"}
 	if not AbilityRuntime.can_pay_action_points(definition,actor):
 		return {"ok":false,"reason":"insufficient_ap"}
