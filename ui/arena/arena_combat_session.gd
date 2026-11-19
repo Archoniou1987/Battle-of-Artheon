@@ -235,7 +235,7 @@ func _ensure_round() -> void:
 		active_round = orchestrator.begin_round()
 
 func activate_ability(ability_id: String) -> Dictionary:
-		var target_round := state.round_number if active_round != null else state.round_number + 1
+	var target_round := state.round_number if active_round != null else state.round_number + 1
 	var check := _validate_ability(player_id,ability_id,target_round)
 	if not bool(check.get("ok",false)) or ability_id.is_empty():
 		return {"ok":false,"reason":String(check.get("reason","ability_unavailable"))}
