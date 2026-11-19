@@ -256,6 +256,18 @@ func _make_action_component_event(parent:CombatEvent, component:Dictionary, targ
 				amount = maxf(0.0,amount+k*CombatModifierService.spell_power(caster,state.round_number))
 				var bonus_percent := CombatModifierService.magic_damage_bonus_pct(caster,state.round_number)
 				amount *= maxf(0.0,1.0+bonus_percent/100.0)
+		# Generic ABI direct-damage synergy against one currently active EFF.
+		# Inactive/future-round EFF never grants early bonus.
+		var conditional: Variant = component.get("bonus_if_target_effect",{})
+		if conditional is Dictionary:
+			var condition: Dictionary = conditional
+			var effect_id := String(condition.get("effect_id",""))
+			var target := state.get_combatant(target_id)
+			if target != null and not effect_id.is_empty():
+				for active in CombatModifierService.active_effects(target,state.round_number):
+					if String(active.get("effect_id","")) == effect_id:
+						amount *= maxf(0.0,1.0+float(condition.get("damage_pct",0.0))/100.0)
+						break
 		amount *= scale
 		if delivery_type in ["MELEE", "PROJECTILE"]:
 			return state.create_event(CombatEvent.Kind.ATTACK, parent.source_id, target_id, CombatDamagePayload.ability_attack_payload(parent, component, amount, scale), parent.event_id)
