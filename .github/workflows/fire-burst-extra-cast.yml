@@ -6,6 +6,10 @@ on:
     branches:
       - feature/character-inventory-ui-v1
     paths:
+      - data/abilities/catalog.json
+      - core/abilities/ability_catalog.gd
+      - tests/combat/approved_abi_catalog_runner.gd
+      - tests/combat/magic_abi_scaling_runner.gd
       - core/abilities/ability_runtime.gd
       - core/abilities/ability_scheduler.gd
       - ui/arena/arena_combat_session.gd
@@ -30,5 +34,9 @@ jobs:
         run: GODOT_TEST_TIMEOUT=120 bash tools/run_godot_check.sh --import
       - name: Verify ordered second cast rules
         run: GODOT_TEST_TIMEOUT=60 bash tools/run_godot_check.sh tests/combat/fire_burst_extra_cast_runner.gd
+      - name: Verify canonical ABI IDs and PAR150 scaling
+        run: |
+          bash tools/run_godot_check.sh tests/combat/approved_abi_catalog_runner.gd
+          bash tools/run_godot_check.sh tests/combat/magic_abi_scaling_runner.gd
       - name: Verify existing physical round contract
         run: GODOT_TEST_TIMEOUT=90 bash tools/run_godot_check.sh tests/combat/arena_ability_integration_runner.gd
