@@ -63,16 +63,17 @@ func resolve(engine: CombatEngine) -> void:
 	# Two selected spells resolve their own damage/EFF children before the next
 	# selected ABI. This preserves player-selected order for chained mechanics.
 	# No change for legacy one-ABI physical rounds.
-	var magic_casts_by_source: Dictionary = {}
+	var selected_casts_by_source: Dictionary = {}
+	var instant_cast_sources: Dictionary = {}
 	for action in locked_actions:
 		if action.kind != CombatEvent.Kind.ACTION or String(action.payload.get("source_kind",""))!="ability":
 			continue
-		if not AbilityRuntime.extra_cast_eligible(AbilityCatalog.definition(AbilityCatalog.load_json(),String(action.payload.get("ability_id","")))) and not String(action.payload.get("ability_id","")).begins_with("ABI8"):
-			continue
-		magic_casts_by_source[action.source_id]=int(magic_casts_by_source.get(action.source_id,0))+1
+		selected_casts_by_source[action.source_id]=int(selected_casts_by_source.get(action.source_id,0))+1
+		if bool(action.payload.get("instant_bonus_eligible",false)):
+			instant_cast_sources[action.source_id]=true
 	var ordered_dual_cast := false
-	for source_id in magic_casts_by_source:
-		if int(magic_casts_by_source[source_id])>=2:
+	for source_id in selected_casts_by_source:
+		if int(selected_casts_by_source[source_id])>=2 and bool(instant_cast_sources.get(source_id,false)):
 			ordered_dual_cast=true
 			break
 	if ordered_dual_cast:
