@@ -31,6 +31,7 @@ func _initialize() -> void:
 	var state := CombatState.new()
 	var caster := TestFixtureLoader.new_combatant("caster","Caster",40,1000,500)
 	caster.combat_stats["par_totals"]["PAR150"]=100.0
+	caster.combat_stats["magic_damage_rating"]=100.0 # Legacy fixture mirror used by PAR canonicalization
 	var target := TestFixtureLoader.new_combatant("target","Target",40,10000,0)
 	state.add_combatant(caster)
 	state.add_combatant(target)
